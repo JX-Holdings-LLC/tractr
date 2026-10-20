@@ -15,96 +15,16 @@ mod recording;
 
 static RECORDER: recording::Recorder = recording::Recorder::new("FARM_PLAYER_BLESS", "player screenshots");
 
-use common::{press, Stores, FRAME};
+use common::{new_game, press, scene, Stores, FRAME};
 use farm_player::{Player, PlayerMode};
 use farm_render::images::decode_image;
 use farm_render::tiny_skia::Pixmap;
-use farm_sim::schema::{DialogueState, ShopSession};
 use std::path::PathBuf;
 
 const SIZES: [(u32, u32); 2] = [(1280, 800), (1920, 1080)];
 /// Channel difference that counts as different, and how many pixels may differ.
 const CHANNEL_TOLERANCE: i32 = 6;
 const MAX_DIFFERENT_FRACTION: f64 = 0.004;
-
-fn new_game(stores: &Stores) -> Player {
-    new_game_of(stores, &common::starter())
-}
-
-fn new_game_of(stores: &Stores, project: &farm_sim::GameProject) -> Player {
-    let mut player = stores.standalone(project);
-    common::idle(&mut player, 1);
-    press(&mut player, "enter");
-    assert_eq!(player.screen(), farm_player::ScreenKind::Playing);
-    player
-}
-
-/// Sets up one screen; returns the player to render.
-fn scene(name: &str) -> Player {
-    let stores = Stores::new();
-    match name {
-        "title" => stores.standalone(&common::starter()),
-        "settings" => {
-            let mut player = stores.standalone(&common::starter());
-            // Focus starts on New Game; Continue and Load are disabled without saves, so the
-            // next entry down is Settings.
-            common::idle(&mut player, 1);
-            press(&mut player, "arrowdown");
-            press(&mut player, "enter");
-            assert_eq!(player.screen(), farm_player::ScreenKind::Settings);
-            player
-        }
-        "hud" => new_game(&stores),
-        "dialogue" => {
-            let mut player = new_game(&stores);
-            let mut state = player.state().unwrap().clone();
-            state.dialogue =
-                Some(DialogueState { npc_id: "npc-merchant".into(), dialogue_id: "dialogue-merchant-greeting".into() });
-            player.replace_state(state).unwrap();
-            player
-        }
-        "shop" => {
-            let mut player = new_game(&stores);
-            let mut state = player.state().unwrap().clone();
-            state.shop = Some(ShopSession { shop_id: "shop-general".into() });
-            player.replace_state(state).unwrap();
-            player
-        }
-        // The sample games (compiled by the authoring core): each starts on its own map.
-        "sample-cozy" | "sample-quest" => {
-            let file = if name == "sample-cozy" { "cozy-garden.cart" } else { "quest-rpg.cart" };
-            let path = common::root().join("fixtures").join("golden").join("cartridges").join(file);
-            let bytes = std::fs::read(path).unwrap();
-            let mut player = Player::from_cartridge_bytes(&bytes, stores.options(PlayerMode::Standalone)).unwrap();
-            common::idle(&mut player, 1);
-            press(&mut player, "enter");
-            if name == "sample-quest" {
-                // Through the farm's south gate to the village square.
-                let mut state = player.state().unwrap().clone();
-                state.player.scene_id = "scene-square".into();
-                state.player.x = farm_sim::units::tile_center(8);
-                state.player.y = farm_sim::units::tile_center(5);
-                player.replace_state(state).unwrap();
-            }
-            player
-        }
-        // A pack-defined minigame (the example pack Lantern Night) a few frames in.
-        "pack-minigame" => {
-            let mut project = common::starter();
-            let pack = common::root().join("fixtures").join("projects").join("lantern-night-mod.json");
-            let pack = serde_json::from_str(&std::fs::read_to_string(pack).unwrap()).unwrap();
-            project.content_packs.push(farm_sim::schema::PackInstallation { pack, enabled: true });
-            let mut player = new_game_of(&stores, &project);
-            let open = farm_sim::schema::PluginMutation::StartMinigame { minigame_id: "lantern-night:catch".into() };
-            player
-                .run_command(&farm_sim::Command::PluginMutation { plugin_id: "shots".into(), mutation: open })
-                .unwrap();
-            assert!(player.plugin_errors().is_empty(), "{:?}", player.plugin_errors());
-            player
-        }
-        other => panic!("unknown scene {other}"),
-    }
-}
 
 fn render(mut player: Player, width: u32, height: u32) -> Pixmap {
     // Past the toasts' fade-in, before they leave.
