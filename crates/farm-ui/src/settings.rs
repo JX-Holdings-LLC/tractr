@@ -34,11 +34,60 @@ pub struct DisplaySettings {
     pub integer_scaling: bool,
     /// Size of the interface (1 = 100 %).
     pub ui_scale: f32,
+    /// Which renderer the desktop game draws with (no settings screen row: it is for the
+    /// settings file, next to the `--renderer` flag).
+    pub renderer: RendererChoice,
 }
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { fullscreen: false, integer_scaling: true, ui_scale: 1.0 }
+        Self { fullscreen: false, integer_scaling: true, ui_scale: 1.0, renderer: RendererChoice::Auto }
+    }
+}
+
+/// The desktop game's renderer. Other hosts (the editor, the web) always draw on the CPU.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", from = "String", into = "String")]
+pub enum RendererChoice {
+    /// The GPU when a hardware adapter works, else the CPU.
+    #[default]
+    Auto,
+    /// The CPU rasterizer.
+    Cpu,
+    /// The GPU, software adapters included; the CPU when none works.
+    Gpu,
+}
+
+impl RendererChoice {
+    /// `auto`, `cpu` or `gpu` (any case); `None` for anything else.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(Self::Auto),
+            "cpu" => Some(Self::Cpu),
+            "gpu" => Some(Self::Gpu),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Cpu => "cpu",
+            Self::Gpu => "gpu",
+        }
+    }
+}
+
+/// An unknown value in a settings file means `auto` (the rest of the file still loads).
+impl From<String> for RendererChoice {
+    fn from(text: String) -> Self {
+        Self::parse(&text).unwrap_or_default()
+    }
+}
+
+impl From<RendererChoice> for String {
+    fn from(choice: RendererChoice) -> Self {
+        choice.name().to_owned()
     }
 }
 

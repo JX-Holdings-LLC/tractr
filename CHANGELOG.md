@@ -2,6 +2,18 @@
 
 ## 0.3.0 (unreleased)
 
+- **Exported games draw on the GPU.** The desktop player has a wgpu renderer
+  (Vulkan, DirectX 12, Metal) that draws the same frames as the CPU one at
+  the window's resolution, with the same crisp nearest-neighbour scaling and
+  letterboxing, and leaves room for lighting and particle passes later. It
+  is used when a hardware GPU works; otherwise, and whenever the GPU fails
+  or its device is lost, the game switches to the CPU renderer without
+  stopping. `--renderer auto|gpu|cpu`, `FARM_RENDERER` or `renderer` in the
+  settings file pick one, and the game logs which it uses. Screenshots,
+  headless runs, the editor's Play Mode and the web demo keep the CPU
+  renderer, and tests check the two against each other
+  ([docs/PLAYER.md](docs/PLAYER.md#renderers)).
+
 - **Music, more minigames, and the game in one language.**
   - **Music and ambience.** Games have a soundtrack out of the box: day and
     night music, birdsong, crickets and rain, composed and synthesized by the

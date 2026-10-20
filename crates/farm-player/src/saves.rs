@@ -337,6 +337,25 @@ mod tests {
         assert!(settings_from_toml("[audio\n").is_err());
     }
 
+    #[test]
+    fn the_renderer_setting_reads_leniently() {
+        use farm_ui::RendererChoice;
+        let mut settings = Settings::default();
+        assert_eq!(settings.display.renderer, RendererChoice::Auto);
+        settings.display.renderer = RendererChoice::Cpu;
+        let text = settings_to_toml(&settings);
+        assert!(text.contains("renderer = \"cpu\""), "{text}");
+        assert_eq!(settings_from_toml(&text).unwrap().display.renderer, RendererChoice::Cpu);
+        assert_eq!(
+            settings_from_toml("[display]\nrenderer = \"GPU\"\n").unwrap().display.renderer,
+            RendererChoice::Gpu
+        );
+        // An unknown renderer is `auto`, and the rest of the file still counts.
+        let odd = settings_from_toml("[display]\nrenderer = \"vulkan\"\nfullscreen = true\n").unwrap();
+        assert_eq!(odd.display.renderer, RendererChoice::Auto);
+        assert!(odd.display.fullscreen);
+    }
+
     fn files_in(folder: &Path) -> Vec<String> {
         let mut names: Vec<String> =
             fs::read_dir(folder).unwrap().map(|entry| entry.unwrap().file_name().to_string_lossy().into()).collect();

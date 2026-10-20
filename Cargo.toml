@@ -16,6 +16,7 @@ members = [
     "crates/farm-ffi",
     "crates/farm-wasm",
     "crates/farm-player",
+    "crates/farm-gpu",
     "crates/farm-plugins",
     "crates/farm-bench",
     "crates/farm-fuzz",

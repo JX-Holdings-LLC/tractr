@@ -26,6 +26,7 @@
 pub mod atmosphere;
 pub mod builtin_art;
 pub mod canvas2d;
+pub mod compose;
 pub mod css_color;
 pub mod draw;
 pub mod graphics;
@@ -40,6 +41,7 @@ pub mod world;
 
 pub use builtin_art::{BuiltinArt, BuiltinArtEntry, BuiltinArtManifest};
 pub use canvas2d::{compute_camera, entity_pixel_origin};
+pub use compose::{Composition, Upscale, WorldLayer};
 pub use css_color::Color;
 pub use draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
 pub use graphics::{apply_graphics, resolve_visual, ArtAsset, GraphicsSource};

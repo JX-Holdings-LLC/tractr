@@ -17,12 +17,14 @@ struct Options {
     script: Option<PathBuf>,
     exit_after_frames: Option<u64>,
     fullscreen: Option<bool>,
+    renderer: Option<farm_ui::RendererChoice>,
 }
 
 fn usage() -> &'static str {
     "Usage:\n\
-     \x20 farm-player [--cart game.cart] [--fullscreen | --windowed] [--exit-after-frames N]\n\
-     \x20     Play the game in a window (game.cart beside the executable by default).\n\
+     \x20 farm-player [--cart game.cart] [--fullscreen | --windowed] [--renderer auto|gpu|cpu] [--exit-after-frames N]\n\
+     \x20     Play the game in a window (game.cart beside the executable by default). --renderer (or\n\
+     \x20     FARM_RENDERER) picks the GPU or CPU renderer; auto takes the GPU when a hardware one works.\n\
      \x20 farm-player --headless [--cart game.cart] [--replay replay.json] [--load save] [--save save]\n\
      \x20     Replay without a window and print a JSON report. A save path ending in .json writes a\n\
      \x20     JSON save; any other name writes a binary save. --load reads either.\n\
@@ -65,6 +67,13 @@ fn parse_args() -> Result<Options, String> {
             }
             "--fullscreen" => options.fullscreen = Some(true),
             "--windowed" => options.fullscreen = Some(false),
+            "--renderer" => {
+                let text = value("--renderer")?;
+                options.renderer = Some(
+                    farm_ui::RendererChoice::parse(&text)
+                        .ok_or_else(|| format!("--renderer wants cpu, gpu or auto, not {text}"))?,
+                );
+            }
             "--help" | "-h" => return Err(usage().to_owned()),
             _ => return Err(format!("Unknown option {arg}.\n{}", usage())),
         }
@@ -135,6 +144,7 @@ fn windowed(options: Options) -> Result<(), String> {
     let desktop = farm_player::desktop::DesktopOptions {
         exit_after_frames: options.exit_after_frames,
         fullscreen: options.fullscreen,
+        renderer: options.renderer,
     };
     // An exported game has no console: a missing cartridge is shown in a window too.
     let cart = match cart_path(&options).and_then(|path| read(&path)) {

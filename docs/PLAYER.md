@@ -27,6 +27,7 @@ cargo run -p farm-player -- --screenshot title.png --cart game.cart --size 1280x
 |---|---|
 | `--cart <file>` | The cartridge (default: `game.cart` beside the executable). |
 | `--fullscreen`, `--windowed` | Start this way for this run; the setting is saved. |
+| `--renderer auto\|gpu\|cpu` | The window's renderer for this run ([Renderers](#renderers)); `FARM_RENDERER` does the same. |
 | `--exit-after-frames <n>` | Close after `n` frames (smoke tests). |
 | `--headless` | No window: load, replay, report (see below). |
 | `--replay <file>`, `--load <save>`, `--save <save>` | Headless replay input, incoming save and outgoing save. |
@@ -110,7 +111,10 @@ puts both under one folder (tests, portable installs). Every field has a
 default, so a partial or older file loads; an unreadable file is ignored.
 
 - **Display:** fullscreen (borderless) or windowed, integer scaling (whole
-  pixel steps, letterboxed) or fit, interface size (75–150 %).
+  pixel steps, letterboxed) or fit, interface size (75–150 %). The file
+  also keeps the renderer (`renderer = "auto"`, `"gpu"` or `"cpu"` under
+  `[display]`; [Renderers](#renderers)), which has no row in the settings
+  screen.
 - **Audio:** master, music, sound effects, mute. Sound effects are the
   synthesized farm-runtime presets, rendered once when the device opens.
   Music and ambience are built-in loops, composed and synthesized by the
@@ -235,11 +239,19 @@ loop {
 - Stores: `FsSaveStore`/`FsSettingsStore` (files) and
   `MemorySaveStore`/`MemorySettingsStore` (tests, the editor).
 
+A host with a renderer of its own calls `frame_composition` instead of
+`frame`: the same frame, returned as the `farm_render::Composition` the CPU
+path would rasterize (the world's draw list, native size, upscale and tints;
+the UI's draw list; their image stores). `compose_pixels` rasterizes that
+frame on the CPU after all.
+
 The crate's `desktop` feature (on by default) adds the window: winit and
-softbuffer, gilrs gamepads, cpal audio and the user folders. farm-ffi and the
-WebAssembly build use the library without it; farm-ffi turns on `audio-out`
-alone (cpal through `speaker::SpeakerThread`, which keeps the stream on its own
-thread so the player can move between threads).
+softbuffer, gilrs gamepads, cpal audio and the user folders; its `gpu`
+feature (on by default too, so in the Export Game templates) adds the GPU
+renderer ([Renderers](#renderers)). farm-ffi and the WebAssembly build use the
+library without them; farm-ffi turns on `audio-out` alone (cpal through
+`speaker::SpeakerThread`, which keeps the stream on its own thread so the
+player can move between threads).
 
 ## In the editor
 
@@ -287,6 +299,9 @@ under one lock, so plugin hooks never block the editor. Editor shortcuts
    letterboxed when the scene is smaller than the window.
 5. The UI is rasterized at full resolution on top, so text stays crisp.
 
+Steps 4 and 5 are the same with the GPU renderer, on the GPU
+([Renderers](#renderers)); the times below are the CPU renderer's.
+
 The UI scales with the window (1× at 1280×800, 1.35× at 1920×1080) times the
 interface size setting. 16:10 (Steam Deck) and 16:9 both lay out without
 overlap; the HUD drops its labels and then wraps when space runs out. A host
@@ -324,6 +339,64 @@ and reports 2560×1600 and 3840×2160 without a budget (one run on a shared clou
 unchanged menu frames and upscaling straight into the window's buffer are
 the next steps.
 
+## Renderers
+
+The desktop game draws its frames with one of two renderers:
+
+- **GPU** (`farm-gpu`, [wgpu] on Vulkan, DirectX 12 or Metal; no OpenGL). It
+  executes the same `Composition` as the CPU path, in passes: the world's
+  draw list into an offscreen texture at the native pixel-art size with the
+  backdrop tints, then the frame at the window's size (the letterbox colour,
+  the world scaled up with nearest neighbour through the CPU path's own
+  column and row maps, the UI at full resolution), then a copy into the
+  window's surface. Later lighting, palette-swap or particle passes go
+  between those. Rectangles, rounded rectangles, nearest and bilinear images
+  (with tints and opacity), glyphs and the day/night modulate are drawn by
+  the shader with the CPU rasterizer's integer arithmetic. Glyphs come from
+  farm-render's own coverage masks, in a glyph atlas. Everything else
+  (strokes, circles, ovals, lines, blurred shadows, outlined or very large
+  text) is rasterized once by the CPU rasterizer into a sprite atlas, keyed
+  by the command and the fractional part of its position, so a shape that
+  moves by whole pixels is not rasterized again. Clips are scissor
+  rectangles. A full atlas is cleared, then grown up to the device's limit;
+  a frame that still does not fit is drawn on the CPU and shown through the
+  GPU.
+- **CPU** (`farm-render`'s rasterizer, presented through softbuffer). It is
+  the reference: the screenshot goldens, `--screenshot`, headless runs, the
+  editor's Play Mode (pixels handed to the C# app) and the web player all
+  use it, and the GPU renderer is tested against it.
+
+`--renderer`, else the `FARM_RENDERER` environment variable, else the
+`renderer` setting picks one:
+
+| Value | Renderer |
+|---|---|
+| `auto` (default) | The GPU when a hardware adapter works; otherwise the CPU. A software adapter (llvmpipe, WARP) rasterizes on the CPU too, so `auto` leaves it to the CPU renderer. |
+| `gpu` | The GPU, software adapters included; the CPU when there is none. |
+| `cpu` | The CPU. |
+
+The game never stops or shows a black window over the renderer. No adapter,
+no surface, a device that cannot be created, a device that is lost or
+reports an error, or a panic in the GPU path switches the window to the CPU
+renderer, which shows the same frame. The renderer in use, and why the
+window fell back, is printed on stderr:
+
+```text
+Renderer: GPU, <adapter name> (discrete GPU, Vulkan)
+Renderer: CPU (the GPU renderer is not available: no GPU adapter: only a software adapter: llvmpipe (…) (software, Vulkan))
+Renderer: CPU (the GPU renderer stopped: the GPU device failed: …)
+```
+
+The two agree within a small tolerance: on the screenshot goldens' screens
+at 1280×800 and 1920×1080, a walk with the camera between pixels, fitted
+scaling and Spanish with the readable font, at most 25 pixels of a frame
+differ by more than 6 in a channel (anti-aliased edges, which the GPU
+computes from areas where tiny-skia scans), and most frames not at all
+(lavapipe, `crates/farm-player/tests/gpu_parity.rs`). The GPU renderer adds
+about 4.4 MB to the Linux template (13.4 → 17.8 MB stripped; 5.5 → 7.3 MB gzipped).
+
+[wgpu]: https://wgpu.rs
+
 ## Tests
 
 - `crates/farm-ui`: layout, focus navigation (keyboard and gamepad), clicks
@@ -337,6 +410,13 @@ the next steps.
   full-size frames with `FARM_PLAYER_SCREENSHOTS=<dir>` (the ignored
   `review_screens` test writes every other screen too).
 - `crates/farm-player/tests/binary.rs`: `--screenshot`, and the real window
-  under `xvfb-run` for a few frames (skipped without Xvfb).
+  under `xvfb-run` for a few frames with each renderer (skipped without
+  Xvfb; `--renderer gpu` falls back to the CPU without a Vulkan driver).
+- `crates/farm-player/tests/gpu_parity.rs` and `crates/farm-gpu/tests/parity.rs`:
+  the GPU renderer offscreen against the CPU one, on the screenshot screens
+  and on draw lists of every command, plus full atlases, oversized frames
+  and a lost device (skipped without an adapter; on Linux,
+  `mesa-vulkan-drivers` provides lavapipe). `FARM_GPU_SCREENSHOTS=<dir>`
+  writes both frames.
 - `crates/farm-player/tests/bench.rs` (ignored): frame times, run with
   `cargo test --release -p farm-player --test bench -- --ignored --nocapture`.
