@@ -784,6 +784,7 @@ dependencies = [
 name = "farm-plugins"
 version = "0.3.0-dev"
 dependencies = [
+ "farm-runtime",
  "farm-sim",
  "serde",
  "serde_json",

@@ -96,6 +96,21 @@ let ``plugins of enabled packs ship with the hooks their manifest grants`` () =
     Assert.Equal(None, first.GrantedMutations)
     Assert.Equal("beta:greeter", cart.Plugins.[1].Id)
     Assert.Equal(Some [ "message"; "giveItem:any" ], cart.Plugins.[1].GrantedMutations)
+    // No minigame kinds: the field stays absent, so these cartridges keep their bytes.
+    Assert.Empty(first.GrantedMinigames)
+
+[<Fact>]
+let ``plugins carry the minigame kinds their manifest allows`` () =
+    let pack = validPack (readJson [ "Fixtures"; "lantern-night-mod.json" ])
+    let project = { starter () with ContentPacks = [ { PackInstallation.Default with Pack = pack } ] }
+    let cart = read (CartridgeCompiler.Compile project)
+    Assert.Equal<string list>([ "lantern-night:lantern-catch" ], cart.Plugins.[0].GrantedMinigames)
+    Assert.Equal<string list>([], cart.Plugins.[0].GrantedHooks)
+    Assert.Equal(Some [], cart.Plugins.[0].GrantedMutations)
+    // Without the manifest's permission the plugin defines nothing.
+    let denied = { pack with Manifest = { pack.Manifest with Permissions = { pack.Manifest.Permissions with Minigames = Some [] } } }
+    let cart = read (CartridgeCompiler.Compile { project with ContentPacks = [ { PackInstallation.Default with Pack = denied } ] })
+    Assert.Empty(cart.Plugins.[0].GrantedMinigames)
     Assert.Empty (read (CartridgeCompiler.Compile(starter ()))).Plugins
 
 [<Fact>]

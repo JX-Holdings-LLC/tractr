@@ -127,6 +127,8 @@ public sealed class ModsEditorView : UserControl, IRetirable
         _review.Children.Add(Ui.Wrapped($"Permissions: content {(manifest.Permissions.ContentInject ? "added to your game" : "off (none of the pack's content loads)")}; hooks {(manifest.Permissions.Hooks.Length == 0 ? "none" : string.Join(", ", manifest.Permissions.Hooks))}{(manifest.Permissions.UiPanels ? "; UI panels requested (not supported, grants nothing)" : "")}", "small"));
         if (pack.Plugins.Length > 0)
             _review.Children.Add(Ui.Wrapped($"Plugins may: {PackRules.describeMutations(manifest.Permissions)}", "small"));
+        if (PackRules.describeMinigames(manifest).OrNull() is { } minigames)
+            _review.Children.Add(Ui.Wrapped($"Minigames: {minigames}", "small"));
         if (manifest.Dependencies.Length > 0)
             _review.Children.Add(Ui.Wrapped($"Dependencies: {string.Join(", ", manifest.Dependencies.Select(dep => $"{dep.PackId} {dep.Version.OrNull() ?? "*"}"))}", "muted", "small"));
         if (manifest.Overrides.Length > 0)

@@ -269,7 +269,7 @@ internal sealed class ContentForm
         var name = "ContentField_" + path;
         var type = Unwrap(property.PropertyType);
         var nullable = IsNullable(property);
-        var field = ContentForms.Field(owner.Name, property.Name, label);
+        var field = ContentForms.Field(owner.Name, property.Name, label, _project);
         if (field is { Kind: "reference" or "referenceList" }) label = TrimId(label);
 
         if (property.Name == "Id" && type == typeof(string))
@@ -694,20 +694,23 @@ internal sealed class ContentForm
 
     /// <summary>
     /// A built-in minigame kind's settings as typed fields (F# <c>MinigameKinds</c>), with a line on
-    /// how the kind plays; a kind the game doesn't have keeps the raw setting rows.
+    /// how the kind plays; a kind a pack defines (with that line) and a kind the game doesn't have
+    /// keep the raw setting rows.
     /// </summary>
     private void AddMinigameSettings(Panel panel, JsonObject target, string key, string path)
     {
         var kind = StringOf(target[Key<MinigameDef>(nameof(MinigameDef.Kind))]) ?? "";
         var settings = ContentForms.MinigameSettings(kind);
+        var help = ContentForms.MinigameHelp(kind, _project);
         if (settings.Count == 0)
         {
+            if (help.Length > 0) panel.Children.Add(Ui.Text(help, "muted", "small"));
             AddKeyValues(panel, target, key, path);
             return;
         }
 
         if (target[key] is not JsonObject config) target[key] = config = new JsonObject();
-        panel.Children.Add(Ui.Text(ContentForms.MinigameHelp(kind), "muted", "small"));
+        panel.Children.Add(Ui.Text(help, "muted", "small"));
         panel.Children.Add(VocabularyFields(config, settings, path));
         // A cleared setting goes away (the game then plays its default) instead of staying as null.
         _writers.Add(() =>

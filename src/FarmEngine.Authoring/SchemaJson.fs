@@ -2269,6 +2269,7 @@ module SchemaJson =
         let mutable vContentInject = true
         let mutable vUiPanels = false
         let mutable vMutations = None
+        let mutable vMinigames = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -2276,8 +2277,9 @@ module SchemaJson =
             | "contentInject" -> vContentInject <- Decode.boolean (key :: path) value
             | "uiPanels" -> vUiPanels <- Decode.boolean (key :: path) value
             | "mutations" -> vMutations <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "minigames" -> vMinigames <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Hooks = vHooks; ContentInject = vContentInject; UiPanels = vUiPanels; Mutations = vMutations; Extra = List.ofSeq extra }
+        { Hooks = vHooks; ContentInject = vContentInject; UiPanels = vUiPanels; Mutations = vMutations; Minigames = vMinigames; Extra = List.ofSeq extra }
 
     and encodePackPermissions (value: PackPermissions) : Json =
         JObject(
@@ -2287,6 +2289,9 @@ module SchemaJson =
                 yield "uiPanels", JBool value.UiPanels
                 match value.Mutations with
                 | Some v -> yield "mutations", (Encode.list JString) v
+                | None -> ()
+                match value.Minigames with
+                | Some v -> yield "minigames", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -2335,6 +2340,7 @@ module SchemaJson =
         let mutable vId = ""
         let mutable vName = None
         let mutable vHooks = []
+        let mutable vMinigames = None
         let mutable vSource = ""
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
@@ -2342,9 +2348,10 @@ module SchemaJson =
             | "id" -> vId <- Decode.string (key :: path) value
             | "name" -> vName <- Decode.optional Decode.string (key :: path) value
             | "hooks" -> vHooks <- (Decode.list Decode.string) (key :: path) value
+            | "minigames" -> vMinigames <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "source" -> vSource <- Decode.string (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Hooks = vHooks; Source = vSource; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Hooks = vHooks; Minigames = vMinigames; Source = vSource; Extra = List.ofSeq extra }
 
     and encodePackPlugin (value: PackPlugin) : Json =
         JObject(
@@ -2354,6 +2361,9 @@ module SchemaJson =
                 | Some v -> yield "name", JString v
                 | None -> ()
                 yield "hooks", (Encode.list JString) value.Hooks
+                match value.Minigames with
+                | Some v -> yield "minigames", (Encode.list JString) v
+                | None -> ()
                 yield "source", JString value.Source
                 yield! value.Extra
             ]

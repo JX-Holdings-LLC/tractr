@@ -111,7 +111,7 @@ what an exported game contains.
 - **Contents (as built):** the compiled content, the new-game start state and
   the presentation data as JSON sections with string ids and numbers in
   authoring units, an asset table with every embedded file once, and the pack
-  plugins with their granted hooks (see "Format 2" below).
+  plugins with their granted hooks and minigame kinds (see "Format 2" below).
 - **Contents (Future):** content tables with ids interned to dense integer
   indices, a string table per locale, compiled condition bytecode, compiled
   dialogue graphs, flat tile-layer arrays and texture atlases packed at load.

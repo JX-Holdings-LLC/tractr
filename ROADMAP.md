@@ -352,16 +352,27 @@ it makes run the graphical player, with a title screen, save slots, settings
 and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
 [docs/EXPORT.md](docs/EXPORT.md) has the design, what is done and what is left.
 
+## Content packs
+
+- [x] **Minigames from content packs.** A pack plugin defines a minigame kind
+  with `api.minigame(name, { start, update, draw })`, allowed by the
+  manifest's `permissions.minigames`. Each session runs in its own sandbox
+  instance with a fuel budget per frame; `update` gets the routed game input,
+  `draw` answers a checked list of rectangles, text and item sprites that
+  `farm-ui` draws in the minigame window, and the score resolves the def's
+  tiers like a built-in kind (a plugin that fails or breaks a limit scores 0
+  and reports the error). The editor offers the enabled packs' kinds, Problems
+  knows them, and cartridges carry each plugin's granted kinds. No guest
+  change: the API is a JavaScript prelude over `api.on`
+  ([docs/PLUGINS.md](docs/PLUGINS.md#minigames)). Pointer input and sounds
+  for pack minigames are not there yet.
+
 ## Later
 
 - **Localization** of the rest of the editor UI (tabs, forms and Problems;
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
-- **Minigames from content packs.** The minigame kinds are compiled into the
-  player (six built in, picked from a list in the editor). Letting a pack
-  define its own needs a plugin API beyond mutations: per-frame update and
-  draw calls into the sandbox, and input routed to it.
 - **Retire the web version's TypeScript engine** once playtesting on
   `farm-wasm` has proven itself, and move its HTML export to `farm-wasm`'s
   standalone player (as the native editor's web demo export does).

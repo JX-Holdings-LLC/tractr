@@ -38,7 +38,8 @@ toasts look and behave exactly as they do in an exported game. Frames run on a
 worker thread, so plugins never stall the editor. The editor adds Restart,
 Keep changes and a debug drawer. Content-pack plugins run in `farm-plugins`, a
 QuickJS-in-WebAssembly sandbox with deterministic fuel budgets; a pack's
-manifest declares what its plugins may change ([docs/PLUGINS.md](docs/PLUGINS.md)).
+manifest declares what its plugins may change, and a plugin can define its own
+minigame kinds ([docs/PLUGINS.md](docs/PLUGINS.md)).
 
 **F# authoring.** Project migrations, validation, the Problems pipeline,
 content compilation, pack composition, localization, the starter pack and the

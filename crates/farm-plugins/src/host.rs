@@ -1,6 +1,7 @@
 //! The plugin host: one isolated QuickJS instance per plugin (port of `JintPluginHost`).
 
 use crate::capabilities::{check_answer, KeyBudget, MutationGrants};
+use crate::minigame::{wrapped_source, MinigameLimits, PackMinigame};
 use crate::sandbox::{self, status, EngineLimits, GuestFault, GuestInstance, Sandbox, WasmiEngine, MAX_RESULT_BYTES};
 use crate::{PluginDispatchResult, PluginError, PluginErrorKind, PluginSpec};
 use serde_json::Value;
@@ -75,6 +76,8 @@ pub struct PluginHostOptions {
     /// Most times a plugin is rebuilt after an overrun in one session; the next overrun
     /// disables it.
     pub max_rebuilds: u32,
+    /// Budgets and bounds of pack-defined minigame sessions ([`WasmPluginHost::start_minigame`]).
+    pub minigame: MinigameLimits,
 }
 
 impl Default for PluginHostOptions {
@@ -93,6 +96,7 @@ impl Default for PluginHostOptions {
             max_strikes: 3,
             strike_window: 100,
             max_rebuilds: 10,
+            minigame: MinigameLimits::default(),
         }
     }
 }
@@ -290,6 +294,34 @@ impl WasmPluginHost {
         self.entries.iter().find(|entry| entry.spec.id == plugin_id).and_then(|entry| entry.last_fuel_used)
     }
 
+    /// Whether some plugin defines the minigame `kind` (`packId:name`, granted by its pack).
+    pub fn defines_minigame(&self, kind: &str) -> bool {
+        self.entries.iter().any(|entry| entry.spec.defines_minigame(kind))
+    }
+
+    /// Start a session of the pack-defined minigame `kind` (`packId:name`) with the def's
+    /// `config` and a `seed` for its randomness (passed to `start` as `info.seed`): a fresh
+    /// instance of the first plugin, in spec order, that defines it (see [`PackMinigame`]).
+    /// `None` when no plugin defines the kind; an error when that plugin is disabled for the
+    /// session or the start fails. Hook handlers, strikes and budget windows are not affected.
+    pub fn start_minigame(&self, kind: &str, config: &Value, seed: u32) -> Option<Result<PackMinigame, PluginError>> {
+        let entry = self.entries.iter().find(|entry| entry.spec.defines_minigame(kind))?;
+        let id = &entry.spec.id;
+        let refuse = |message: String| PluginError {
+            plugin_id: id.clone(),
+            kind: PluginErrorKind::Disabled,
+            message: format!("minigame {kind} failed: {message}"),
+            hook: Some(format!("{}{}", crate::MINIGAME_HOOK_PREFIX, kind.rsplit_once(':').map_or(kind, |(_, n)| n))),
+        };
+        if entry.disabled {
+            return Some(Err(refuse(format!("plugin {id} is disabled for this session"))));
+        }
+        let Some(sandbox) = &self.sandbox else {
+            return Some(Err(refuse("the plugin sandbox is not available".to_owned())));
+        };
+        Some(PackMinigame::start(sandbox, &entry.spec, kind, config, seed, self.options.minigame.clone()))
+    }
+
     /// Build a fresh instance for the plugin and run its source with `fuel`.
     fn initialize(&mut self, index: usize, fuel: u64) -> Result<(), PluginError> {
         let entry = &mut self.entries[index];
@@ -302,7 +334,7 @@ impl WasmPluginHost {
         };
         let mut instance = sandbox.instance().map_err(|fault| failed(&describe_fault(&fault)))?;
         instance.set_fuel(fuel);
-        let reply = sandbox::init(instance.as_mut(), &entry.granted_json, &entry.spec.source);
+        let reply = sandbox::init(instance.as_mut(), &entry.granted_json, &wrapped_source(&entry.spec.source));
         entry.last_fuel_used = Some(instance.fuel_used(fuel));
         let reply = reply.map_err(|fault| failed(&describe_fault(&fault)))?;
         match reply.status {

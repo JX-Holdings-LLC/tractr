@@ -16,6 +16,16 @@
     settings as fields, and Problems warns about a kind the game doesn't have
     (it used to become a silent 0.5 "Go!" button), unused settings and
     numbers out of range.
+  - **Minigames from content packs.** A pack's plugin can define its own
+    minigame kind (`api.minigame`, allowed by the manifest's new
+    `minigames` permission): the game runs it frame by frame with the
+    player's keys and draws its rectangles, text and item art in the
+    minigame window, and its score picks the reward tier like any minigame.
+    A plugin that throws or goes over its limits ends the minigame as failed
+    with an error the creator sees, never stalling the game. The editor's
+    kind list offers the enabled packs' kinds, Problems says when a kind's
+    pack is missing, turned off or lacks the permission, and the example pack
+    Lantern Night shows how (docs/PLUGINS.md "Minigames").
   - **Spanish all the way.** The engine's own messages ("Not enough money!"),
     the built-in minigames' texts and save-load notices follow the game's
     language, and the editor's whole menu bar is translated. Replays and

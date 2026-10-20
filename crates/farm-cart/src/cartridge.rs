@@ -52,6 +52,8 @@ pub struct CartPlugin {
     /// The pack manifest's `permissions.mutations`; `None` when it declares none (the player
     /// then applies the default capabilities).
     pub granted_mutations: Option<Vec<String>>,
+    /// The minigame kinds (`packId:name`) the plugin defines that the manifest allows.
+    pub granted_minigames: Vec<String>,
 }
 
 /// A verified cartridge, borrowing its sections from the buffer.
@@ -125,6 +127,10 @@ pub fn read_cartridge(bytes: &[u8]) -> Result<Cartridge<'_>, String> {
                     granted_mutations: plugin
                         .granted_mutations()
                         .map(|mutations| mutations.iter().map(str::to_owned).collect()),
+                    granted_minigames: plugin
+                        .granted_minigames()
+                        .map(|kinds| kinds.iter().map(str::to_owned).collect())
+                        .unwrap_or_default(),
                 })
                 .collect()
         })

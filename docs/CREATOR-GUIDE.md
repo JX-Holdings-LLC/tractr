@@ -118,11 +118,15 @@ to:
   is a short challenge whose score picks the reward. Its **Kind** is one of
   the games built into the player: **Timing bar**, **Hold to catch**,
   **Simple battle**, **Rhythm tap**, **Moving target** and **Memory
-  sequence**. Each kind's settings show as fields with their defaults (clear
-  one to play the default). The kinds are part of the engine: a project
-  can't add its own, and a kind the game doesn't have plays as a single
-  "Go!" button that scores 0.5, which Problems warns about, as it does about
-  settings the kind doesn't read or numbers outside their range.
+  sequence**, or a kind an enabled content pack defines (listed as
+  `pack:name (from Pack Name)`; its plugin runs and draws the game, see
+  [docs/PLUGINS.md](PLUGINS.md#minigames)). Each built-in kind's settings
+  show as fields with their defaults (clear one to play the default); a
+  pack kind's settings are passed to its plugin as written. A kind the game
+  doesn't have plays as a single "Go!" button that scores 0.5, which
+  Problems warns about (also when the pack of a pack kind is missing, turned
+  off or lacks the permission), as it does about settings a built-in kind
+  doesn't read or numbers outside their range.
 
 Every nested field also has an **Edit as JSON** box, for pasting or bulk
 changes.

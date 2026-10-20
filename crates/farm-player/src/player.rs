@@ -633,11 +633,23 @@ impl Player {
         self.ui.set_focus(farm_ui::WidgetId::new("pause").with("Resume"));
     }
 
+    /// A plugin error as a toast. A toast is a glance, not a log: the full text is in the plugin
+    /// errors list.
+    fn plugin_error_toast(&mut self, error: &str) {
+        let error = match error.char_indices().nth(PLUGIN_ERROR_TOAST_CHARS) {
+            Some((end, _)) => format!("{}…", &error[..end]),
+            None => error.to_owned(),
+        };
+        let message = self.ui.lang().format("toast.pluginError", &[&error]);
+        self.game_ui.toasts.push(message, ToastKind::Error);
+    }
+
     fn drain_session_events(&mut self) {
         let lang = self.ui.lang();
         let Some(game) = self.game.as_mut() else { return };
         let gain = self.settings.audio.effects_gain();
         let mut autosave = false;
+        let mut plugin_errors = Vec::new();
         for event in game.session.drain_events() {
             match event {
                 SessionEvent::Toast { text, kind, message } => {
@@ -650,8 +662,12 @@ impl Player {
                     }
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
+                SessionEvent::PluginError { text } => plugin_errors.push(text),
                 SessionEvent::SceneChanged { .. } | SessionEvent::QuestCompleted { .. } => {}
             }
+        }
+        for error in plugin_errors {
+            self.plugin_error_toast(&error);
         }
         if autosave && self.mode == PlayerMode::Standalone {
             let slot = self.game.as_ref().map_or(0, |game| game.slot);
@@ -1125,13 +1141,7 @@ impl Player {
         session.set_reduced_motion(self.settings.accessibility.reduced_motion);
         let graphics = GraphicsSource::from_state(&self.def.presentation, session.content(), session.state());
         for error in session.plugin_errors() {
-            // A toast is a glance, not a log: the full text is in the plugin errors list.
-            let error = match error.char_indices().nth(PLUGIN_ERROR_TOAST_CHARS) {
-                Some((end, _)) => format!("{}…", &error[..end]),
-                None => error,
-            };
-            let message = self.ui.lang().format("toast.pluginError", &[&error]);
-            self.game_ui.toasts.push(message, ToastKind::Error);
+            self.plugin_error_toast(&error);
         }
         self.game = Some(Game { session, graphics, urls: SharedUrls::new(), slot, play_seconds });
         self.game_ui = GameUi { toasts: std::mem::take(&mut self.game_ui.toasts), ..GameUi::new() };

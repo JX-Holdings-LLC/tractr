@@ -37,8 +37,9 @@ three sections:
 | `presentation_json` | `farm_sim::Presentation` | Art bindings, custom assets, graphics settings, creator panels |
 
 A `plugins` table carries the sandboxed plugins of the enabled content packs
-in load order, each with the hooks its pack manifest grants, so an exported
-game runs them in `farm-plugins` exactly as the editor does.
+in load order, each with the hooks and minigame kinds its pack manifest
+grants, so an exported game runs them in `farm-plugins` exactly as the editor
+does.
 
 The sections are JSON with numbers in authoring units (tiles, points,
 minutes); the engine converts them to its fixed-unit integers when it reads

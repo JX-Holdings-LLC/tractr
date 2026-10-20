@@ -396,6 +396,22 @@ type ContentForms =
         | Some role -> FormField.OfRole(label, role)
         | None -> null
 
+    /// What `owner.property` holds in `project` (`Field`, with the choices that depend on the
+    /// project: a minigame's kind offers the kinds the enabled packs define too).
+    static member Field(owner: string, property: string, label: string, project: GameProject) : FormField | null =
+        match References.roleIn project owner property with
+        | Some role -> FormField.OfRole(label, role)
+        | None -> null
+
+    /// What a minigame kind plays like in `project`: a built-in kind's help, or for a kind an
+    /// enabled pack defines, which pack runs it (empty for a kind the game doesn't have).
+    static member MinigameHelp(kind: string, project: GameProject) : string =
+        match MinigameKinds.tryFind kind, MinigameKinds.tryFindPackKind project kind with
+        | Some builtIn, _ -> builtIn.Help
+        | None, Some pack ->
+            sprintf "Defined by the pack %s (plugin %s): the plugin runs and draws the game. Its settings are passed to the plugin as written." pack.PackName pack.PluginId
+        | None, None -> ""
+
     /// The typed settings of a built-in minigame kind, as optional fields of its `config` (empty
     /// for a kind the game doesn't have). Clearing one plays with its default (the placeholder).
     static member MinigameSettings(kind: string) : IReadOnlyList<FormField> =
