@@ -256,6 +256,7 @@ checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
 | `crates/farm-ui` (Rust) | In-game UI on draw lists: HUD, dialogue, shop, crafting, inventory, quests, panels, minigames, the game shell's screens | `GameView.tsx` and its dialogs |
 | `crates/farm-runtime` (Rust) | Fixed timestep, input bindings, minigames, creator panels, audio model | `packages/engine-runtime` |
 | `crates/farm-render` (Rust) | World and Edit Mode snapshots, art decoration, built-in art, draw lists, a CPU rasterizer and fonts | `packages/renderer-canvas2d`, `packages/game-shell/src/snapshot.ts` |
+| `crates/farm-gpu` (Rust) | The desktop player's GPU renderer: farm-render's draw lists through wgpu (Vulkan, DirectX 12, Metal), with the CPU rasterizer as fallback and reference | —  |
 | `crates/farm-plugins` (Rust) | Plugin sandbox: QuickJS in WebAssembly, one wasmi instance per plugin, fuel budgets | `packages/engine-runtime/src/plugins.ts` |
 
 [docs/PORTING.md](docs/PORTING.md) has the porting conventions.

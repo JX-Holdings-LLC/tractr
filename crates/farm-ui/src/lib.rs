@@ -34,7 +34,7 @@ pub use i18n::Lang;
 pub use icons::Icon;
 pub use input::{GamepadButton, InputDevice, NavAction, UiInput};
 pub use layout::{Align, Flow, RectExt};
-pub use settings::{BindAction, Bindings, KeyRoute, Settings};
+pub use settings::{BindAction, Bindings, KeyRoute, RendererChoice, Settings};
 pub use theme::Theme;
 pub use ui::{HitKind, Interaction, Ui, WidgetId};
 pub use widgets::{Button, ButtonKind, Modal, ModalSpec};

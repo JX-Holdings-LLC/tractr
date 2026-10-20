@@ -18,7 +18,8 @@ C# Avalonia editor (`src/FarmingRpgMaker.App`). There is no dev server, no
   Python 3.
 - Linux: `libasound2-dev libudev-dev pkg-config` to build;
   `libxkbcommon-x11-0` to run the window; `xvfb` for the player's window test
-  (skipped without it).
+  and `mesa-vulkan-drivers` (lavapipe) for the GPU renderer's parity tests
+  (both skipped without them).
 - Optional tools; their levels are skipped, not failed, when they are absent:
   cargo-about 0.9.2 (player license check), cargo-llvm-cov (coverage),
   cargo-deny and cargo-machete (security), wasm-opt (smaller wasm only).

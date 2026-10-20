@@ -9,7 +9,7 @@ repository.workspace = true
 publish.workspace = true
 
 [features]
-default = ["desktop"]
+default = ["desktop", "gpu"]
 # The desktop game: a window (winit + softbuffer), gamepads (gilrs), audio (cpal), user folders
 # (directories) and the system language (sys-locale). Without it the crate is the
 # platform-independent player library (what farm-ffi embeds in the editor, and what builds for
@@ -18,6 +18,10 @@ desktop = ["audio-out", "dep:winit", "dep:softbuffer", "dep:gilrs", "dep:directo
 # Sound output on the default device (cpal), without the rest of the desktop game: the editor's
 # Play Mode.
 audio-out = ["dep:cpal"]
+# The desktop game's GPU renderer (farm-gpu: wgpu on Vulkan, DirectX 12 or Metal), chosen at run time
+# with --renderer, FARM_RENDERER or the display.renderer setting; the CPU renderer stays the
+# fallback and the reference.
+gpu = ["desktop", "dep:farm-gpu"]
 
 [dependencies]
 farm-cart = { path = "../farm-cart" }
@@ -26,6 +30,7 @@ farm-runtime = { path = "../farm-runtime" }
 farm-plugins = { path = "../farm-plugins" }
 farm-render = { path = "../farm-render" }
 farm-ui = { path = "../farm-ui" }
+farm-gpu = { path = "../farm-gpu", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 toml = { version = "1", default-features = false, features = ["parse", "display", "serde"] }
@@ -43,3 +48,8 @@ embed-resource = "3"
 
 [lints]
 workspace = true
+
+# The GPU renderer against the CPU one (skips without a GPU adapter).
+[[test]]
+name = "gpu_parity"
+required-features = ["gpu"]

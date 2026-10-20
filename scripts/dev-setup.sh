@@ -65,7 +65,7 @@ export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
 # --- System packages ------------------------------------------------------------------------
 
 apt_packages=(build-essential curl ca-certificates python3 pkg-config libasound2-dev libudev-dev
-  libxkbcommon-x11-0 libfontconfig1 libice6 libsm6 xvfb)
+  libxkbcommon-x11-0 libfontconfig1 libice6 libsm6 xvfb mesa-vulkan-drivers)
 
 system_packages() {
   say "System packages"

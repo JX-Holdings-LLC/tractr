@@ -75,8 +75,8 @@ and exit criteria for each phase.
 4. [x] Switch the app to F# + Rust; the C# engine projects are deleted
 5. [x] Editor port on the new stack (the list above)
 6. [x] Rust player and plugin sandbox, embedded in Play Mode; Export Game for
-   Windows and Linux, and (with `farm-wasm`) the web demo. A GPU renderer
-   comes later.
+   Windows and Linux, and (with `farm-wasm`) the web demo. The desktop player
+   draws on the GPU too (`farm-gpu`, wgpu); GPU effects come later.
 7. [x] One engine for web and native: F# schema records and the authoring core
    under Fable, `farm-wasm`, the web editor on both, native numerics (schema
    v9)
@@ -250,8 +250,8 @@ Play Mode.
 - [x] Play Mode runs pack plugins in `farm-plugins` (through the embedded
   player); the Jint host is deleted.
 - [x] `farm-render` supplies world snapshots, draw lists and a CPU
-  rasterizer that also builds for WebAssembly. GPU drawing is under
-  [Later](#later).
+  rasterizer that also builds for WebAssembly. The desktop player can draw
+  the same draw lists with wgpu (`farm-gpu`); GPU effects are under [Later](#later).
 - [x] Export Game packaging (`FarmEngine.Export`, File → Export Game…,
   `farmc export`): Problems gate, deterministic cartridge, renamed player
   template, Windows icon and version info patched from .NET, Linux `.png` and
@@ -382,9 +382,15 @@ and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
   `farm-wasm` has proven itself, and move its HTML export to `farm-wasm`'s
   standalone player (as the native editor's web demo export does).
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
-- **Player polish.** A GPU renderer (wgpu) for lighting, palette swaps and
-  particles; gamepad rebinding in the controls menu (keys are rebindable
-  today); a message box when the game crashes (it writes a crash log today).
+- **Player polish.** GPU effects: day/night lighting, season palette swaps
+  and weather particles as passes of the wgpu renderer (`farm-gpu` draws
+  the CPU renderer's frames today and falls back to it; docs/PLAYER.md
+  "Renderers"), each with a CPU equivalent or a clear "GPU only" rule;
+  drawing the remaining shapes (circles, strokes, blurs) in the shader
+  instead of as CPU-rasterized sprites; the GPU path for the editor's Play
+  Mode (it hands CPU pixels to the C# app). Gamepad rebinding in the controls
+  menu (keys are rebindable today); a message box when the game crashes (it
+  writes a crash log today).
 - **macOS/Linux builds** of the editor. Avalonia and Velopack already support
   them; this needs packaging and CI jobs. (Exported *games* get Linux builds
   in phase 6, whatever the editor runs on.)

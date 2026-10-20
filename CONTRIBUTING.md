@@ -38,9 +38,14 @@ What it installs:
   ```sh
   sudo apt-get install libasound2-dev libudev-dev pkg-config   # build: ALSA (cpal), libudev (gilrs)
   sudo apt-get install libxkbcommon-x11-0 xvfb                 # run the window; xvfb for the window test
+  sudo apt-get install mesa-vulkan-drivers                     # lavapipe: a software Vulkan driver for the GPU tests
   ```
 
-  Without `xvfb`, `crates/farm-player/tests/binary.rs` skips its window test.
+  Without `xvfb`, `crates/farm-player/tests/binary.rs` skips its window tests.
+  Without a Vulkan driver (a GPU's, or lavapipe), the GPU renderer's parity
+  tests (`crates/farm-gpu/tests/parity.rs`,
+  `crates/farm-player/tests/gpu_parity.rs`) say why and skip;
+  `FARM_REQUIRE_GPU=1` (set in CI on Linux) makes that a failure.
 
 Windows needs the MSVC build tools for Rust (the Visual Studio "Desktop
 development with C++" workload). macOS is untested: CI has no macOS job, and
@@ -126,6 +131,7 @@ Switches that only write images for a look, never compared:
 |---|---|
 | `FARM_PLAYER_SCREENSHOTS=<dir>` | full-size game screens (`cargo test -p farm-player --test screenshots`; `-- --ignored review_screens` for every screen) |
 | `FARM_WASM_SCREENSHOTS=<dir>` | the web demo's frames (`node tools/wasm/smoke.mjs`) |
+| `FARM_GPU_SCREENSHOTS=<dir>` | the GPU and CPU frames the parity tests compare (`cargo test -p farm-gpu --test parity`, `cargo test -p farm-player --test gpu_parity`) |
 | `FRM_SCREENSHOT_DIR=<dir>` | the editor screenshots in `docs/media` (`ScreenshotTests`, `GameScreenshotTests` in the app tests) |
 
 ## Property tests
