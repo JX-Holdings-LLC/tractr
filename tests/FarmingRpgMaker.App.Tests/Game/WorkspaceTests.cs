@@ -550,7 +550,7 @@ public sealed class WorkspaceTests
         tabs.SelectedIndex = 2;
         Pump();
         var problems = FindByName<ProblemsView>(host.Window, "ProblemsView");
-        var index = problems.CurrentProblems.ToList().FindIndex(problem => problem.TargetKind == "asset" && problem.TargetId == asset.Id);
+        var index = problems.ViewModel.Problems.ToList().FindIndex(problem => problem.TargetKind == "asset" && problem.TargetId == asset.Id);
         Assert.True(index >= 0);
 
         FindByName<Button>(host.Window, $"ProblemGo_{index}").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));

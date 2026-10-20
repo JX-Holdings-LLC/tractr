@@ -86,7 +86,7 @@ public sealed class ContentEditorTests
         tabs.SelectedIndex = 2;
         Pump();
         var problems = FindByName<ProblemsView>(host.Window, "ProblemsView");
-        var index = problems.CurrentProblems.ToList().FindIndex(problem => problem.TargetKind == "npc" && problem.TargetId == npc.Id);
+        var index = problems.ViewModel.Problems.ToList().FindIndex(problem => problem.TargetKind == "npc" && problem.TargetId == npc.Id);
         Assert.True(index >= 0);
         Assert.Contains("errors", FindByName<TextBlock>(host.Window, "ProblemsSummary").Text);
 
