@@ -1,158 +1,124 @@
-using System.Text.Json;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Platform.Storage;
-using FarmEngine.Authoring;
-using FarmEngine.Authoring.Net;
-using FarmEngine.Schemas;
 using FarmingRpgMaker.App.Projects;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 
 namespace FarmingRpgMaker.App.Game;
 
 /// <summary>
-/// Installed pack order, an explicit manifest/permission review before installation, the curated
-/// registry, and "Export selection as pack" (web ModsEditor).
+/// The Mods tab: shows its <see cref="ModsViewModel"/> (installed packs, the review, the
+/// registry, the export choices) and picks and saves the pack files.
 /// </summary>
 public sealed class ModsEditorView : UserControl, IRetirable
 {
     private static readonly FilePickerFileType PackFiles = new("Content pack JSON") { Patterns = ["*.json"], MimeTypes = ["application/json"] };
-    private readonly ProjectWorkspace _workspace;
     private readonly StackPanel _installed = new() { Name = "InstalledPacks", Spacing = 8 };
     private readonly StackPanel _review = new() { Name = "PackReview", Spacing = 8 };
-    private readonly TextBlock _message = Ui.Wrapped("Choose a content pack JSON file to review it.", "muted", "small");
-    private readonly Button _install;
     private readonly StackPanel _registry = new() { Name = "PackRegistry", Spacing = 6 };
-    private readonly TextBox _exportName = new() { Name = "ExportPackName", Text = "my-pack", MinWidth = 220 };
     private readonly StackPanel _exportCategories = new() { Name = "ExportCategories", Spacing = 4 };
-    private readonly TextBlock _exportMessage = Ui.Wrapped("", "muted", "small");
-    private readonly HashSet<string> _exportKeys = [.. Mods.DefaultExportKeys];
-    private readonly HashSet<(string Key, string Id)> _exportExcluded = [];
-    private ContentPack? _pending;
-    private string? _selectedPackId;
 
     public ModsEditorView(ProjectWorkspace workspace)
     {
-        _workspace = workspace;
+        ViewModel = new ModsViewModel(workspace, () => IsEffectivelyVisible);
+        DataContext = ViewModel;
         Name = "ModsEditorView";
-        _message.Name = "ModsMessage";
+        var message = Shown(Ui.Wrapped("", "muted", "small"), nameof(ModsViewModel.Message));
+        message.Name = "ModsMessage";
         var layout = new StackPanel { Spacing = 12, Margin = new Thickness(20), MaxWidth = 900 };
         layout.Children.Add(Ui.Text("INSTALLED PACKS", "section"));
         layout.Children.Add(_installed);
         layout.Children.Add(Ui.Text("ADD PACK", "section"));
-        var choose = Ui.AsyncButton("Choose pack JSON", ChoosePackAsync, error => _message.Text = $"Could not read the pack: {error.Message}", "tool");
+        var choose = Ui.AsyncButton("Choose pack JSON", ChoosePackAsync, ViewModel.PackReadFailed, "tool");
         choose.Name = "ChoosePackButton";
         layout.Children.Add(choose);
-        layout.Children.Add(_message);
+        layout.Children.Add(message);
         layout.Children.Add(_review);
-        _install = Ui.Button("Install reviewed pack", InstallReviewed, "accent");
-        _install.Name = "InstallPackButton";
-        _install.IsEnabled = false;
-        layout.Children.Add(_install);
+        var install = Ui.CommandButton("Install reviewed pack", ViewModel.InstallCommand, "accent");
+        install.Name = "InstallPackButton";
+        layout.Children.Add(install);
         layout.Children.Add(Ui.Text("REGISTRY", "section"));
         layout.Children.Add(Ui.Wrapped("Curated packs that ship with the editor. Install opens the same review as a pack file.", "muted", "small"));
         layout.Children.Add(_registry);
         layout.Children.Add(Ui.Text("EXPORT SELECTION AS PACK", "section"));
         layout.Children.Add(Ui.Wrapped("Turn what you built here into a shareable content pack. Tick a type to include all of it, or open it to pick entries.", "muted", "small"));
-        Ui.Label((_exportName, "Pack name"));
-        layout.Children.Add(Ui.HStack(8, Ui.Text("Pack name", "muted", "small"), _exportName));
+        var exportName = new TextBox { Name = "ExportPackName", MinWidth = 220 };
+        exportName.Bind(TextBox.TextProperty, new Binding(nameof(ModsViewModel.ExportName)) { Mode = BindingMode.TwoWay });
+        Ui.Label((exportName, "Pack name"));
+        layout.Children.Add(Ui.HStack(8, Ui.Text("Pack name", "muted", "small"), exportName));
         layout.Children.Add(_exportCategories);
-        var export = Ui.AsyncButton("Save pack JSON…", ExportSelectionAsync, error => _exportMessage.Text = $"Could not save the pack: {error.Message}", "accent");
+        var export = Ui.AsyncButton("Save pack JSON…", ExportSelectionAsync, ViewModel.ExportFailed, "accent");
         export.Name = "ExportPackButton";
         layout.Children.Add(export);
-        _exportMessage.Name = "ExportPackMessage";
-        layout.Children.Add(_exportMessage);
+        var exportMessage = Shown(Ui.Wrapped("", "muted", "small"), nameof(ModsViewModel.ExportMessage));
+        exportMessage.Name = "ExportPackMessage";
+        layout.Children.Add(exportMessage);
         Content = new ScrollViewer { Content = layout };
-        _workspace.ProjectChanged += OnProjectChanged;
-        Refresh();
+        ViewModel.PropertyChanged += OnViewModelChanged;
+        ShowInstalled();
+        ShowRegistry();
+        ShowExportCategories();
     }
+
+    public ModsViewModel ViewModel { get; }
 
     /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
-    public void Retire() => _workspace.ProjectChanged -= OnProjectChanged;
+    public void Retire() => ViewModel.Retire();
 
-    private void OnProjectChanged(object? sender, ProjectChangedEventArgs e)
+    public void Refresh() => ViewModel.Refresh();
+
+    private static TextBlock Shown(TextBlock block, string property)
     {
-        if (IsEffectivelyVisible) Refresh();
+        block.Bind(TextBlock.TextProperty, new Binding(property));
+        return block;
     }
 
-    public void SelectPack(string id)
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _selectedPackId = id;
-        Refresh();
+        switch (e.PropertyName)
+        {
+            case nameof(ModsViewModel.Installed): ShowInstalled(); break;
+            case nameof(ModsViewModel.Registry): ShowRegistry(); break;
+            case nameof(ModsViewModel.ExportCategories): ShowExportCategories(); break;
+            case nameof(ModsViewModel.Review): ShowReview(); break;
+        }
     }
 
-    public void ReviewPackJson(string json)
+    private void ShowReview()
     {
-        _pending = null;
         _review.Children.Clear();
-        _install.IsEnabled = false;
-        try
+        if (ViewModel.Review is not { } review) return;
+        _review.Children.Add(Ui.Text(review.Title, "h2"));
+        _review.Children.Add(Ui.Wrapped(review.Byline, "muted", "small"));
+        _review.Children.Add(Ui.Wrapped(review.Engine, "muted", "small"));
+        _review.Children.Add(Ui.Wrapped(review.Permissions, "small"));
+        if (review.PluginPermissions is { } plugins) _review.Children.Add(Ui.Wrapped(plugins, "small"));
+        if (review.Dependencies is { } dependencies) _review.Children.Add(Ui.Wrapped(dependencies, "muted", "small"));
+        if (review.Overrides is { } overrides) _review.Children.Add(Ui.Wrapped(overrides, "muted", "small"));
+        _review.Children.Add(Ui.Wrapped(review.Content, "small"));
+        if (review.Art is { } artText)
         {
-            var parsed = JsonModule.parse(json);
-            if (parsed.IsError) throw new JsonException(parsed.ErrorValue);
-            var validation = PackRules.validateContentPack(parsed.ResultValue);
-            if (validation.IsError)
-            {
-                _message.Text = $"Pack is invalid: {string.Join("; ", validation.ErrorValue)}";
-                return;
-            }
-
-            ReviewPack(validation.ResultValue);
-        }
-        catch (JsonException error)
-        {
-            _message.Text = $"Pack JSON could not be read: {error.Message}";
-        }
-    }
-
-    /// <summary>Shows a validated pack's manifest, permissions and plugins before installing it.</summary>
-    public void ReviewPack(ContentPack pack)
-    {
-        _pending = null;
-        _review.Children.Clear();
-        _install.IsEnabled = false;
-        if (_workspace.Current is { } project && Mods.IsInstalled(project, pack.Manifest.Id))
-        {
-            _message.Text = $"{pack.Manifest.Id} is already installed.";
-            return;
-        }
-
-        _pending = pack;
-        var manifest = pack.Manifest;
-        _message.Text = $"Review {manifest.Name} before installing.";
-        _review.Children.Add(Ui.Text($"{manifest.Name} · {manifest.Version}", "h2"));
-        _review.Children.Add(Ui.Wrapped($"{manifest.Description.OrNull() ?? "No description"} · by {manifest.Author.OrNull() ?? "unknown author"}", "muted", "small"));
-        _review.Children.Add(Ui.Wrapped($"Engine: {manifest.EngineCompatibility} · ID: {manifest.Id}", "muted", "small"));
-        // contentInject off means the pack's content is not loaded; packs cannot add UI panels
-        // yet, so uiPanels grants nothing.
-        _review.Children.Add(Ui.Wrapped($"Permissions: content {(manifest.Permissions.ContentInject ? "added to your game" : "off (none of the pack's content loads)")}; hooks {(manifest.Permissions.Hooks.Length == 0 ? "none" : string.Join(", ", manifest.Permissions.Hooks))}{(manifest.Permissions.UiPanels ? "; UI panels requested (not supported, grants nothing)" : "")}", "small"));
-        if (pack.Plugins.Length > 0)
-            _review.Children.Add(Ui.Wrapped($"Plugins may: {PackRules.describeMutations(manifest.Permissions)}", "small"));
-        if (manifest.Dependencies.Length > 0)
-            _review.Children.Add(Ui.Wrapped($"Dependencies: {string.Join(", ", manifest.Dependencies.Select(dep => $"{dep.PackId} {dep.Version.OrNull() ?? "*"}"))}", "muted", "small"));
-        if (manifest.Overrides.Length > 0)
-            _review.Children.Add(Ui.Wrapped($"Overrides: {string.Join(", ", manifest.Overrides)}", "muted", "small"));
-        var content = pack.Content;
-        _review.Children.Add(Ui.Wrapped($"Content: {content.Items.Length} items, {content.Npcs.Length} NPCs, {content.Scenes.Length} scenes, {content.Recipes.Length} recipes, {content.Quests.Length} quests, {pack.Plugins.Length} plugins", "small"));
-        if (Mods.PackAssets(pack) is { Count: > 0 } assets)
-        {
-            var art = Ui.Wrapped($"Art: {assets.Count} image{(assets.Count == 1 ? "" : "s")}, added to this project's art when you install.", "small");
+            var art = Ui.Wrapped(artText, "small");
             art.Name = "PackReviewArt";
             _review.Children.Add(art);
-            if (_workspace.Current is { } current && Mods.PackAssetConflicts(current, pack) is { Count: > 0 } conflicts)
-            {
-                var clash = Ui.Wrapped($"This project already has different art named {string.Join(", ", conflicts)}; it keeps its own, so the pack's entries using those ids look different here.", "small");
-                clash.Name = "PackReviewArtConflicts";
-                _review.Children.Add(clash);
-            }
         }
-        foreach (var plugin in pack.Plugins)
+
+        if (review.ArtConflicts is { } conflicts)
         {
-            _review.Children.Add(Ui.Text($"Plugin: {plugin.Name.OrNull() ?? plugin.Id} · hooks {string.Join(", ", plugin.Hooks)}", "section"));
+            var clash = Ui.Wrapped(conflicts, "small");
+            clash.Name = "PackReviewArtConflicts";
+            _review.Children.Add(clash);
+        }
+
+        foreach (var plugin in review.Plugins)
+        {
+            _review.Children.Add(Ui.Text(plugin.Header, "section"));
             var source = new TextBox { Text = plugin.Source, IsReadOnly = true, AcceptsReturn = true, MinHeight = 80, MaxHeight = 180, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
             Ui.Label((source, $"Plugin source: {plugin.Id}"));
             _review.Children.Add(source);
         }
-        _install.IsEnabled = true;
     }
 
     private async Task ChoosePackAsync()
@@ -167,92 +133,62 @@ public sealed class ModsEditorView : UserControl, IRetirable
         if (files.Count == 0) return;
         try
         {
-            ReviewPackJson(await PickedFiles.ReadTextAsync(files[0], PickedFiles.MaxPackBytes, "content packs"));
+            ViewModel.ReviewPackJson(await PickedFiles.ReadTextAsync(files[0], PickedFiles.MaxPackBytes, "content packs"));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            _message.Text = $"Could not open pack: {error.Message}";
+            ViewModel.PackOpenFailed(error);
         }
     }
 
-    private void RefreshRegistry(GameProject project)
+    private void ShowRegistry()
     {
         _registry.Children.Clear();
-        foreach (var entry in Mods.Registry)
+        foreach (var entry in ViewModel.Registry)
         {
-            var installed = Mods.IsInstalled(project, entry.Id);
-            var install = Ui.Button(installed ? "Installed" : "Install", () => ReviewPack(entry.Pack), "tool", "small");
+            var pack = entry.Pack;
+            var install = Ui.Button(entry.Installed ? "Installed" : "Install", () => ViewModel.ReviewPack(pack), "tool", "small");
             install.Name = $"RegistryInstall_{entry.Id}";
-            install.IsEnabled = !installed;
-            var text = Ui.VStack(2, Ui.Text($"{entry.Name} · by {entry.Author}", "h3"), Ui.Wrapped(entry.Description, "muted", "small"));
+            install.IsEnabled = !entry.Installed;
+            var text = Ui.VStack(2, Ui.Text(entry.Title, "h3"), Ui.Wrapped(entry.Description, "muted", "small"));
             _registry.Children.Add(Ui.Row(text, install));
         }
     }
 
-    private void RefreshExport(GameProject project)
+    private void ShowExportCategories()
     {
         _exportCategories.Children.Clear();
-        foreach (var category in Mods.ExportCategories(project))
+        foreach (var category in ViewModel.ExportCategories)
         {
             var key = category.Key;
-            var count = category.Entries.Length;
             var include = new CheckBox
             {
                 Name = $"ExportCategory_{key}",
-                Content = $"{category.Label} ({count})",
-                IsChecked = count > 0 && _exportKeys.Contains(key),
-                IsEnabled = count > 0,
+                Content = category.Label,
+                IsChecked = category.Included,
+                IsEnabled = category.Count > 0,
             };
             var entries = new StackPanel { Spacing = 2, Margin = new Thickness(24, 0, 0, 0) };
             foreach (var option in category.Entries)
             {
                 var id = option.Id;
-                var pick = new CheckBox { Name = $"ExportEntry_{key}_{id}", Content = option.Label, IsChecked = !_exportExcluded.Contains((key, id)) };
-                pick.Click += (_, _) =>
-                {
-                    if (pick.IsChecked == true) _exportExcluded.Remove((key, id));
-                    else _exportExcluded.Add((key, id));
-                };
+                var pick = new CheckBox { Name = $"ExportEntry_{key}_{id}", Content = option.Label, IsChecked = option.Included };
+                pick.Click += (_, _) => ViewModel.SetEntryIncluded(key, id, pick.IsChecked == true);
                 entries.Children.Add(pick);
             }
 
-            include.Click += (_, _) =>
-            {
-                if (include.IsChecked == true) _exportKeys.Add(key);
-                else _exportKeys.Remove(key);
-            };
-            var expander = new Expander { Name = $"ExportEntries_{key}", Header = "Entries", Content = entries, IsEnabled = count > 0 };
+            include.Click += (_, _) => ViewModel.SetCategoryIncluded(key, include.IsChecked == true);
+            var expander = new Expander { Name = $"ExportEntries_{key}", Header = "Entries", Content = entries, IsEnabled = category.Count > 0 };
             _exportCategories.Children.Add(Ui.HStack(8, include, expander));
         }
     }
 
-    /// <summary>The pack the Export button would save: the ticked types, less unticked entries.</summary>
-    public PackExportResult BuildSelectedPack()
-    {
-        var project = _workspace.Current ?? throw new InvalidOperationException("No project is open.");
-        var selection = new Dictionary<string, IReadOnlyList<string>>();
-        foreach (var category in Mods.ExportCategories(project))
-        {
-            if (!_exportKeys.Contains(category.Key)) continue;
-            selection[category.Key] = category.Entries.Select(entry => entry.Id).Where(id => !_exportExcluded.Contains((category.Key, id))).ToList();
-        }
-
-        return Mods.ExportPack(project, _exportName.Text ?? "", selection);
-    }
-
     private async Task ExportSelectionAsync()
     {
-        if (_workspace.Current is null) return;
-        var result = BuildSelectedPack();
-        if (!result.Ok)
-        {
-            _exportMessage.Text = $"Could not export: {string.Join("; ", result.Errors)}";
-            return;
-        }
-
+        if (ViewModel.PrepareExport() is not { } result) return;
         if (TopLevel.GetTopLevel(this)?.StorageProvider is not { CanSave: true } storage)
         {
-            _exportMessage.Text = "Saving files is not available here.";
+            ViewModel.ExportUnavailable();
             return;
         }
 
@@ -268,65 +204,41 @@ public sealed class ModsEditorView : UserControl, IRetirable
             });
             if (file is null) return;
             await PickedFiles.WriteTextAsync(file, result.Text);
-            _exportMessage.Text = ExportedText(file.Name, result);
+            ViewModel.Exported(file.Name, result);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
-            _exportMessage.Text = $"Could not save the pack: {error.Message}";
+            ViewModel.ExportFailed(error);
         }
     }
 
-    /// <summary>"Saved my-pack.json with 2 images (the art its entries use)."</summary>
-    internal static string ExportedText(string fileName, PackExportResult result) => result.Assets.Count switch
-    {
-        0 => $"Saved {fileName}.",
-        1 => $"Saved {fileName} with 1 image (the art its entries use).",
-        var count => $"Saved {fileName} with {count} images (the art its entries use).",
-    };
-
-    private void InstallReviewed()
-    {
-        if (_pending is not { } pack) return;
-        if (_workspace.Apply(Edits.InstallPack(pack)))
-        {
-            _pending = null;
-            _review.Children.Clear();
-            _install.IsEnabled = false;
-            _message.Text = $"Installed {pack.Manifest.Name}.";
-        }
-    }
-
-    public void Refresh()
+    private void ShowInstalled()
     {
         _installed.Children.Clear();
-        if (_workspace.Current is not { } project) return;
-        RefreshRegistry(project);
-        RefreshExport(project);
-        if (project.ContentPacks.Length == 0)
+        if (!ViewModel.HasProject) return;
+        if (ViewModel.Installed.Count == 0)
         {
             _installed.Children.Add(Ui.Wrapped("No packs installed.", "muted", "small"));
             return;
         }
 
-        for (var i = 0; i < project.ContentPacks.Length; i++)
+        foreach (var pack in ViewModel.Installed)
         {
-            var install = project.ContentPacks[i];
-            var manifest = install.Pack.Manifest;
-            var id = manifest.Id;
-            var header = Ui.Text($"{manifest.Name} · {manifest.Version}{(id == _selectedPackId ? "  ←" : "")}", "h3");
-            var details = Ui.Wrapped($"{id} · {install.Pack.Plugins.Length} plugins · hooks: {(manifest.Permissions.Hooks.Length == 0 ? "none" : string.Join(", ", manifest.Permissions.Hooks))}", "muted", "small");
-            var enabled = new CheckBox { Name = $"PackEnabled_{id}", Content = "Enabled", IsChecked = install.Enabled };
-            enabled.Click += (_, _) => _workspace.Apply(Edits.SetPackEnabled(id, enabled.IsChecked == true));
-            var up = Ui.Button("↑", () => _workspace.Apply(Edits.MovePack(_workspace.Current!, id, -1)), "tool", "small");
+            var id = pack.Id;
+            var header = Ui.Text(pack.Header, "h3");
+            var details = Ui.Wrapped(pack.Details, "muted", "small");
+            var enabled = new CheckBox { Name = $"PackEnabled_{id}", Content = "Enabled", IsChecked = pack.Enabled };
+            enabled.Click += (_, _) => ViewModel.SetPackEnabled(id, enabled.IsChecked == true);
+            var up = Ui.Button("↑", () => ViewModel.MovePack(id, -1), "tool", "small");
             up.Name = $"MovePackUp_{id}";
-            up.IsEnabled = i > 0;
-            var down = Ui.Button("↓", () => _workspace.Apply(Edits.MovePack(_workspace.Current!, id, 1)), "tool", "small");
+            up.IsEnabled = pack.CanMoveUp;
+            var down = Ui.Button("↓", () => ViewModel.MovePack(id, 1), "tool", "small");
             down.Name = $"MovePackDown_{id}";
-            down.IsEnabled = i < project.ContentPacks.Length - 1;
-            Ui.Label((up, $"Load {manifest.Name} earlier"), (down, $"Load {manifest.Name} later"), (enabled, $"{manifest.Name} enabled"));
-            var import = Ui.Button("Import into project", () => _workspace.Apply(Edits.ImportPack(id)), "tool", "small");
+            down.IsEnabled = pack.CanMoveDown;
+            Ui.Label((up, $"Load {pack.Name} earlier"), (down, $"Load {pack.Name} later"), (enabled, $"{pack.Name} enabled"));
+            var import = Ui.Button("Import into project", () => ViewModel.ImportPack(id), "tool", "small");
             import.Name = $"ImportPack_{id}";
-            var remove = Ui.Button("Remove", () => _workspace.Apply(Edits.RemovePack(id)), "tool", "small");
+            var remove = Ui.Button("Remove", () => ViewModel.RemovePack(id), "tool", "small");
             remove.Name = $"RemovePack_{id}";
             var row = Ui.VStack(6, header, details, Ui.HStack(8, enabled, up, down, import, remove));
             _installed.Children.Add(new Border { Child = row }.WithClasses("row"));

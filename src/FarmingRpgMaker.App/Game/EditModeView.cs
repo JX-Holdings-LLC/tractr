@@ -355,7 +355,7 @@ public sealed partial class EditModeView : UserControl
         if (problem.TargetKind == "pack" && problem.TargetId is { } packId)
         {
             SelectedTab = EditorTab.Mods;
-            _modsEditor.SelectPack(packId);
+            _modsEditor.ViewModel.SelectPack(packId);
             return;
         }
         if (problem.TargetKind == "asset" && problem.TargetId is { } assetId)

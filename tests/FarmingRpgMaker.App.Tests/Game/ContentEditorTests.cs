@@ -146,7 +146,7 @@ public sealed class ContentEditorTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 4;
         Pump();
         var mods = FindByName<ModsEditorView>(host.Window, "ModsEditorView");
-        mods.ReviewPackJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo-mod.json")));
+        mods.ViewModel.ReviewPackJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo-mod.json")));
         Assert.True(FindByName<Button>(host.Window, "InstallPackButton").IsEnabled);
         Assert.Contains("Permissions", AllVisibleText(host.Window));
         // The demo mod declares no mutations: the review says what its plugin may do by default.

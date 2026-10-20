@@ -66,7 +66,7 @@ public sealed class ModsRegistryTests
         Toggle(host, "ExportCategory_recipes", false);
         Toggle(host, "ExportEntry_items_material-wood", false);
         Toggle(host, "ExportCategory_npcs", true);
-        var result = mods.BuildSelectedPack();
+        var result = mods.ViewModel.BuildSelectedPack();
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         var pack = result.Pack!;
         Assert.Equal("starter-goods", pack.Manifest.Id);
@@ -77,11 +77,11 @@ public sealed class ModsRegistryTests
         Assert.Equal(project.Npcs.Length, pack.Content.Npcs.Length);
 
         // The saved text installs back through the review.
-        mods.ReviewPackJson(result.Text);
+        mods.ViewModel.ReviewPackJson(result.Text);
         Assert.True(FindByName<Button>(host.Window, "InstallPackButton").IsEnabled);
 
         foreach (var category in Mods.ExportCategories(project)) Toggle(host, $"ExportCategory_{category.Key}", false);
-        Assert.False(mods.BuildSelectedPack().Ok);
+        Assert.False(mods.ViewModel.BuildSelectedPack().Ok);
         Assert.Same(project, host.Workspace.Current);
     }
 }

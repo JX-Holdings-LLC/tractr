@@ -9,6 +9,7 @@ using FarmEngine.Schemas;
 using FarmingRpgMaker.App.Game;
 using FarmingRpgMaker.App.Projects;
 using FarmingRpgMaker.App.ViewModels;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 using SkiaSharp;
 using static FarmingRpgMaker.App.Tests.Ui.UiTestHelpers;
 
@@ -120,17 +121,17 @@ public sealed class ImportSafetyTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 4;
         Pump();
         var mods = FindByName<ModsEditorView>(host.Window, "ModsEditorView");
-        var result = mods.BuildSelectedPack();
+        var result = mods.ViewModel.BuildSelectedPack();
         Assert.True(result.Ok, string.Join("; ", result.Errors));
         Assert.Equal(["art-hoe"], result.Assets.Select(a => a.Id));
-        Assert.Equal("Saved p.json with 1 image (the art its entries use).", ModsEditorView.ExportedText("p.json", result));
+        Assert.Equal("Saved p.json with 1 image (the art its entries use).", ModsViewModel.ExportedText("p.json", result));
 
         // Another project: the review lists the art, and installing adds it.
         using var other = new GameTestHost();
         FindByName<TabControl>(other.Window, "EditorTabs").SelectedIndex = 4;
         Pump();
         var otherMods = FindByName<ModsEditorView>(other.Window, "ModsEditorView");
-        otherMods.ReviewPackJson(result.Text);
+        otherMods.ViewModel.ReviewPackJson(result.Text);
         Assert.Contains("Art: 1 image", FindByName<TextBlock>(other.Window, "PackReviewArt").Text, StringComparison.Ordinal);
         FindByName<Button>(other.Window, "InstallPackButton").RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.Contains(other.Workspace.Current!.CustomAssets, a => a.Id == "art-hoe");
