@@ -18,7 +18,7 @@ public sealed class ContentFormTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectEntry(category, id);
+        view.ViewModel.SelectEntry(category, id);
         Pump();
         return view;
     }
@@ -117,7 +117,7 @@ public sealed class ContentFormTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectCategory("Events");
+        view.ViewModel.SelectCategory("Events");
         Pump();
         Press(host, "AddContentButton");
         Pump();
@@ -260,7 +260,7 @@ public sealed class ContentFormTests
         using var host = new GameTestHost();
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectCategory("Quests");
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory("Quests");
         Pump();
         Press(host, "AddContentButton");
         Pump();

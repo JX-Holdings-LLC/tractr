@@ -14,6 +14,7 @@ using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Interop;
 using FarmEngine.Schemas;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 using Microsoft.FSharp.Reflection;
@@ -33,7 +34,7 @@ namespace FarmingRpgMaker.App.Game;
 /// compact schedule and waypoint rows (NPCs), stock cards (shops), and art previews beside visual
 /// bindings and legacy image fields.
 /// </summary>
-internal sealed class ContentForm
+internal sealed class ContentForm : IContentDraft
 {
     private sealed record JsonEscape(string Label, TextBox Box, string Original, bool Nullable, Action<JsonNode?> Replace);
 

@@ -16,7 +16,7 @@ public sealed class ContentEditorTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectCategory(category);
+        view.ViewModel.SelectCategory(category);
         Pump();
         return view;
     }
