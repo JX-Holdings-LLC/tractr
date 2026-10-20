@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "bumpPolicy": "every-main-change",
+  "apps": {
+    "farming-rpg-maker": {
+      "tagPrefix": "v",
+      "paths": [
+        "**"
+      ],
+      "versionFiles": [
+        {
+          "path": "Cargo.toml",
+          "format": "text",
+          "pattern": "^version = \"(?<version>[^\"]+)\"$"
+        },
+        {
+          "path": "Directory.Build.props",
+          "format": "text",
+          "pattern": "<Version Condition=\"[^\\r\\n]*?\">(?<version>[^<]+)</Version>"
+        }
+      ],
+      "notes": ".release/notes/{app}/{version}.md",
+      "assets": [
+        "FarmingRpgMaker-{version}-full.nupkg",
+        "FarmingRpgMaker-win-Portable.zip",
+        "FarmingRpgMaker-win-Setup.exe",
+        "RELEASES",
+        "releases.win.json",
+        "player-windows-x64.zip",
+        "player-linux-x64.tar.gz",
+        "player-web.tar.gz",
+        "build-info.txt"
+      ],
+      "security": "standard",
+      "checksumFile": "SHA256SUMS",
+      "legacyLatest": true,
+      "optionalAssets": [
+        {
+          "pattern": "^FarmingRpgMaker-{version}-delta\\.nupkg$",
+          "min": 0,
+          "max": 1
+        }
+      ]
+    }
+  }
+}
