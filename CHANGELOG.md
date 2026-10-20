@@ -337,7 +337,10 @@
     art studio errors name the field instead of the control, and test-only
     placeholders no longer ship in the app.
     [docs/EDITOR-ARCHITECTURE.md](docs/EDITOR-ARCHITECTURE.md) describes the
-    editor's views and the steps towards view models.
+    editor's views and the steps towards view models. The Content, Problems,
+    Settings, Mods, Workshop and Interface tabs now keep their state and
+    unsaved fields in view models that are tested without building the
+    editor.
 - **One engine for the web and native editors.** The web editor
   (`jxburros/farm-game-engine`, private)
   now runs this repository's engine: its Play Mode plays through `farm-wasm`,

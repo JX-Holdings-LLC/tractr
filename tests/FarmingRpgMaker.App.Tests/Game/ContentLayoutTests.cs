@@ -20,7 +20,7 @@ public sealed class ContentLayoutTests
     {
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectCategory(category);
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory(category);
         Pump();
     }
 
@@ -28,7 +28,7 @@ public sealed class ContentLayoutTests
     {
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectEntry(category, id);
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectEntry(category, id);
         Pump();
     }
 

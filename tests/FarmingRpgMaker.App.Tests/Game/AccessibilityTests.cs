@@ -54,7 +54,7 @@ public sealed class AccessibilityTests
         var content = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
         foreach (var category in ContentCategories)
         {
-            content.SelectCategory(category);
+            content.ViewModel.SelectCategory(category);
             Pump();
             var entries = FindByName<ListBox>(host.Window, "ContentEntities");
             if (entries.ItemCount > 0)

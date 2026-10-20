@@ -23,7 +23,7 @@ public sealed class EditorDraftAndFindTests
         Tabs(host).SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectEntry(category, id);
+        view.ViewModel.SelectEntry(category, id);
         Pump();
         return view;
     }
@@ -50,7 +50,7 @@ public sealed class EditorDraftAndFindTests
         var npc = host.Workspace.Current!.Npcs[0];
         var view = OpenEntry(host, "NPCs", npc.Id);
         FindByName<TextBox>(host.Window, "ContentField_Name").Text = "Draft Name";
-        Assert.True(view.HasUnsavedChanges);
+        Assert.True(view.ViewModel.HasUnsavedChanges);
 
         // Another tab and a map edit undone meanwhile: the draft stays.
         Tabs(host).SelectedIndex = 0;
@@ -64,26 +64,26 @@ public sealed class EditorDraftAndFindTests
 
         // Another entry asks first; Keep editing stays, Save and continue saves then moves on.
         var other = host.Workspace.Current!.Npcs[1];
-        view.SelectEntry("NPCs", other.Id);
+        view.ViewModel.SelectEntry("NPCs", other.Id);
         Pump();
         Assert.True(FindByName<Border>(host.Window, "ContentDraftBar").IsVisible);
-        Assert.Equal(npc.Id, view.SelectedId);
+        Assert.Equal(npc.Id, view.ViewModel.SelectedId);
         Press(host, "ContentDraftKeep");
         Assert.False(FindByName<Border>(host.Window, "ContentDraftBar").IsVisible);
         Assert.Equal("Draft Name", FindByName<TextBox>(host.Window, "ContentField_Name").Text);
-        view.SelectEntry("NPCs", other.Id);
+        view.ViewModel.SelectEntry("NPCs", other.Id);
         Pump();
         Press(host, "ContentDraftSave");
         Assert.Equal("Draft Name", host.Workspace.Current!.Npcs.First(n => n.Id == npc.Id).Name);
-        Assert.Equal(other.Id, view.SelectedId);
-        Assert.False(view.HasUnsavedChanges);
+        Assert.Equal(other.Id, view.ViewModel.SelectedId);
+        Assert.False(view.ViewModel.HasUnsavedChanges);
 
         // Discard drops the fields.
         FindByName<TextBox>(host.Window, "ContentField_Name").Text = "Thrown away";
-        view.SelectEntry("NPCs", npc.Id);
+        view.ViewModel.SelectEntry("NPCs", npc.Id);
         Pump();
         Press(host, "ContentDraftDiscard");
-        Assert.Equal(npc.Id, view.SelectedId);
+        Assert.Equal(npc.Id, view.ViewModel.SelectedId);
         Assert.Equal(other.Name, host.Workspace.Current!.Npcs.First(n => n.Id == other.Id).Name);
     }
 
@@ -115,7 +115,7 @@ public sealed class EditorDraftAndFindTests
         var view = FindByName<InterfaceEditorView>(host.Window, "InterfaceEditorView");
         var panels = FindByName<ListBox>(host.Window, "InterfacePanels");
         FindByName<TextBox>(host.Window, "InterfaceTitle").Text = "Draft panel";
-        Assert.True(view.HasUnsavedChanges);
+        Assert.True(view.ViewModel.HasUnsavedChanges);
         Tabs(host).SelectedIndex = 0;
         Pump();
         Tabs(host).SelectedIndex = 7;
@@ -126,7 +126,7 @@ public sealed class EditorDraftAndFindTests
         Assert.True(FindByName<Border>(host.Window, "InterfaceDraftBar").IsVisible);
         Press(host, "InterfaceDraftSave");
         Assert.Contains(host.Workspace.Current!.GamePanels.OrEmpty(), panel => panel.Title == "Draft panel");
-        Assert.False(view.HasUnsavedChanges);
+        Assert.False(view.ViewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
@@ -152,7 +152,7 @@ public sealed class EditorDraftAndFindTests
         Pump();
         Assert.False(FindByName<Border>(host.Window, "QuickOpen").IsVisible);
         Assert.Equal(1, Tabs(host).SelectedIndex);
-        Assert.Equal(npc.Id, FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectedId);
+        Assert.Equal(npc.Id, FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectedId);
     }
 
     [AvaloniaFact]
@@ -228,7 +228,7 @@ public sealed class EditorDraftAndFindTests
         Tabs(host).SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectCategory("Events");
+        view.ViewModel.SelectCategory("Events");
         Pump();
         Press(host, "AddContentButton");
         var eventId = host.Workspace.Current!.Events[^1].Id;
