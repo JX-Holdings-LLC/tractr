@@ -229,7 +229,7 @@ internal sealed class NewProjectWindow : ProjectDialogWindow
         : base("New Project", 540, 560)
     {
         Name = "NewProjectWindow";
-        var nameBox = new TextBox { Name = "NewProjectName", Text = "My Farming Game", Watermark = "Project name" };
+        var nameBox = new TextBox { Name = "NewProjectName", Text = "My Farming Game", PlaceholderText = "Project name" };
         Avalonia.Automation.AutomationProperties.SetName(nameBox, "Project name");
         var list = new StackPanel { Spacing = 6 };
         RadioButton? first = null;
@@ -307,7 +307,7 @@ internal sealed class OpenProjectWindow : ProjectDialogWindow
     private readonly Button _delete;
     private readonly Button _rename;
     private readonly Button _duplicate;
-    private readonly TextBox _renameBox = new() { Name = "RenameProjectName", Watermark = "Project name", MinWidth = 260 };
+    private readonly TextBox _renameBox = new() { Name = "RenameProjectName", PlaceholderText = "Project name", MinWidth = 260 };
     private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, FontSize = 12 };
     private string? _confirmDeleteId;
     private string? _notice;

@@ -51,7 +51,7 @@ public sealed class InterfaceEditorTests
         Assert.Equal("Entry 1 kind", AutomationProperties.GetName(kind));
         Assert.Equal("Remove entry 1", AutomationProperties.GetName(FindByName<Button>(row, "InterfaceEntryRemove")));
         var text = Assert.IsType<TextBox>(ValueControl(row));
-        Assert.Equal("Text", text.Watermark);
+        Assert.Equal("Text", text.PlaceholderText);
         Assert.Equal("Entry 1 text", AutomationProperties.GetName(text));
         text.Text = "Hello";
 
@@ -63,7 +63,7 @@ public sealed class InterfaceEditorTests
 
         Choose(kind, "flag");
         var flag = Assert.IsType<TextBox>(ValueControl(row));
-        Assert.Equal("Flag name", flag.Watermark);
+        Assert.Equal("Flag name", flag.PlaceholderText);
         Assert.Equal("", flag.Text ?? "");
         Assert.Equal("Entry 1 flag name", AutomationProperties.GetName(flag));
 

@@ -8,64 +8,72 @@ runtime, icons from Material Design Icons and the Inter typeface, whose licenses
 are at the end of this file. The Rust engine library (farm_ffi) and the game
 player templates have their own notices in THIRD-PARTY-rust.txt.
 
-- Avalonia 11.3.22 (MIT)
-- Avalonia.Angle.Windows.Natives 2.1.25547.20250602 (license file LICENSE)
-- Avalonia.Desktop 11.3.22 (MIT)
-- Avalonia.Fonts.Inter 11.3.22 (MIT)
-- Avalonia.FreeDesktop 11.3.22 (MIT)
-- Avalonia.Native 11.3.22 (MIT)
-- Avalonia.Remote.Protocol 11.3.22 (MIT)
-- Avalonia.Skia 11.3.22 (MIT)
-- Avalonia.Themes.Fluent 11.3.22 (MIT)
-- Avalonia.Win32 11.3.22 (MIT)
-- Avalonia.X11 11.3.22 (MIT)
+- Avalonia 12.1.4 (MIT)
+- Avalonia.Angle.Windows.Natives 2.1.27548.20260419 (license file LICENSE)
+- Avalonia.Desktop 12.1.4 (MIT)
+- Avalonia.Fonts.Inter 12.1.4 (MIT)
+- Avalonia.FreeDesktop 12.1.4 (MIT)
+- Avalonia.FreeDesktop.AtSpi 12.1.4 (MIT)
+- Avalonia.HarfBuzz 12.1.4 (MIT)
+- Avalonia.Native 12.1.4 (MIT)
+- Avalonia.Remote.Protocol 12.1.4 (MIT)
+- Avalonia.Skia 12.1.4 (MIT)
+- Avalonia.Themes.Fluent 12.1.4 (MIT)
+- Avalonia.Win32 12.1.4 (MIT)
+- Avalonia.X11 12.1.4 (MIT)
 - ExCSS 4.3.1 (MIT)
 - FSharp.Core 10.0.112 (MIT)
-- HarfBuzzSharp 8.3.1.1 (MIT)
-- HarfBuzzSharp.NativeAssets.Linux 8.3.1.1 (MIT)
-- HarfBuzzSharp.NativeAssets.macOS 8.3.1.1 (MIT)
-- HarfBuzzSharp.NativeAssets.Win32 8.3.1.1 (MIT)
-- MicroCom.Runtime 0.11.0 (MIT)
-- ShimSkiaSharp 3.7.0 (MIT)
-- SkiaSharp 2.88.9 (MIT)
-- SkiaSharp.NativeAssets.Linux 2.88.9 (MIT)
-- SkiaSharp.NativeAssets.macOS 2.88.9 (MIT)
-- SkiaSharp.NativeAssets.Win32 2.88.9 (MIT)
-- Svg.Custom 3.7.0 (MS-PL)
-- Svg.Model 3.7.0 (MIT)
-- Svg.Skia 3.7.0 (MIT)
-- Tmds.DBus.Protocol 0.21.3 (MIT)
+- HarfBuzzSharp 8.3.1.3 (MIT)
+- HarfBuzzSharp.NativeAssets.Linux 8.3.1.3 (MIT)
+- HarfBuzzSharp.NativeAssets.macOS 8.3.1.3 (MIT)
+- HarfBuzzSharp.NativeAssets.Win32 8.3.1.3 (MIT)
+- MicroCom.Runtime 0.11.6 (MIT)
+- ShimSkiaSharp 5.1.1 (MIT)
+- SkiaSharp 3.119.4 (MIT)
+- SkiaSharp.NativeAssets.Linux 3.119.4 (MIT)
+- SkiaSharp.NativeAssets.macOS 3.119.4 (MIT)
+- SkiaSharp.NativeAssets.Win32 3.119.4 (MIT)
+- Svg.Animation 5.1.1 (MIT)
+- Svg.Custom 5.1.1 (MS-PL)
+- Svg.Model 5.1.1 (MIT)
+- Svg.SceneGraph 5.1.1 (MIT)
+- Svg.Skia 5.1.1 (MIT)
+- Tmds.DBus.Protocol 0.94.1 (MIT)
 - Velopack 1.2.158 (MIT)
 
 --------------------------------------------------------------------------------
 MIT
 
 Used by:
-- Avalonia 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Desktop 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Fonts.Inter 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.FreeDesktop 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Native 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Remote.Protocol 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Skia 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Themes.Fluent 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.Win32 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
-- Avalonia.X11 11.3.22: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Desktop 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Fonts.Inter 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.FreeDesktop 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.FreeDesktop.AtSpi 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.HarfBuzz 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Native 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Remote.Protocol 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Skia 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Themes.Fluent 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.Win32 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
+- Avalonia.X11 12.1.4: Copyright 2013-2026 © The AvaloniaUI Project
 - ExCSS 4.3.1: (no copyright line; authors: Tyler Brinks)
 - FSharp.Core 10.0.112: © Microsoft Corporation. All rights reserved.
-- HarfBuzzSharp 8.3.1.1: © Microsoft Corporation. All rights reserved.
-- HarfBuzzSharp.NativeAssets.Linux 8.3.1.1: © Microsoft Corporation. All rights reserved.
-- HarfBuzzSharp.NativeAssets.macOS 8.3.1.1: © Microsoft Corporation. All rights reserved.
-- HarfBuzzSharp.NativeAssets.Win32 8.3.1.1: © Microsoft Corporation. All rights reserved.
-- MicroCom.Runtime 0.11.0: Copyright 2021 © Nikita Tsukanov
-- ShimSkiaSharp 3.7.0: Copyright © Wiesław Šoltés 2026
-- SkiaSharp 2.88.9: © Microsoft Corporation. All rights reserved.
-- SkiaSharp.NativeAssets.Linux 2.88.9: © Microsoft Corporation. All rights reserved.
-- SkiaSharp.NativeAssets.macOS 2.88.9: © Microsoft Corporation. All rights reserved.
-- SkiaSharp.NativeAssets.Win32 2.88.9: © Microsoft Corporation. All rights reserved.
-- Svg.Model 3.7.0: Copyright © Wiesław Šoltés 2026
-- Svg.Skia 3.7.0: Copyright © Wiesław Šoltés 2026
-- Tmds.DBus.Protocol 0.21.3: Tom Deseyn
+- HarfBuzzSharp 8.3.1.3: © Microsoft Corporation. All rights reserved.
+- HarfBuzzSharp.NativeAssets.Linux 8.3.1.3: © Microsoft Corporation. All rights reserved.
+- HarfBuzzSharp.NativeAssets.macOS 8.3.1.3: © Microsoft Corporation. All rights reserved.
+- HarfBuzzSharp.NativeAssets.Win32 8.3.1.3: © Microsoft Corporation. All rights reserved.
+- MicroCom.Runtime 0.11.6: Copyright 2021 © Nikita Tsukanov
+- ShimSkiaSharp 5.1.1: Copyright © Wiesław Šoltés 2026
+- SkiaSharp 3.119.4: © Microsoft Corporation. All rights reserved.
+- SkiaSharp.NativeAssets.Linux 3.119.4: © Microsoft Corporation. All rights reserved.
+- SkiaSharp.NativeAssets.macOS 3.119.4: © Microsoft Corporation. All rights reserved.
+- SkiaSharp.NativeAssets.Win32 3.119.4: © Microsoft Corporation. All rights reserved.
+- Svg.Animation 5.1.1: Copyright © Wiesław Šoltés 2026
+- Svg.Model 5.1.1: Copyright © Wiesław Šoltés 2026
+- Svg.SceneGraph 5.1.1: Copyright © Wiesław Šoltés 2026
+- Svg.Skia 5.1.1: Copyright © Wiesław Šoltés 2026
+- Tmds.DBus.Protocol 0.94.1: Tom Deseyn
 - Velopack 1.2.158: Copyright © Velopack Ltd. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -90,7 +98,7 @@ SOFTWARE.
 MS-PL
 
 Used by:
-- Svg.Custom 3.7.0: Copyright © Wiesław Šoltés 2026
+- Svg.Custom 5.1.1: Copyright © Wiesław Šoltés 2026
 
 Microsoft Public License (Ms-PL)
 
@@ -117,7 +125,7 @@ The terms "reproduce," "reproduction," "derivative works," and "distribution" ha
 
 --------------------------------------------------------------------------------
 Included in the packages:
-- Avalonia.Angle.Windows.Natives 2.1.25547.20250602 (LICENSE)
+- Avalonia.Angle.Windows.Natives 2.1.27548.20260419 (LICENSE)
 
 // Copyright 2018 The ANGLE Project Authors.
 // All rights reserved.
@@ -154,14 +162,14 @@ Included in the packages:
 
 --------------------------------------------------------------------------------
 Included in the packages:
-- HarfBuzzSharp 8.3.1.1 (LICENSE.txt)
-- HarfBuzzSharp.NativeAssets.Linux 8.3.1.1 (LICENSE.txt)
-- HarfBuzzSharp.NativeAssets.macOS 8.3.1.1 (LICENSE.txt)
-- HarfBuzzSharp.NativeAssets.Win32 8.3.1.1 (LICENSE.txt)
-- SkiaSharp 2.88.9 (LICENSE.txt)
-- SkiaSharp.NativeAssets.Linux 2.88.9 (LICENSE.txt)
-- SkiaSharp.NativeAssets.macOS 2.88.9 (LICENSE.txt)
-- SkiaSharp.NativeAssets.Win32 2.88.9 (LICENSE.txt)
+- HarfBuzzSharp 8.3.1.3 (LICENSE.txt)
+- HarfBuzzSharp.NativeAssets.Linux 8.3.1.3 (LICENSE.txt)
+- HarfBuzzSharp.NativeAssets.macOS 8.3.1.3 (LICENSE.txt)
+- HarfBuzzSharp.NativeAssets.Win32 8.3.1.3 (LICENSE.txt)
+- SkiaSharp 3.119.4 (LICENSE.txt)
+- SkiaSharp.NativeAssets.Linux 3.119.4 (LICENSE.txt)
+- SkiaSharp.NativeAssets.macOS 3.119.4 (LICENSE.txt)
+- SkiaSharp.NativeAssets.Win32 3.119.4 (LICENSE.txt)
 
 Copyright (c) 2015-2016 Xamarin, Inc.
 Copyright (c) 2017-2018 Microsoft Corporation.
@@ -185,13 +193,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Included in the packages:
-- HarfBuzzSharp.NativeAssets.Linux 8.3.1.1 (THIRD-PARTY-NOTICES.txt)
-- HarfBuzzSharp.NativeAssets.macOS 8.3.1.1 (THIRD-PARTY-NOTICES.txt)
-- HarfBuzzSharp.NativeAssets.Win32 8.3.1.1 (THIRD-PARTY-NOTICES.txt)
-- SkiaSharp 2.88.9 (THIRD-PARTY-NOTICES.txt)
-- SkiaSharp.NativeAssets.Linux 2.88.9 (THIRD-PARTY-NOTICES.txt)
-- SkiaSharp.NativeAssets.macOS 2.88.9 (THIRD-PARTY-NOTICES.txt)
-- SkiaSharp.NativeAssets.Win32 2.88.9 (THIRD-PARTY-NOTICES.txt)
+- HarfBuzzSharp.NativeAssets.Linux 8.3.1.3 (THIRD-PARTY-NOTICES.txt)
+- HarfBuzzSharp.NativeAssets.macOS 8.3.1.3 (THIRD-PARTY-NOTICES.txt)
+- HarfBuzzSharp.NativeAssets.Win32 8.3.1.3 (THIRD-PARTY-NOTICES.txt)
+- SkiaSharp.NativeAssets.Linux 3.119.4 (THIRD-PARTY-NOTICES.txt)
+- SkiaSharp.NativeAssets.macOS 3.119.4 (THIRD-PARTY-NOTICES.txt)
+- SkiaSharp.NativeAssets.Win32 3.119.4 (THIRD-PARTY-NOTICES.txt)
 
 THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
 Do not translate or localize

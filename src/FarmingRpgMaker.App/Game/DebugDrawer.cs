@@ -107,7 +107,7 @@ internal static class DebugDrawer
         stack.Children.Add(scenes);
 
         stack.Children.Add(Ui.Text("SET FLAG", "section"));
-        var flagBox = new TextBox { Name = "DebugFlagName", Watermark = "flag-name", MinWidth = 150, FontSize = 12.5 };
+        var flagBox = new TextBox { Name = "DebugFlagName", PlaceholderText = "flag-name", MinWidth = 150, FontSize = 12.5 };
         var set = Ui.Button("Set", () =>
         {
             var flag = flagBox.Text?.Trim();

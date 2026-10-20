@@ -33,8 +33,8 @@ public sealed class UpdateCoordinatorTests
         Assert.Equal(UpdateState.NotInstalled, coordinator.State);
         Assert.False(coordinator.CanCheck);
 
-        await coordinator.CheckAsync();
-        await coordinator.RunStartupCheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
+        await coordinator.RunStartupCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.NotInstalled, coordinator.State);
         Assert.Equal(0, _service.CheckCount);
@@ -54,7 +54,7 @@ public sealed class UpdateCoordinatorTests
             }
         };
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal([UpdateState.Checking, UpdateState.UpToDate], states);
         Assert.Null(coordinator.AvailableUpdate);
@@ -69,7 +69,7 @@ public sealed class UpdateCoordinatorTests
         _service.DownloadSteps = [0, 10, 55, 90, 100];
         var coordinator = Create();
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.Available, coordinator.State);
         Assert.Equal("0.2.0", coordinator.AvailableUpdate?.Version);
@@ -89,7 +89,7 @@ public sealed class UpdateCoordinatorTests
             sawDownloading |= coordinator.State == UpdateState.Downloading;
         };
 
-        await coordinator.DownloadAsync();
+        await coordinator.DownloadAsync(TestContext.Current.CancellationToken);
 
         Assert.True(sawDownloading);
         Assert.Equal([10, 55, 90, 100], progress);
@@ -115,7 +115,7 @@ public sealed class UpdateCoordinatorTests
         _service.NextResult = new UpdateCheckResult.Error("GitHub's hourly request limit was reached.");
         var coordinator = Create();
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.Error, coordinator.State);
         Assert.Equal("GitHub's hourly request limit was reached.", coordinator.ErrorMessage);
@@ -129,7 +129,7 @@ public sealed class UpdateCoordinatorTests
     {
         var coordinator = new UpdateCoordinator(new ThrowingService(), new InMemorySettingsStore(), _time, a => a());
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.Error, coordinator.State);
         Assert.Equal("boom", coordinator.ErrorMessage);
@@ -142,8 +142,8 @@ public sealed class UpdateCoordinatorTests
         _service.DownloadFailure = new IOException("disk full");
         var coordinator = Create();
 
-        await coordinator.CheckAsync();
-        await coordinator.DownloadAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
+        await coordinator.DownloadAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.Error, coordinator.State);
         Assert.Contains("disk full", coordinator.ErrorMessage, StringComparison.Ordinal);
@@ -151,7 +151,7 @@ public sealed class UpdateCoordinatorTests
         Assert.True(coordinator.CanDownload);
 
         _service.DownloadFailure = null;
-        await coordinator.DownloadAsync();
+        await coordinator.DownloadAsync(TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.ReadyToInstall, coordinator.State);
     }
 
@@ -161,9 +161,9 @@ public sealed class UpdateCoordinatorTests
         _service.NextResult = FakeUpdateService.SampleUpdate();
         _service.HoldDownload = true;
         var coordinator = Create();
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
-        var download = coordinator.DownloadAsync();
+        var download = coordinator.DownloadAsync(TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.Downloading, coordinator.State);
         coordinator.Cancel();
         await download;
@@ -178,7 +178,7 @@ public sealed class UpdateCoordinatorTests
         _service.NextResult = FakeUpdateService.SampleUpdate("0.2.0");
         var store = new InMemorySettingsStore(new UpdateSettings { AutoDownload = false });
         var coordinator = Create(store: store);
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
         Assert.True(coordinator.IsBadgeVisible);
 
         coordinator.SkipAvailableVersion();
@@ -189,14 +189,14 @@ public sealed class UpdateCoordinatorTests
 
         // A later session with auto-download on still ignores the skipped version…
         var next = new UpdateCoordinator(_service, new InMemorySettingsStore(store.Current with { AutoDownload = true }), _time, a => a());
-        await next.CheckAsync();
+        await next.CheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.Available, next.State);
         Assert.False(next.IsBadgeVisible);
         Assert.Equal(0, _service.DownloadCount);
 
         // …but a newer version shows up again and auto-downloads.
         _service.NextResult = FakeUpdateService.SampleUpdate("0.2.1");
-        await next.CheckAsync();
+        await next.CheckAsync(TestContext.Current.CancellationToken);
         Assert.False(next.IsAvailableUpdateSkipped);
         Assert.Equal(UpdateState.ReadyToInstall, next.State);
         Assert.True(next.IsBadgeVisible);
@@ -209,7 +209,7 @@ public sealed class UpdateCoordinatorTests
         _service.NextResult = FakeUpdateService.SampleUpdate();
         var coordinator = Create(new UpdateSettings { AutoDownload = true });
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, _service.DownloadCount);
         Assert.Equal(UpdateState.ReadyToInstall, coordinator.State);
@@ -223,10 +223,10 @@ public sealed class UpdateCoordinatorTests
         _service.PrereleaseResult = FakeUpdateService.SampleUpdate("0.3.0-beta.1");
         var store = new InMemorySettingsStore();
         var coordinator = Create(store: store);
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.UpToDate, coordinator.State);
 
-        await coordinator.SetChannelAsync(UpdateChannel.Prerelease);
+        await coordinator.SetChannelAsync(UpdateChannel.Prerelease, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateChannel.Prerelease, store.Current.Channel);
         Assert.Equal(UpdateChannel.Prerelease, _service.Channel);
@@ -234,7 +234,7 @@ public sealed class UpdateCoordinatorTests
         Assert.Equal(UpdateState.Available, coordinator.State);
         Assert.Equal("0.3.0-beta.1", coordinator.AvailableUpdate?.Version);
 
-        await coordinator.SetChannelAsync(UpdateChannel.Stable);
+        await coordinator.SetChannelAsync(UpdateChannel.Stable, TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.UpToDate, coordinator.State);
         Assert.Null(coordinator.AvailableUpdate);
     }
@@ -248,10 +248,10 @@ public sealed class UpdateCoordinatorTests
         _service.PrereleaseResult = FakeUpdateService.SampleUpdate("0.3.0-beta.1");
         var coordinator = Create();
 
-        var first = coordinator.CheckAsync();
+        var first = coordinator.CheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(UpdateState.Checking, coordinator.State);
         Assert.False(first.IsCompleted);
-        await coordinator.SetChannelAsync(UpdateChannel.Prerelease);
+        await coordinator.SetChannelAsync(UpdateChannel.Prerelease, TestContext.Current.CancellationToken);
         _service.ReleaseCheck();
         await first;
 
@@ -272,7 +272,7 @@ public sealed class UpdateCoordinatorTests
     {
         var coordinator = Create(new UpdateSettings { CheckOnStartup = false });
 
-        await coordinator.RunStartupCheckAsync();
+        await coordinator.RunStartupCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, _service.CheckCount);
         Assert.Equal(UpdateState.Idle, coordinator.State);
@@ -283,17 +283,17 @@ public sealed class UpdateCoordinatorTests
     {
         var recent = Create(new UpdateSettings { LastChecked = Start - TimeSpan.FromHours(1) });
         recent.StartupCheckInterval = TimeSpan.FromHours(6);
-        await recent.RunStartupCheckAsync();
+        await recent.RunStartupCheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(0, _service.CheckCount);
 
         var stale = Create(new UpdateSettings { LastChecked = Start - TimeSpan.FromHours(7) });
         stale.StartupCheckInterval = TimeSpan.FromHours(6);
-        await stale.RunStartupCheckAsync();
+        await stale.RunStartupCheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(1, _service.CheckCount);
         Assert.Equal(UpdateState.UpToDate, stale.State);
 
         var never = Create();
-        await never.RunStartupCheckAsync();
+        await never.RunStartupCheckAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, _service.CheckCount);
     }
 
@@ -303,7 +303,7 @@ public sealed class UpdateCoordinatorTests
         _service.PendingRestartVersion = "0.2.0";
         var coordinator = Create();
 
-        await coordinator.RunStartupCheckAsync();
+        await coordinator.RunStartupCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateState.ReadyToInstall, coordinator.State);
         Assert.Equal("0.2.0", coordinator.AvailableUpdate?.Version);
@@ -323,7 +323,7 @@ public sealed class UpdateCoordinatorTests
         Assert.Equal(0, _service.ApplyOnExitCount);
 
         _service.NextResult = FakeUpdateService.SampleUpdate();
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
         coordinator.ApplyAndRestart();
         Assert.Equal(0, _service.ApplyAndRestartCount);
     }
@@ -347,7 +347,7 @@ public sealed class UpdateCoordinatorTests
     {
         var coordinator = new UpdateCoordinator(_service, new BrokenStore(), _time, a => a());
 
-        await coordinator.CheckAsync();
+        await coordinator.CheckAsync(TestContext.Current.CancellationToken);
         coordinator.SetAutoDownload(true);
 
         Assert.Equal(UpdateState.UpToDate, coordinator.State);

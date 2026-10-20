@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Export;
@@ -202,7 +203,7 @@ public sealed class ExportGameTests
         Assert.Equal("Exported Windows x64 and Linux x64.", FindByName<TextBlock>(dialog!, "ExportStatusText").Text);
         if (!string.IsNullOrEmpty(OutputDir))
         {
-            GameTestHost.Capture(dialog!).Save(Path.Combine(OutputDir, "export-game.png"));
+            GameTestHost.Capture(dialog!).Save(Path.Combine(OutputDir, "export-game.png"), PngBitmapEncoderOptions.Default);
         }
 
         var game = host.Workspace.Current!;

@@ -33,8 +33,20 @@ module Icons =
         stream.CopyTo memory
         memory.ToArray()
 
+    /// How the icon is resampled: bilinear from the nearest mipmap when it shrinks, bilinear at
+    /// its own size (Mitchell would blur it), Mitchell cubic when it grows. That is what
+    /// SkiaSharp 2.88's high filter quality chose; sizes between two mipmap levels come out
+    /// slightly different (docs/SKIA-MIGRATION.md).
+    let private sampling (scale: float32) =
+        if scale < 1.0f then
+            SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Nearest)
+        elif scale = 1.0f then
+            SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)
+        else
+            SKSamplingOptions(SKCubicResampler.Mitchell)
+
     /// `png` scaled into a transparent `size`×`size` square (centred, aspect kept), as PNG.
-    let private renderOne (source: SKBitmap) (size: int) : byte[] =
+    let private renderOne (source: SKImage) (size: int) : byte[] =
         let info = SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul)
         use surface = SKSurface.Create info
         let canvas = surface.Canvas
@@ -43,8 +55,8 @@ module Icons =
         let width = float32 source.Width * scale
         let height = float32 source.Height * scale
         let target = SKRect.Create((float32 size - width) / 2.0f, (float32 size - height) / 2.0f, width, height)
-        use paint = new SKPaint(IsAntialias = true, FilterQuality = SKFilterQuality.High)
-        canvas.DrawBitmap(source, target, paint)
+        use paint = new SKPaint(IsAntialias = true)
+        canvas.DrawImage(source, target, sampling scale, paint)
         canvas.Flush()
         use image = surface.Snapshot()
         use data = image.Encode(SKEncodedImageFormat.Png, 100)
@@ -87,7 +99,9 @@ module Icons =
             match source with
             | null -> Error "The icon image could not be decoded."
             | source when source.Width < 1 || source.Height < 1 -> Error "The icon image is empty."
-            | source -> Ok [ for size in sizes -> size, renderOne source size ]
+            | source ->
+                use image = SKImage.FromBitmap source
+                Ok [ for size in sizes -> size, renderOne image size ]
 
     /// The icon at every size in `sizes`, from PNG bytes. Only PNG reaches Skia (the asset is a
     /// `data:image/png` URL, and Skia would otherwise sniff and decode any format it knows), and

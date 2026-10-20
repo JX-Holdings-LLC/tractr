@@ -3,20 +3,22 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.22" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.3.22" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.22" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.22" />
-    <PackageVersion Include="Avalonia.Headless.XUnit" Version="11.3.22" />
-    <PackageVersion Include="Avalonia.Skia" Version="11.3.22" />
-    <!-- Keep in step with the SkiaSharp that Avalonia.Skia depends on. -->
-    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
-    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="2.88.9" />
-    <!-- SVG import: renders on the same SkiaSharp 2.88 (Svg.Skia 4.9+ needs SkiaSharp 3; docs/SKIA-MIGRATION.md). -->
-    <PackageVersion Include="Svg.Skia" Version="3.7.0" />
+    <PackageVersion Include="Avalonia" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+    <PackageVersion Include="Avalonia.Skia" Version="12.1.4" />
+    <!-- Keep in step with the SkiaSharp that Avalonia.Skia depends on (3.119.4 for Avalonia 12.1.4). -->
+    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+    <!-- SVG import: renders on the same SkiaSharp 3.119 (Svg.Skia 5.2+ needs SkiaSharp 4; docs/SKIA-MIGRATION.md). -->
+    <PackageVersion Include="Svg.Skia" Version="5.1.1" />
     <PackageVersion Include="Velopack" Version="1.2.158" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <!-- The F# tests run on xUnit v2 (FsCheck.Xunit); the app tests on v3, which Avalonia.Headless.XUnit 12 needs. -->
     <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="FSharp.Core" Version="10.0.112" />

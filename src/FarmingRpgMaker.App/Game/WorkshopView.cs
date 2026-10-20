@@ -21,8 +21,8 @@ public sealed class WorkshopView : UserControl, IRetirable
     private readonly Action<string> _openEditor;
     private readonly ComboBox _patterns = new() { Name = "WorkshopPattern", MinWidth = 240 };
     private readonly ComboBox _npc = new() { Name = "WorkshopNpc", MinWidth = 180 };
-    private readonly TextBox _name = new() { Name = "WorkshopName", Watermark = "Name" };
-    private readonly TextBox _text = new() { Name = "WorkshopText", Watermark = "Story text or description", AcceptsReturn = true, MinHeight = 80, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+    private readonly TextBox _name = new() { Name = "WorkshopName", PlaceholderText = "Name" };
+    private readonly TextBox _text = new() { Name = "WorkshopText", PlaceholderText = "Story text or description", AcceptsReturn = true, MinHeight = 80, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
     private readonly TextBox _x = new() { Name = "WorkshopX", Text = "1", Width = 65 };
     private readonly TextBox _y = new() { Name = "WorkshopY", Text = "1", Width = 65 };
     private readonly TextBox _day = new() { Name = "WorkshopDay", Text = "2", Width = 65 };

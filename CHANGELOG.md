@@ -214,8 +214,13 @@
   - Art import, project and pack art, and images inside SVGs are read only
     as PNG, JPEG, GIF, WebP or BMP, and their size is checked from the header
     before the graphics library sees them; the Export Game icon must be a
-    PNG. The plan for the graphics library upgrade (Avalonia 12, SkiaSharp 3)
-    is in [docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md).
+    PNG.
+  - **A supported graphics library.** The editor moved to Avalonia 12 and
+    SkiaSharp 3 (from Avalonia 11 and SkiaSharp 2.88, which no longer gets
+    fixes for its image decoders, fonts and text shaping), and SVG import to
+    Svg.Skia 5 with its scripting and SVG fonts switched off. The editor
+    looks and works as before, and so do Export Game's icons
+    ([docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md)).
 - **License, notices and contributor docs.** The repository has an MIT
   `LICENSE`. The app ships it in its `licenses` folder with notices for its
   .NET packages, the runtime, icons and fonts (`THIRD-PARTY-dotnet.txt`), and

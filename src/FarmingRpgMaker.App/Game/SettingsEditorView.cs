@@ -55,9 +55,9 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly CheckBox _energy = new() { Name = "Setting_EnergyEnabled", Content = "Energy enabled" };
     private readonly CheckBox _skills = new() { Name = "Setting_SkillsEnabled", Content = "Skills enabled" };
     private readonly CheckBox _credit = new() { Name = "Setting_ShowMadeWithCredit", Content = "Show creator credit" };
-    private readonly TextBox _exportTitle = new() { Name = "Export_Title", Watermark = "Project name" };
+    private readonly TextBox _exportTitle = new() { Name = "Export_Title", PlaceholderText = "Project name" };
     private readonly TextBox _exportExecutable = new() { Name = "Export_ExecutableName" };
-    private readonly TextBox _exportVersion = new() { Name = "Export_Version", Watermark = "Project version" };
+    private readonly TextBox _exportVersion = new() { Name = "Export_Version", PlaceholderText = "Project version" };
     private readonly TextBox _exportAuthor = new() { Name = "Export_Author" };
     private readonly TextBox _exportCompany = new() { Name = "Export_Company" };
     private readonly TextBox _exportGameId = new() { Name = "Export_GameId", IsReadOnly = true };

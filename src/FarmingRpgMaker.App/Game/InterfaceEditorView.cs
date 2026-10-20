@@ -19,7 +19,7 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
     private readonly ProjectWorkspace _workspace;
     private readonly ListBox _panels = new() { Name = "InterfacePanels", MinHeight = 130 };
     private readonly TextBox _title = new() { Name = "InterfaceTitle" };
-    private readonly TextBox _flag = new() { Name = "InterfaceVisibleFlag", Watermark = "Optional story flag" };
+    private readonly TextBox _flag = new() { Name = "InterfaceVisibleFlag", PlaceholderText = "Optional story flag" };
     private readonly StackPanel _entries = new() { Name = "InterfaceEntries", Spacing = 8 };
     private readonly List<EntryRow> _rows = [];
     private readonly TextBlock _message = Ui.Wrapped("Select or add a panel.", "muted", "small");
@@ -181,7 +181,7 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
 
     private void AddEntryRow(GamePanelEntry entry)
     {
-        var label = new TextBox { Name = "InterfaceEntryLabel", Text = entry.Label, Watermark = "Label", MinWidth = 115 };
+        var label = new TextBox { Name = "InterfaceEntryLabel", Text = entry.Label, PlaceholderText = "Label", MinWidth = 115 };
         var kind = new ComboBox { Name = "InterfaceEntryKind", MinWidth = 85 };
         foreach (var value in GamePanelEntryKinds.All) kind.Items.Add(new ComboBoxItem { Content = value, Tag = value });
         kind.SelectedItem = kind.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, entry.Kind)) ?? kind.Items[0];
@@ -227,8 +227,8 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
     {
         GamePanelEntryKinds.Item => Picker("item", "Choose item", value),
         GamePanelEntryKinds.Action => Picker("action", "Choose action", value),
-        GamePanelEntryKinds.Text => new TextBox { Name = "InterfaceEntryValue", Text = value, Watermark = "Text", MinWidth = 150 },
-        GamePanelEntryKinds.Flag => new TextBox { Name = "InterfaceEntryValue", Text = value, Watermark = "Flag name", MinWidth = 150 },
+        GamePanelEntryKinds.Text => new TextBox { Name = "InterfaceEntryValue", Text = value, PlaceholderText = "Text", MinWidth = 150 },
+        GamePanelEntryKinds.Flag => new TextBox { Name = "InterfaceEntryValue", Text = value, PlaceholderText = "Flag name", MinWidth = 150 },
         _ => null,
     };
 

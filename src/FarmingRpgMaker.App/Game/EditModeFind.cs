@@ -27,7 +27,7 @@ public sealed partial class EditModeView
     private IReadOnlyList<MapMarker> _markers = [];
     private (GameProject? Project, MapGeometry? Geometry, bool Shown) _markersFor;
     private readonly Border _quickOpen = new() { Name = "QuickOpen", IsVisible = false, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Width = 520, Margin = new Thickness(0, 48, 0, 0) };
-    private readonly TextBox _quickOpenBox = new() { Name = "QuickOpenBox", Watermark = "Find NPCs, items, quests, events, scenes, art…" };
+    private readonly TextBox _quickOpenBox = new() { Name = "QuickOpenBox", PlaceholderText = "Find NPCs, items, quests, events, scenes, art…" };
     private readonly ListBox _quickOpenResults = new() { Name = "QuickOpenResults", MaxHeight = 360 };
     private List<FindResult> _found = [];
     /// <summary>A "Pick on map" waiting for a tile: what to do with it, and where to go back to.</summary>
