@@ -11,6 +11,8 @@ publish.workspace = true
 
 [dependencies]
 farm-sim = { path = "../farm-sim" }
+# Draw lists of pack-defined minigames (`farm_runtime::canvas`).
+farm-runtime = { path = "../farm-runtime" }
 serde.workspace = true
 serde_json.workspace = true
 # Pure-Rust interpreter: no JIT (works where JITs are forbidden), fast instantiation. No `wat`

@@ -38,13 +38,25 @@ pub struct PackPermissions {
     /// plugins' answers to `onEffect` / `onCommand` are dropped.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mutations: Option<Vec<String>>,
+    /// Minigame kinds the pack's plugins may define (user-approved at install), by their local
+    /// names (`lantern-catch`); a minigame def plays one as `packId:name`. `None` (absent) and
+    /// empty both allow none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minigames: Option<Vec<String>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
 
 impl Default for PackPermissions {
     fn default() -> Self {
-        Self { hooks: Vec::new(), content_inject: true, ui_panels: false, mutations: None, extra: Map::new() }
+        Self {
+            hooks: Vec::new(),
+            content_inject: true,
+            ui_panels: false,
+            mutations: None,
+            minigames: None,
+            extra: Map::new(),
+        }
     }
 }
 
@@ -67,6 +79,10 @@ pub struct PackPlugin {
     pub name: Option<String>,
     /// Hooks this plugin wants; effective set = intersection with manifest permissions.hooks.
     pub hooks: Vec<String>,
+    /// Minigame kinds this plugin defines (`api.minigame(name, …)`), by local name; effective
+    /// set = intersection with manifest permissions.minigames.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minigames: Option<Vec<String>>,
     pub source: String,
     #[serde(flatten)]
     pub extra: Map<String, Value>,

@@ -7,7 +7,9 @@ answers with a list of **mutations** such as
 `{ type: 'giveMoney', amount: 10 }`. Plugins never touch the game state
 themselves. Each answer is checked and then runs as a `pluginMutation`
 command, so it enters the command log like anything the player does, and a
-replay of that log needs no plugins.
+replay of that log needs no plugins. A plugin can also define its own
+minigame kinds, which it runs and draws frame by frame
+([Minigames](#minigames)).
 
 Plugins run in `farm-plugins`: QuickJS compiled to WebAssembly, one isolated
 instance per plugin, run by the wasmi interpreter with deterministic budgets.
@@ -42,6 +44,7 @@ the pack. The Mods tab's install review shows them.
 | `mutations` | see below | What the plugins may answer with. |
 | `contentInject` | `true` | Whether the pack's content (definitions, `playerStart`, string tables) loads. When it is `false`, nothing of it loads, the Problems panel warns if the pack has content, and its plugins still run. |
 | `uiPanels` | `false` | Reserved. Packs cannot add game panels yet, so this allows nothing. |
+| `minigames` | none | The minigame kinds the pack's plugins may define ([Minigames](#minigames)). A plugin defines the kinds in its own `minigames` list that the manifest also lists. |
 
 ### Mutation capabilities
 
@@ -97,6 +100,96 @@ ignored and the Problems panel warns about them.
   watering and storm damage already used the rolled weather. The Problems
   panel warns about plugins that listen to `onWeatherRoll`.
 
+## Minigames
+
+A pack can bring its own minigame kinds. A plugin defines one with
+`api.minigame(name, { start, update, draw })`; the game runs it while a
+minigame of that kind is open, one `update` and one `draw` per frame, and
+draws what `draw` answers inside the minigame window. When `update` says the
+game is done, its score resolves the minigame exactly like a built-in kind's:
+the def's result tiers give the rewards, and only the score enters the command
+log, so replays need no plugins.
+
+```json
+{
+  "manifest": {
+    "id": "lantern-night", "name": "Lantern Night", "version": "1.0.0",
+    "permissions": { "minigames": ["lantern-catch"] }
+  },
+  "content": {
+    "minigames": [{
+      "id": "catch", "name": "Lantern Catch", "kind": "lantern-night:lantern-catch",
+      "config": { "lanterns": 6 },
+      "resultTiers": [
+        { "minScore": 0, "outcomes": [{ "type": "message", "message": "The lanterns drift away." }] },
+        { "minScore": 1, "outcomes": [{ "type": "giveItem", "itemId": "lantern", "itemQuantity": 3 }] }
+      ]
+    }]
+  },
+  "plugins": [{
+    "id": "lantern-catch",
+    "minigames": ["lantern-catch"],
+    "source": "api.minigame('lantern-catch', { start: (config, info) => ({ x: info.width / 2, caught: 0, t: 0 }), update: (s, input, dt) => { if (input.left) s.x -= 200 * dt; if (input.right) s.x += 200 * dt; s.t += dt; return s.t > 10 ? { state: s, done: { score: s.caught / 6 } } : { state: s }; }, draw: s => [{ type: 'rect', x: 0, y: 0, w: 400, h: 240, color: '#1b2140' }, { type: 'rect', x: s.x - 40, y: 204, w: 80, h: 16, radius: 5, color: 'primary' }, { type: 'text', x: 12, y: 26, text: 'Caught ' + s.caught, color: '#ffe9a8' }] });"
+  }]
+}
+```
+
+The complete example, with falling lanterns and item art, is
+[fixtures/projects/lantern-night-mod.json](../fixtures/projects/lantern-night-mod.json).
+
+**Kinds.** A kind is `packId:name`, and its name follows the pack id rule
+(lowercase letters, digits and dashes). The plugin's `minigames` and the
+manifest's `permissions.minigames` list the name (`packId:name` works too);
+only kinds in both are defined, and only while the pack is enabled. Any
+minigame def, the game's own or a pack's, can use the kind. The editor's
+kind list offers the kinds of the enabled packs, and Problems warns when a
+def uses a kind whose pack is not installed, turned off, lacks the
+permission or has no plugin defining it (the def then plays as the neutral
+"Go!" button, like any unknown kind).
+
+**The functions.** The game keeps the state; the functions get it and answer
+a new one:
+
+| Function | Gets | Answers |
+|---|---|---|
+| `start(config, info)` | The def's `config`; `info` is `{ width: 400, height: 240, seed }`. | The first state (any JSON). Optional: without it the state starts as `null`. |
+| `update(state, input, dt)` | The state, the player's input this frame, the frame time in seconds (at most 0.25). | `{ state, done }`: the new state (the old one stays when `state` is left out), and `done: { score }` (0 to 1) or `done: { success }` (`true` scores 1, `false` 0) to finish. |
+| `draw(state)` | The state `update` just answered. | The frame: a list of draw commands. |
+
+`input` is `{ up, down, left, right, action, actionPressed, actionReleased }`,
+all `true` or `false`, from the game's input bindings after rebinding: the
+move keys, arrows, left stick and D-pad, and Interact (E, Space, Enter,
+gamepad A, the touch controls' A) as the action. Escape and the window's
+Give up button cancel the minigame as usual.
+
+**Draw commands** use minigame coordinates: the canvas is 400 × 240, origin
+top left, `y` down, scaled into the window and clipped to it.
+
+| Command | Fields |
+|---|---|
+| `{ type: 'rect', x, y, w, h, color, radius, outline }` | A filled rectangle with rounded corners of `radius`; `outline` draws a stroke of that width instead. |
+| `{ type: 'text', x, y, text, size, color, align, bold }` | One line of text; `y` is its baseline, `align` is `left`, `center` or `right` of `x`, `size` 6–64 (default 14). |
+| `{ type: 'sprite', x, y, w, h, item }` | An item's art fitted into the rectangle. A plain id means the pack's own item (`packId:item`) when there is one, else the id as written. |
+
+Colors are `#rgb`, `#rrggbb`, `#rrggbbaa` or a theme color (`text`,
+`muted`, `primary`, `accent`, `track`, `panel`, `background`, `error`), so a
+minigame can match the game's interface. Unknown types and keys, a wrong
+value or a list over the limits is an error, not ignored.
+
+**Failing.** A minigame whose plugin throws, runs out of fuel or memory,
+answers something malformed or breaks a limit ends at once as failed: it
+resolves with score 0 (the lowest tier applies), and the error shows in the
+plugin errors list and as an error toast, for example
+`lantern-night:lantern-catch: [threw] minigame lantern-night:lantern-catch failed: threw in update: s.lantern is undefined`.
+The game itself never stops or slows past one frame's budget.
+
+**Isolation.** Each minigame session gets its own sandbox instance of the
+plugin, started from its source and granted only that minigame. Its
+JavaScript variables start over for every session and never mix with the
+plugin's hook handlers, which run in their own instance; the hook budgets,
+strikes and windows do not count minigame frames. The plugin's top-level code
+runs in both instances, so keep it to registering handlers.
+
 ## Limits
 
 Budgets are counted in **fuel**: one unit per WebAssembly instruction the
@@ -120,6 +213,12 @@ build). They never depend on the machine.
 | Different flags / skills per plugin per session | 256 / 32 | Further new ones are dropped. |
 | An answer's size | 1 MiB | The answer is dropped (like a throw). |
 | An error message | 1 KB | The rest is cut off. |
+| Minigame start (compile, `start`, first `draw`) | 200 million fuel | The minigame fails. |
+| Minigame frame (`update` and `draw`) | 10 million fuel (8–20 ms) | The minigame fails. |
+| Minigame state | 16 KiB as JSON | The minigame fails. |
+| Draw commands per frame | 256 | The minigame fails. |
+| Text per draw command / per frame | 200 / 4000 characters | The minigame fails. |
+| Minigame answer (`update` and `draw` together) | 1 MiB | The minigame fails. |
 
 A handler that throws gives no mutations and is not a strike, but the fuel it
 burned counts toward its per-second budget. After a strike the plugin is
@@ -132,6 +231,14 @@ twice the fuel its first start used.
   finishes is the same on every machine and in every build.
 - `Date.now()` is always 0, and `Math.random()` gives the same sequence in
   every plugin and every run.
+- A minigame session depends only on its start and its input: the same
+  config, seed and input give the same states, frames and score on every
+  machine (its `Math.random()` starts the same way in every session; use
+  `info.seed` for variety). The seed comes from the game's cosmetic
+  randomness, and only the score enters the command log.
+- Passing the state into the sandbox and back costs about 260 fuel per byte
+  each frame, so a 16 KiB state uses about 4 of a frame's 10 million. Keep
+  states small.
 - Plugin JavaScript state (variables kept between calls) is not saved. It
   starts over when the game loads, when Play Mode restarts, and when the
   plugin is rebuilt after a strike, so a plugin's answers can depend on the
@@ -161,6 +268,16 @@ Notes for engine developers (the 2026-09-30 audit's defence-in-depth items).
 - **WASI stubs.** The guest imports only inert `wasi_snapshot_preview1`
   stubs. `random_get` checks the range against linear memory before it
   allocates anything (the current guest does not import it).
+- **The minigame API needs no guest change.** `api.minigame` is a line of
+  JavaScript (`farm_plugins::PRELUDE`) that runs before every plugin's
+  source and registers the minigame as the handler of the hook
+  `minigame:<name>` through the guest's own `api.on`. Only a minigame
+  session's instance is granted that hook, so the hook handlers' instance
+  never registers one, and one guest call per frame runs `update` and `draw`.
+  Everything the plugin answers is checked on the host side
+  (`farm_runtime::canvas::parse_canvas`, the state and score rules), so the
+  prelude is a convenience, not a boundary: a plugin that rewrites it only
+  breaks its own minigame.
 - **Output sizes.** The host never copies more than 1 MiB of an answer or
   1 KB of an error text out of the guest, however large the plugin makes
   them. The guest itself still copies a thrown message in full into its own

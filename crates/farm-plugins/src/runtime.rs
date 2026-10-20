@@ -211,6 +211,12 @@ impl<H: PluginHost> PluginRuntime<H> {
         self.queue.drain().into_iter().map(|queued| queued.into_command()).collect()
     }
 
+    /// Keep `error` in the recent errors (a pack minigame's failure, for instance), like the
+    /// errors of a dispatch.
+    pub fn report(&mut self, error: PluginError) {
+        self.record(&[error]);
+    }
+
     fn record(&mut self, errors: &[PluginError]) {
         for error in errors {
             if self.recent_errors.len() == MAX_RECENT_ERRORS {

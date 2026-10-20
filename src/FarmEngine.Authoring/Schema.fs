@@ -1121,13 +1121,17 @@ and PackPermissions =
         /// Mutation capabilities the pack's plugins may use (`message`, `giveItem`, `setFlag:any`,
         /// `*`, … — see docs/PLUGINS.md). None: the defaults, and onEffect/onCommand answers are dropped.
         Mutations: (string list) option
+        /// Minigame kinds the pack's plugins may define (user-approved at install), by local name
+        /// (`lantern-catch`); minigame defs play one as `packId:name` (docs/PLUGINS.md). None and
+        /// empty both allow none.
+        Minigames: (string list) option
         /// Undeclared keys, in order (zod `.passthrough()`).
         Extra: (string * Json) list
     }
 
     /// A `PackPermissions` with every field at its schema default.
     static member Default : PackPermissions =
-        { Hooks = []; ContentInject = true; UiPanels = false; Mutations = None; Extra = [] }
+        { Hooks = []; ContentInject = true; UiPanels = false; Mutations = None; Minigames = None; Extra = [] }
 
 /// Optional player-start block so a base pack can express the whole starter game.
 and PackPlayerStart =
@@ -1154,6 +1158,9 @@ and PackPlugin =
         Name: string option
         /// Hooks this plugin wants; effective set = intersection with manifest permissions.hooks.
         Hooks: string list
+        /// Minigame kinds this plugin defines (`api.minigame(name, …)`), by local name; effective
+        /// set = intersection with manifest permissions.minigames.
+        Minigames: (string list) option
         Source: string
         /// Undeclared keys, in order (zod `.passthrough()`).
         Extra: (string * Json) list
@@ -1161,7 +1168,7 @@ and PackPlugin =
 
     /// A `PackPlugin` with every field at its schema default.
     static member Default : PackPlugin =
-        { Id = ""; Name = None; Hooks = []; Source = ""; Extra = [] }
+        { Id = ""; Name = None; Hooks = []; Minigames = None; Source = ""; Extra = [] }
 
 /// TS `PackPlayerStartSchema.inventory` item (inline object).
 and PackStartItem =

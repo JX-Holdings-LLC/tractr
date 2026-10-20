@@ -393,12 +393,55 @@ module internal ChecksContent =
                 sink.Error("minigame.emptyKind", path + ".kind", sprintf "Minigame \"%s\" has no kind" minigame.Name, target)
             else
                 match MinigameKinds.tryFind minigame.Kind with
+                | None when (MinigameKinds.tryFindPackKind context.Project minigame.Kind).IsSome ->
+                    // An enabled pack's plugin defines it; its settings are the plugin's own.
+                    ()
                 | None ->
-                    sink.Warning(
-                        "minigame.unknownKind",
-                        path + ".kind",
-                        sprintf "Minigame \"%s\" uses kind \"%s\", which the game doesn't have: it plays as a single \"Go!\" button that always scores 0.5. Pick one of the built-in kinds" minigame.Name minigame.Kind,
-                        target)
+                    let fallback = "it plays as a single \"Go!\" button that always scores 0.5"
+                    let packId, name =
+                        match minigame.Kind.IndexOf ':' with
+                        | -1 -> "", minigame.Kind
+                        | at -> minigame.Kind.Substring(0, at), minigame.Kind.Substring(at + 1)
+                    let install = context.Project.ContentPacks |> List.tryFind (fun install -> install.Pack.Manifest.Id = packId)
+                    let kindPath = path + ".kind"
+                    match install with
+                    | _ when packId.Length = 0 ->
+                        sink.Warning(
+                            "minigame.unknownKind",
+                            kindPath,
+                            sprintf "Minigame \"%s\" uses kind \"%s\", which the game doesn't have: %s. Pick one of the built-in kinds" minigame.Name minigame.Kind fallback,
+                            target)
+                    | None ->
+                        sink.Warning(
+                            "minigame.packMissing",
+                            kindPath,
+                            sprintf "Minigame \"%s\" uses kind \"%s\" from pack \"%s\", which is not installed: %s. Install the pack or pick another kind" minigame.Name minigame.Kind packId fallback,
+                            target)
+                    | Some install when not install.Enabled ->
+                        sink.Warning(
+                            "minigame.packDisabled",
+                            kindPath,
+                            sprintf "Minigame \"%s\" uses kind \"%s\" from pack \"%s\", which is turned off: %s. Turn the pack on in Mods or pick another kind" minigame.Name minigame.Kind install.Pack.Manifest.Name fallback,
+                            target)
+                    | Some install ->
+                        let pack = install.Pack
+                        let declared =
+                            pack.Plugins
+                            |> List.exists (fun plugin ->
+                                plugin.Minigames |> Option.defaultValue [] |> List.choose (PackRules.minigameLocalName packId) |> List.contains name)
+                        // Declared but not found: the manifest does not allow it.
+                        let code, reason =
+                            if declared then
+                                "minigame.packPermission",
+                                sprintf "pack \"%s\" does not have the permission for it (its manifest's permissions.minigames does not list \"%s\")" pack.Manifest.Name name
+                            else
+                                "minigame.packUndefined",
+                                sprintf "no plugin of pack \"%s\" defines it (a plugin's minigames list \"%s\" and its source calls api.minigame('%s', …))" pack.Manifest.Name name name
+                        sink.Warning(
+                            code,
+                            kindPath,
+                            sprintf "Minigame \"%s\" uses kind \"%s\", but %s: %s" minigame.Name minigame.Kind reason fallback,
+                            target)
                 | Some kind ->
                     for key, value in minigame.Config do
                         let spath = sprintf "%s.config.%s" path key
@@ -731,6 +774,24 @@ module internal ChecksContent =
             |> List.iteri (fun k entry ->
                 if not (PackRules.isMutationCapability entry) then
                     sink.Warning("pack.unknownMutation", sprintf "%s.pack.manifest.permissions.mutations[%d]" path k, sprintf "Pack \"%s\" asks for plugin capability \"%s\", which this engine does not know (it is ignored)" manifest.Name entry, target))
+            // Minigame kinds: names like pack ids; a plugin defines only what the manifest allows.
+            let permitted = manifest.Permissions.Minigames |> Option.defaultValue [] |> List.choose (PackRules.minigameLocalName manifest.Id)
+            manifest.Permissions.Minigames
+            |> Option.defaultValue []
+            |> List.iteri (fun k entry ->
+                if (PackRules.minigameLocalName manifest.Id entry).IsNone then
+                    sink.Warning("pack.badMinigameName", sprintf "%s.pack.manifest.permissions.minigames[%d]" path k, sprintf "Pack \"%s\" asks for minigame kind \"%s\": names are lowercase letters, digits and dashes, of this pack only (it is ignored)" manifest.Name entry, target))
+            install.Pack.Plugins
+            |> List.iteri (fun p plugin ->
+                plugin.Minigames
+                |> Option.defaultValue []
+                |> List.iteri (fun k entry ->
+                    match PackRules.minigameLocalName manifest.Id entry with
+                    | Some name when not (List.contains name permitted) ->
+                        sink.Warning("pack.minigameNotPermitted", sprintf "%s.pack.plugins[%d].minigames[%d]" path p k, sprintf "Plugin \"%s\" of pack \"%s\" defines minigame kind \"%s\", which the manifest's permissions.minigames does not allow: the game does not run it" (defaultArg plugin.Name plugin.Id) manifest.Name name, target)
+                    | Some _ -> ()
+                    | None ->
+                        sink.Warning("pack.badMinigameName", sprintf "%s.pack.plugins[%d].minigames[%d]" path p k, sprintf "Plugin \"%s\" of pack \"%s\" defines minigame kind \"%s\": names are lowercase letters, digits and dashes, of this pack only (it is ignored)" (defaultArg plugin.Name plugin.Id) manifest.Name entry, target)))
             // Plugins answer onWeatherRoll after the night: the day's watering and storm damage
             // already used the rolled weather (docs/PLUGINS.md).
             if install.Enabled && manifest.Permissions.Hooks |> List.contains "onWeatherRoll" then

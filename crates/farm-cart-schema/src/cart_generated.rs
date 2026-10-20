@@ -461,6 +461,7 @@ impl<'a> Plugin<'a> {
   pub const VT_SOURCE: flatbuffers::VOffsetT = 8;
   pub const VT_GRANTED_HOOKS: flatbuffers::VOffsetT = 10;
   pub const VT_GRANTED_MUTATIONS: flatbuffers::VOffsetT = 12;
+  pub const VT_GRANTED_MINIGAMES: flatbuffers::VOffsetT = 14;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -472,6 +473,7 @@ impl<'a> Plugin<'a> {
     args: &'args PluginArgs<'args>
   ) -> flatbuffers::WIPOffset<Plugin<'bldr>> {
     let mut builder = PluginBuilder::new(_fbb);
+    if let Some(x) = args.granted_minigames { builder.add_granted_minigames(x); }
     if let Some(x) = args.granted_mutations { builder.add_granted_mutations(x); }
     if let Some(x) = args.granted_hooks { builder.add_granted_hooks(x); }
     if let Some(x) = args.source { builder.add_source(x); }
@@ -516,6 +518,13 @@ impl<'a> Plugin<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(Plugin::VT_GRANTED_MUTATIONS, None)}
   }
+  #[inline]
+  pub fn granted_minigames(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(Plugin::VT_GRANTED_MINIGAMES, None)}
+  }
 }
 
 impl flatbuffers::Verifiable for Plugin<'_> {
@@ -530,6 +539,7 @@ impl flatbuffers::Verifiable for Plugin<'_> {
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("source", Self::VT_SOURCE, true)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_hooks", Self::VT_GRANTED_HOOKS, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_mutations", Self::VT_GRANTED_MUTATIONS, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_minigames", Self::VT_GRANTED_MINIGAMES, false)?
      .finish();
     Ok(())
   }
@@ -540,6 +550,7 @@ pub struct PluginArgs<'a> {
     pub source: Option<flatbuffers::WIPOffset<&'a str>>,
     pub granted_hooks: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
     pub granted_mutations: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
+    pub granted_minigames: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
 }
 impl<'a> Default for PluginArgs<'a> {
   #[inline]
@@ -550,6 +561,7 @@ impl<'a> Default for PluginArgs<'a> {
       source: None, // required field
       granted_hooks: None,
       granted_mutations: None,
+      granted_minigames: None,
     }
   }
 }
@@ -580,6 +592,10 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> PluginBuilder<'a, 'b, A> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Plugin::VT_GRANTED_MUTATIONS, granted_mutations);
   }
   #[inline]
+  pub fn add_granted_minigames(&mut self, granted_minigames: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Plugin::VT_GRANTED_MINIGAMES, granted_minigames);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> PluginBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     PluginBuilder {
@@ -605,6 +621,7 @@ impl core::fmt::Debug for Plugin<'_> {
       ds.field("source", &self.source());
       ds.field("granted_hooks", &self.granted_hooks());
       ds.field("granted_mutations", &self.granted_mutations());
+      ds.field("granted_minigames", &self.granted_minigames());
       ds.finish()
   }
 }

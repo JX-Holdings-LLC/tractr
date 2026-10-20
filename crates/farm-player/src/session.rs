@@ -12,8 +12,12 @@
 //!   mutation answering tick `k` applies before tick `k + 1` at any frame rate, and a replay of
 //!   the command log is deterministic.
 //! - Minigames are hosted here: the UI forwards presses and choices, and a finished minigame
-//!   enters the command log exactly once as `resolveMinigame`.
+//!   enters the command log exactly once as `resolveMinigame`. A kind a pack plugin defines runs
+//!   in the plugin sandbox ([`SessionPlugins::start_minigame`]), one `update` and `draw` per
+//!   frame with the routed game input; one that fails (a limit, a throw, a malformed answer)
+//!   resolves with score 0 and reports the error like any plugin error.
 
+use farm_plugins::{MinigameControls, MinigameFrame, PackMinigame, PluginError};
 use farm_runtime::host::{HostedMinigame, MinigameInput, MinigameView};
 use farm_runtime::input::{self, InputManager, Modifiers, MoveVector};
 use farm_runtime::timestep::FixedTimestep;
@@ -63,6 +67,9 @@ pub enum SessionEvent {
     DayStarted { day: u32, season: String, year: u32 },
     /// A quest was completed.
     QuestCompleted { quest_id: String },
+    /// A plugin failed outside a hook (a pack minigame): `text` is the error as
+    /// [`PlaySession::plugin_errors`] lists it.
+    PluginError { text: String },
 }
 
 /// Floating feedback text ("juice"): presentation only, never simulation state.
@@ -113,6 +120,24 @@ pub trait SessionPlugins: Send {
     fn recent_errors(&self) -> Vec<String> {
         Vec::new()
     }
+    /// Start a session of the pack-defined minigame `kind` (`packId:name`) with the def's
+    /// `config` and a seed for its randomness. `None` when no plugin defines the kind (the
+    /// session then plays the built-in kind of that name, or the neutral fallback).
+    fn start_minigame(
+        &mut self,
+        _kind: &str,
+        _config: &Value,
+        _seed: u32,
+    ) -> Option<Result<PackMinigame, PluginError>> {
+        None
+    }
+    /// Keep a pack minigame's failure in the recent errors.
+    fn report_error(&mut self, _error: PluginError) {}
+}
+
+/// A plugin error as [`SessionPlugins::recent_errors`] lists it.
+pub fn describe_plugin_error(error: &PluginError) -> String {
+    format!("{}: [{}] {}", error.plugin_id, error.kind.as_str(), error.message)
 }
 
 /// A creator debug-drawer action (web `debugMutate`): tooling, never gameplay.
@@ -142,12 +167,49 @@ pub enum DebugAction {
     SkipDay,
 }
 
+/// What plays a mounted minigame.
+enum MinigameHost {
+    /// A built-in kind (or the neutral fallback).
+    BuiltIn(HostedMinigame),
+    /// A kind a pack plugin defines; `action` is whether interact was held last frame.
+    Pack { game: Box<PackMinigame>, action: bool },
+    /// A pack minigame that failed (to start or in a frame): it resolves with score 0.
+    Failed,
+}
+
 struct MountedMinigame {
     /// The `state.minigame` this mount belongs to.
     active: farm_sim::schema::MinigameSession,
-    game: HostedMinigame,
+    game: MinigameHost,
     view: MinigameView,
     reported: bool,
+}
+
+/// The view of a pack minigame: its kind and frame; the rest stays empty (the plugin draws
+/// everything itself).
+fn pack_view(kind: &str, canvas: Option<farm_runtime::canvas::MinigameCanvas>, score: Option<f64>) -> MinigameView {
+    MinigameView {
+        kind: kind.to_owned(),
+        prompt: String::new(),
+        button_text: String::new(),
+        is_done: score.is_some(),
+        score,
+        position: 0.0,
+        target_left: 0.0,
+        target_size: 0.0,
+        status: String::new(),
+        log: String::new(),
+        choices: Vec::new(),
+        notes: Vec::new(),
+        meter: 0.0,
+        progress: 0.0,
+        highlight: String::new(),
+        canvas,
+        prompt_message: None,
+        button_message: None,
+        status_message: None,
+        log_message: None,
+    }
 }
 
 /// One running game. `Send` but not shared: one thread at a time drives it.
@@ -459,12 +521,15 @@ impl PlaySession {
 
     /// Forward a press/release/choice to the running minigame. A finished minigame reports its
     /// score through the command log exactly once.
+    /// Pack minigames read the game input instead ([`MinigameControls`]), so this does nothing
+    /// for them.
     pub fn minigame_input(&mut self, input: MinigameInput) {
         let Some(mounted) = self.minigame.as_mut() else { return };
         if mounted.reported || mounted.view.is_done {
             return;
         }
-        if let Ok(view) = mounted.game.apply(input) {
+        let MinigameHost::BuiltIn(game) = &mut mounted.game else { return };
+        if let Ok(view) = game.apply(input) {
             mounted.view = view;
         }
         self.report_minigame();
@@ -625,9 +690,33 @@ impl PlaySession {
                 }
                 let random = self.next_cosmetic();
                 let definition = self.ctx.content.minigames.iter().find(|def| def.id == active.minigame_id);
+                if let Some(def) = definition {
+                    // A pack-defined kind runs in its plugin's sandbox.
+                    let seed = (random * f64::from(u32::MAX)) as u32;
+                    let config = serde_json::to_value(&def.config).unwrap_or(Value::Null);
+                    let started =
+                        self.plugins.as_mut().and_then(|plugins| plugins.start_minigame(&def.kind, &config, seed));
+                    match started {
+                        Some(Ok(game)) => {
+                            let view = pack_view(&def.kind, Some(game.canvas().clone()), None);
+                            let game = MinigameHost::Pack { game: Box::new(game), action: self.action_held() };
+                            self.minigame = Some(MountedMinigame { active, game, view, reported: false });
+                            return;
+                        }
+                        Some(Err(error)) => {
+                            let view = pack_view(&def.kind, None, Some(0.0));
+                            let game = MinigameHost::Failed;
+                            self.minigame = Some(MountedMinigame { active, game, view, reported: false });
+                            self.report_plugin_error(error);
+                            return;
+                        }
+                        None => {}
+                    }
+                }
                 match HostedMinigame::mount(definition, random) {
                     Ok(game) => {
                         let view = game.view();
+                        let game = MinigameHost::BuiltIn(game);
                         self.minigame = Some(MountedMinigame { active, game, view, reported: false });
                     }
                     Err(_) => self.minigame = None,
@@ -636,13 +725,76 @@ impl PlaySession {
         }
     }
 
+    /// Interact (E, Space, Enter, gamepad A after rebinding) is held.
+    fn action_held(&self) -> bool {
+        input::bindings::INTERACT_KEYS.iter().any(|key| self.input.pressed(key))
+    }
+
+    /// This frame's game input as a pack minigame reads it; `was_held` is whether interact was
+    /// held in the previous frame.
+    fn minigame_controls(&self, was_held: bool) -> MinigameControls {
+        let keys = |names: [&str; 2]| names.iter().any(|key| self.input.pressed(key));
+        let action = self.action_held();
+        // A tap that went down and up within one frame still counts as a press and a release.
+        let tapped = input::bindings::INTERACT_KEYS.iter().any(|key| self.input.just_pressed(key));
+        MinigameControls {
+            up: keys(["arrowup", "w"]),
+            down: keys(["arrowdown", "s"]),
+            left: keys(["arrowleft", "a"]),
+            right: keys(["arrowright", "d"]),
+            action,
+            action_pressed: tapped || (action && !was_held),
+            action_released: (was_held || tapped) && !action,
+        }
+    }
+
+    fn report_plugin_error(&mut self, error: PluginError) {
+        let text = describe_plugin_error(&error);
+        if let Some(plugins) = self.plugins.as_mut() {
+            plugins.report_error(error);
+        }
+        self.events.push(SessionEvent::PluginError { text });
+    }
+
     fn update_minigame(&mut self, delta: f64) {
+        let controls = match self.minigame.as_ref().map(|mounted| &mounted.game) {
+            Some(MinigameHost::Pack { action, .. }) => self.minigame_controls(*action),
+            _ => MinigameControls::default(),
+        };
+        let mut failure = None;
         if let Some(mounted) = self.minigame.as_mut() {
             if !mounted.reported && !mounted.view.is_done {
-                if let Ok(view) = mounted.game.apply(MinigameInput::Update { seconds: delta }) {
-                    mounted.view = view;
+                match &mut mounted.game {
+                    MinigameHost::BuiltIn(game) => {
+                        if let Ok(view) = game.apply(MinigameInput::Update { seconds: delta }) {
+                            mounted.view = view;
+                        }
+                    }
+                    MinigameHost::Pack { game, action } => {
+                        *action = controls.action;
+                        match game.frame(&controls, delta) {
+                            Ok(frame) => {
+                                let score = match frame {
+                                    MinigameFrame::Running => None,
+                                    MinigameFrame::Finished { score } => Some(score),
+                                };
+                                mounted.view = pack_view(game.kind(), Some(game.canvas().clone()), score);
+                            }
+                            Err(error) => {
+                                // Ends as failed; the last frame stays up until the engine closes it.
+                                mounted.view.score = Some(0.0);
+                                mounted.view.is_done = true;
+                                mounted.game = MinigameHost::Failed;
+                                failure = Some(error);
+                            }
+                        }
+                    }
+                    MinigameHost::Failed => {}
                 }
             }
+        }
+        if let Some(error) = failure {
+            self.report_plugin_error(error);
         }
         self.report_minigame();
     }

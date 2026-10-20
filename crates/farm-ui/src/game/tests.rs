@@ -519,3 +519,55 @@ fn inventory_holds_seeds_and_fertilizer_for_planting() {
     fixture.idle();
     assert_eq!(fixture.game_ui.planting.fertilizer, None);
 }
+
+#[test]
+fn a_pack_minigame_draws_its_own_frame_scaled_into_the_window() {
+    use farm_runtime::canvas::{parse_canvas, CanvasLimits, MinigameCanvas, CANVAS_HEIGHT, CANVAS_WIDTH};
+    let mut fixture = Fixture::starter();
+    fixture.ctx.content.minigames.push(farm_sim::schema::MinigameDef {
+        id: "glow:catch".into(),
+        name: "Lantern Catch".into(),
+        kind: "glow:lantern-catch".into(),
+        ..Default::default()
+    });
+    fixture.state.minigame = Some(MinigameSession { minigame_id: "glow:catch".into(), ..MinigameSession::default() });
+    let raw = serde_json::json!([
+        { "type": "rect", "x": 0, "y": 0, "w": 400, "h": 240, "color": "#102030" },
+        { "type": "rect", "x": 100, "y": 50, "w": 40, "h": 20, "radius": 4, "color": "accent" },
+        { "type": "text", "x": 200, "y": 30, "text": "Caught 2 / 6", "align": "center", "bold": true },
+        { "type": "sprite", "x": 10, "y": 10, "w": 32, "h": 32, "item": "parsnip-seeds" },
+        { "type": "rect", "x": 390, "y": 230, "w": 500, "h": 500, "color": "#ff0000" },
+    ]);
+    let commands = parse_canvas(&raw, &CanvasLimits::default()).unwrap();
+    let mut view = farm_runtime::host::HostedMinigame::mount(None, 0.5).unwrap().view();
+    view.kind = "glow:lantern-catch".into();
+    view.canvas = Some(MinigameCanvas { pack_id: "glow".into(), commands });
+    fixture.minigame = Some(view);
+    fixture.idle();
+    fixture.idle();
+    assert!(fixture.texts().iter().any(|text| text == "Caught 2 / 6"), "{:?}", fixture.texts());
+    // The background fills the canvas, scaled to the window's width.
+    let background = fixture.last.commands.iter().find_map(|command| match command {
+        farm_render::DrawCmd::FillRect { rect, color, .. } if *color == farm_render::Color::rgb(0x10, 0x20, 0x30) => {
+            Some(*rect)
+        }
+        _ => None,
+    });
+    let background = background.expect("the background is drawn");
+    let scale = background.width / CANVAS_WIDTH;
+    assert!(scale > 0.5 && scale <= 2.0, "{background:?}");
+    assert!((background.height - CANVAS_HEIGHT * scale).abs() < 0.01);
+    // What reaches past the canvas is clipped to it.
+    let clipped = fixture.last.commands.iter().any(|command| {
+        matches!(command, farm_render::DrawCmd::ClipRect { rect } if (rect.width - background.width).abs() < 0.01)
+    });
+    assert!(clipped, "the canvas is clipped");
+    // No primary button: input comes from the game keys. Give up still cancels, and Space or
+    // Enter never reach it (it takes no focus).
+    assert!(fixture.ui.last_rect(WidgetId::new("minigame-primary")).is_none());
+    for nav in [NavAction::Down, NavAction::Right, NavAction::Up, NavAction::Accept] {
+        assert!(fixture.nav(&[nav]).is_empty(), "{nav:?}");
+    }
+    assert!(fixture.ui.focused().is_none());
+    assert_eq!(command(&fixture.click(WidgetId::new("minigame-give-up"))), Some(&Command::CancelMinigame));
+}

@@ -4,8 +4,13 @@
 //! (a battle's moves, a memory game's symbols) or the primary button. Presses and releases go to
 //! `PlaySession::minigame_input`; the score enters the command log there, exactly once. Engine
 //! texts show in the player's language (their catalog messages); a def's own prompt as written.
+//!
+//! A pack-defined kind brings its own frame (`MinigameView::canvas`, validated by
+//! `farm_runtime::canvas`): its rectangles, text and item sprites are scaled from canvas units
+//! into the window and clipped to it, colors by name follow the theme, and its input comes from
+//! the game keys, so only Give up is a button.
 
-use super::{GameAction, GameView};
+use super::{draw_item_art, GameAction, GameView};
 use crate::format::capitalize;
 use crate::i18n::Lang;
 use crate::icons::Icon;
@@ -14,14 +19,17 @@ use crate::layout::{Align, RectExt};
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::{Button, ButtonKind, ModalSpec};
-use farm_render::{FontId, Rect, TextAlign};
+use farm_render::{Color, DrawCmd, FontId, ImageStore, Rect, TextAlign};
+use farm_runtime::canvas::{
+    CanvasAlign, CanvasColor, CanvasCommand, MinigameCanvas, ThemeColor, CANVAS_HEIGHT, CANVAS_WIDTH,
+};
 use farm_runtime::host::MinigameInput;
 use farm_sim::Command;
 
 const BAR_WIDTH: f32 = 320.0;
 const BAR_HEIGHT: f32 = 26.0;
 
-pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameAction>) {
+pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {
     let (Some(active), Some(game)) = (view.state.minigame.as_ref(), view.minigame) else { return };
     let colors = ui.theme().colors;
     let definition = view.content.minigames.iter().find(|def| def.id == active.minigame_id);
@@ -43,6 +51,32 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     let area = modal.body;
     let lang = ui.lang();
     let mut y = modal.top;
+    if let Some(canvas) = &game.canvas {
+        y = draw_canvas(ui, view, images, canvas, area, y);
+        let hint = ui.tr("minigame.packKeys");
+        let colors = ui.theme().colors;
+        ui.label(
+            Rect::new(area.x, y, area.width, ui.line_height(12.0)),
+            hint,
+            12.0,
+            FontId::Regular,
+            colors.muted,
+            Align::Center,
+        );
+        y += ui.line_height(12.0);
+        ui.end_modal_body(y);
+        if let Some(mut footer) = modal.footer {
+            // Not focusable: Space and Enter belong to the minigame.
+            let give_up = Button::new(ui.tr("minigame.giveUp")).kind(ButtonKind::Secondary);
+            let width = ui.button_width(&give_up);
+            let rect = footer.cut_right(width).centered(width, ui.button_height(13.0));
+            if ui.button(WidgetId::new("minigame-give-up"), rect, give_up.focusable(false)) {
+                actions.push(GameAction::Command(Command::CancelMinigame));
+            }
+        }
+        ui.close_modal();
+        return;
+    }
     let prompt = lang.localize(game.prompt_message.as_ref(), &game.prompt);
     y += ui.paragraph(area.x, y, area.width, &prompt, 14.0, FontId::Regular, colors.text, TextAlign::Center) + 14.0;
 
@@ -158,6 +192,86 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
         }
     }
     ui.close_modal();
+}
+
+/// A theme color or a literal one.
+fn canvas_color(ui: &Ui, color: CanvasColor) -> Color {
+    let colors = ui.theme().colors;
+    match color {
+        CanvasColor::Rgba([r, g, b, a]) => Color::rgba(r, g, b, a),
+        CanvasColor::Theme(theme) => match theme {
+            ThemeColor::Text => colors.text,
+            ThemeColor::Muted => colors.muted,
+            ThemeColor::Primary => colors.primary,
+            ThemeColor::Accent => colors.accent,
+            ThemeColor::Track => colors.track,
+            ThemeColor::Panel => colors.panel,
+            ThemeColor::Background => colors.background,
+            ThemeColor::Error => colors.error,
+        },
+    }
+}
+
+/// Draws a pack minigame's frame at `top`, as wide as `area` (at most twice the canvas size),
+/// clipped to the canvas; returns the y below it.
+fn draw_canvas(
+    ui: &mut Ui,
+    view: &GameView<'_>,
+    images: &mut ImageStore,
+    canvas: &MinigameCanvas,
+    area: Rect,
+    top: f32,
+) -> f32 {
+    let scale = (area.width / CANVAS_WIDTH).min(2.0);
+    let frame =
+        Rect::new(area.x + (area.width - CANVAS_WIDTH * scale) / 2.0, top, CANVAS_WIDTH * scale, CANVAS_HEIGHT * scale);
+    let at = |x: f32, y: f32, w: f32, h: f32| Rect::new(frame.x + x * scale, frame.y + y * scale, w * scale, h * scale);
+    let track = ui.theme().colors.track;
+    ui.list_mut().fill_round_rect(frame, 6.0, track);
+    ui.push_clip(frame);
+    for command in &canvas.commands {
+        match command {
+            CanvasCommand::Rect { x, y, w, h, color, radius, outline } => {
+                let rect = at(*x, *y, *w, *h);
+                let color = canvas_color(ui, *color);
+                match outline {
+                    Some(width) => ui.list_mut().stroke_rect(rect, color, width * scale),
+                    None if *radius > 0.0 => ui.list_mut().fill_round_rect(rect, radius * scale, color),
+                    None => ui.list_mut().fill_rect(rect, color),
+                }
+            }
+            CanvasCommand::Text { x, y, text, size, color, align, bold } => {
+                let font = ui.face(if *bold { FontId::Bold } else { FontId::Regular }, text);
+                let color = canvas_color(ui, *color);
+                let align = match align {
+                    CanvasAlign::Left => TextAlign::Left,
+                    CanvasAlign::Center => TextAlign::Center,
+                    CanvasAlign::Right => TextAlign::Right,
+                };
+                // Canvas units, not the text-size setting: the plugin laid the frame out.
+                ui.list_mut().push(DrawCmd::Text {
+                    text: text.clone(),
+                    x: frame.x + x * scale,
+                    y: frame.y + y * scale,
+                    font,
+                    size: size * scale,
+                    color,
+                    stroke: None,
+                    align,
+                });
+            }
+            CanvasCommand::Sprite { x, y, w, h, item } => {
+                let found = canvas
+                    .sprite_candidates(item)
+                    .find_map(|id| view.content.items.iter().find(|candidate| candidate.id == id));
+                if let Some(found) = found {
+                    draw_item_art(ui, images, &view.art, view.content, found, at(*x, *y, *w, *h));
+                }
+            }
+        }
+    }
+    ui.pop_clip();
+    frame.bottom() + 10.0
 }
 
 /// A choice's label: `minigame.choice.<id>` in the player's language, else the id capitalized.

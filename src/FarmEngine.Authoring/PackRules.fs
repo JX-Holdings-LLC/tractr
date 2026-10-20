@@ -91,6 +91,38 @@ module PackRules =
         let lowerOrDigit (c: char) = (c >= 'a' && c <= 'z') || isDigit c
         id.Length > 0 && lowerOrDigit id.[0] && id |> Seq.forall (fun c -> lowerOrDigit c || c = '-')
 
+    /// Whether `name` can name a pack minigame kind: like a pack id, at most 64 characters (Rust
+    /// `farm_plugins::is_valid_minigame_name`).
+    let isValidMinigameName (name: string) = name.Length <= 64 && isValidPackId name
+
+    /// A `minigames` entry of pack `packId` as a local name: `packId:name` and `name` both mean
+    /// `name`; `None` when it is not a valid name (or names another pack).
+    let minigameLocalName (packId: string) (entry: string) : string option =
+        let name = if entry.StartsWith(packId + ":", StringComparison.Ordinal) then entry.Substring(packId.Length + 1) else entry
+        if isValidMinigameName name then Some name else None
+
+    /// The full minigame kinds (`packId:name`) `plugin` of `pack` may define: the names in its own
+    /// `minigames` that the manifest's `permissions.minigames` also lists, in the plugin's order,
+    /// without duplicates (Rust `farm_plugins::granted_minigame_kinds`).
+    let grantedMinigameKinds (pack: ContentPack) (plugin: PackPlugin) : string list =
+        let packId = pack.Manifest.Id
+        let permitted = pack.Manifest.Permissions.Minigames |> Option.defaultValue [] |> List.choose (minigameLocalName packId)
+        plugin.Minigames
+        |> Option.defaultValue []
+        |> List.choose (minigameLocalName packId)
+        |> List.filter (fun name -> List.contains name permitted)
+        |> List.map (fun name -> packId + ":" + name)
+        |> List.distinct
+
+    /// The minigame kinds a pack's manifest allows, in one line for the install review (`None`
+    /// when it allows none).
+    let describeMinigames (manifest: PackManifest) : string option =
+        match manifest.Permissions.Minigames |> Option.defaultValue [] |> List.choose (minigameLocalName manifest.Id) with
+        | [] -> None
+        | names ->
+            let kinds = names |> List.distinct |> List.map (fun name -> manifest.Id + ":" + name)
+            Some(String.Join(", ", kinds) + " (the pack's plugins run and draw these minigames, and read the player's keys while one is open)")
+
     /// The pack key that carries art: `assets`, a list of custom assets (as in a project's
     /// `customAssets`) with their images as `data:image/…` URLs. Native packs add it next to
     /// `manifest`, `content` and `plugins`; the web keeps it as an unknown key (zod

@@ -26,12 +26,15 @@ table Asset {
 // A sandboxed plugin of an enabled content pack, in load order. `granted_hooks` is the plugin's
 // hooks that the pack manifest's permissions allow. `granted_mutations` is the manifest's
 // `permissions.mutations`, absent when it declares none (the player then applies the defaults).
+// `granted_minigames` is the minigame kinds (`packId:name`) the plugin defines that the manifest's
+// `permissions.minigames` allows, absent when there are none.
 table Plugin {
   id:string (required);
   pack_id:string (required);
   source:string (required);
   granted_hooks:[string];
   granted_mutations:[string];
+  granted_minigames:[string];
 }
 
 // Format 2. The player never reads project JSON: the compiler splits a project into the

@@ -1,5 +1,7 @@
 namespace FarmEngine.Authoring
 
+open FarmEngine.Schemas
+
 /// The value a minigame setting holds.
 [<RequireQualifiedAccess>]
 type MinigameSettingKind =
@@ -27,10 +29,20 @@ type MinigameKind =
       Help: string
       Settings: MinigameSetting list }
 
+/// A minigame kind a content pack defines: a plugin of the pack implements it, and the pack's
+/// manifest allows it (`permissions.minigames`, docs/PLUGINS.md "Minigames").
+type PackMinigameKind =
+    { /// The full kind, `packId:name`, as minigame defs write it.
+      Kind: string
+      PackId: string
+      PackName: string
+      /// `packId:pluginId` of the plugin that defines it.
+      PluginId: string }
+
 /// The minigame kinds built into the player (Rust `farm_runtime::minigames::BUILT_IN_KINDS`; a
-/// Rust test checks that both lists name the same kinds and settings). A def with any other kind
-/// plays as a single "Go!" button that scores 0.5; Problems warns about it. New kinds need the
-/// engine's Rust code, so creators pick from this list.
+/// Rust test checks that both lists name the same kinds and settings), and the kinds enabled
+/// content packs define (`packKinds`). A def with any other kind plays as a single "Go!" button
+/// that scores 0.5; Problems warns about it.
 module MinigameKinds =
     let private number key label (fallback: float) min max =
         { Key = key; Label = label; Kind = MinigameSettingKind.Number; Default = string fallback; Min = Some min; Max = max }
@@ -87,8 +99,31 @@ module MinigameKinds =
 
     let isBuiltIn (kind: string) = (tryFind kind).IsSome
 
-    /// (id, name) pairs for the editor's kind picker.
+    /// (id, name) pairs of the built-in kinds.
     let choices = all |> List.map (fun k -> k.Id, k.Name)
+
+    /// The kinds the enabled packs' plugins define with their manifest's permission, in load
+    /// order (the first plugin wins when two define the same kind, as in the player).
+    let packKinds (project: GameProject) : PackMinigameKind list =
+        [ for install in project.ContentPacks do
+              if install.Enabled then
+                  let pack = install.Pack
+                  for plugin in pack.Plugins do
+                      for kind in PackRules.grantedMinigameKinds pack plugin do
+                          yield
+                              { Kind = kind
+                                PackId = pack.Manifest.Id
+                                PackName = pack.Manifest.Name
+                                PluginId = pack.Manifest.Id + ":" + plugin.Id } ]
+        |> List.distinctBy (fun kind -> kind.Kind)
+
+    /// The pack kind `kind` of `project`, if an enabled pack defines it.
+    let tryFindPackKind (project: GameProject) (kind: string) =
+        packKinds project |> List.tryFind (fun pack -> pack.Kind = kind)
+
+    /// (id, name) pairs for the editor's kind picker: the built-in kinds, then the enabled packs'.
+    let choicesFor (project: GameProject) =
+        choices @ (packKinds project |> List.map (fun kind -> kind.Kind, sprintf "%s (from %s)" kind.Kind kind.PackName))
 
     /// The settings of `kind` (empty for a kind the player doesn't know).
     let settings (kind: string) =

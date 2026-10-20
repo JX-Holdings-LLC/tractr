@@ -204,6 +204,7 @@ fn the_wasm_sandbox_runs_pack_plugins_in_a_session() {
             source: spec.source.clone(),
             granted_hooks: spec.granted_hooks.clone(),
             granted_mutations: spec.granted_mutations.clone(),
+            granted_minigames: spec.granted_minigames.clone(),
         })
         .collect();
     let mut session = session_for(&project);
