@@ -321,7 +321,7 @@ tests/
   FarmingRpgMaker.App.Tests/     # C#, unchanged role
 tools/fable/                     # Fable build of FarmEngine.Authoring + Node smoke test
 tools/wasm/                      # farm-wasm build + Node smoke test
-tools/codegen/                   # generators for RecordWith.fs and RecordJson.fs tables
+tools/codegen/                   # generators for SchemaJson.fs, RecordWith.fs and RecordJson.fs tables
 ```
 
 `FarmEngine.Interop` has an MSBuild target that runs `cargo build` and copies
@@ -339,8 +339,8 @@ without a Rust toolchain, which reports them as skipped.
   migrations, validation, Problems and compiling. That means no reflection, no
   `System.Text.Json`, no file I/O and no .NET-only APIs (such as
   `SortedDictionary` or `System.Security.Cryptography`) in that project. JSON
-  goes through the explicit decoders and encoders in `SchemaJson.fs` over the
-  immutable `Json` type, and .NET-only code lives in `FarmEngine.Authoring.Net`.
+  goes through the explicit decoders and encoders in `SchemaJson.fs` (generated
+  from `Schema.fs`) over the immutable `Json` type, and .NET-only code lives in `FarmEngine.Authoring.Net`.
   CI builds it with `tools/fable/build.sh` and checks the JavaScript in Node
   (`tools/fable/smoke.mjs`). `WebApi.fs` is the JavaScript entry point: JSON
   text in and out, so callers never see F# records.
@@ -348,9 +348,15 @@ without a Rust toolchain, which reports them as skipped.
   as an immutable record: `option` for optional fields, `list` for lists,
   `(string * 'T) list` for ordered maps, `Json` for free-form values, an `Extra`
   field for undeclared keys on the records that keep them, and a union for
-  conditions. Every record has a `Default`. Change a record and its decoder
-  and encoder together, then regenerate the C# helpers
-  (`tools/codegen/record-with.fsx`, `tools/codegen/record-json.py`).
+  conditions. Every record has a `Default`, which is also what a missing key
+  decodes to. `SchemaJson.fs` is generated from the records
+  (`tools/codegen/schema-json.fsx`): the JSON key is the field name in
+  camelCase, and three attributes say what the types do not (`[<JsonKey>]` for
+  another key, `[<JsonNull>]` for a `.nullable()` field written as `null`,
+  `[<JsonDecode>]` for a decoder the type does not give;
+  [tools/codegen](../tools/codegen/README.md#schemajsonfs)). So a schema change
+  is: edit `Schema.fs`, run `schema-json.fsx`, then regenerate the C# helpers
+  (`tools/codegen/record-json.py`, `tools/codegen/record-with.fsx`).
 - The compiler writes cartridges with a plain-F# FlatBuffers builder
   (`FlatBuffers.fs`) that produces the same bytes as the official C# builder,
   and `CartridgeReader` reads them back; both work under Fable.
@@ -451,9 +457,10 @@ Rust-recorded `fixtures/golden/content` projects with F#, and records `fixtures/
 kitchen-sink project and content with every F# record field set, plus the F# pipeline's
 output for the templates, the fixture projects and the example packs), which
 `crates/farm-sim/tests/fsharp_parity.rs` checks against serde and the Rust pipeline. The
-schema itself is still kept by hand on both sides (Schema.fs/SchemaJson.fs and the serde
-types); generating one from the other is future work, and these tests catch a field added on
-one side only.
+schema itself has one source per language: on the F# side `Schema.fs`, from which
+`SchemaJson.fs` is generated (`tools/codegen/schema-json.fsx`); on the Rust side the serde
+types, kept by hand. Generating the serde types (or checking their defaults) from `Schema.fs`
+is future work; these tests catch a field added on one side only.
 
 ### `FarmEngine.Content` → F# — done, deleted
 

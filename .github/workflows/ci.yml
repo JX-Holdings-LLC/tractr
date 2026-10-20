@@ -272,8 +272,8 @@ jobs:
       - name: Coverage minimums
         run: python3 tools/coverage/check.py dotnet TestResults
 
-      # Committed generated code matches its generators (flatc accessors, RecordJson.fs,
-      # RecordWith.fs), and the version numbers agree (docs/RELEASING.md "Versions").
+      # Committed generated code matches its generators (flatc accessors, SchemaJson.fs,
+      # RecordJson.fs, RecordWith.fs), and the version numbers agree (docs/RELEASING.md "Versions").
       - name: Generated code and versions are current
         run: |
           tools/codegen/check.sh
