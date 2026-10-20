@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
 using FarmingRpgMaker.App.Hosting;
 using FarmingRpgMaker.App.Tests.Game;
 using FarmingRpgMaker.App.ViewModels;
@@ -89,7 +90,7 @@ public sealed class ScreenshotTests
         if (!string.IsNullOrEmpty(OutputDir))
         {
             Directory.CreateDirectory(OutputDir);
-            frame.Save(Path.Combine(OutputDir, fileName));
+            frame.Save(Path.Combine(OutputDir, fileName), PngBitmapEncoderOptions.Default);
         }
 
         window.Close();

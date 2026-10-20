@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using FarmEngine.Interop;
 
 namespace FarmingRpgMaker.App.Tests.Interop;
@@ -39,7 +40,8 @@ internal static class NativeTests
 /// <summary>A <see cref="FactAttribute"/> for tests that need the Rust library (see <see cref="NativeTests"/>).</summary>
 public sealed class NativeFactAttribute : FactAttribute
 {
-    public NativeFactAttribute()
+    public NativeFactAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+        : base(sourceFilePath, sourceLineNumber)
     {
         if (NativeTests.SkipReason is { } reason)
         {

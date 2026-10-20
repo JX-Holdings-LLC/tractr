@@ -231,6 +231,24 @@ public sealed class SvgImportSafetyTests
         }
     }
 
+    /// <summary>
+    /// Svg.Skia 5 can run scripts and has loaders that bypass <c>LoadImage</c>; the renderer
+    /// keeps scripting off and offers only the checked image loader.
+    /// </summary>
+    [Fact]
+    public void TheRendererRunsNoScriptsAndLoadsImagesOnlyThroughTheCheck()
+    {
+        var settings = SvgSafety.Settings();
+        Assert.False(settings.EnableJavaScript);
+        Assert.False(settings.EnableExternalJavaScript);
+        Assert.Null(settings.JavaScriptRuntimeFactory);
+        Assert.Null(Svg.Skia.SKSvgSettings.DefaultJavaScriptRuntimeFactory);
+        Assert.False(settings.EnableSvgFonts);
+        var loader = typeof(SvgSafety.CheckedAssetLoader);
+        Assert.False(typeof(Svg.Model.ISvgImageAssetLoader).IsAssignableFrom(loader));
+        Assert.False(typeof(Svg.Model.ISvgDocumentFontLoader).IsAssignableFrom(loader));
+    }
+
     [Fact]
     public void ImageHeadersAreReadWithoutSkia()
     {

@@ -138,7 +138,7 @@ public sealed class ContentEditorView : UserControl, IRetirable
 
     private readonly ProjectWorkspace _workspace;
     private readonly ComboBox _category = new() { Name = "ContentCategory", MinWidth = 175 };
-    private readonly TextBox _filter = new() { Name = "ContentFilter", Watermark = "Filter by name or id" };
+    private readonly TextBox _filter = new() { Name = "ContentFilter", PlaceholderText = "Filter by name or id" };
     private readonly DraftBar _draftBar;
     private readonly ListBox _entities = new() { Name = "ContentEntities", MinHeight = 250 };
     private readonly StackPanel _form = new() { Name = "ContentFields", Spacing = 10 };

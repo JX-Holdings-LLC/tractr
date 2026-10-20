@@ -269,6 +269,11 @@ Play Mode.
   TypeScript `.nullable().optional()`, so hand-written packs hash like the
   web version (content golden `packs-nodes`).
 - [x] Both `settings.json` stores share `JsonSettingsStore.JsonOptions`.
+- [x] The editor renders on a supported Skia (#114): Avalonia 12.1, SkiaSharp
+  3.119 and Svg.Skia 5.1, with the app tests on xUnit v3. The managed image
+  header checks and the SVG renderer's lockdown stay; Windows, GPU and
+  Wayland still need a check by hand
+  ([docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md)).
 
 ## Phase 7: one engine
 

@@ -25,9 +25,9 @@ public sealed partial class EditModeView
     private readonly StackPanel _sceneAnimals = new() { Name = "SceneAnimals", Spacing = 6 };
     private readonly ComboBox _newSceneTile = new() { Name = "NewSceneTile", MinWidth = 110 };
     private readonly ComboBox _layerSelector = new() { Name = "LayerSelector", MinWidth = 140 };
-    private readonly TextBox _sceneName = new() { Name = "SceneName", Watermark = "Scene name" };
-    private readonly TextBox _sceneWidth = new() { Name = "SceneWidth", Width = 58, Watermark = "Width" };
-    private readonly TextBox _sceneHeight = new() { Name = "SceneHeight", Width = 58, Watermark = "Height" };
+    private readonly TextBox _sceneName = new() { Name = "SceneName", PlaceholderText = "Scene name" };
+    private readonly TextBox _sceneWidth = new() { Name = "SceneWidth", Width = 58, PlaceholderText = "Width" };
+    private readonly TextBox _sceneHeight = new() { Name = "SceneHeight", Width = 58, PlaceholderText = "Height" };
     private readonly Button _deleteScene = new() { Name = "DeleteSceneButton", Content = "Delete scene" };
     private readonly Button _startScene = new() { Name = "SetStartSceneButton", Content = "Set as start" };
     private readonly Button _copy = new() { Name = "CopySelectionButton", Content = "Copy selection" };

@@ -49,7 +49,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
     private readonly TextBox _cellColumn = new() { Name = "ArtCellColumn", Text = "0", Width = 55 };
     private readonly TextBox _cellRow = new() { Name = "ArtCellRow", Text = "0", Width = 55 };
     private readonly CheckBox _pixelArt = new() { Name = "ArtPixelArt", Content = "Crisp pixel art" };
-    private readonly TextBox _svgSize = new() { Name = "ArtSvgSize", Width = 70, Watermark = "own" };
+    private readonly TextBox _svgSize = new() { Name = "ArtSvgSize", Width = 70, PlaceholderText = "own" };
     private readonly Border _unusedConfirm = new() { Name = "UnusedArtConfirm", IsVisible = false };
     /// <summary>Asset list thumbnails by asset id, with the data URL they were decoded from.</summary>
     private readonly Dictionary<string, (string DataUrl, Bitmap? Bitmap)> _thumbnails = [];

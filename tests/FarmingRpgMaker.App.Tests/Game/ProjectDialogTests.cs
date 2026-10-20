@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
 using FarmEngine.Authoring.Net;
 using FarmingRpgMaker.App.Projects;
 using static FarmingRpgMaker.App.Tests.Ui.UiTestHelpers;
@@ -29,7 +30,7 @@ public sealed class ProjectDialogTests
         FindByName<RadioButton>(dialog, $"Template_{ProjectTemplates.Quest}").IsChecked = true;
         if (!string.IsNullOrEmpty(OutputDir))
         {
-            GameTestHost.Capture(dialog).Save(Path.Combine(OutputDir, "new-project.png"));
+            GameTestHost.Capture(dialog).Save(Path.Combine(OutputDir, "new-project.png"), PngBitmapEncoderOptions.Default);
         }
 
         Click(dialog, FindByName<Button>(dialog, "CreateProjectButton"));
@@ -52,7 +53,7 @@ public sealed class ProjectDialogTests
         Assert.Equal(3, list.ItemCount);
         if (!string.IsNullOrEmpty(OutputDir))
         {
-            GameTestHost.Capture(dialog).Save(Path.Combine(OutputDir, "open-project.png"));
+            GameTestHost.Capture(dialog).Save(Path.Combine(OutputDir, "open-project.png"), PngBitmapEncoderOptions.Default);
         }
 
         list.SelectedItem = list.Items.OfType<ListBoxItem>().First(i => Equals(i.Tag, a.Id));

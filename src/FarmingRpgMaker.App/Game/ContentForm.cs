@@ -719,12 +719,12 @@ internal sealed class ContentForm
     // ---- Compact rows and cards (web NPCEditor's schedule and waypoints, ShopEditor's stock) ----
 
     /// <summary>A whole-number tile coordinate box.</summary>
-    private TextBox Coordinate(JsonObject target, string key, string name, string label, string watermark)
+    private TextBox Coordinate(JsonObject target, string key, string name, string label, string placeholder)
     {
         var box = NumberControl(target, key, name, label, integer: true, optional: false, min: null, max: null);
         box.MinWidth = 0;
         box.Width = 64;
-        box.Watermark = watermark;
+        box.PlaceholderText = placeholder;
         return box;
     }
 
@@ -834,8 +834,8 @@ internal sealed class ContentForm
                 optionLabel: StockLabel);
             var price = NumberControl(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.Price)), $"ContentField_{path}_{i}_Price", $"{title} price override",
                 integer: false, optional: true, min: null, max: null);
-            price.Watermark = BaseValueText(StringOf(entry[itemKey]));
-            if (item is ComboBox picker) picker.SelectionChanged += (_, _) => price.Watermark = BaseValueText(SelectedId(picker));
+            price.PlaceholderText = BaseValueText(StringOf(entry[itemKey]));
+            if (item is ComboBox picker) picker.SelectionChanged += (_, _) => price.PlaceholderText = BaseValueText(SelectedId(picker));
             var limit = LimitControl(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.DailyLimit)), $"ContentField_{path}_{i}_DailyLimit", $"{title} daily limit");
             var seasons = SeasonChecks(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.Seasons)), $"{path}_{i}", title);
             var card = Ui.VStack(8,
@@ -866,7 +866,7 @@ internal sealed class ContentForm
     /// <summary>A whole-number limit; empty, zero or less removes it (web "Unlimited").</summary>
     private TextBox LimitControl(JsonObject target, string key, string name, string label)
     {
-        var box = Accessible(new TextBox { Name = name, Text = NumberText(target[key]), MinWidth = 90, Watermark = "Unlimited" }, label);
+        var box = Accessible(new TextBox { Name = name, Text = NumberText(target[key]), MinWidth = 90, PlaceholderText = "Unlimited" }, label);
         var original = box.Text;
         Writer(target, key, () => (box.Text ?? "").Trim() == original, () =>
         {
@@ -1127,7 +1127,7 @@ internal sealed class ContentForm
                     var number = NumberControl(target, field.Key, name, field.Label, field.Kind == "integer", field.Optional,
                         field.HasMin ? field.Min : null, field.HasMax ? field.Max : null);
                     numbers[field.Key] = number;
-                    number.Watermark = field.Optional ? (field.Placeholder.Length > 0 ? field.Placeholder : "optional") : null;
+                    number.PlaceholderText = field.Optional ? (field.Placeholder.Length > 0 ? field.Placeholder : "optional") : null;
                     wrap.Children.Add(Labeled(field.Label, number, 130));
                     break;
                 case "bool":
@@ -1144,7 +1144,7 @@ internal sealed class ContentForm
                     break;
                 default:
                     var text = (TextBox)StringControl(target, field.Key, name, field.Label, null, field.Optional, multiline: false, rebuildOnChange: false);
-                    text.Watermark = field.Placeholder;
+                    text.PlaceholderText = field.Placeholder;
                     text.MinWidth = 240;
                     wrap.Children.Add(Labeled(field.Label, text));
                     break;
