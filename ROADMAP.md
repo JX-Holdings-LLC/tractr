@@ -306,9 +306,10 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
   state back in F# (`Playtest.applyState`), checked against Rust's own
   write-back.
 - [x] **Benchmarks and property tests**: `farm-bench` checks the time budgets
-  in CI (saving is over its 1 ms target and held to a regression ceiling until
-  the stable-JSON writer is replaced); proptest covers replay determinism and
-  save round trips, FsCheck covers migrations and compiling.
+  in CI (saving is about 2.5x over its 1 ms target since the stable-JSON writer
+  streams from `Serialize`, and is held to a regression ceiling); proptest
+  covers replay determinism and save round trips, FsCheck covers migrations
+  and compiling.
 - [x] **Native numerics (v9)**: every quantity in `farm-sim` is an integer in
   a fixed unit (float arithmetic is denied outside the JSON adapters), JSON
   stays in authoring units, the state hash is xxh3-64 over a canonical binary

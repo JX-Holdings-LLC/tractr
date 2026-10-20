@@ -43,6 +43,23 @@ fn a_save_round_trips_unchanged_on_the_same_cartridge() {
 }
 
 #[test]
+fn a_json_save_is_the_stable_json_of_its_header_and_state() {
+    // `write_save` writes the envelope straight from the state; it once built it as a
+    // `serde_json::Value`, and the text is the same.
+    let project = starter_project();
+    let (_, target) = build(&project);
+    let state = state::create_game_state(&project, Some("save-file"));
+    let header = serde_json::json!({
+        "format": farm_cart::save_file::SAVE_FORMAT,
+        "gameId": target.game_id,
+        "gameVersion": target.game_version,
+        "cartHash": target.cart_hash,
+    });
+    let file = serde_json::json!({ "header": header, "state": serde_json::to_value(&state).unwrap() });
+    assert_eq!(write_save(&state, &target), farm_sim::stable_json::stringify_via_value(&file));
+}
+
+#[test]
 fn a_save_with_a_malformed_tile_grid_is_repaired_on_load() {
     let project = starter_project();
     let (content, target) = build(&project);

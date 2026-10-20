@@ -112,10 +112,20 @@ pub fn write_save(state: &GameState, target: &SaveTarget) -> String {
         game_version: target.game_version.clone(),
         cart_hash: target.cart_hash.clone(),
     };
-    let mut file = serde_json::Map::new();
-    file.insert("header".to_owned(), serde_json::to_value(&header).unwrap_or(Value::Null));
-    file.insert("state".to_owned(), serde_json::to_value(state).unwrap_or(Value::Null));
-    stable_json::stringify_value(&Value::Object(file))
+    /// The envelope, in stable key order already.
+    #[derive(Serialize)]
+    struct JsonSave<'a> {
+        header: &'a SaveHeader,
+        state: &'a GameState,
+    }
+    stable_json::try_stringify(&JsonSave { header: &header, state }).unwrap_or_else(|_| {
+        // What the envelope held before it was written directly: a part that does not
+        // serialize is null.
+        let mut file = serde_json::Map::new();
+        file.insert("header".to_owned(), serde_json::to_value(&header).unwrap_or(Value::Null));
+        file.insert("state".to_owned(), serde_json::to_value(state).unwrap_or(Value::Null));
+        stable_json::stringify_value(&Value::Object(file))
+    })
 }
 
 /// What loading a save produced. `ok == false` means `state` is `None` and `errors` says why.

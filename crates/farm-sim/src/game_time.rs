@@ -21,7 +21,7 @@ use crate::quests;
 use crate::rng::Rng;
 use crate::schema::{
     classic_calendar_seasons, soil_states, tile_types, CalendarConfig, CalendarFestival, CalendarSeason, ClockState,
-    Crop, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
+    Crop, CropDefinition, GameContent, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
 };
 use crate::units;
 use crate::weather;
@@ -347,6 +347,7 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
         node_types.insert(def.id.as_str(), def);
     }
 
+    let mut crop_types = CropTypes::new(&ctx.content, &next.season);
     for scene in &mut state.world.scenes {
         // Weather stays outside indoor scenes (greenhouses, interiors, mine floors).
         let outdoor = !scene.is_indoor();
@@ -362,7 +363,7 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
                     tile.crop = None;
                 }
                 if let Some(crop) = tile.crop.as_mut() {
-                    grow_crop_overnight(ctx, crop, &next.season);
+                    grow_crop_overnight(&mut crop_types, crop);
                 }
                 settle_soil_overnight(tile, outdoor && night.waters_outdoor_soil, next.day);
                 respawn_node(tile, &node_types, next.day);
@@ -371,14 +372,53 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
     }
 }
 
+/// The crop definitions the night pass meets, and whether each grows in the new season. A farm
+/// grows a handful of crop types on thousands of tiles, so the last few types found answer
+/// nearly every tile with a string comparison instead of hashing the type again.
+struct CropTypes<'c> {
+    content: &'c GameContent,
+    new_season: &'c str,
+    /// Types found so far (at most [`CropTypes::RECENT`]): the content's own key, the
+    /// definition, and whether it is in season.
+    recent: Vec<(&'c str, &'c CropDefinition, bool)>,
+    /// The entry of `recent` the next new type replaces once it is full.
+    next: usize,
+}
+
+impl<'c> CropTypes<'c> {
+    const RECENT: usize = 8;
+
+    fn new(content: &'c GameContent, new_season: &'c str) -> Self {
+        Self { content, new_season, recent: Vec::with_capacity(Self::RECENT), next: 0 }
+    }
+
+    /// The definition of `crop_type` and whether it grows in the new season (what
+    /// `content.crops.get(crop_type)` and a look at its seasons answer).
+    fn get(&mut self, crop_type: &str) -> Option<(&'c CropDefinition, bool)> {
+        if let Some(&(_, definition, in_season)) = self.recent.iter().find(|(key, ..)| *key == crop_type) {
+            return Some((definition, in_season));
+        }
+        let (key, definition) = self.content.crops.get_key_value(crop_type)?;
+        let in_season = definition.seasons.iter().any(|season| season == self.new_season);
+        let entry = (key.as_str(), definition, in_season);
+        if self.recent.len() < Self::RECENT {
+            self.recent.push(entry);
+        } else {
+            self.recent[self.next] = entry;
+            self.next = (self.next + 1) % Self::RECENT;
+        }
+        Some((definition, in_season))
+    }
+}
+
 /// One night of growth for a live crop: a watered crop grows a day, a dry one goes a day
 /// without water, and a crop out of the new season withers. A withered crop or one of an
 /// unknown type is left alone.
-fn grow_crop_overnight(ctx: &EngineContext, crop: &mut Crop, new_season: &str) {
+fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop) {
     if crop.withered == Some(true) {
         return;
     }
-    let Some(definition) = ctx.content.crops.get(&crop.r#type) else { return };
+    let Some((definition, in_season)) = crop_types.get(&crop.r#type) else { return };
     if crop.watered {
         crop.days_grown = Some(crop.days_grown.unwrap_or(0).saturating_add(1));
         crop.days_without_water = 0;
@@ -388,7 +428,7 @@ fn grow_crop_overnight(ctx: &EngineContext, crop: &mut Crop, new_season: &str) {
     crop.watered = false;
     crop.stage = crops::compute_crop_stage(crop, definition);
     // Season check happens against the NEW season.
-    if !definition.seasons.iter().any(|season| season == new_season) {
+    if !in_season {
         crop.withered = Some(true);
     }
 }
@@ -398,14 +438,9 @@ fn grow_crop_overnight(ctx: &EngineContext, crop: &mut Crop, new_season: &str) {
 fn settle_soil_overnight(tile: &mut Tile, rained: bool, new_day: u32) {
     if rained && tile.background == tile_types::SOIL {
         tile.soil_moisture = 100;
-        tile.soil_state = Some(
-            if tile.soil_state.as_deref() == Some(soil_states::FERTILIZED) {
-                soil_states::FERTILIZED
-            } else {
-                soil_states::WATERED
-            }
-            .to_owned(),
-        );
+        if tile.soil_state.as_deref() != Some(soil_states::FERTILIZED) {
+            set_text(&mut tile.soil_state, soil_states::WATERED);
+        }
         if let Some(crop) = tile.crop.as_mut() {
             if crop.withered != Some(true) {
                 crop.watered = true;
@@ -416,8 +451,22 @@ fn settle_soil_overnight(tile: &mut Tile, rained: bool, new_day: u32) {
     } else {
         tile.soil_moisture = 0;
         if tile.soil_state.as_deref() == Some(soil_states::WATERED) {
-            tile.soil_state = Some(soil_states::DRY.to_owned());
+            set_text(&mut tile.soil_state, soil_states::DRY);
         }
+    }
+}
+
+/// Sets an optional text field to `text`, reusing the string it holds (every tilled tile
+/// changes its soil state each night).
+fn set_text(slot: &mut Option<String>, text: &str) {
+    match slot {
+        Some(current) => {
+            if current != text {
+                current.clear();
+                current.push_str(text);
+            }
+        }
+        None => *slot = Some(text.to_owned()),
     }
 }
 

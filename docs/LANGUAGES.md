@@ -149,11 +149,17 @@ what an exported game contains.
   [EXPORT.md](EXPORT.md#what-earlier-phases-must-get-right). Rust can also export a save as stable JSON for
   debugging and for the web version.
 - Saving is synchronous: the player serializes, compresses and writes the
-  save on the simulation thread. Serializing the mid-size benchmark state
-  takes about 10.7 ms against a 1 ms budget, so CI holds it to a regression
-  ceiling (`SAVE_CEILING` in `crates/farm-bench`) until the stable-JSON writer
-  is replaced. **Future:** serialize in about a millisecond, then compress and
-  write on a worker thread.
+  save on the simulation thread. Stable JSON is written straight from
+  `Serialize` (`farm_sim::stable_json`), putting only the objects whose keys
+  arrive out of order into key order; building a `serde_json::Value` tree
+  first, as the first writer did, stays as the reference the tests compare
+  it with. Serializing the mid-size benchmark state takes about 2.5 ms (it
+  took 10.7 ms with the tree) against a 1 ms budget, so CI holds it to a
+  regression ceiling (`SAVE_CEILING` in `crates/farm-bench`). Unsorted
+  `serde_json` output of the same state takes about 1 ms, so the budget needs
+  more than a faster writer, and copying the state to serialize it elsewhere
+  costs about as much as writing it. **Future:** compress and write on a
+  worker thread.
 
 ### FFI: .NET → Rust (`farm-ffi`)
 
@@ -667,8 +673,8 @@ the same tests, and was then deleted.
    ([NUMERICS.md](NUMERICS.md); done). From here Rust is the reference
    implementation and the `js` helpers are deleted. *Exit:* old v8 saves load
    and play on in both apps (met), and benchmarks meet their budgets (not
-   met for saving: about 10.7 ms against 1 ms, held to `SAVE_CEILING`; see
-   [ROADMAP.md](../ROADMAP.md)).
+   met for saving: about 2.5 ms against 1 ms, down from 10.7 ms, held to
+   `SAVE_CEILING`; see [ROADMAP.md](../ROADMAP.md)).
 
 ## Checklist: porting a new part of the web editor
 
