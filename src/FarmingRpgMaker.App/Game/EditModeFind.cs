@@ -40,7 +40,7 @@ public sealed partial class EditModeView
     public bool IsPicking => _pick is not null;
 
     /// <summary>True while a form (content, interface, settings) holds fields that are not saved (#87).</summary>
-    public bool HasUnsavedDrafts => _contentEditor.HasUnsavedChanges || _interfaceEditor.HasUnsavedChanges || _settingsEditor.HasUnsavedChanges;
+    public bool HasUnsavedDrafts => _contentEditor.HasUnsavedChanges || _interfaceEditor.ViewModel.HasUnsavedChanges || _settingsEditor.HasUnsavedChanges;
 
     /// <summary>
     /// Applies the fields typed into the forms but not saved yet (the project is being left, the
@@ -49,7 +49,7 @@ public sealed partial class EditModeView
     public bool SaveDrafts()
     {
         var content = _contentEditor.SaveDraft();
-        var panel = _interfaceEditor.SaveDraft();
+        var panel = _interfaceEditor.ViewModel.SaveDraft();
         var settings = _settingsEditor.SaveDrafts();
         return content && panel && settings;
     }

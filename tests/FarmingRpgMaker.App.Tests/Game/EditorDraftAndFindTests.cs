@@ -115,7 +115,7 @@ public sealed class EditorDraftAndFindTests
         var view = FindByName<InterfaceEditorView>(host.Window, "InterfaceEditorView");
         var panels = FindByName<ListBox>(host.Window, "InterfacePanels");
         FindByName<TextBox>(host.Window, "InterfaceTitle").Text = "Draft panel";
-        Assert.True(view.HasUnsavedChanges);
+        Assert.True(view.ViewModel.HasUnsavedChanges);
         Tabs(host).SelectedIndex = 0;
         Pump();
         Tabs(host).SelectedIndex = 7;
@@ -126,7 +126,7 @@ public sealed class EditorDraftAndFindTests
         Assert.True(FindByName<Border>(host.Window, "InterfaceDraftBar").IsVisible);
         Press(host, "InterfaceDraftSave");
         Assert.Contains(host.Workspace.Current!.GamePanels.OrEmpty(), panel => panel.Title == "Draft panel");
-        Assert.False(view.HasUnsavedChanges);
+        Assert.False(view.ViewModel.HasUnsavedChanges);
     }
 
     [AvaloniaFact]
