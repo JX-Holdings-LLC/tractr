@@ -45,13 +45,14 @@ units in JSON.
 The schema exists twice: as Rust types in `farm-sim::schema` (serde, the
 engine's own) and as F# records in `src/FarmEngine.Authoring/Schema.fs` (the
 editor's data model, also compiled to JavaScript for the web editor), with
-their JSON in `SchemaJson.fs`. Both must round-trip the same JSON. The rules
+their JSON in `SchemaJson.fs`, generated from `Schema.fs` by
+`tools/codegen/schema-json.fsx`. Both must round-trip the same JSON. The rules
 for the F# records:
 
 - A zod object → an F# record in PascalCase with a `static member Default`
-  (every field at its schema default). The decoder and encoder in
-  `SchemaJson.fs` name each JSON key explicitly, so acronyms such as
-  `selectedNPCId` need nothing special.
+  (every field at its schema default). The JSON key is the field name in
+  camelCase; a key that is not (acronyms such as `selectedNPCId`) takes
+  `[<JsonKey "selectedNPCId">]` on the field.
 - `.passthrough()` → an `Extra: (string * Json) list` field: undeclared keys in
   order, written back after the declared ones. Records **without** passthrough
   have no `Extra` (zod strips unknown keys).
@@ -60,9 +61,10 @@ for the F# records:
   the creator typed.
 - Optional (`.optional()`, TS `undefined`) → `option`, omitted from JSON when
   `None`.
-- `.nullable()` (key present with value `null`) → `option`, and the encoder
-  writes `null` for `None`. `.nullable().optional()` → `'T option option`
-  (`None` absent, `Some None` null).
+- `.nullable()` (key present with value `null`) → `option` with
+  `[<JsonNull>]`, and the encoder writes `null` for `None`.
+  `.nullable().optional()` → `'T option option` (`None` absent, `Some None`
+  null).
 - `.default(x)` → the decoder's value for a missing key (and the record's
   `Default`).
 - `z.enum([...])` of strings → plain `string` plus a module of `[<Literal>]`
@@ -79,9 +81,10 @@ for the F# records:
 - `z.infer` helper functions in schema files (e.g. `eventFiredFlag`,
   `centerCoordinate`, `classicCalendarSeasons`) → functions in a module named
   after the schema file (`EventsSchema.EventFiredFlag`, …).
-- After changing a record, regenerate the C# helpers:
-  `tools/codegen/record-with.fsx` (the `WithField` extensions) and
-  `tools/codegen/record-json.py` (codec and key tables).
+- After changing a record, regenerate `SchemaJson.fs`
+  (`dotnet fsi tools/codegen/schema-json.fsx`), then the C# helpers:
+  `tools/codegen/record-json.py` (codec and key tables) and
+  `tools/codegen/record-with.fsx` (the `WithField` extensions).
 
 ## State and numbers (Rust)
 

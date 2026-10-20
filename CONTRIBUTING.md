@@ -145,6 +145,7 @@ needs that tool. CI checks that each matches its generator.
 | What | Regenerate | When | CI check |
 |---|---|---|---|
 | FlatBuffers accessors (`crates/farm-cart-schema/src/*_generated.rs`) | `flatc --rust` 25.2.10 ([schemas/README.md](schemas/README.md)) | a `.fbs` changes | `tools/codegen/check.sh` |
+| `src/FarmEngine.Authoring/SchemaJson.fs` (schema JSON codecs) | `dotnet fsi tools/codegen/schema-json.fsx` ([tools/codegen](tools/codegen/README.md#schemajsonfs)) | a record or union in `Schema.fs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordJson.fs` tables | `python3 tools/codegen/record-json.py` | `SchemaJson.fs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordWith.fs` | `dotnet build -c Release src/FarmEngine.Authoring && dotnet fsi tools/codegen/record-with.fsx` | a schema record changes | `tools/codegen/check.sh` |
 | Player license notices (`tools/player-licenses/THIRD-PARTY.txt`) | `tools/player-licenses/generate.sh` (needs cargo-about 0.9.2) | `farm-player`'s dependencies, the fonts or the plugin guest change | `generate.sh --check` |
