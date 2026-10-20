@@ -1205,6 +1205,23 @@
     "gameErrors": [],
     "game": "b6433a8a5c8d7fe3"
   },
+  "fixtures/lantern-night-mod.json": {
+    "ok": true,
+    "fromVersion": 1,
+    "migrated": true,
+    "errors": [],
+    "json": "6e10c40b0a258d64",
+    "stable": "cc51949cb38218b8",
+    "problems": [
+      "error|content.scenes|startSceneId|Start scene \"scene-farm\" does not exist|settings",
+      "error|player.sceneMissing|player.sceneId|The player starts in missing scene \"\"|"
+    ],
+    "content": "9b3f6ebdc23a003d",
+    "cartridge": "throws InvalidOperationException: startSceneId: Start scene \"scene-farm\" does not exist\nplayer.sceneId: The player starts in missing scene \"\"",
+    "gameOk": true,
+    "gameErrors": [],
+    "game": "649ac39c2e010430"
+  },
   "fixtures/my-first-mod.json": {
     "ok": true,
     "fromVersion": 1,
