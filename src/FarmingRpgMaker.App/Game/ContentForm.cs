@@ -14,6 +14,7 @@ using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Interop;
 using FarmEngine.Schemas;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 using Microsoft.FSharp.Collections;
 using Microsoft.FSharp.Core;
 using Microsoft.FSharp.Reflection;
@@ -33,7 +34,7 @@ namespace FarmingRpgMaker.App.Game;
 /// compact schedule and waypoint rows (NPCs), stock cards (shops), and art previews beside visual
 /// bindings and legacy image fields.
 /// </summary>
-internal sealed class ContentForm
+internal sealed class ContentForm : IContentDraft
 {
     private sealed record JsonEscape(string Label, TextBox Box, string Original, bool Nullable, Action<JsonNode?> Replace);
 
@@ -269,7 +270,7 @@ internal sealed class ContentForm
         var name = "ContentField_" + path;
         var type = Unwrap(property.PropertyType);
         var nullable = IsNullable(property);
-        var field = ContentForms.Field(owner.Name, property.Name, label);
+        var field = ContentForms.Field(owner.Name, property.Name, label, _project);
         if (field is { Kind: "reference" or "referenceList" }) label = TrimId(label);
 
         if (property.Name == "Id" && type == typeof(string))
@@ -694,20 +695,23 @@ internal sealed class ContentForm
 
     /// <summary>
     /// A built-in minigame kind's settings as typed fields (F# <c>MinigameKinds</c>), with a line on
-    /// how the kind plays; a kind the game doesn't have keeps the raw setting rows.
+    /// how the kind plays; a kind a pack defines (with that line) and a kind the game doesn't have
+    /// keep the raw setting rows.
     /// </summary>
     private void AddMinigameSettings(Panel panel, JsonObject target, string key, string path)
     {
         var kind = StringOf(target[Key<MinigameDef>(nameof(MinigameDef.Kind))]) ?? "";
         var settings = ContentForms.MinigameSettings(kind);
+        var help = ContentForms.MinigameHelp(kind, _project);
         if (settings.Count == 0)
         {
+            if (help.Length > 0) panel.Children.Add(Ui.Text(help, "muted", "small"));
             AddKeyValues(panel, target, key, path);
             return;
         }
 
         if (target[key] is not JsonObject config) target[key] = config = new JsonObject();
-        panel.Children.Add(Ui.Text(ContentForms.MinigameHelp(kind), "muted", "small"));
+        panel.Children.Add(Ui.Text(help, "muted", "small"));
         panel.Children.Add(VocabularyFields(config, settings, path));
         // A cleared setting goes away (the game then plays its default) instead of staying as null.
         _writers.Add(() =>
@@ -719,12 +723,12 @@ internal sealed class ContentForm
     // ---- Compact rows and cards (web NPCEditor's schedule and waypoints, ShopEditor's stock) ----
 
     /// <summary>A whole-number tile coordinate box.</summary>
-    private TextBox Coordinate(JsonObject target, string key, string name, string label, string watermark)
+    private TextBox Coordinate(JsonObject target, string key, string name, string label, string placeholder)
     {
         var box = NumberControl(target, key, name, label, integer: true, optional: false, min: null, max: null);
         box.MinWidth = 0;
         box.Width = 64;
-        box.Watermark = watermark;
+        box.PlaceholderText = placeholder;
         return box;
     }
 
@@ -834,8 +838,8 @@ internal sealed class ContentForm
                 optionLabel: StockLabel);
             var price = NumberControl(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.Price)), $"ContentField_{path}_{i}_Price", $"{title} price override",
                 integer: false, optional: true, min: null, max: null);
-            price.Watermark = BaseValueText(StringOf(entry[itemKey]));
-            if (item is ComboBox picker) picker.SelectionChanged += (_, _) => price.Watermark = BaseValueText(SelectedId(picker));
+            price.PlaceholderText = BaseValueText(StringOf(entry[itemKey]));
+            if (item is ComboBox picker) picker.SelectionChanged += (_, _) => price.PlaceholderText = BaseValueText(SelectedId(picker));
             var limit = LimitControl(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.DailyLimit)), $"ContentField_{path}_{i}_DailyLimit", $"{title} daily limit");
             var seasons = SeasonChecks(entry, Key<ShopStockEntry>(nameof(ShopStockEntry.Seasons)), $"{path}_{i}", title);
             var card = Ui.VStack(8,
@@ -866,7 +870,7 @@ internal sealed class ContentForm
     /// <summary>A whole-number limit; empty, zero or less removes it (web "Unlimited").</summary>
     private TextBox LimitControl(JsonObject target, string key, string name, string label)
     {
-        var box = Accessible(new TextBox { Name = name, Text = NumberText(target[key]), MinWidth = 90, Watermark = "Unlimited" }, label);
+        var box = Accessible(new TextBox { Name = name, Text = NumberText(target[key]), MinWidth = 90, PlaceholderText = "Unlimited" }, label);
         var original = box.Text;
         Writer(target, key, () => (box.Text ?? "").Trim() == original, () =>
         {
@@ -1127,7 +1131,7 @@ internal sealed class ContentForm
                     var number = NumberControl(target, field.Key, name, field.Label, field.Kind == "integer", field.Optional,
                         field.HasMin ? field.Min : null, field.HasMax ? field.Max : null);
                     numbers[field.Key] = number;
-                    number.Watermark = field.Optional ? (field.Placeholder.Length > 0 ? field.Placeholder : "optional") : null;
+                    number.PlaceholderText = field.Optional ? (field.Placeholder.Length > 0 ? field.Placeholder : "optional") : null;
                     wrap.Children.Add(Labeled(field.Label, number, 130));
                     break;
                 case "bool":
@@ -1144,7 +1148,7 @@ internal sealed class ContentForm
                     break;
                 default:
                     var text = (TextBox)StringControl(target, field.Key, name, field.Label, null, field.Optional, multiline: false, rebuildOnChange: false);
-                    text.Watermark = field.Placeholder;
+                    text.PlaceholderText = field.Placeholder;
                     text.MinWidth = 240;
                     wrap.Children.Add(Labeled(field.Label, text));
                     break;

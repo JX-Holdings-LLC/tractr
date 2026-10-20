@@ -2,6 +2,18 @@
 
 ## 0.3.0 (unreleased)
 
+- **Exported games draw on the GPU.** The desktop player has a wgpu renderer
+  (Vulkan, DirectX 12, Metal) that draws the same frames as the CPU one at
+  the window's resolution, with the same crisp nearest-neighbour scaling and
+  letterboxing, and leaves room for lighting and particle passes later. It
+  is used when a hardware GPU works; otherwise, and whenever the GPU fails
+  or its device is lost, the game switches to the CPU renderer without
+  stopping. `--renderer auto|gpu|cpu`, `FARM_RENDERER` or `renderer` in the
+  settings file pick one, and the game logs which it uses. Screenshots,
+  headless runs, the editor's Play Mode and the web demo keep the CPU
+  renderer, and tests check the two against each other
+  ([docs/PLAYER.md](docs/PLAYER.md#renderers)).
+
 - **Music, more minigames, and the game in one language.**
   - **Music and ambience.** Games have a soundtrack out of the box: day and
     night music, birdsong, crickets and rain, composed and synthesized by the
@@ -16,6 +28,16 @@
     settings as fields, and Problems warns about a kind the game doesn't have
     (it used to become a silent 0.5 "Go!" button), unused settings and
     numbers out of range.
+  - **Minigames from content packs.** A pack's plugin can define its own
+    minigame kind (`api.minigame`, allowed by the manifest's new
+    `minigames` permission): the game runs it frame by frame with the
+    player's keys and draws its rectangles, text and item art in the
+    minigame window, and its score picks the reward tier like any minigame.
+    A plugin that throws or goes over its limits ends the minigame as failed
+    with an error the creator sees, never stalling the game. The editor's
+    kind list offers the enabled packs' kinds, Problems says when a kind's
+    pack is missing, turned off or lacks the permission, and the example pack
+    Lantern Night shows how (docs/PLUGINS.md "Minigames").
   - **Spanish all the way.** The engine's own messages ("Not enough money!"),
     the built-in minigames' texts and save-load notices follow the game's
     language, and the editor's whole menu bar is translated. Replays and
@@ -47,6 +69,13 @@
     crops, soil, nodes and machines, and NPCs added in the update join the
     world. A save without a random state gets a new one, and a save/load round
     trip no longer changes which NPC you talk to or the state hash.
+
+- **Saving and nights are faster.** Save slots and JSON saves (the editor's
+  and the web version's) are written straight from the game state instead of
+  through a JSON tree, with byte-for-byte the same text: the state of a
+  mid-size farm takes about 2.5 ms instead of 14 ms to write, and a
+  compressed save slot about 7 ms instead of 21 ms. The night on a 256×256
+  farm full of crops takes about a third less time.
 
 - **Authoring core hardening.**
   - **Hostile project files are refused, not crashes.** Deeply nested JSON is
@@ -214,8 +243,13 @@
   - Art import, project and pack art, and images inside SVGs are read only
     as PNG, JPEG, GIF, WebP or BMP, and their size is checked from the header
     before the graphics library sees them; the Export Game icon must be a
-    PNG. The plan for the graphics library upgrade (Avalonia 12, SkiaSharp 3)
-    is in [docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md).
+    PNG.
+  - **A supported graphics library.** The editor moved to Avalonia 12 and
+    SkiaSharp 3 (from Avalonia 11 and SkiaSharp 2.88, which no longer gets
+    fixes for its image decoders, fonts and text shaping), and SVG import to
+    Svg.Skia 5 with its scripting and SVG fonts switched off. The editor
+    looks and works as before, and so do Export Game's icons
+    ([docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md)).
 - **License, notices and contributor docs.** The repository has an MIT
   `LICENSE`. The app ships it in its `licenses` folder with notices for its
   .NET packages, the runtime, icons and fonts (`THIRD-PARTY-dotnet.txt`), and
@@ -322,7 +356,10 @@
     art studio errors name the field instead of the control, and test-only
     placeholders no longer ship in the app.
     [docs/EDITOR-ARCHITECTURE.md](docs/EDITOR-ARCHITECTURE.md) describes the
-    editor's views and the steps towards view models.
+    editor's views and the steps towards view models. The Content, Problems,
+    Settings, Mods, Workshop and Interface tabs now keep their state and
+    unsaved fields in view models that are tested without building the
+    editor.
 - **One engine for the web and native editors.** The web editor
   (`jxburros/farm-game-engine`, private)
   now runs this repository's engine: its Play Mode plays through `farm-wasm`,

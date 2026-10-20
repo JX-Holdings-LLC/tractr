@@ -260,6 +260,7 @@ module References =
           reference "FishTableEntry" "ItemId" ReferenceKind.Item
           optional "FishTable" "JunkItemId" ReferenceKind.Item
           // Extensibility
+          // The built-in kinds; `roleIn` adds the kinds a project's packs define.
           oneOf "MinigameDef" "Kind" MinigameKinds.choices
           plain "MinigameDef" "Config" "settings passed to the minigame kind, keyed by setting name"
           // Settings, weather, mine, interface
@@ -278,7 +279,9 @@ module References =
           plain "PackManifest" "Overrides" "ids from other packs this pack replaces (checked when packs merge)"
           plain "PackPermissions" "Hooks" "plugin hook names the pack may use"
           plain "PackPermissions" "Mutations" "plugin mutation capabilities (docs/PLUGINS.md)"
+          plain "PackPermissions" "Minigames" "minigame kinds the pack's plugins may define (docs/PLUGINS.md)"
           plain "PackPlugin" "Hooks" "plugin hook names the plugin handles"
+          plain "PackPlugin" "Minigames" "minigame kinds the plugin defines with api.minigame"
           plain "PackContent" "Strings" "locale string tables keyed by locale code"
           optional "PackPlayerStart" "SceneId" ReferenceKind.Scene
           reference "PackStartItem" "ItemId" ReferenceKind.Item
@@ -299,6 +302,13 @@ module References =
         match byProperty.TryGetValue(owner + "." + property) with
         | true, declaration -> Some declaration.Role
         | _ -> None
+
+    /// What `owner.property` holds in `project`: `roleOf`, except that a minigame's kind also
+    /// offers the kinds the project's enabled packs define (`MinigameKinds.choicesFor`).
+    let roleIn (project: GameProject) (owner: string) (property: string) : FieldRole option =
+        match owner, property with
+        | "MinigameDef", "Kind" -> Some(FieldRole.OneOf(MinigameKinds.choicesFor project, None))
+        | _ -> roleOf owner property
 
     let private label (name: string option) (id: string) =
         match name with

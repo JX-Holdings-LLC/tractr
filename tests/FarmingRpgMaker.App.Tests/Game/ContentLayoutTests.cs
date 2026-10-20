@@ -20,7 +20,7 @@ public sealed class ContentLayoutTests
     {
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectCategory(category);
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory(category);
         Pump();
     }
 
@@ -28,7 +28,7 @@ public sealed class ContentLayoutTests
     {
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectEntry(category, id);
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectEntry(category, id);
         Pump();
     }
 
@@ -266,8 +266,8 @@ public sealed class ContentLayoutTests
         var first = ItemOf(before.Stock[0].ItemId);
         var selected = Assert.IsType<ComboBoxItem>(FindByName<ComboBox>(host.Window, "ContentField_Stock_0_ItemId").SelectedItem);
         Assert.Equal($"{first.Name} ({ContentReadouts.Money(first.Value)})", selected.Content);
-        Assert.Equal($"{JsNumber.format(first.Value)} (base)", Box(host, "ContentField_Stock_0_Price").Watermark);
-        Assert.Equal("Unlimited", Box(host, "ContentField_Stock_0_DailyLimit").Watermark);
+        Assert.Equal($"{JsNumber.format(first.Value)} (base)", Box(host, "ContentField_Stock_0_Price").PlaceholderText);
+        Assert.Equal("Unlimited", Box(host, "ContentField_Stock_0_DailyLimit").PlaceholderText);
         for (var i = 0; i < seasons.Length; i++)
         {
             var check = FindByName<CheckBox>(host.Window, $"ContentSeason_Stock_0_{i}");
@@ -282,7 +282,7 @@ public sealed class ContentLayoutTests
 
         // Another item: the placeholder follows it.
         Choose(host, "ContentField_Stock_1_ItemId", "tool-axe");
-        Assert.Equal($"{JsNumber.format(ItemOf("tool-axe").Value)} (base)", Box(host, "ContentField_Stock_1_Price").Watermark);
+        Assert.Equal($"{JsNumber.format(ItemOf("tool-axe").Value)} (base)", Box(host, "ContentField_Stock_1_Price").PlaceholderText);
 
         Type(host, "ContentField_Stock_0_Price", "40");
         Type(host, "ContentField_Stock_0_DailyLimit", "3");

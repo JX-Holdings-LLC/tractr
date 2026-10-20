@@ -926,6 +926,8 @@ type RecordWith =
     [<Extension>]
     static member WithMutations(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Mutations = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithMinigames(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Minigames = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithSceneId(record: PackPlayerStart, value: string | null) : PackPlayerStart = { record with SceneId = Option.ofObj value }
     [<Extension>]
     static member WithX(record: PackPlayerStart, value: Nullable<float>) : PackPlayerStart = { record with X = Option.ofNullable value }
@@ -941,6 +943,8 @@ type RecordWith =
     static member WithName(record: PackPlugin, value: string | null) : PackPlugin = { record with Name = Option.ofObj value }
     [<Extension>]
     static member WithHooks(record: PackPlugin, value: seq<string>) : PackPlugin = { record with Hooks = List.ofSeq value }
+    [<Extension>]
+    static member WithMinigames(record: PackPlugin, value: seq<string> | null) : PackPlugin = { record with Minigames = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithSource(record: PackPlugin, value: string) : PackPlugin = { record with Source = value }
     [<Extension>]

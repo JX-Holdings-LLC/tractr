@@ -1,0 +1,112 @@
+{
+  "manifest": {
+    "id": "lantern-night",
+    "name": "Lantern Night",
+    "version": "1.0.0",
+    "description": "Example pack with its own minigame kind: its plugin defines lantern-catch, which the pack's Lantern Catch minigame (action key L) plays.",
+    "author": "farm-game-engine",
+    "engineCompatibility": ">=0.5.0",
+    "base": false,
+    "dependencies": [],
+    "overrides": [],
+    "permissions": {
+      "hooks": [],
+      "contentInject": true,
+      "uiPanels": false,
+      "mutations": [],
+      "minigames": [
+        "lantern-catch"
+      ]
+    }
+  },
+  "content": {
+    "items": [
+      {
+        "id": "lantern",
+        "name": "Paper Lantern",
+        "description": "A lantern caught on Lantern Night.",
+        "type": "material",
+        "stackable": true,
+        "maxStack": 99,
+        "value": 40
+      }
+    ],
+    "minigames": [
+      {
+        "id": "catch",
+        "name": "Lantern Catch",
+        "kind": "lantern-night:lantern-catch",
+        "config": {
+          "lanterns": 6
+        },
+        "resultTiers": [
+          {
+            "minScore": 0,
+            "outcomes": [
+              {
+                "type": "message",
+                "message": "The lanterns drift away."
+              }
+            ]
+          },
+          {
+            "minScore": 0.5,
+            "outcomes": [
+              {
+                "type": "giveItem",
+                "itemId": "lantern",
+                "itemQuantity": 1
+              },
+              {
+                "type": "message",
+                "message": "You caught a few lanterns!"
+              }
+            ]
+          },
+          {
+            "minScore": 1,
+            "outcomes": [
+              {
+                "type": "giveItem",
+                "itemId": "lantern",
+                "itemQuantity": 3
+              },
+              {
+                "type": "message",
+                "message": "Every lantern caught!"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "play",
+        "name": "Catch lanterns",
+        "description": "Play Lantern Catch.",
+        "conditions": [],
+        "failMessage": "",
+        "outcomes": [
+          {
+            "type": "startMinigame",
+            "minigameId": "catch"
+          }
+        ],
+        "energyCost": 0,
+        "hotkey": "l"
+      }
+    ]
+  },
+  "plugins": [
+    {
+      "id": "lantern-catch",
+      "name": "Lantern Catch",
+      "hooks": [],
+      "minigames": [
+        "lantern-catch"
+      ],
+      "source": "// Lantern Catch: move the basket (left/right, hold the action key to hurry) under the falling\n// lanterns. The score is the share of lanterns caught.\nfunction next(s) {\n  // Park-Miller: the same seed drops the same lanterns.\n  s.rng = (s.rng * 16807) % 2147483647;\n  return s.rng / 2147483647;\n}\nfunction drop(s) {\n  s.lantern = { x: 30 + next(s) * (s.w - 60), y: -20, speed: 70 + next(s) * 50 };\n  s.dropped += 1;\n}\napi.minigame('lantern-catch', {\n  start: function (config, info) {\n    var total = Math.max(1, Math.min(20, Math.floor(Number(config.lanterns) || 6)));\n    var s = { w: info.width, h: info.height, x: info.width / 2, total: total, dropped: 0, caught: 0,\n              rng: (info.seed % 2147483646) + 1, lantern: null, flash: 0 };\n    drop(s);\n    return s;\n  },\n  update: function (s, input, dt) {\n    var speed = input.action ? 320 : 200;\n    if (input.left) s.x = Math.max(40, s.x - speed * dt);\n    if (input.right) s.x = Math.min(s.w - 40, s.x + speed * dt);\n    s.flash = Math.max(0, s.flash - dt);\n    var l = s.lantern;\n    l.y += l.speed * dt;\n    if (l.y >= s.h - 40) {\n      if (Math.abs(l.x - s.x) <= 40) { s.caught += 1; s.flash = 0.3; }\n      if (s.dropped >= s.total) return { state: s, done: { score: s.caught / s.total } };\n      drop(s);\n    }\n    return { state: s };\n  },\n  draw: function (s) {\n    var l = s.lantern;\n    return [\n      { type: 'rect', x: 0, y: 0, w: s.w, h: s.h, color: '#1b2140' },\n      { type: 'rect', x: 0, y: s.h - 18, w: s.w, h: 18, color: '#2d3a5c' },\n      { type: 'text', x: 12, y: 26, text: 'Caught ' + s.caught + ' / ' + s.total, size: 16, bold: true, color: '#ffe9a8' },\n      { type: 'text', x: s.w - 12, y: 26, text: 'Lantern ' + s.dropped, size: 13, align: 'right', color: 'muted' },\n      { type: 'rect', x: l.x - 12, y: l.y - 14, w: 24, h: 28, radius: 8, color: '#ffb347' },\n      { type: 'sprite', x: l.x - 10, y: l.y - 10, w: 20, h: 20, item: 'lantern' },\n      { type: 'rect', x: s.x - 40, y: s.h - 36, w: 80, h: 16, radius: 5, color: s.flash > 0 ? 'accent' : 'primary' }\n    ];\n  }\n});\n"
+    }
+  ]
+}

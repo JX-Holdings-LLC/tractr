@@ -224,6 +224,68 @@ let ``pack plugin capabilities and onWeatherRoll`` () =
     Assert.StartsWith("default:", PackRules.describeMutations PackPermissions.Default)
     Assert.Equal("message, giveItem (the pack's own content only)", PackRules.describeMutations { PackPermissions.Default with Mutations = Some [ "message"; "giveItem" ] })
 
+/// The example pack (fixtures/projects/lantern-night-mod.json): its plugin defines the minigame
+/// kind lantern-night:lantern-catch.
+let private lanternNight () = validPack (readJson [ "Fixtures"; "lantern-night-mod.json" ])
+
+[<Fact>]
+let ``minigame kinds that enabled packs define are known, and a missing pack or permission is a problem`` () =
+    let fresh project = { (Defaults.newMinigame project) with Kind = "lantern-night:lantern-catch"; Config = [ "lanterns", JNumber 4.0 ] }
+    let withGame (project: GameProject) =
+        let game = fresh project
+        project |> apply (UpsertMinigame game), project.Minigames.Length
+    // Installed and enabled: the kind is known, offered in the editor, its settings are its own.
+    let installed, index = withGame (starter () |> apply (InstallPack(lanternNight ())))
+    for code in [ "minigame.unknownKind"; "minigame.unknownSetting"; "minigame.packMissing"; "minigame.packPermission"; "minigame.packUndefined" ] do
+        lacks code installed
+    let kinds = MinigameKinds.packKinds installed
+    Assert.Equal<string list>([ "lantern-night:lantern-catch" ], kinds |> List.map (fun kind -> kind.Kind))
+    Assert.Equal("lantern-night:lantern-catch", kinds.[0].PluginId)
+    match References.roleIn installed "MinigameDef" "Kind" with
+    | Some(FieldRole.OneOf(choices, None)) ->
+        Assert.Equal<(string * string) list>(MinigameKinds.choices @ [ "lantern-night:lantern-catch", "lantern-night:lantern-catch (from Lantern Night)" ], choices)
+    | other -> failwithf "MinigameDef.Kind is %A" other
+    Assert.Equal(References.roleOf "MinigameDef" "Kind", References.roleIn (starter ()) "MinigameDef" "Kind")
+    Assert.StartsWith("Defined by the pack Lantern Night", ContentForms.MinigameHelp("lantern-night:lantern-catch", installed))
+    Assert.Equal("", ContentForms.MinigameHelp("lantern-night:lantern-catch", starter ()))
+    Assert.Equal(Some "lantern-night:lantern-catch (the pack's plugins run and draw these minigames, and read the player's keys while one is open)", PackRules.describeMinigames (lanternNight ()).Manifest)
+    Assert.Equal(None, PackRules.describeMinigames PackManifest.Default)
+    // The pack is not installed.
+    let missing, _ = withGame (starter ())
+    let problem = has "minigame.packMissing" missing
+    Assert.Equal(sprintf "minigames[%d].kind" index, problem.Path)
+    Assert.True problem.IsWarning
+    Assert.Contains("from pack \"lantern-night\", which is not installed", problem.Message)
+    lacks "minigame.unknownKind" missing
+    // Turned off.
+    let off = installed |> apply (SetPackEnabled("lantern-night", false))
+    Assert.Contains("which is turned off", (has "minigame.packDisabled" off).Message)
+    Assert.Empty(MinigameKinds.packKinds off)
+    // The manifest lacks the permission (and then its plugin's kind is flagged too).
+    let withPack (change: ContentPack -> ContentPack) =
+        let project, _ = withGame (starter () |> apply (InstallPack(change (lanternNight ()))))
+        project
+    let unpermitted = withPack (fun pack -> { pack with Manifest = { pack.Manifest with Permissions = { pack.Manifest.Permissions with Minigames = None } } })
+    let problem = has "minigame.packPermission" unpermitted
+    Assert.Contains("does not have the permission for it (its manifest's permissions.minigames does not list \"lantern-catch\")", problem.Message)
+    let at = (starter ()).ContentPacks.Length
+    Assert.Equal(sprintf "contentPacks[%d].pack.plugins[0].minigames[0]" at, (has "pack.minigameNotPermitted" unpermitted).Path)
+    // No plugin defines it.
+    let undefined = withPack (fun pack -> { pack with Plugins = [ { pack.Plugins.[0] with Minigames = None } ] })
+    Assert.Contains("no plugin of pack \"Lantern Night\" defines it", (has "minigame.packUndefined" undefined).Message)
+    // Names follow the pack id rule; another pack's kind is not this one's.
+    let bad = withPack (fun pack -> { pack with Manifest = { pack.Manifest with Permissions = { pack.Manifest.Permissions with Minigames = Some [ "lantern-catch"; "Big Game"; "other:thing" ] } } })
+    let names = Problems.collect bad |> List.filter (fun p -> p.Code = "pack.badMinigameName") |> List.map (fun p -> p.Path)
+    Assert.Equal<string list>([ sprintf "contentPacks[%d].pack.manifest.permissions.minigames[1]" at; sprintf "contentPacks[%d].pack.manifest.permissions.minigames[2]" at ], names)
+    lacks "minigame.packPermission" bad
+    // A kind without a pack prefix is still just unknown.
+    let project = starter ()
+    has "minigame.unknownKind" (project |> apply (UpsertMinigame { fresh project with Kind = "lantern-catch" })) |> ignore
+    // Granted kinds: the plugin's names that the manifest allows, either spelling, once.
+    let pack = lanternNight ()
+    let plugin = { pack.Plugins.[0] with Minigames = Some [ "lantern-catch"; "lantern-night:lantern-catch"; "other:x"; "not-allowed" ] }
+    Assert.Equal<string list>([ "lantern-night:lantern-catch" ], PackRules.grantedMinigameKinds pack plugin)
+
 [<Fact>]
 let ``reserved hotkeys and C# friendly members`` () =
     let project = starter ()

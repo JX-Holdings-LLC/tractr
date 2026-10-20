@@ -32,8 +32,8 @@ use farm_plugins::PluginHostOptions;
 use farm_render::graphics::{art_assets, ArtAsset};
 use farm_render::tiny_skia::Pixmap;
 use farm_render::{
-    apply_graphics, compute_camera, shell_snapshot_shared, BuiltinArt, DrawList, GraphicsSource, SharedUrls,
-    SnapshotOptions, SnapshotPop, TileWindow, WorldSnapshot,
+    apply_graphics, compute_camera, shell_snapshot_shared, BuiltinArt, Composition, DrawList, GraphicsSource,
+    SharedUrls, SnapshotOptions, SnapshotPop, TileWindow, Upscale, WorldLayer, WorldSnapshot,
 };
 use farm_runtime::host::{calendar_view, MinigameInput};
 use farm_runtime::music::{self, MusicCue};
@@ -53,6 +53,26 @@ use std::sync::Arc;
 
 /// A world snapshot, the world's size and the camera target (pixels).
 type WorldFrame = (WorldSnapshot, (f64, f64), (f64, f64));
+
+/// What a frame ends with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Render {
+    /// Nothing ([`Player::step`]).
+    None,
+    /// CPU pixels ([`Player::frame`]).
+    Pixels,
+    /// A [`Composition`] for the host's renderer ([`Player::frame_composition`]).
+    Plan,
+}
+
+/// The frame of the last [`Player::frame_composition`].
+#[derive(Debug, Default)]
+struct Planned {
+    size: (u32, u32),
+    tints: Vec<(farm_render::Color, farm_render::Color)>,
+    /// The world's draw list, native size and upscale.
+    world: Option<(DrawList, u32, u32, Upscale)>,
+}
 
 /// Longest plugin error a toast shows, in characters.
 const PLUGIN_ERROR_TOAST_CHARS: usize = 200;
@@ -280,6 +300,9 @@ pub struct Player {
     renderer: FrameRenderer,
     ui_list: DrawList,
     world: Option<(WorldSnapshot, WorldView)>,
+    /// The last [`Player::frame_composition`]: its frame size, world tints and world layer (draw
+    /// list, native size, upscale).
+    planned: Planned,
     /// The title screen's backdrop: the start of the game, its art and shared URLs (built once).
     title_state: Option<(GameState, GraphicsSource, SharedUrls)>,
     sounds: Vec<SoundRequest>,
@@ -409,6 +432,7 @@ impl Player {
             renderer: FrameRenderer::new(Arc::new(assets)),
             ui_list: DrawList::new(),
             world: None,
+            planned: Planned::default(),
             title_state: None,
             sounds: Vec::new(),
             requests: Vec::new(),
@@ -459,7 +483,7 @@ impl Player {
         width: u32,
         height: u32,
     ) -> Result<FrameOutput<'_>, PlayerError> {
-        self.run(dt_seconds, events, width, height, true)?;
+        self.run(dt_seconds, events, width, height, Render::Pixels)?;
         let music = self.music_cue();
         Ok(FrameOutput {
             pixels: self.renderer.frame(),
@@ -467,6 +491,63 @@ impl Player {
             requests: std::mem::take(&mut self.requests),
             music,
         })
+    }
+
+    /// [`Player::frame`] for a host with a renderer of its own (the desktop GPU backend): instead
+    /// of composing pixels it returns what to draw, the [`Composition`] the CPU path would
+    /// rasterize. [`Player::compose_pixels`] rasterizes the same frame on the CPU after all.
+    pub fn frame_composition(
+        &mut self,
+        dt_seconds: f64,
+        events: &[InputEvent],
+        width: u32,
+        height: u32,
+    ) -> Result<(StepOutput, Composition<'_>), PlayerError> {
+        self.run(dt_seconds, events, width, height, Render::Plan)?;
+        let music = self.music_cue();
+        let step = StepOutput {
+            sounds: std::mem::take(&mut self.sounds),
+            requests: std::mem::take(&mut self.requests),
+            music,
+        };
+        Ok((step, self.composition()))
+    }
+
+    /// The last [`Player::frame_composition`].
+    fn composition(&self) -> Composition<'_> {
+        let planned = &self.planned;
+        let (background, letterbox) = self.backdrop(&planned.tints);
+        Composition {
+            width: planned.size.0,
+            height: planned.size.1,
+            letterbox,
+            world: planned.world.as_ref().map(|(list, native_width, native_height, upscale)| WorldLayer {
+                list,
+                images: &self.renderer.world.images,
+                native_width: *native_width,
+                native_height: *native_height,
+                background,
+                tints: &planned.tints,
+                upscale: *upscale,
+            }),
+            ui: &self.ui_list,
+            ui_images: &self.renderer.ui_images,
+        }
+    }
+
+    /// Rasterizes the frame of the last [`Player::frame_composition`] on the CPU, as
+    /// [`Player::frame`] would have (a host whose renderer could not draw it).
+    pub fn compose_pixels(&mut self) -> Result<&Pixmap, PlayerError> {
+        if let Some(message) = &self.poisoned {
+            return Err(PlayerError::Poisoned(message.clone()));
+        }
+        let (width, height) = self.planned.size;
+        if let Err(panic) = catch_unwind(AssertUnwindSafe(|| self.compose(width, height))) {
+            let message = panic_message(&*panic);
+            self.poisoned = Some(message.clone());
+            return Err(PlayerError::Engine(message));
+        }
+        Ok(self.renderer.frame())
     }
 
     /// [`Player::frame`] without composing pixels (tests, headless hosts). The UI is still laid
@@ -478,7 +559,7 @@ impl Player {
         width: u32,
         height: u32,
     ) -> Result<StepOutput, PlayerError> {
-        self.run(dt_seconds, events, width, height, false)?;
+        self.run(dt_seconds, events, width, height, Render::None)?;
         let music = self.music_cue();
         Ok(StepOutput { sounds: std::mem::take(&mut self.sounds), requests: std::mem::take(&mut self.requests), music })
     }
@@ -499,7 +580,7 @@ impl Player {
         events: &[InputEvent],
         width: u32,
         height: u32,
-        render: bool,
+        render: Render,
     ) -> Result<(), PlayerError> {
         if let Some(message) = &self.poisoned {
             return Err(PlayerError::Poisoned(message.clone()));
@@ -507,8 +588,10 @@ impl Player {
         let (width, height) = (width.max(1), height.max(1));
         let result = catch_unwind(AssertUnwindSafe(|| {
             self.advance(dt, events, width, height);
-            if render {
-                self.compose(width, height);
+            match render {
+                Render::None => {}
+                Render::Pixels => self.compose(width, height),
+                Render::Plan => self.plan(width, height),
             }
         }));
         match result {
@@ -633,11 +716,23 @@ impl Player {
         self.ui.set_focus(farm_ui::WidgetId::new("pause").with("Resume"));
     }
 
+    /// A plugin error as a toast. A toast is a glance, not a log: the full text is in the plugin
+    /// errors list.
+    fn plugin_error_toast(&mut self, error: &str) {
+        let error = match error.char_indices().nth(PLUGIN_ERROR_TOAST_CHARS) {
+            Some((end, _)) => format!("{}…", &error[..end]),
+            None => error.to_owned(),
+        };
+        let message = self.ui.lang().format("toast.pluginError", &[&error]);
+        self.game_ui.toasts.push(message, ToastKind::Error);
+    }
+
     fn drain_session_events(&mut self) {
         let lang = self.ui.lang();
         let Some(game) = self.game.as_mut() else { return };
         let gain = self.settings.audio.effects_gain();
         let mut autosave = false;
+        let mut plugin_errors = Vec::new();
         for event in game.session.drain_events() {
             match event {
                 SessionEvent::Toast { text, kind, message } => {
@@ -650,8 +745,12 @@ impl Player {
                     }
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
+                SessionEvent::PluginError { text } => plugin_errors.push(text),
                 SessionEvent::SceneChanged { .. } | SessionEvent::QuestCompleted { .. } => {}
             }
+        }
+        for error in plugin_errors {
+            self.plugin_error_toast(&error);
         }
         if autosave && self.mode == PlayerMode::Standalone {
             let slot = self.game.as_ref().map_or(0, |game| game.slot);
@@ -770,12 +869,28 @@ impl Player {
         }
     }
 
-    fn compose(&mut self, width: u32, height: u32) {
+    /// The world's background and the letterbox colour under `tints`.
+    fn backdrop(&self, tints: &[(farm_render::Color, farm_render::Color)]) -> (farm_render::Color, farm_render::Color) {
         let background = self.ui.theme().colors.background;
-        let tints = self.ui.world_tints().to_vec();
         // Letterbox areas are flat background: they take the tints as one flat colour.
         let letterbox =
             tints.iter().fold(background, |color, (top, bottom)| over(color, farm_ui::theme::mix(*top, *bottom, 0.5)));
+        (background, letterbox)
+    }
+
+    /// Builds the frame's world draw list for [`Player::frame_composition`].
+    fn plan(&mut self, width: u32, height: u32) {
+        self.planned.size = (width, height);
+        self.planned.tints = self.ui.world_tints().to_vec();
+        self.planned.world = self.world.as_mut().map(|(snapshot, view)| {
+            let (list, native_width, native_height) = self.renderer.world_list(snapshot, view);
+            (list, native_width, native_height, view.upscale())
+        });
+    }
+
+    fn compose(&mut self, width: u32, height: u32) {
+        let tints = self.ui.world_tints().to_vec();
+        let (background, letterbox) = self.backdrop(&tints);
         self.renderer.begin(width, height, letterbox);
         if let Some((snapshot, view)) = self.world.as_mut() {
             let view = *view;
@@ -1125,13 +1240,7 @@ impl Player {
         session.set_reduced_motion(self.settings.accessibility.reduced_motion);
         let graphics = GraphicsSource::from_state(&self.def.presentation, session.content(), session.state());
         for error in session.plugin_errors() {
-            // A toast is a glance, not a log: the full text is in the plugin errors list.
-            let error = match error.char_indices().nth(PLUGIN_ERROR_TOAST_CHARS) {
-                Some((end, _)) => format!("{}…", &error[..end]),
-                None => error,
-            };
-            let message = self.ui.lang().format("toast.pluginError", &[&error]);
-            self.game_ui.toasts.push(message, ToastKind::Error);
+            self.plugin_error_toast(&error);
         }
         self.game = Some(Game { session, graphics, urls: SharedUrls::new(), slot, play_seconds });
         self.game_ui = GameUi { toasts: std::mem::take(&mut self.game_ui.toasts), ..GameUi::new() };

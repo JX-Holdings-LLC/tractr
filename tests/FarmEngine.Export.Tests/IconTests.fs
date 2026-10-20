@@ -24,6 +24,24 @@ let ``the default icon renders at every size`` () =
         Assert.Equal((size, size), pngSize png)
 
 [<Fact>]
+let ``an icon drawn at its own size keeps its pixels`` () =
+    // A 256-pixel source at 256 pixels is copied, not resampled: a blur would change the
+    // pixels and make the PNG too large for the slot the Windows template reserves.
+    let source = Icons.defaultIcon ()
+    let png = Icons.render source |> ok |> List.find (fun (size, _) -> size = 256) |> snd
+    use expected = SKBitmap.Decode source
+    use actual = SKBitmap.Decode png
+    Assert.Equal((256, 256), (expected.Width, expected.Height))
+    for y in 0 .. 255 do
+        for x in 0 .. 255 do
+            let a = expected.GetPixel(x, y)
+            let b = actual.GetPixel(x, y)
+            // Alpha exactly; colours within the rounding of premultiplying and back.
+            Assert.Equal(a.Alpha, b.Alpha)
+            if a.Alpha = 255uy then
+                Assert.Equal(a, b)
+
+[<Fact>]
 let ``a wide image is centred with transparent bands`` () =
     let rendered = Icons.render (makePng 512 256 false) |> ok
     let png = rendered |> List.find (fun (size, _) -> size = 256) |> snd

@@ -229,6 +229,7 @@ const EN: &[(&str, &str)] = &[
     ("shop.leftToday", "{0}/{1} left today"),
     // Minigames.
     ("minigame.keys", "Space / Enter"),
+    ("minigame.packKeys", "Arrows move · Space / Enter acts"),
     ("minigame.giveUp", "Give up"),
     ("minigame.choice.attack", "Attack"),
     ("minigame.choice.guard", "Guard"),
@@ -463,6 +464,7 @@ const ES: &[(&str, &str)] = &[
     ("shop.noStockDetail", "Vuelve cuando cambie la estaci\u{f3}n."),
     ("shop.leftToday", "Quedan {0}/{1} hoy"),
     ("minigame.keys", "Espacio / Intro"),
+    ("minigame.packKeys", "Flechas: mover · Espacio / Intro: actuar"),
     ("minigame.giveUp", "Rendirse"),
     ("minigame.choice.attack", "Atacar"),
     ("minigame.choice.guard", "Defender"),

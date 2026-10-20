@@ -116,6 +116,10 @@ pub struct MinigameView {
     pub progress: f64,
     /// memory-sequence: the symbol shown now (empty between symbols and after the showing).
     pub highlight: String,
+    /// A pack-defined minigame's frame (`None` for the built-in kinds, which the UI draws
+    /// itself from the fields above).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canvas: Option<crate::canvas::MinigameCanvas>,
     #[serde(skip)]
     pub prompt_message: Option<Message>,
     #[serde(skip)]
@@ -195,6 +199,7 @@ impl HostedMinigame {
             meter: 0.0,
             progress: 0.0,
             highlight: String::new(),
+            canvas: None,
             prompt_message: self.session.prompt_message(),
             button_message: self.session.button_message(),
             status_message: None,

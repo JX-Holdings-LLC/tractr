@@ -1,25 +1,21 @@
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using FarmEngine.Authoring;
 using FarmingRpgMaker.App.Projects;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 
 namespace FarmingRpgMaker.App.Game;
 
-/// <summary>The F# schema and content checks, refreshed when this tab is opened.</summary>
+/// <summary>The Problems tab: shows the rows of its <see cref="ProblemsViewModel"/>.</summary>
 public sealed class ProblemsView : UserControl, IRetirable
 {
-    private readonly ProjectWorkspace _workspace;
-    private readonly Action<Problem> _navigate;
     private readonly StackPanel _rows = new() { Name = "ProblemRows", Spacing = 8 };
     private readonly TextBlock _summary = Ui.Text("", "h2");
-    private bool _dirty = true;
-
-    public IReadOnlyList<Problem> CurrentProblems { get; private set; } = [];
 
     public ProblemsView(ProjectWorkspace workspace, Action<Problem> navigate)
     {
-        _workspace = workspace;
-        _navigate = navigate;
+        ViewModel = new ProblemsViewModel(workspace, navigate);
         Name = "ProblemsView";
         _summary.Name = "ProblemsSummary";
         var stack = new StackPanel { Spacing = 12, Margin = new Thickness(20) };
@@ -27,49 +23,45 @@ public sealed class ProblemsView : UserControl, IRetirable
         stack.Children.Add(Ui.Wrapped("Errors block export. Warnings and tips help you improve the project.", "muted", "small"));
         stack.Children.Add(_rows);
         Content = new ScrollViewer { Content = stack };
-        _workspace.ProjectChanged += OnProjectChanged;
+        ViewModel.PropertyChanged += OnViewModelChanged;
     }
 
+    public ProblemsViewModel ViewModel { get; }
+
     /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
-    public void Retire() => _workspace.ProjectChanged -= OnProjectChanged;
+    public void Retire() => ViewModel.Retire();
 
-    private void OnProjectChanged(object? sender, ProjectChangedEventArgs e) => _dirty = true;
+    public void Refresh() => ViewModel.Refresh();
 
-    public void Refresh()
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!_dirty) return;
-        _dirty = false;
-        _rows.Children.Clear();
-        if (_workspace.Current is not { } project)
-        {
-            _summary.Text = "No project open";
-            return;
-        }
+        if (e.PropertyName == nameof(ProblemsViewModel.Summary)) _summary.Text = ViewModel.Summary;
+        if (e.PropertyName == nameof(ProblemsViewModel.Problems)) Render();
+    }
 
-        var problems = Problems.Collect(project);
-        CurrentProblems = problems;
-        var errors = problems.Count(problem => problem.IsError);
-        var warnings = problems.Count(problem => problem.IsWarning);
-        _summary.Text = $"{errors} errors · {warnings} warnings · {problems.Count - errors - warnings} tips";
-        if (problems.Count == 0)
+    private void Render()
+    {
+        _rows.Children.Clear();
+        if (!ViewModel.HasProject) return;
+        if (ViewModel.IsClean)
         {
             _rows.Children.Add(Ui.Empty("IconStar", "No problems found", "Your project passed the current checks."));
             return;
         }
 
+        var problems = ViewModel.Problems;
         for (var index = 0; index < problems.Count; index++)
         {
             var problem = problems[index];
-            var title = Ui.Wrapped($"{problem.SeverityName.ToUpperInvariant()} · {problem.Message}", "small");
+            var title = Ui.Wrapped(ProblemsViewModel.RowTitle(problem), "small");
             if (problem.IsError) title.Classes.Add("error");
             var path = Ui.Text(problem.Path, "muted", "small");
             var text = Ui.VStack(4, title, path);
             if (problem.HasTarget)
             {
-                var go = Ui.Button("Go to", () => _navigate(problem), "tool", "small");
+                var go = Ui.Button("Go to", () => ViewModel.GoTo(problem), "tool", "small");
                 go.Name = $"ProblemGo_{index}";
-                // Every row has a "Go to": the name says which problem it opens.
-                Avalonia.Automation.AutomationProperties.SetName(go, $"Go to: {problem.Message}");
+                Avalonia.Automation.AutomationProperties.SetName(go, ProblemsViewModel.GoToName(problem));
                 _rows.Children.Add(Ui.Row(text, go));
             }
             else

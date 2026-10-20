@@ -12,6 +12,22 @@ planned.
 
 ## Prerequisites
 
+One command installs everything below that is missing, at the versions the
+repository pins, and checks the result:
+
+```sh
+scripts/dev-setup.sh            # Linux or macOS (--check to only report, --full for the extra CI tools)
+scripts\dev-setup.ps1           # Windows, with winget (-Check, -Full)
+```
+
+Or open the repository in a dev container (VS Code Dev Containers or GitHub
+Codespaces): [.devcontainer](.devcontainer) builds an Ubuntu image with the
+same tools. The script verifies its downloads (rustup by sha256, the .NET SDK
+by the sha512 in Microsoft's release metadata) and asks before it runs
+`apt-get`.
+
+What it installs:
+
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download) (`global.json`
   pins the version).
 - A [Rust toolchain](https://rustup.rs); `rust-toolchain.toml` pins the
@@ -22,9 +38,14 @@ planned.
   ```sh
   sudo apt-get install libasound2-dev libudev-dev pkg-config   # build: ALSA (cpal), libudev (gilrs)
   sudo apt-get install libxkbcommon-x11-0 xvfb                 # run the window; xvfb for the window test
+  sudo apt-get install mesa-vulkan-drivers                     # lavapipe: a software Vulkan driver for the GPU tests
   ```
 
-  Without `xvfb`, `crates/farm-player/tests/binary.rs` skips its window test.
+  Without `xvfb`, `crates/farm-player/tests/binary.rs` skips its window tests.
+  Without a Vulkan driver (a GPU's, or lavapipe), the GPU renderer's parity
+  tests (`crates/farm-gpu/tests/parity.rs`,
+  `crates/farm-player/tests/gpu_parity.rs`) say why and skip;
+  `FARM_REQUIRE_GPU=1` (set in CI on Linux) makes that a failure.
 
 Windows needs the MSVC build tools for Rust (the Visual Studio "Desktop
 development with C++" workload). macOS is untested: CI has no macOS job, and
@@ -110,6 +131,7 @@ Switches that only write images for a look, never compared:
 |---|---|
 | `FARM_PLAYER_SCREENSHOTS=<dir>` | full-size game screens (`cargo test -p farm-player --test screenshots`; `-- --ignored review_screens` for every screen) |
 | `FARM_WASM_SCREENSHOTS=<dir>` | the web demo's frames (`node tools/wasm/smoke.mjs`) |
+| `FARM_GPU_SCREENSHOTS=<dir>` | the GPU and CPU frames the parity tests compare (`cargo test -p farm-gpu --test parity`, `cargo test -p farm-player --test gpu_parity`) |
 | `FRM_SCREENSHOT_DIR=<dir>` | the editor screenshots in `docs/media` (`ScreenshotTests`, `GameScreenshotTests` in the app tests) |
 
 ## Property tests
@@ -145,6 +167,7 @@ needs that tool. CI checks that each matches its generator.
 | What | Regenerate | When | CI check |
 |---|---|---|---|
 | FlatBuffers accessors (`crates/farm-cart-schema/src/*_generated.rs`) | `flatc --rust` 25.2.10 ([schemas/README.md](schemas/README.md)) | a `.fbs` changes | `tools/codegen/check.sh` |
+| `src/FarmEngine.Authoring/SchemaJson.fs` (schema JSON codecs) | `dotnet fsi tools/codegen/schema-json.fsx` ([tools/codegen](tools/codegen/README.md#schemajsonfs)) | a record or union in `Schema.fs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordJson.fs` tables | `python3 tools/codegen/record-json.py` | `SchemaJson.fs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordWith.fs` | `dotnet build -c Release src/FarmEngine.Authoring && dotnet fsi tools/codegen/record-with.fsx` | a schema record changes | `tools/codegen/check.sh` |
 | Player license notices (`tools/player-licenses/THIRD-PARTY.txt`) | `tools/player-licenses/generate.sh` (needs cargo-about 0.9.2) | `farm-player`'s dependencies, the fonts or the plugin guest change | `generate.sh --check` |

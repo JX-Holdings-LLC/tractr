@@ -18,7 +18,11 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::io::Cursor;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+
+/// The next [`ImageStore::uid`].
+static NEXT_STORE: AtomicU64 = AtomicU64::new(1);
 
 /// Largest accepted image side, in pixels (decompression-bomb guard).
 pub const MAX_IMAGE_SIDE: u32 = 8192;
@@ -212,6 +216,7 @@ pub struct ImageStore {
     /// cannot be reused, and its entry).
     by_pointer: BTreeMap<usize, (Arc<str>, u32)>,
     next_id: u32,
+    uid: u64,
     clock: u64,
     frame_start: u64,
 }
@@ -242,6 +247,7 @@ impl ImageStore {
             by_content: BTreeMap::new(),
             by_pointer: BTreeMap::new(),
             next_id: 1,
+            uid: NEXT_STORE.fetch_add(1, Ordering::Relaxed),
             clock: 0,
             frame_start: 0,
         }
@@ -259,6 +265,12 @@ impl ImageStore {
             return decode_image(&bytes).ok();
         }
         decode_source(source)
+    }
+
+    /// A number no other store of this process has: renderers that keep copies of the images
+    /// (the GPU backend's textures) key them by it and the [`ImageId`].
+    pub fn uid(&self) -> u64 {
+        self.uid
     }
 
     /// Number of cached sources (including ones that failed to decode).

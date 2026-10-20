@@ -1,6 +1,6 @@
 //! The desktop game (feature `desktop`): a winit window presenting the [`Player`]'s frames
-//! through softbuffer, keyboard, mouse and gilrs gamepads, cpal audio, user folders and crash
-//! logs.
+//! through the GPU renderer (feature `gpu`) or softbuffer ([`present`]), keyboard, mouse and gilrs
+//! gamepads, cpal audio, user folders and crash logs.
 //!
 //! - The window takes its title and size from the cartridge's game info; fullscreen is
 //!   borderless and toggles with Alt+Enter or F11 (the player asks through
@@ -20,15 +20,18 @@ pub mod crash;
 pub mod folders;
 mod gamepad;
 mod keys;
+pub mod present;
 
 use crate::input::{InputEvent, PointerButton};
 use crate::player::{Player, PlayerOptions, PlayerRequest};
 use crate::render::error_screen;
 use crate::saves::{FsSaveStore, FsSettingsStore, MemorySaveStore, MemorySettingsStore};
 use crate::speaker::Audio;
+use farm_ui::RendererChoice;
 use gamepad::Gamepads;
+use present::Presenter;
 use std::num::NonZeroU32;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use winit::application::ApplicationHandler;
 use winit::dpi::{LogicalSize, PhysicalPosition};
@@ -46,16 +49,19 @@ pub struct DesktopOptions {
     pub exit_after_frames: Option<u64>,
     /// Force a window or fullscreen for this run.
     pub fullscreen: Option<bool>,
+    /// The renderer for this run (`--renderer`); else `FARM_RENDERER`, else the setting
+    /// ([`present`]).
+    pub renderer: Option<RendererChoice>,
 }
-
-type Surface = softbuffer::Surface<Rc<Window>, Rc<Window>>;
 
 struct App {
     /// `None` when the game could not even start (only the error screen shows).
     player: Option<Player>,
     options: DesktopOptions,
-    window: Option<Rc<Window>>,
-    surface: Option<Surface>,
+    window: Option<Arc<Window>>,
+    presenter: Option<Presenter>,
+    /// The renderer asked for (resolved when the window opens).
+    renderer: RendererChoice,
     events: Vec<InputEvent>,
     pointer: PhysicalPosition<f64>,
     last_frame: Option<Instant>,
@@ -158,11 +164,14 @@ pub fn run(cart: &[u8], options: DesktopOptions) -> Result<(), String> {
 
 impl App {
     fn new(player: Option<Player>, options: DesktopOptions) -> Self {
+        let setting = player.as_ref().map_or(RendererChoice::Auto, |player| player.settings().display.renderer);
+        let renderer = present::renderer_choice(options.renderer, setting);
         Self {
             player,
             options,
             window: None,
-            surface: None,
+            presenter: None,
+            renderer,
             events: Vec::new(),
             pointer: PhysicalPosition::new(0.0, 0.0),
             last_frame: None,
@@ -202,26 +211,22 @@ impl App {
         }
     }
 
-    /// Copies premultiplied RGBA (opaque) pixels into the window as 0RGB.
-    fn present(surface: &mut Surface, width: NonZeroU32, height: NonZeroU32, pixels: &[u8]) {
-        if surface.resize(width, height).is_err() {
-            return;
-        }
-        if let Ok(mut buffer) = surface.buffer_mut() {
-            for (out, pixel) in buffer.iter_mut().zip(pixels.chunks_exact(4)) {
-                *out = (u32::from(pixel[0]) << 16) | (u32::from(pixel[1]) << 8) | u32::from(pixel[2]);
-            }
-            let _ = buffer.present();
-        }
+    /// The window cannot be drawn to at all: stop.
+    fn cannot_draw(&mut self, event_loop: &ActiveEventLoop, message: String) {
+        self.presenter = None;
+        self.error.get_or_insert(message);
+        event_loop.exit();
     }
 
     fn render(&mut self, event_loop: &ActiveEventLoop) {
-        let (Some(window), Some(surface)) = (self.window.clone(), self.surface.as_mut()) else { return };
+        let (Some(window), Some(presenter)) = (self.window.clone(), self.presenter.as_mut()) else { return };
         let size = window.inner_size();
         let (Some(width), Some(height)) = (NonZeroU32::new(size.width), NonZeroU32::new(size.height)) else { return };
         if let Some(lines) = &self.failure {
             let pixmap = error_screen(width.get(), height.get(), "The game stopped", lines);
-            Self::present(surface, width, height, pixmap.data());
+            if let Err(message) = presenter.show_pixels(&window, width, height, pixmap.data()) {
+                self.cannot_draw(event_loop, message);
+            }
             return;
         }
         let Some(player) = self.player.as_mut() else { return };
@@ -233,15 +238,18 @@ impl App {
         }
         let events = std::mem::take(&mut self.events);
         crash::set_frame(self.frames);
-        let output = match player.frame(dt, &events, width.get(), height.get()) {
-            Ok(output) => output,
-            Err(error) => {
+        let output = match presenter.frame(&window, player, dt, &events, width, height) {
+            Ok(Ok(output)) => output,
+            Ok(Err(error)) => {
                 let message = error.to_string();
                 self.fail(event_loop, message);
                 return;
             }
+            Err(message) => {
+                self.cannot_draw(event_loop, message);
+                return;
+            }
         };
-        Self::present(surface, width, height, output.pixels.data());
         if let Some(audio) = self.audio.as_mut() {
             audio.maintain();
             audio.set_music(output.music);
@@ -285,25 +293,17 @@ impl ApplicationHandler for App {
             .with_inner_size(LogicalSize::new(f64::from(width), f64::from(height)))
             .with_min_inner_size(LogicalSize::new(320.0, 200.0));
         let window = match event_loop.create_window(attributes) {
-            Ok(window) => Rc::new(window),
+            Ok(window) => Arc::new(window),
             Err(error) => {
                 self.error = Some(format!("Cannot open a window: {error}"));
                 event_loop.exit();
                 return;
             }
         };
-        let context = match softbuffer::Context::new(Rc::clone(&window)) {
-            Ok(context) => context,
-            Err(error) => {
-                self.error = Some(format!("Cannot draw to the window: {error}"));
-                event_loop.exit();
-                return;
-            }
-        };
-        match softbuffer::Surface::new(&context, Rc::clone(&window)) {
-            Ok(surface) => self.surface = Some(surface),
-            Err(error) => {
-                self.error = Some(format!("Cannot draw to the window: {error}"));
+        match Presenter::open(&window, self.renderer) {
+            Ok(presenter) => self.presenter = Some(presenter),
+            Err(message) => {
+                self.error = Some(message);
                 event_loop.exit();
                 return;
             }

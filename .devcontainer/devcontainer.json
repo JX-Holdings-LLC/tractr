@@ -1,0 +1,28 @@
+{
+  "name": "Farming RPG Maker",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "scripts/dev-setup.sh --check && dotnet tool restore",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "ms-dotnettools.csdevkit",
+        "Ionide.Ionide-fsharp",
+        "editorconfig.editorconfig",
+        "DavidAnson.vscode-markdownlint"
+      ]
+    }
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
+}

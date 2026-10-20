@@ -55,7 +55,7 @@ public sealed class GitHubReleaseNotesClientTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(SampleJson) };
         });
 
-        var result = await client.GetReleasesAsync();
+        var result = await client.GetReleasesAsync(TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(3, result.Releases.Count);
@@ -76,7 +76,7 @@ public sealed class GitHubReleaseNotesClientTests
             return response;
         });
 
-        var result = await client.GetReleasesAsync();
+        var result = await client.GetReleasesAsync(TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Empty(result.Releases);
@@ -88,7 +88,7 @@ public sealed class GitHubReleaseNotesClientTests
     {
         var client = Client(_ => new HttpResponseMessage(HttpStatusCode.TooManyRequests));
 
-        var result = await client.GetReleasesAsync();
+        var result = await client.GetReleasesAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("limit", result.Error, StringComparison.OrdinalIgnoreCase);
     }
@@ -98,7 +98,7 @@ public sealed class GitHubReleaseNotesClientTests
     {
         var client = Client(_ => throw new HttpRequestException("No such host is known."));
 
-        var result = await client.GetReleasesAsync();
+        var result = await client.GetReleasesAsync(TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
         Assert.Contains("offline", result.Error, StringComparison.OrdinalIgnoreCase);
@@ -109,7 +109,7 @@ public sealed class GitHubReleaseNotesClientTests
     {
         var client = Client(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html>oops</html>") });
 
-        var result = await client.GetReleasesAsync();
+        var result = await client.GetReleasesAsync(TestContext.Current.CancellationToken);
 
         Assert.False(result.IsSuccess);
     }
@@ -119,7 +119,7 @@ public sealed class GitHubReleaseNotesClientTests
     {
         var client = Client(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
 
-        Assert.Null(await client.FindReleaseAsync("0.2.0"));
+        Assert.Null(await client.FindReleaseAsync("0.2.0", TestContext.Current.CancellationToken));
     }
 
     private static GitHubReleaseNotesClient Client(Func<HttpRequestMessage, HttpResponseMessage> respond) =>

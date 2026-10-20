@@ -16,7 +16,7 @@ public sealed class ContentEditorTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectCategory(category);
+        view.ViewModel.SelectCategory(category);
         Pump();
         return view;
     }
@@ -86,7 +86,7 @@ public sealed class ContentEditorTests
         tabs.SelectedIndex = 2;
         Pump();
         var problems = FindByName<ProblemsView>(host.Window, "ProblemsView");
-        var index = problems.CurrentProblems.ToList().FindIndex(problem => problem.TargetKind == "npc" && problem.TargetId == npc.Id);
+        var index = problems.ViewModel.Problems.ToList().FindIndex(problem => problem.TargetKind == "npc" && problem.TargetId == npc.Id);
         Assert.True(index >= 0);
         Assert.Contains("errors", FindByName<TextBlock>(host.Window, "ProblemsSummary").Text);
 
@@ -146,7 +146,7 @@ public sealed class ContentEditorTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 4;
         Pump();
         var mods = FindByName<ModsEditorView>(host.Window, "ModsEditorView");
-        mods.ReviewPackJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo-mod.json")));
+        mods.ViewModel.ReviewPackJson(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "demo-mod.json")));
         Assert.True(FindByName<Button>(host.Window, "InstallPackButton").IsEnabled);
         Assert.Contains("Permissions", AllVisibleText(host.Window));
         // The demo mod declares no mutations: the review says what its plugin may do by default.

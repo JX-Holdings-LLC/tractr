@@ -203,6 +203,11 @@ players/windows-x64/template.json     players/linux-x64/template.json
 players/windows-x64/THIRD-PARTY.txt   players/linux-x64/THIRD-PARTY.txt
 ```
 
+The desktop templates are `farm-player` with its default features, so an
+exported game draws with the GPU renderer when the player's machine has a
+working Vulkan or DirectX 12 GPU, and with the CPU renderer otherwise
+([PLAYER.md](PLAYER.md#renderers)).
+
 `template.json` is `{ "target": "linux-x64", "version": "0.2.0", "sha256": "…",
 "files": { "THIRD-PARTY.txt": "…" } }`: `sha256` is the executable's (for the
 web, the module's) and `files` has every other file export uses (the license

@@ -167,9 +167,9 @@ type CartridgeCompiler =
                    builder.AddOffsetField(0, idOffset)
                    builder.EndTable() |]
         let assetsOffset = builder.CreateOffsetVector assetOffsets
-        // Plugins of the enabled packs in load order, each with the hooks its manifest grants
-        // and the mutation capabilities it declares, if any (Rust
-        // `farm_plugins::plugin_specs_from_project`).
+        // Plugins of the enabled packs in load order, each with the hooks its manifest grants,
+        // the mutation capabilities it declares, if any, and the minigame kinds it may define
+        // (Rust `farm_plugins::plugin_specs_from_project`).
         let pluginOffsets =
             [| for install in project.ContentPacks do
                    if install.Enabled then
@@ -183,10 +183,16 @@ type CartridgeCompiler =
                            let mutationsOffset =
                                pack.Manifest.Permissions.Mutations
                                |> Option.map (fun mutations -> builder.CreateOffsetVector(mutations |> List.map builder.CreateString |> Array.ofList))
+                           // Absent when there are none, so games without pack minigames keep their bytes.
+                           let minigamesOffset =
+                               match PackRules.grantedMinigameKinds pack plugin with
+                               | [] -> None
+                               | kinds -> Some(builder.CreateOffsetVector(kinds |> List.map builder.CreateString |> Array.ofList))
                            let idOffset = builder.CreateString(pack.Manifest.Id + ":" + plugin.Id)
                            let packOffset = builder.CreateString pack.Manifest.Id
                            let sourceOffset = builder.CreateString plugin.Source
-                           builder.StartTable 5
+                           builder.StartTable 6
+                           minigamesOffset |> Option.iter (fun offset -> builder.AddOffsetField(5, offset))
                            mutationsOffset |> Option.iter (fun offset -> builder.AddOffsetField(4, offset))
                            builder.AddOffsetField(3, hooksOffset)
                            builder.AddOffsetField(2, sourceOffset)

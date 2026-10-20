@@ -329,7 +329,7 @@ public sealed partial class EditModeView : UserControl
     {
         if (EditorNavigation.WorkshopTarget(tabKey) is not { } target) return;
         SelectedTab = target.Tab;
-        if (target.Category is { } category) _contentEditor.SelectCategory(category);
+        if (target.Category is { } category) _contentEditor.ViewModel.SelectCategory(category);
     }
 
     /// <summary>A Problems row: opens what the problem is about.</summary>
@@ -355,7 +355,7 @@ public sealed partial class EditModeView : UserControl
         if (problem.TargetKind == "pack" && problem.TargetId is { } packId)
         {
             SelectedTab = EditorTab.Mods;
-            _modsEditor.SelectPack(packId);
+            _modsEditor.ViewModel.SelectPack(packId);
             return;
         }
         if (problem.TargetKind == "asset" && problem.TargetId is { } assetId)
@@ -368,7 +368,7 @@ public sealed partial class EditModeView : UserControl
         if (EditorNavigation.ContentCategory(problem.TargetKind) is { } category && problem.TargetId is { } id)
         {
             SelectedTab = EditorTab.Content;
-            _contentEditor.SelectEntry(category, id);
+            _contentEditor.ViewModel.SelectEntry(category, id);
         }
     }
     /// <summary>The scene shown (defaults to the player's scene).</summary>

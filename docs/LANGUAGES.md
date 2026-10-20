@@ -111,7 +111,7 @@ what an exported game contains.
 - **Contents (as built):** the compiled content, the new-game start state and
   the presentation data as JSON sections with string ids and numbers in
   authoring units, an asset table with every embedded file once, and the pack
-  plugins with their granted hooks (see "Format 2" below).
+  plugins with their granted hooks and minigame kinds (see "Format 2" below).
 - **Contents (Future):** content tables with ids interned to dense integer
   indices, a string table per locale, compiled condition bytecode, compiled
   dialogue graphs, flat tile-layer arrays and texture atlases packed at load.
@@ -149,11 +149,17 @@ what an exported game contains.
   [EXPORT.md](EXPORT.md#what-earlier-phases-must-get-right). Rust can also export a save as stable JSON for
   debugging and for the web version.
 - Saving is synchronous: the player serializes, compresses and writes the
-  save on the simulation thread. Serializing the mid-size benchmark state
-  takes about 10.7 ms against a 1 ms budget, so CI holds it to a regression
-  ceiling (`SAVE_CEILING` in `crates/farm-bench`) until the stable-JSON writer
-  is replaced. **Future:** serialize in about a millisecond, then compress and
-  write on a worker thread.
+  save on the simulation thread. Stable JSON is written straight from
+  `Serialize` (`farm_sim::stable_json`), putting only the objects whose keys
+  arrive out of order into key order; building a `serde_json::Value` tree
+  first, as the first writer did, stays as the reference the tests compare
+  it with. Serializing the mid-size benchmark state takes about 2.5 ms (it
+  took 10.7 ms with the tree) against a 1 ms budget, so CI holds it to a
+  regression ceiling (`SAVE_CEILING` in `crates/farm-bench`). Unsorted
+  `serde_json` output of the same state takes about 1 ms, so the budget needs
+  more than a faster writer, and copying the state to serialize it elsewhere
+  costs about as much as writing it. **Future:** compress and write on a
+  worker thread.
 
 ### FFI: .NET → Rust (`farm-ffi`)
 
@@ -301,7 +307,8 @@ crates/
   farm-plugins/    # PluginHost trait; QuickJS-in-wasm host run by wasmi  ← Runtime/Plugins.cs
   farm-render/     # draw-list builder; CPU rasterizer (tiny-skia)     ← src/FarmEngine.Rendering
   farm-ui/         # in-game UI (HUD, dialogue, shop, inventory, crafting, quests, panels)
-  farm-player/     # standalone player (winit + softbuffer + cpal + gilrs) and game shell; embeddable
+  farm-gpu/        # wgpu backend for draw lists (the desktop player's GPU renderer)
+  farm-player/     # standalone player (winit + softbuffer or wgpu + cpal + gilrs) and game shell; embeddable
   farm-host/       # host protocol shared by farm-ffi and farm-wasm
   farm-ffi/        # C ABI for .NET
   farm-wasm/       # wasm-bindgen API for the web
@@ -321,7 +328,7 @@ tests/
   FarmingRpgMaker.App.Tests/     # C#, unchanged role
 tools/fable/                     # Fable build of FarmEngine.Authoring + Node smoke test
 tools/wasm/                      # farm-wasm build + Node smoke test
-tools/codegen/                   # generators for RecordWith.fs and RecordJson.fs tables
+tools/codegen/                   # generators for SchemaJson.fs, RecordWith.fs and RecordJson.fs tables
 ```
 
 `FarmEngine.Interop` has an MSBuild target that runs `cargo build` and copies
@@ -339,8 +346,8 @@ without a Rust toolchain, which reports them as skipped.
   migrations, validation, Problems and compiling. That means no reflection, no
   `System.Text.Json`, no file I/O and no .NET-only APIs (such as
   `SortedDictionary` or `System.Security.Cryptography`) in that project. JSON
-  goes through the explicit decoders and encoders in `SchemaJson.fs` over the
-  immutable `Json` type, and .NET-only code lives in `FarmEngine.Authoring.Net`.
+  goes through the explicit decoders and encoders in `SchemaJson.fs` (generated
+  from `Schema.fs`) over the immutable `Json` type, and .NET-only code lives in `FarmEngine.Authoring.Net`.
   CI builds it with `tools/fable/build.sh` and checks the JavaScript in Node
   (`tools/fable/smoke.mjs`). `WebApi.fs` is the JavaScript entry point: JSON
   text in and out, so callers never see F# records.
@@ -348,9 +355,15 @@ without a Rust toolchain, which reports them as skipped.
   as an immutable record: `option` for optional fields, `list` for lists,
   `(string * 'T) list` for ordered maps, `Json` for free-form values, an `Extra`
   field for undeclared keys on the records that keep them, and a union for
-  conditions. Every record has a `Default`. Change a record and its decoder
-  and encoder together, then regenerate the C# helpers
-  (`tools/codegen/record-with.fsx`, `tools/codegen/record-json.py`).
+  conditions. Every record has a `Default`, which is also what a missing key
+  decodes to. `SchemaJson.fs` is generated from the records
+  (`tools/codegen/schema-json.fsx`): the JSON key is the field name in
+  camelCase, and three attributes say what the types do not (`[<JsonKey>]` for
+  another key, `[<JsonNull>]` for a `.nullable()` field written as `null`,
+  `[<JsonDecode>]` for a decoder the type does not give;
+  [tools/codegen](../tools/codegen/README.md#schemajsonfs)). So a schema change
+  is: edit `Schema.fs`, run `schema-json.fsx`, then regenerate the C# helpers
+  (`tools/codegen/record-json.py`, `tools/codegen/record-with.fsx`).
 - The compiler writes cartridges with a plain-F# FlatBuffers builder
   (`FlatBuffers.fs`) that produces the same bytes as the official C# builder,
   and `CartridgeReader` reads them back; both work under Fable.
@@ -451,9 +464,10 @@ Rust-recorded `fixtures/golden/content` projects with F#, and records `fixtures/
 kitchen-sink project and content with every F# record field set, plus the F# pipeline's
 output for the templates, the fixture projects and the example packs), which
 `crates/farm-sim/tests/fsharp_parity.rs` checks against serde and the Rust pipeline. The
-schema itself is still kept by hand on both sides (Schema.fs/SchemaJson.fs and the serde
-types); generating one from the other is future work, and these tests catch a field added on
-one side only.
+schema itself has one source per language: on the F# side `Schema.fs`, from which
+`SchemaJson.fs` is generated (`tools/codegen/schema-json.fsx`); on the Rust side the serde
+types, kept by hand. Generating the serde types (or checking their defaults) from `Schema.fs`
+is future work; these tests catch a field added on one side only.
 
 ### `FarmEngine.Content` → F# — done, deleted
 
@@ -484,7 +498,7 @@ The renderer splits into **what to draw** (one implementation, Rust) and
 | `WorldSnapshot.cs`, `ShellSnapshot.cs` | `farm-render::snapshot` (typed structs, same JSON) and `farm-render::shell` (`shell_snapshot`, `editor_snapshot`). Done. |
 | `Graphics.cs`, `BuiltinArt.cs` | `farm-render::graphics` (`resolve_visual`, `apply_graphics`, `GraphicsSource` on the cartridge `Presentation`) and `farm-render::builtin_art`. The art pack lives in `assets/builtin-art/`, shared with the C# project. Done. |
 | `Atmosphere.cs`, `Canvas2d.cs`, `CssColor.cs` | `farm-render::{atmosphere, canvas2d, css_color}`. Done. |
-| `SkiaWorldRenderer.cs` | `farm-render::world` builds the draw list (`farm-render::draw`) with the same passes and geometry. `farm-render::raster` rasterizes it on the CPU with tiny-skia (feature `raster`, also on wasm32). Done; Edit Mode (`MapCanvas`, `RustPreview`) and Play Mode both draw with it. Later: `farm-render::wgpu` for play. |
+| `SkiaWorldRenderer.cs` | `farm-render::world` builds the draw list (`farm-render::draw`) with the same passes and geometry. `farm-render::raster` rasterizes it on the CPU with tiny-skia (feature `raster`, also on wasm32). Done; Edit Mode (`MapCanvas`, `RustPreview`) and Play Mode both draw with it. The desktop player can draw the same lists with wgpu (`farm-gpu`, docs/PLAYER.md "Renderers"). |
 | `ImageStore.cs` | `farm-render::images`: decodes `data:` URLs and `builtin://` sheets (PNG, JPEG, GIF, WebP, BMP), refuses images over 8192 px a side, caches failures, bounded LRU, and a resolver hook for cartridge `asset:` URLs. Done. |
 | (new) | `farm-render::text`: embedded Inter Regular and Bold, measurement, word wrap and ellipsis for `farm-ui`. |
 
@@ -492,7 +506,8 @@ Until the switch, differential tests compared decorated Edit Mode snapshots
 exactly and the Rust raster with the Skia one pixel by pixel; golden images in
 `fixtures/render/` now pin the Rust output.
 
-A later wgpu backend would add the farming-specific visuals a CPU rasterizer
+The wgpu backend (`farm-gpu`) draws what the CPU rasterizer draws today.
+Later passes on it would add the farming-specific visuals a CPU rasterizer
 can't do cheaply: day/night lighting, season palette swaps (the same art in autumn
 or snow), rain, snow and wind particles, and water shimmer on watered soil.
 
@@ -556,7 +571,7 @@ New tests:
   | Overnight pass, 256×256 farm, full crops + 50 machines | < 30 ms |
   | Save (serialize on sim thread) | < 1 ms |
   | Cartridge load, sample games | < 50 ms |
-  | Frame (draw list + wgpu), 1080p, integrated GPU (Future: there is no wgpu backend; the CPU rasterizer is held to one 60 Hz frame) | < 4 ms |
+  | Frame (draw list + wgpu), 1080p, integrated GPU (not measured: CI has no GPU; the CPU rasterizer is held to one 60 Hz frame) | < 4 ms |
 
 ## What still needs to be built, by language
 
@@ -641,7 +656,7 @@ the same tests, and was then deleted.
 5. **Editor port** (the list above), on the new stack. It can start as soon
    as phase 3 lands. See the checklist below.
 6. **Rust player and plugins.** `farm-plugins` (QuickJS in wasmi, done),
-   `farm-render` wgpu backend, `farm-ui` (done), `farm-player` (the graphical
+   the wgpu backend (`farm-gpu`, done in 0.3), `farm-ui` (done), `farm-player` (the graphical
    player and game shell are done, on the CPU rasterizer with cpal audio).
    Embed it in Play Mode (done: frames rendered by Rust and shown in an
    Avalonia control) and retire the C# play views and Jint (done). Export Game
@@ -649,7 +664,7 @@ the same tests, and was then deleted.
    with `farm-wasm`; [EXPORT.md](EXPORT.md), [PLAYER.md](PLAYER.md)). *Exit:* the embedded and
    standalone players are the same `Player`, screenshot goldens pin its
    frames, and exported sample games replay their goldens on Windows and
-   Linux. The wasm player came in phase 7; the wgpu backend is Future.
+   Linux. The wasm player came in phase 7, the wgpu backend in 0.3.
 7. **One engine (v9).** First move the schema records from C# to F# so
    `FarmEngine.Authoring` compiles under Fable (done), then the web version
    adopts `farm-wasm` for play and Fable-compiled `FarmEngine.Authoring` for
@@ -660,8 +675,8 @@ the same tests, and was then deleted.
    ([NUMERICS.md](NUMERICS.md); done). From here Rust is the reference
    implementation and the `js` helpers are deleted. *Exit:* old v8 saves load
    and play on in both apps (met), and benchmarks meet their budgets (not
-   met for saving: about 10.7 ms against 1 ms, held to `SAVE_CEILING`; see
-   [ROADMAP.md](../ROADMAP.md)).
+   met for saving: about 2.5 ms against 1 ms, down from 10.7 ms, held to
+   `SAVE_CEILING`; see [ROADMAP.md](../ROADMAP.md)).
 
 ## Checklist: porting a new part of the web editor
 
@@ -702,8 +717,8 @@ issue before work starts.
   Problems pipeline.
 - **Units of measure** on the F# records (`<gold>`, `<day>`, `<tile>`).
 - **Asynchronous saving** within a 1 ms budget on the simulation thread.
-- **A wgpu renderer** for play, with a 4 ms 1080p frame target; the player
-  draws with the CPU rasterizer and softbuffer.
+- **GPU effects** on the wgpu renderer (`farm-gpu` draws the CPU renderer's
+  frames today), and a measured 4 ms 1080p frame target on an integrated GPU.
 - **kira audio** (crossfades, ambience layers); the player mixes its own audio
   and outputs it through cpal.
 - **Generated FFI bindings with `SafeHandle`s**; `FarmEngine.Interop` is

@@ -3,10 +3,15 @@ namespace FarmEngine.Schemas
 open FarmEngine.Authoring
 
 // Generated once from the C# records of FarmEngine.Schemas (a port of packages/engine-schemas), then
-// kept by hand. JSON: SchemaJson.fs. Numbers are `float` in authoring units (tiles, points,
-// minutes; docs/NUMERICS.md): project JSON keeps them, and the Rust engine converts them to
-// fixed-unit integers when it loads a cartridge. `option` is an optional or nullable field;
-// `Extra` keeps the keys the schema does not declare (zod `.passthrough()`), in order.
+// kept by hand. Numbers are `float` in authoring units (tiles, points, minutes; docs/NUMERICS.md):
+// project JSON keeps them, and the Rust engine converts them to fixed-unit integers when it loads
+// a cartridge. `option` is an optional or nullable field; `Extra` keeps the keys the schema does
+// not declare (zod `.passthrough()`), in order.
+//
+// JSON: SchemaJson.fs is generated from this file (tools/codegen/schema-json.fsx; run it after
+// changing a record or union here). It follows from the types, the `Default` members (a missing
+// key decodes to the field's value in `Default`) and the `[<Json…>]` attributes below, which say
+// what the types do not.
 //
 // Forward compatibility: a record without `Extra` (zod's default `.strip()`) drops keys it does
 // not declare when it loads, so a key a newer build writes at the same schema version (a new
@@ -17,6 +22,29 @@ open FarmEngine.Authoring
 // The Rust engine has its own serde types for the same JSON (crates/farm-sim/src/schema). The
 // parity tests keep the two in step: ParityTests.fs records an F# encoding of every field of every
 // record (fixtures/parity), which crates/farm-sim/tests/fsharp_parity.rs reads back through serde.
+
+/// The JSON key of a record field, when it is not the field name in camelCase (`selectedNPCId`).
+/// Read by tools/codegen/schema-json.fsx; nothing reads it at run time.
+[<System.AttributeUsage(System.AttributeTargets.Property)>]
+type JsonKeyAttribute(key: string) =
+    inherit System.Attribute()
+    /// The JSON key.
+    member _.Key = key
+
+/// An `option` field zod declares `.nullable()` (a required key): `None` is written as `null`
+/// instead of being left out. Read by tools/codegen/schema-json.fsx.
+[<System.AttributeUsage(System.AttributeTargets.Property)>]
+type JsonNullAttribute() =
+    inherit System.Attribute()
+
+/// The decoder of a record field, as F# source, when it is not the one the field's type gives:
+/// an expression of the field's type over `key`, `path` (the record's path) and `value` (the
+/// member's JSON). Read by tools/codegen/schema-json.fsx; the encoder still follows the type.
+[<System.AttributeUsage(System.AttributeTargets.Property)>]
+type JsonDecodeAttribute(expression: string) =
+    inherit System.Attribute()
+    /// The decoder expression.
+    member _.Expression = expression
 
 type ActionDef =
     {
@@ -196,6 +224,7 @@ and Crop =
         /// One of `CropQualities`.
         Quality: string
         /// One of `CropMutations` or `null` (required key).
+        [<JsonNull>]
         Mutation: string option
         IsMultiTileRoot: bool option
         MultiTileId: string option
@@ -402,6 +431,7 @@ and ExportSettings =
         GameId: string
         Author: string option
         Company: string option
+        [<JsonKey "icon">]
         IconAssetId: string option
         Window: ExportWindow
         /// `integer` or `fit`.
@@ -606,7 +636,9 @@ and GameProject =
         Quests: Quest list
         Player: Player
         /// Flags a new game starts with: `boolean | number | string` (plugins store numbers and
-        /// strings, and Keep changes writes them back as they are).
+        /// strings, and Keep changes writes them back as they are), so each value is checked to be
+        /// one of those.
+        [<JsonDecode "(Decode.dict Decode.flagValue) (key :: path) value">]
         EventFlags: (string * Json) list
         StartSceneId: string
         /// One of `EditorModes`.
@@ -614,7 +646,9 @@ and GameProject =
         /// One of `TileTypes`.
         SelectedTileType: string
         SelectedTileVisual: VisualRef option
+        [<JsonKey "selectedNPCId"; JsonNull>]
         SelectedNpcId: string option
+        [<JsonNull>]
         SelectedItemId: string option
         CurrentTime: float
         CustomAssets: CustomAsset list
@@ -1087,13 +1121,17 @@ and PackPermissions =
         /// Mutation capabilities the pack's plugins may use (`message`, `giveItem`, `setFlag:any`,
         /// `*`, … — see docs/PLUGINS.md). None: the defaults, and onEffect/onCommand answers are dropped.
         Mutations: (string list) option
+        /// Minigame kinds the pack's plugins may define (user-approved at install), by local name
+        /// (`lantern-catch`); minigame defs play one as `packId:name` (docs/PLUGINS.md). None and
+        /// empty both allow none.
+        Minigames: (string list) option
         /// Undeclared keys, in order (zod `.passthrough()`).
         Extra: (string * Json) list
     }
 
     /// A `PackPermissions` with every field at its schema default.
     static member Default : PackPermissions =
-        { Hooks = []; ContentInject = true; UiPanels = false; Mutations = None; Extra = [] }
+        { Hooks = []; ContentInject = true; UiPanels = false; Mutations = None; Minigames = None; Extra = [] }
 
 /// Optional player-start block so a base pack can express the whole starter game.
 and PackPlayerStart =
@@ -1120,6 +1158,9 @@ and PackPlugin =
         Name: string option
         /// Hooks this plugin wants; effective set = intersection with manifest permissions.hooks.
         Hooks: string list
+        /// Minigame kinds this plugin defines (`api.minigame(name, …)`), by local name; effective
+        /// set = intersection with manifest permissions.minigames.
+        Minigames: (string list) option
         Source: string
         /// Undeclared keys, in order (zod `.passthrough()`).
         Extra: (string * Json) list
@@ -1127,7 +1168,7 @@ and PackPlugin =
 
     /// A `PackPlugin` with every field at its schema default.
     static member Default : PackPlugin =
-        { Id = ""; Name = None; Hooks = []; Source = ""; Extra = [] }
+        { Id = ""; Name = None; Hooks = []; Minigames = None; Source = ""; Extra = [] }
 
 /// TS `PackPlayerStartSchema.inventory` item (inline object).
 and PackStartItem =
@@ -1238,6 +1279,7 @@ and QuestObjective =
         TargetItemQuantity: float option
         TargetCropType: string option
         TargetCropQuantity: float option
+        [<JsonKey "targetNPCId">]
         TargetNpcId: string option
         TargetSceneId: string option
         Completed: bool
@@ -1341,7 +1383,9 @@ and RecipeUnlock =
 /// Serialized PRNG state — deterministic resume is a core guarantee.
 and RngState =
     {
-        /// Always `"xoshiro128ss"` (zod literal).
+        /// Always `"xoshiro128ss"` (zod literal). Any value decodes (a non-string to `""`): the
+        /// checks report the literal ("Invalid literal value", SchemaChecks.fs), as zod does.
+        [<JsonDecode "(match value with JString s -> s | _ -> \"\")">]
         Algorithm: string
         S: uint32 list
     }
@@ -1469,8 +1513,10 @@ and Tile =
         /// Background layer: grass, soil, water, floor
         Background: string
         /// Overlay layer: path, rug, … renders on top of background
+        [<JsonNull>]
         Overlay: string option
         /// Object layer: wall, door, … renders on top of overlay
+        [<JsonNull>]
         Object: string option
         Crop: Crop option
         Item: Item option
@@ -1602,6 +1648,7 @@ and WeatherTypeDefinition =
         /// NPCs with schedules stay home (skip schedule walking).
         NpcsStayInside: bool
         /// Renderer overlay hint: 'rain' | 'snow' | null.
+        [<JsonNull>]
         Overlay: string option
         /// Undeclared keys, in order (zod `.passthrough()`).
         Extra: (string * Json) list

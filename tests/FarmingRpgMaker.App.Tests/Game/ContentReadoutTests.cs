@@ -22,7 +22,7 @@ public sealed class ContentReadoutTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectEntry(category, id);
+        view.ViewModel.SelectEntry(category, id);
         Pump();
         return view;
     }
@@ -135,7 +135,7 @@ public sealed class ContentReadoutTests
         Assert.Contains("built-in crop again", Text(host, "ContentMessage"));
 
         // Problems navigation reaches a built-in too: read-only, with its card and Customize.
-        view.SelectEntry("Crops", "wheat");
+        view.ViewModel.SelectEntry("Crops", "wheat");
         Pump();
         Assert.Equal("This is a built-in crop. Customize it to change it.", Text(host, "ContentMessage"));
         Assert.Contains("$15", Card(host, "CropSummary"));
@@ -215,7 +215,7 @@ public sealed class ContentReadoutTests
         Assert.Equal(28, empty.Width);
         Assert.Equal($"{npcs[1].Name}  ·  {npcs[1].Id}", AutomationProperties.GetName(ListEntry(host, npcs[1].Id)));
         // Categories without art have no slot.
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectCategory("Quests");
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory("Quests");
         Pump();
         Assert.Null(TryFindByName<Border>(host.Window, $"ContentThumb_{host.Workspace.Current!.Quests[0].Id}"));
     }

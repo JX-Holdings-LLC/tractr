@@ -92,15 +92,26 @@ struct CropKey {
     y1: u32,
 }
 
-/// A glyph rasterized at one device size and subpixel position (any colour).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct SpriteKey {
-    font: FontId,
-    glyph: u16,
+/// A glyph rasterized at one device size and subpixel position (any colour). Other renderers of
+/// draw lists (the GPU backend) key their glyph atlases by it, so text matches this rasterizer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GlyphKey {
+    pub font: FontId,
+    pub glyph: u16,
     /// Device pixels × 64.
-    size: u32,
-    x: u8,
-    y: u8,
+    pub size: u32,
+    /// Quarter-pixel position of the pen inside its device pixel, on each axis (0..4).
+    pub x: u8,
+    pub y: u8,
+}
+
+/// Where one glyph of a plain text run lands: its coverage ([`rasterize_glyph`]) is placed with
+/// its own offset from the device pixel (`column`, `row`) of the pen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GlyphPlacement {
+    pub key: GlyphKey,
+    pub column: i32,
+    pub row: i32,
 }
 
 /// A glyph's coverage and where its top-left sits relative to the pen position.
@@ -122,7 +133,7 @@ struct Caches {
     tinted: BTreeMap<(ImageId, u32), Pixmap>,
     crops: BTreeMap<CropKey, Pixmap>,
     glyphs: BTreeMap<(FontId, u16), Option<Path>>,
-    sprites: BTreeMap<SpriteKey, SpriteEntry>,
+    sprites: BTreeMap<GlyphKey, SpriteEntry>,
     /// Renders so far (the sprite cache's clock).
     renders: u64,
 }
@@ -404,31 +415,18 @@ impl Caches {
 impl Caches {
     /// The coverage of a glyph (rasterized on first use); `None` for empty glyphs. A full cache
     /// drops its least recently used quarter first.
-    fn sprite(&mut self, key: SpriteKey) -> Option<&GlyphSprite> {
+    fn sprite(&mut self, key: GlyphKey) -> Option<&GlyphSprite> {
         let now = self.renders;
         if !self.sprites.contains_key(&key) {
             if self.sprites.len() >= MAX_GLYPH_SPRITES {
-                let mut ages: Vec<(u64, SpriteKey)> =
+                let mut ages: Vec<(u64, GlyphKey)> =
                     self.sprites.iter().map(|(key, entry)| (entry.used, *key)).collect();
                 ages.sort();
                 for (_, old) in &ages[..ages.len() / 4] {
                     self.sprites.remove(old);
                 }
             }
-            let path = self.glyph(key.font, ttf_parser::GlyphId(key.glyph)).cloned();
-            let sprite = path.and_then(|path| {
-                let scale = key.size as f32 / 64.0 / text::font(key.font).units_per_em();
-                let (dx, dy) = (f32::from(key.x) / SUBPIXELS, f32::from(key.y) / SUBPIXELS);
-                let bounds = path.bounds();
-                let left = (bounds.left() * scale + dx).floor() as i32 - 1;
-                let top = (bounds.top() * scale + dy).floor() as i32 - 1;
-                let right = (bounds.right() * scale + dx).ceil() as i32 + 1;
-                let bottom = (bounds.bottom() * scale + dy).ceil() as i32 + 1;
-                let mut coverage = Mask::new((right - left).max(1) as u32, (bottom - top).max(1) as u32)?;
-                let transform = Transform::from_row(scale, 0.0, 0.0, scale, dx - left as f32, dy - top as f32);
-                coverage.fill_path(&path, FillRule::Winding, true, transform);
-                Some(GlyphSprite { left, top, coverage })
-            });
+            let sprite = self.glyph(key.font, ttf_parser::GlyphId(key.glyph)).and_then(|path| glyph_sprite(path, key));
             self.sprites.insert(key, SpriteEntry { sprite, used: now });
         }
         let entry = self.sprites.get_mut(&key)?;
@@ -437,8 +435,84 @@ impl Caches {
     }
 }
 
+/// The coverage of a glyph outline (font units, y down) at a key's size and subpixel position.
+fn glyph_sprite(path: &Path, key: GlyphKey) -> Option<GlyphSprite> {
+    let scale = key.size as f32 / 64.0 / text::font(key.font).units_per_em();
+    let (dx, dy) = (f32::from(key.x) / SUBPIXELS, f32::from(key.y) / SUBPIXELS);
+    let bounds = path.bounds();
+    let left = (bounds.left() * scale + dx).floor() as i32 - 1;
+    let top = (bounds.top() * scale + dy).floor() as i32 - 1;
+    let right = (bounds.right() * scale + dx).ceil() as i32 + 1;
+    let bottom = (bounds.bottom() * scale + dy).ceil() as i32 + 1;
+    let mut coverage = Mask::new((right - left).max(1) as u32, (bottom - top).max(1) as u32)?;
+    let transform = Transform::from_row(scale, 0.0, 0.0, scale, dx - left as f32, dy - top as f32);
+    coverage.fill_path(path, FillRule::Winding, true, transform);
+    Some(GlyphSprite { left, top, coverage })
+}
+
+/// The coverage this rasterizer draws a glyph with: an 8-bit mask and the offset of its top-left
+/// corner from the pen's device pixel ([`GlyphPlacement`]). `None` for glyphs that draw nothing.
+pub fn rasterize_glyph(key: GlyphKey) -> Option<(i32, i32, Mask)> {
+    let mut builder = GlyphPath(PathBuilder::new());
+    text::font(key.font).face().outline_glyph(ttf_parser::GlyphId(key.glyph), &mut builder)?;
+    let path = builder.0.finish()?;
+    glyph_sprite(&path, key).map(|sprite| (sprite.left, sprite.top, sprite.coverage))
+}
+
+/// The glyphs of a text command drawn from cached coverage (plain text under a uniform scale and
+/// translation, up to 160 device pixels): each glyph's key and pen pixel. `None` when the
+/// rasterizer fills the run as paths instead (outlined, large or transformed text).
+#[allow(clippy::too_many_arguments)]
+pub fn sprite_text_layout<'a>(
+    content: &'a str,
+    x: f32,
+    y: f32,
+    font_id: FontId,
+    size: f32,
+    outline: bool,
+    align: TextAlign,
+    transform: Transform,
+) -> Option<impl Iterator<Item = GlyphPlacement> + 'a> {
+    let device_size = size * transform.sx;
+    let sprites = !outline
+        && transform.kx == 0.0
+        && transform.ky == 0.0
+        && transform.sx > 0.0
+        && (transform.sx - transform.sy).abs() <= 1e-6 * transform.sx
+        && device_size <= MAX_SPRITE_TEXT;
+    if !sprites {
+        return None;
+    }
+    let font = text::font(font_id);
+    let start = text_start(font, content, x, size, align);
+    let size_q = (device_size * 64.0 + 0.5).floor() as u32;
+    let baseline = y * transform.sy + transform.ty;
+    let (row, sub_y) = (baseline.floor(), ((baseline - baseline.floor()) * SUBPIXELS) as u8);
+    Some(font.layout(content, size).map(move |(glyph, offset)| {
+        let pen = (start + offset) * transform.sx + transform.tx;
+        let (column, sub_x) = (pen.floor(), ((pen - pen.floor()) * SUBPIXELS) as u8);
+        let key = GlyphKey {
+            font: font_id,
+            glyph: glyph.0,
+            size: size_q,
+            x: sub_x.min(SUBPIXELS as u8 - 1),
+            y: sub_y.min(SUBPIXELS as u8 - 1),
+        };
+        GlyphPlacement { key, column: column as i32, row: row as i32 }
+    }))
+}
+
+/// Where a run starts for its alignment.
+fn text_start(font: &text::Font, content: &str, x: f32, size: f32, align: TextAlign) -> f32 {
+    match align {
+        TextAlign::Left => x,
+        TextAlign::Center => x - font.measure(content, size) / 2.0,
+        TextAlign::Right => x - font.measure(content, size),
+    }
+}
+
 /// True for transforms that only scale (positively) and translate.
-fn is_scale_translate(transform: Transform) -> bool {
+pub fn is_scale_translate(transform: Transform) -> bool {
     transform.kx == 0.0 && transform.ky == 0.0 && transform.sx > 0.0 && transform.sy > 0.0
 }
 
@@ -999,15 +1073,15 @@ fn draw_image(
 
 /// Skia's nearest-neighbour mapping along one axis of an axis-aligned image draw.
 #[derive(Debug, Clone, Copy)]
-struct NearestAxis {
+pub struct NearestAxis {
     /// Device pixels covered by the destination, `[start, end)`.
-    start: i32,
-    end: i32,
-    inv_scale: f32,
-    inv_translate: f32,
+    pub start: i32,
+    pub end: i32,
+    pub inv_scale: f32,
+    pub inv_translate: f32,
     /// The integer source subset Skia samples (strict source-rect constraint).
-    subset_origin: i32,
-    subset_len: i32,
+    pub subset_origin: i32,
+    pub subset_len: i32,
 }
 
 impl NearestAxis {
@@ -1015,7 +1089,7 @@ impl NearestAxis {
     /// cut to its integer bounds, the local matrix is `RectToRect(src, dst)` moved to that
     /// subset, concatenated with the canvas scale/translate, then inverted; the destination
     /// rectangle is rounded to device pixels like `SkScan::FillRect`.
-    fn new(
+    pub fn new(
         src_pos: f32,
         src_len: f32,
         dst_pos: f32,
@@ -1065,7 +1139,7 @@ impl NearestAxis {
 
     /// The source pixel sampled for device pixel `device`: its center mapped back (a separate
     /// multiply and add, like Skia's low-precision pipeline), clamped to the subset, truncated.
-    fn sample(&self, device: i32) -> usize {
+    pub fn sample(&self, device: i32) -> usize {
         let center = device as f32 + 0.5;
         let u = center * self.inv_scale + self.inv_translate;
         let last = f32::from_bits((self.subset_len as f32).to_bits() - 1);
@@ -1181,42 +1255,19 @@ fn draw_text(
     if size.is_nan() || size <= 0.0 || content.is_empty() {
         return;
     }
-    let font = text::font(font_id);
-    let scale = font.scale(size);
-    let start = match align {
-        TextAlign::Left => x,
-        TextAlign::Center => x - font.measure(content, size) / 2.0,
-        TextAlign::Right => x - font.measure(content, size),
-    };
     // Plain text under scale + translate: cached glyph sprites at quarter-pixel positions.
-    let device_size = size * transform.sx;
-    let sprites = outline.is_none()
-        && transform.kx == 0.0
-        && transform.ky == 0.0
-        && transform.sx > 0.0
-        && (transform.sx - transform.sy).abs() <= 1e-6 * transform.sx
-        && device_size <= MAX_SPRITE_TEXT;
-    if sprites {
-        let size_q = (device_size * 64.0 + 0.5).floor() as u32;
-        let baseline = y * transform.sy + transform.ty;
-        let (row, sub_y) = (baseline.floor(), ((baseline - baseline.floor()) * SUBPIXELS) as u8);
-        for (glyph, offset) in font.layout(content, size) {
-            let pen = (start + offset) * transform.sx + transform.tx;
-            let (column, sub_x) = (pen.floor(), ((pen - pen.floor()) * SUBPIXELS) as u8);
-            let key = SpriteKey {
-                font: font_id,
-                glyph: glyph.0,
-                size: size_q,
-                x: sub_x.min(SUBPIXELS as u8 - 1),
-                y: sub_y.min(SUBPIXELS as u8 - 1),
-            };
+    if let Some(glyphs) = sprite_text_layout(content, x, y, font_id, size, outline.is_some(), align, transform) {
+        for GlyphPlacement { key, column, row } in glyphs {
             if let Some(sprite) = caches.sprite(key) {
-                let (left, top) = (column as i32 + sprite.left, row as i32 + sprite.top);
+                let (left, top) = (column + sprite.left, row + sprite.top);
                 blend_coverage(target, &sprite.coverage, left, top, color, clip.clip);
             }
         }
         return;
     }
+    let font = text::font(font_id);
+    let scale = font.scale(size);
+    let start = text_start(font, content, x, size, align);
     // The outline first, then the fill (canvas strokeText then fillText).
     let passes = outline.into_iter().map(Some).chain(std::iter::once(None));
     for pass in passes {
@@ -1325,7 +1376,7 @@ mod tests {
     #[test]
     fn a_full_glyph_cache_drops_the_least_recently_used() {
         let mut caches = Caches::default();
-        let key = |glyph: u16| SpriteKey { font: FontId::Regular, glyph, size: 16 * 64, x: 0, y: 0 };
+        let key = |glyph: u16| GlyphKey { font: FontId::Regular, glyph, size: 16 * 64, x: 0, y: 0 };
         for glyph in 0..MAX_GLYPH_SPRITES as u16 {
             caches.sprites.insert(key(glyph), SpriteEntry { sprite: None, used: u64::from(glyph) });
         }

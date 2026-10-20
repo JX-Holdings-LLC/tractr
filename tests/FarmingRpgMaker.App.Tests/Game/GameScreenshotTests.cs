@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
 using FarmingRpgMaker.App.Game;
 using FarmingRpgMaker.App.Tests.Ui;
 using static FarmingRpgMaker.App.Tests.Ui.UiTestHelpers;
@@ -148,7 +149,7 @@ public sealed class GameScreenshotTests
         if (!string.IsNullOrEmpty(OutputDir))
         {
             Directory.CreateDirectory(OutputDir);
-            frame.Save(Path.Combine(OutputDir, fileName));
+            frame.Save(Path.Combine(OutputDir, fileName), PngBitmapEncoderOptions.Default);
         }
 
         ScreenshotGoldens.Check(frame, fileName);

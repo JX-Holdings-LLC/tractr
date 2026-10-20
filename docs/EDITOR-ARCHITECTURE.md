@@ -14,15 +14,20 @@ tested without building the view.**
 |---|---|---|
 | Shell | `Views/MainWindow.axaml`, `AboutWindow.axaml`, `UpdateCenterWindow.axaml` with `ViewModels/MainWindowViewModel`, `AboutViewModel`, `UpdateCenterViewModel`; `ExportGameViewModel` behind `Projects/ExportGameWindow` | MVVM: XAML bound to view models (`Mvvm/ObservableObject`, `RelayCommand`) |
 | Game surface | `Game/GameWorkspaceView` (switches Edit and Play Mode), `Game/PlayModeView`, `Game/DebugDrawer` | Code-built views over the Rust player |
-| Edit Mode | `Game/EditModeView` (+ `EditModeTools`, `EditModeFind`), `ContentEditorView` + `ContentForm`, `SettingsEditorView`, `ArtEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView`, `ProblemsView` | Code-built `UserControl`s (`Ui` builders) that hold their state and call `ProjectWorkspace` |
+| Edit Mode tabs with view models | `Game/ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView`, `ContentEditorView` over `ViewModels/EditMode/ProblemsViewModel`, `SettingsViewModel`, `ModsViewModel`, `WorkshopViewModel`, `InterfaceViewModel`, `ContentEditorViewModel` | Code-built views that show and collect; the view model owns the state, calls F# and `ProjectWorkspace` (tests: `tests/FarmingRpgMaker.App.Tests/ViewModels`) |
+| Edit Mode, not yet moved | `Game/EditModeView` (+ `EditModeTools`, `EditModeFind`), `ArtEditorView`, and the fields of `ContentForm` | Code-built `UserControl`s (`Ui` builders) that hold their state and call `ProjectWorkspace` |
 | Project | `Projects/ProjectWorkspace` (the open F# `Document`, undo/redo, autosave), `ProjectStore`, `ProjectDialogs`, `ProjectCommandHandler` | Plain classes; dialogs code-built |
 | Engine | F# `FarmEngine.Authoring` (edits, validation, form metadata, readouts), Rust through `FarmEngine.Interop` | Called by the views and view models |
 
-Edit Mode is where most of the code is, and it is not MVVM: the views build
-their controls in code, keep form state in the controls, and apply F# edits
-through `ProjectWorkspace` directly. That works and is well covered by the
-headless UI tests, but it means a rule hidden in a view can only be tested by
-building the whole editor, and restyling means editing C#.
+Edit Mode is where most of the code is. Six of its tabs have view models
+(the target structure below): Problems, Settings, Mods, Workshop, Interface
+and Content. Their views still build their controls in code, but they bind or
+read the view model's state instead of keeping it, and every rule they had
+(drafts, validation messages, what a button does) is tested by driving the
+view model over a `ProjectWorkspace`, without Avalonia. The map tools in
+`EditModeView`, the art studio and the generated content form's fields are
+still code-built views that keep their state in their controls: a rule there
+can only be tested by building the whole editor.
 
 ## Shared pieces
 
@@ -36,7 +41,10 @@ Use these instead of writing another copy:
 | Write a file without leaving half of it behind | `FarmingRpgMaker.Updates.AtomicFile` |
 | Read or change one section of `settings.json` | `SettingsFile` through `AppSettingsStore` / `JsonSettingsStore`; `AppSettingsStore.TryUpdate` for preferences that must never stop the creator |
 | Read or write a file the creator picked | `Projects/PickedFiles` (size caps, atomic local saves) |
-| Ask about unsaved form fields | `Game/DraftBar` |
+| Ask about unsaved form fields | `ViewModels/EditMode/DraftPrompt` (the question, owned by the view model), shown by `Game/DraftBar` |
+| Run a view model's command from a code-built button | `Ui.CommandButton` (it follows `CanExecute`, and the UI tests' raised Click events run it) |
+| Keep a panel's rows in step with a view model's draft rows | `Game/DraftRows` (rows keep their controls when others move or go) |
+| A temp-folder `ProjectWorkspace` for view model tests | `tests/FarmingRpgMaker.App.Tests/ViewModels/TestWorkspace` |
 | Common controls (buttons, rows, icons, modal cards, accessible names) | `Game/Ui` |
 | Reflection over the schema records for generated forms | `Game/ContentFormSchema` (no controls); layout pieces in `Game/ContentFormLayout` |
 
@@ -51,13 +59,17 @@ uses it; see the remaining steps.
 
 ## Target structure
 
-Each Edit Mode tab gets a view model, introduced one tab at a time:
+Each Edit Mode tab gets a view model, introduced one tab at a time (done for
+Problems, Settings, Mods, Workshop, Interface and Content):
 
 - **The view model owns the state** a tab has today in its controls and
   fields: the selected entry, the draft, the dirty flag, validation messages,
   the status line. It calls F# for every decision (edits, validation,
   readouts, options) and `ProjectWorkspace` to apply edits. It has no
-  Avalonia types, so tests drive it directly.
+  Avalonia types, so tests drive it directly (`EditModeViewModelRulesTests`
+  checks that). Opening the tab calls its `Refresh`; a tab that is not on show
+  catches up then instead of on every edit (the view passes whether it is
+  shown).
 - **The view binds to it.** Small, static layouts move to XAML; generated
   layouts (the schema-driven `ContentForm`, the map canvas) stay in code but
   read and write the view model rather than holding state.
@@ -72,16 +84,24 @@ Each Edit Mode tab gets a view model, introduced one tab at a time:
 
 In order; each step is a separate change that keeps the UI tests passing.
 
-1. **Draft forms first.** Give the Content, Interface and Settings tabs view
-   models that own their drafts, dirty flags and validation (`ContentForm`'s
-   draft bookkeeping, `HasUnsavedChanges`, `SaveDraft`), so the unsaved-fields
-   rules (#87, #70) are tested without the UI. `DraftBar` binds to them.
+1. **Draft forms first.** Done: the Content, Interface and Settings tabs'
+   view models own their drafts, dirty flags and validation, so the
+   unsaved-fields rules (#87, #70) are tested without the UI, and `DraftBar`
+   shows the view model's `DraftPrompt`. Problems, Mods and Workshop moved
+   too. What is left of this step: the generated content form's fields still
+   live in `ContentForm`'s controls, behind `IContentDraft` (step 2).
 2. **Split `ContentForm` further**: the list rows (schedules, waypoints, stock
    cards) and the condition and outcome editors become their own controls over
    the draft, next to the reflection helpers already in `ContentFormSchema`.
+   Then the JSON draft and the field writers move behind `IContentDraft` into
+   a view model, so `IsDirty`, `Commit` and the field errors are tested
+   without the form.
 3. **Map editor state.** Move the map tool state (`Tool`, the brush, the
    selection, the door form's fields, Pick on map) out of `EditModeView` and
-   `EditModeTools` into a view model; the canvas and toolbar bind to it.
+   `EditModeTools` into a view model; the canvas and toolbar bind to it. The
+   Edit Mode view model then becomes the navigator: the callbacks the tab view
+   models still take (`pickOnMap`, the Workshop's tab keys, the Problems row
+   handler) go through it.
 4. **Art studio.** Split `ArtEditorView` into the asset list, the animation
    clip editor and the bindings panel, with the frame and clip arithmetic in a
    view model or F#.

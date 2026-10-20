@@ -6,6 +6,7 @@
 //! from the camera's whole-pixel position, and the upscale starts at the fractional remainder.
 
 use farm_cart::AssetTable;
+use farm_render::compose::{self, Upscale};
 use farm_render::tiny_skia::{self, FilterQuality, Pixmap, PixmapPaint, Transform};
 use farm_render::{
     compute_camera, Color, DrawList, ImageStore, Rasterizer, SnapshotCamera, WorldRenderer, WorldSnapshot,
@@ -26,20 +27,27 @@ pub struct WorldView {
     pub origin: (f64, f64),
 }
 
+impl WorldView {
+    /// The upscale of a native world rendered from this view's camera rounded down to whole
+    /// pixels ([`FrameRenderer::draw_world`]).
+    pub fn upscale(&self) -> Upscale {
+        let camera = self.camera;
+        Upscale {
+            zoom: self.zoom,
+            view: (camera.width, camera.height),
+            origin: self.origin,
+            fraction: (camera.x - camera.x.floor(), camera.y - camera.y.floor()),
+        }
+    }
+}
+
 /// Blends a vertical gradient over every row of `pixmap`; `position` maps a row to 0 (top
 /// colour) … 1 (bottom colour).
-fn tint_rows(pixmap: &mut Pixmap, top: Color, bottom: Color, position: impl Fn(usize) -> f64) {
+fn tint_rows(pixmap: &mut Pixmap, top: Color, bottom: Color, position: impl Fn(usize) -> f32) {
     let width = pixmap.width() as usize;
     for (row, line) in pixmap.data_mut().chunks_exact_mut(width * 4).enumerate() {
-        let t = position(row) as f32;
-        let lerp = |a: u8, b: u8| (f32::from(a) + (f32::from(b) - f32::from(a)) * t + 0.5) as u32;
-        let alpha = lerp(top.a, bottom.a).min(255);
-        if alpha == 0 {
-            continue;
-        }
-        let channel = |a: u8, b: u8| (lerp(a, b).min(255) * alpha + 127) / 255;
-        let source = [channel(top.r, bottom.r), channel(top.g, bottom.g), channel(top.b, bottom.b), alpha];
-        let inverse = 255 - alpha;
+        let Some(source) = compose::tint_source(top, bottom, position(row)) else { continue };
+        let inverse = 255 - source[3];
         for pixel in line.chunks_exact_mut(4) {
             for (d, s) in pixel.iter_mut().zip(source) {
                 *d = (s + (u32::from(*d) * inverse + 127) / 255).min(255) as u8;
@@ -131,6 +139,21 @@ impl FrameRenderer {
         self.frame.fill(skia_color(background));
     }
 
+    /// Points `snapshot`'s camera at the native world of `view` (the camera rounded down to whole
+    /// pixels, one pixel larger for smooth scrolling) and returns its size.
+    fn native_camera(snapshot: &mut WorldSnapshot, view: &WorldView) -> (u32, u32) {
+        let camera = view.camera;
+        let native_w = (camera.width.ceil() as u32 + 1).max(1);
+        let native_h = (camera.height.ceil() as u32 + 1).max(1);
+        snapshot.camera = Some(SnapshotCamera {
+            x: camera.x.floor(),
+            y: camera.y.floor(),
+            width: f64::from(native_w),
+            height: f64::from(native_h),
+        });
+        (native_w, native_h)
+    }
+
     /// Renders `snapshot` (its camera set from `view`) at native resolution and scales it into the
     /// frame. `background` fills the world pixmap first (outside the scene). `tints` are vertical
     /// gradients (top, bottom colour) over the frame's height, blended into the world before it is
@@ -142,50 +165,42 @@ impl FrameRenderer {
         background: Color,
         tints: &[(Color, Color)],
     ) {
-        let camera = view.camera;
-        let (base_x, base_y) = (camera.x.floor(), camera.y.floor());
-        let (fraction_x, fraction_y) = (camera.x - base_x, camera.y - base_y);
-        let native_w = (camera.width.ceil() as u32 + 1).max(1);
-        let native_h = (camera.height.ceil() as u32 + 1).max(1);
-        snapshot.camera =
-            Some(SnapshotCamera { x: base_x, y: base_y, width: f64::from(native_w), height: f64::from(native_h) });
+        let (native_w, native_h) = Self::native_camera(snapshot, view);
         if self.native.width() != native_w || self.native.height() != native_h {
             self.native = new_pixmap(native_w, native_h);
         }
         self.native.fill(skia_color(background));
         self.world.render_into(snapshot, &mut self.native.as_mut(), Transform::identity());
-        let frame_height = f64::from(self.frame.height());
+        let upscale = view.upscale();
+        let frame_height = self.frame.height();
         for (top, bottom) in tints {
-            tint_rows(&mut self.native, *top, *bottom, |row| {
-                // The row's centre on screen, as a fraction of the frame's height.
-                ((view.origin.1 + (row as f64 + 0.5 - fraction_y) * view.zoom) / frame_height).clamp(0.0, 1.0)
-            });
+            tint_rows(&mut self.native, *top, *bottom, |row| upscale.tint_position(row, frame_height));
         }
-        self.upscale(view, (fraction_x, fraction_y));
+        self.upscale(&upscale);
+    }
+
+    /// What [`FrameRenderer::draw_world`] rasterizes, for another renderer: sets `snapshot`'s
+    /// camera the same way and returns the world's draw list (its images are in
+    /// [`FrameRenderer::world`]) and native size.
+    pub fn world_list(&mut self, snapshot: &mut WorldSnapshot, view: &WorldView) -> (DrawList, u32, u32) {
+        let (native_w, native_h) = Self::native_camera(snapshot, view);
+        (self.world.draw_list(snapshot), native_w, native_h)
     }
 
     /// Nearest-neighbour blit of the native world into the frame's viewport rectangle.
-    fn upscale(&mut self, view: &WorldView, fraction: (f64, f64)) {
-        let zoom = view.zoom;
-        let (frame_w, frame_h) = (self.frame.width() as usize, self.frame.height() as usize);
-        let dest_w = ((view.camera.width * zoom).round_ties_even() as usize).min(frame_w);
-        let dest_h = ((view.camera.height * zoom).round_ties_even() as usize).min(frame_h);
-        let (x0, y0) = (view.origin.0.max(0.0) as usize, view.origin.1.max(0.0) as usize);
-        let dest_w = dest_w.min(frame_w - x0.min(frame_w));
-        let dest_h = dest_h.min(frame_h - y0.min(frame_h));
+    fn upscale(&mut self, upscale: &Upscale) {
+        let (x0, y0, dest_w, dest_h) = upscale.destination(self.frame.width(), self.frame.height());
+        let frame_w = self.frame.width() as usize;
         let (native_w, native_h) = (self.native.width() as usize, self.native.height() as usize);
-        let map = |device: usize, fraction: f64, limit: usize| -> usize {
-            (((device as f64 + 0.5) / zoom + fraction).floor() as usize).min(limit - 1)
-        };
         self.columns.clear();
-        self.columns.extend((0..dest_w).map(|x| map(x, fraction.0, native_w) * 4));
+        self.columns.extend((0..dest_w).map(|x| upscale.source_column(x, native_w) * 4));
         let source = self.native.data();
         let frame_stride = frame_w * 4;
         let data = self.frame.data_mut();
         let mut previous: Option<(usize, usize)> = None; // (source row, frame row start)
         for y in 0..dest_h {
             let row_start = (y0 + y) * frame_stride + x0 * 4;
-            let source_row = map(y, fraction.1, native_h);
+            let source_row = upscale.source_row(y, native_h);
             if let Some((last_row, last_start)) = previous {
                 if last_row == source_row {
                     data.copy_within(last_start..last_start + dest_w * 4, row_start);
@@ -312,13 +327,13 @@ mod tests {
             camera: SnapshotCamera { x: 0.0, y: 0.0, width: 4.0, height: 2.0 },
             origin: (0.0, 0.0),
         };
-        renderer.upscale(&view, (0.0, 0.0));
+        renderer.upscale(&view.upscale());
         let red: Vec<u8> = renderer.frame.data().chunks_exact(4).map(|p| p[0]).collect();
         assert_eq!(red[..8], [0, 0, 1, 1, 2, 2, 3, 3]);
         assert_eq!(red[8..16], [0, 0, 1, 1, 2, 2, 3, 3]);
         assert_eq!(red[16..24], [5, 5, 6, 6, 7, 7, 8, 8]);
         // Half a world pixel of camera offset shifts the sampling by one device pixel.
-        renderer.upscale(&view, (0.5, 0.0));
+        renderer.upscale(&Upscale { fraction: (0.5, 0.0), ..view.upscale() });
         let red: Vec<u8> = renderer.frame.data().chunks_exact(4).map(|p| p[0]).collect();
         assert_eq!(red[..8], [0, 1, 1, 2, 2, 3, 3, 4]);
     }

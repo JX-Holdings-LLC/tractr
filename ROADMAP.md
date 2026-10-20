@@ -75,8 +75,8 @@ and exit criteria for each phase.
 4. [x] Switch the app to F# + Rust; the C# engine projects are deleted
 5. [x] Editor port on the new stack (the list above)
 6. [x] Rust player and plugin sandbox, embedded in Play Mode; Export Game for
-   Windows and Linux, and (with `farm-wasm`) the web demo. A GPU renderer
-   comes later.
+   Windows and Linux, and (with `farm-wasm`) the web demo. The desktop player
+   draws on the GPU too (`farm-gpu`, wgpu); GPU effects come later.
 7. [x] One engine for web and native: F# schema records and the authoring core
    under Fable, `farm-wasm`, the web editor on both, native numerics (schema
    v9)
@@ -250,8 +250,8 @@ Play Mode.
 - [x] Play Mode runs pack plugins in `farm-plugins` (through the embedded
   player); the Jint host is deleted.
 - [x] `farm-render` supplies world snapshots, draw lists and a CPU
-  rasterizer that also builds for WebAssembly. GPU drawing is under
-  [Later](#later).
+  rasterizer that also builds for WebAssembly. The desktop player can draw
+  the same draw lists with wgpu (`farm-gpu`); GPU effects are under [Later](#later).
 - [x] Export Game packaging (`FarmEngine.Export`, File → Export Game…,
   `farmc export`): Problems gate, deterministic cartridge, renamed player
   template, Windows icon and version info patched from .NET, Linux `.png` and
@@ -269,6 +269,11 @@ Play Mode.
   TypeScript `.nullable().optional()`, so hand-written packs hash like the
   web version (content golden `packs-nodes`).
 - [x] Both `settings.json` stores share `JsonSettingsStore.JsonOptions`.
+- [x] The editor renders on a supported Skia (#114): Avalonia 12.1, SkiaSharp
+  3.119 and Svg.Skia 5.1, with the app tests on xUnit v3. The managed image
+  header checks and the SVG renderer's lockdown stay; Windows, GPU and
+  Wayland still need a check by hand
+  ([docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md)).
 
 ## Phase 7: one engine
 
@@ -279,7 +284,7 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
 - [x] **Schema records in F#.** `src/FarmEngine.Authoring/Schema.fs` holds
   the project, content and save shapes as immutable F# records (options,
   lists, ordered maps and the `EventCondition` union) with JSON codecs
-  (`SchemaJson.fs`), generated once and kept by hand since; parity tests against the Rust
+  (`SchemaJson.fs`) generated from the records (`tools/codegen/schema-json.fsx`); parity tests against the Rust
   serde types guard them (docs/LANGUAGES.md "Two project pipelines"). The C# `FarmEngine.Schemas` project and its
   migrations, validation and generated FlatBuffers readers are deleted. The
   editor builds and updates records through generated `WithField` extensions
@@ -301,9 +306,10 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
   state back in F# (`Playtest.applyState`), checked against Rust's own
   write-back.
 - [x] **Benchmarks and property tests**: `farm-bench` checks the time budgets
-  in CI (saving is over its 1 ms target and held to a regression ceiling until
-  the stable-JSON writer is replaced); proptest covers replay determinism and
-  save round trips, FsCheck covers migrations and compiling.
+  in CI (saving is about 2.5x over its 1 ms target since the stable-JSON writer
+  streams from `Serialize`, and is held to a regression ceiling); proptest
+  covers replay determinism and save round trips, FsCheck covers migrations
+  and compiling.
 - [x] **Native numerics (v9)**: every quantity in `farm-sim` is an integer in
   a fixed unit (float arithmetic is denied outside the JSON adapters), JSON
   stays in authoring units, the state hash is xxh3-64 over a canonical binary
@@ -352,23 +358,40 @@ it makes run the graphical player, with a title screen, save slots, settings
 and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
 [docs/EXPORT.md](docs/EXPORT.md) has the design, what is done and what is left.
 
+## Content packs
+
+- [x] **Minigames from content packs.** A pack plugin defines a minigame kind
+  with `api.minigame(name, { start, update, draw })`, allowed by the
+  manifest's `permissions.minigames`. Each session runs in its own sandbox
+  instance with a fuel budget per frame; `update` gets the routed game input,
+  `draw` answers a checked list of rectangles, text and item sprites that
+  `farm-ui` draws in the minigame window, and the score resolves the def's
+  tiers like a built-in kind (a plugin that fails or breaks a limit scores 0
+  and reports the error). The editor offers the enabled packs' kinds, Problems
+  knows them, and cartridges carry each plugin's granted kinds. No guest
+  change: the API is a JavaScript prelude over `api.on`
+  ([docs/PLUGINS.md](docs/PLUGINS.md#minigames)). Pointer input and sounds
+  for pack minigames are not there yet.
+
 ## Later
 
 - **Localization** of the rest of the editor UI (tabs, forms and Problems;
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
-- **Minigames from content packs.** The minigame kinds are compiled into the
-  player (six built in, picked from a list in the editor). Letting a pack
-  define its own needs a plugin API beyond mutations: per-frame update and
-  draw calls into the sandbox, and input routed to it.
 - **Retire the web version's TypeScript engine** once playtesting on
   `farm-wasm` has proven itself, and move its HTML export to `farm-wasm`'s
   standalone player (as the native editor's web demo export does).
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
-- **Player polish.** A GPU renderer (wgpu) for lighting, palette swaps and
-  particles; gamepad rebinding in the controls menu (keys are rebindable
-  today); a message box when the game crashes (it writes a crash log today).
+- **Player polish.** GPU effects: day/night lighting, season palette swaps
+  and weather particles as passes of the wgpu renderer (`farm-gpu` draws
+  the CPU renderer's frames today and falls back to it; docs/PLAYER.md
+  "Renderers"), each with a CPU equivalent or a clear "GPU only" rule;
+  drawing the remaining shapes (circles, strokes, blurs) in the shader
+  instead of as CPU-rasterized sprites; the GPU path for the editor's Play
+  Mode (it hands CPU pixels to the C# app). Gamepad rebinding in the controls
+  menu (keys are rebindable today); a message box when the game crashes (it
+  writes a crash log today).
 - **macOS/Linux builds** of the editor. Avalonia and Velopack already support
   them; this needs packaging and CI jobs. (Exported *games* get Linux builds
   in phase 6, whatever the editor runs on.)

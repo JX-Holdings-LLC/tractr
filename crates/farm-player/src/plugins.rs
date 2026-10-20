@@ -1,10 +1,11 @@
 //! The plugin sandbox (`farm-plugins`) attached to a [`PlaySession`](crate::session::PlaySession).
 
-use crate::session::SessionPlugins;
+use crate::session::{describe_plugin_error, SessionPlugins};
 use farm_cart::CartPlugin;
-use farm_plugins::{PluginHostOptions, PluginRuntime, PluginSpec, WasmPluginHost};
+use farm_plugins::{PackMinigame, PluginError, PluginHostOptions, PluginRuntime, PluginSpec, WasmPluginHost};
 use farm_sim::schema::GameProject;
 use farm_sim::{Command, HookEvent};
+use serde_json::Value;
 
 impl SessionPlugins for PluginRuntime<WasmPluginHost> {
     fn dispatch(&mut self, events: &[HookEvent], depth: u32) {
@@ -27,9 +28,15 @@ impl SessionPlugins for PluginRuntime<WasmPluginHost> {
     }
 
     fn recent_errors(&self) -> Vec<String> {
-        PluginRuntime::recent_errors(self)
-            .map(|error| format!("{}: [{}] {}", error.plugin_id, error.kind.as_str(), error.message))
-            .collect()
+        PluginRuntime::recent_errors(self).map(describe_plugin_error).collect()
+    }
+
+    fn start_minigame(&mut self, kind: &str, config: &Value, seed: u32) -> Option<Result<PackMinigame, PluginError>> {
+        self.host().start_minigame(kind, config, seed)
+    }
+
+    fn report_error(&mut self, error: PluginError) {
+        self.report(error);
     }
 }
 
@@ -46,6 +53,7 @@ pub fn for_cartridge(plugins: &[CartPlugin], options: PluginHostOptions) -> Opti
             source: plugin.source.clone(),
             granted_hooks: plugin.granted_hooks.clone(),
             granted_mutations: plugin.granted_mutations.clone(),
+            granted_minigames: plugin.granted_minigames.clone(),
         })
         .collect();
     let host = WasmPluginHost::new(specs.clone(), options);

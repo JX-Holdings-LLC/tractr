@@ -9,6 +9,7 @@ using Avalonia.Media;
 using FarmEngine.Authoring;
 using FarmEngine.Schemas;
 using FarmingRpgMaker.App.Projects;
+using FarmingRpgMaker.App.ViewModels.EditMode;
 
 namespace FarmingRpgMaker.App.Game;
 
@@ -27,7 +28,7 @@ public sealed partial class EditModeView
     private IReadOnlyList<MapMarker> _markers = [];
     private (GameProject? Project, MapGeometry? Geometry, bool Shown) _markersFor;
     private readonly Border _quickOpen = new() { Name = "QuickOpen", IsVisible = false, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Width = 520, Margin = new Thickness(0, 48, 0, 0) };
-    private readonly TextBox _quickOpenBox = new() { Name = "QuickOpenBox", Watermark = "Find NPCs, items, quests, events, scenes, art…" };
+    private readonly TextBox _quickOpenBox = new() { Name = "QuickOpenBox", PlaceholderText = "Find NPCs, items, quests, events, scenes, art…" };
     private readonly ListBox _quickOpenResults = new() { Name = "QuickOpenResults", MaxHeight = 360 };
     private List<FindResult> _found = [];
     /// <summary>A "Pick on map" waiting for a tile: what to do with it, and where to go back to.</summary>
@@ -40,7 +41,7 @@ public sealed partial class EditModeView
     public bool IsPicking => _pick is not null;
 
     /// <summary>True while a form (content, interface, settings) holds fields that are not saved (#87).</summary>
-    public bool HasUnsavedDrafts => _contentEditor.HasUnsavedChanges || _interfaceEditor.HasUnsavedChanges || _settingsEditor.HasUnsavedChanges;
+    public bool HasUnsavedDrafts => _contentEditor.ViewModel.HasUnsavedChanges || _interfaceEditor.ViewModel.HasUnsavedChanges || _settingsEditor.ViewModel.HasUnsavedChanges;
 
     /// <summary>
     /// Applies the fields typed into the forms but not saved yet (the project is being left, the
@@ -48,9 +49,9 @@ public sealed partial class EditModeView
     /// </summary>
     public bool SaveDrafts()
     {
-        var content = _contentEditor.SaveDraft();
-        var panel = _interfaceEditor.SaveDraft();
-        var settings = _settingsEditor.SaveDrafts();
+        var content = _contentEditor.ViewModel.SaveDraft();
+        var panel = _interfaceEditor.ViewModel.SaveDraft();
+        var settings = _settingsEditor.ViewModel.SaveDrafts();
         return content && panel && settings;
     }
 
@@ -154,7 +155,7 @@ public sealed partial class EditModeView
                 return true;
             case "event":
                 SelectedTab = EditorTab.Content;
-                _contentEditor.SelectEntry("Events", marker.TargetId);
+                _contentEditor.ViewModel.SelectEntry("Events", marker.TargetId);
                 return true;
             case "mine":
                 SelectedTab = EditorTab.Settings;
@@ -310,7 +311,7 @@ public sealed partial class EditModeView
         var results = new List<(int Rank, FindResult Result)>();
         foreach (var scene in project.Scenes.Where(s => !s.Extra.ContainsKey("generated")))
         {
-            if ((ContentEditorView.Rank(scene.Name, text) ?? ContentEditorView.Rank(scene.Id, text) + 2) is { } rank)
+            if ((ContentEditorViewModel.Rank(scene.Name, text) ?? ContentEditorViewModel.Rank(scene.Id, text) + 2) is { } rank)
             {
                 var id = scene.Id;
                 results.Add((rank, new FindResult("Scene", $"{scene.Name}  ·  {id}", () =>
@@ -321,19 +322,19 @@ public sealed partial class EditModeView
             }
         }
 
-        foreach (var (category, id, label) in ContentEditorView.Search(project, text))
+        foreach (var (category, id, label) in ContentEditorViewModel.Search(project, text))
         {
             var name = label.Split("  ·  ")[0];
-            results.Add((ContentEditorView.Rank(name, text) ?? 2, new FindResult(category, label, () =>
+            results.Add((ContentEditorViewModel.Rank(name, text) ?? 2, new FindResult(category, label, () =>
             {
                 SelectedTab = EditorTab.Content;
-                _contentEditor.SelectEntry(category, id);
+                _contentEditor.ViewModel.SelectEntry(category, id);
             })));
         }
 
         foreach (var asset in project.CustomAssets)
         {
-            if ((ContentEditorView.Rank(asset.Name, text) ?? ContentEditorView.Rank(asset.Id, text) + 2) is { } rank)
+            if ((ContentEditorViewModel.Rank(asset.Name, text) ?? ContentEditorViewModel.Rank(asset.Id, text) + 2) is { } rank)
             {
                 var id = asset.Id;
                 results.Add((rank, new FindResult("Art", $"{asset.Name}  ·  {id}", () =>

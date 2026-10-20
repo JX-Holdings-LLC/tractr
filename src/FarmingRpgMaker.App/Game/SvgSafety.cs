@@ -21,6 +21,7 @@ namespace FarmingRpgMaker.App.Game;
 /// file URL in this process. Nothing else in the editor uses it (HttpClient is separate).</item>
 /// <item>Embedded raster images are decoded only when their header is a PNG, JPEG, GIF, WebP or
 /// BMP image within the import limits (<see cref="ImageHeaders"/>).</item>
+/// <item>Scripting and SVG fonts stay off (<see cref="Settings"/>).</item>
 /// </list>
 /// </summary>
 internal static class SvgSafety
@@ -72,9 +73,23 @@ internal static class SvgSafety
         }
 
         CheckImageLinks(document);
-        var model = new SkiaModel(new SKSvgSettings());
+        var model = new SkiaModel(Settings());
         return SKSvg.ToPicture(document, model, new CheckedAssetLoader(model));
     }
+
+    /// <summary>
+    /// Renderer settings with Svg.Skia's scripting and SVG fonts off. Scripts cannot run without
+    /// a script runtime, and none is registered; switching them off too keeps it that way if a
+    /// later version or package brings one.
+    /// </summary>
+    internal static SKSvgSettings Settings() => new()
+    {
+        EnableJavaScript = false,
+        EnableExternalJavaScript = false,
+        JavaScriptRuntimeFactory = null,
+        NavigationHandler = null,
+        EnableSvgFonts = false,
+    };
 
     /// <summary>Refuses images that link to anything but a <c>data:</c> URL or a <c>#fragment</c>.</summary>
     internal static void CheckImageLinks(SvgElement element)
@@ -106,10 +121,17 @@ internal static class SvgSafety
     }
 #pragma warning restore SYSLIB0014
 
-    /// <summary>Svg.Skia's loader, but embedded images must pass the header check first.</summary>
-    private sealed class CheckedAssetLoader(SkiaModel model) : ISvgAssetLoader
+    /// <summary>
+    /// Svg.Skia's loader, but embedded images must pass the header check first. It implements
+    /// only <see cref="ISvgAssetLoader"/>, on purpose: Svg.Model then loads every image through
+    /// <see cref="LoadImage"/> rather than the newer <c>ISvgImageAssetLoader</c>, and never loads
+    /// fonts from the document (<c>ISvgDocumentFontLoader</c>).
+    /// </summary>
+    internal sealed class CheckedAssetLoader(SkiaModel model) : ISvgAssetLoader
     {
         private readonly SkiaSvgAssetLoader _inner = new(model);
+
+        public bool EnableSvgFonts => false;
 
         public Shim.SKImage LoadImage(Stream stream)
         {

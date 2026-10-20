@@ -40,6 +40,7 @@ public static class TestAppBuilder
         AppBuilder.Configure<FarmingRpgMaker.App.App>()
             .AfterSetup(_ => GC.KeepAlive(DataDirectory))
             .UseSkia()
+            .UseHarfBuzz()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
             .WithInterFont();
 }

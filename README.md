@@ -38,7 +38,8 @@ toasts look and behave exactly as they do in an exported game. Frames run on a
 worker thread, so plugins never stall the editor. The editor adds Restart,
 Keep changes and a debug drawer. Content-pack plugins run in `farm-plugins`, a
 QuickJS-in-WebAssembly sandbox with deterministic fuel budgets; a pack's
-manifest declares what its plugins may change ([docs/PLUGINS.md](docs/PLUGINS.md)).
+manifest declares what its plugins may change, and a plugin can define its own
+minigame kinds ([docs/PLUGINS.md](docs/PLUGINS.md)).
 
 **F# authoring.** Project migrations, validation, the Problems pipeline,
 content compilation, pack composition, localization, the starter pack and the
@@ -184,6 +185,10 @@ another folder.
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and a
 [Rust toolchain](https://rustup.rs) (the version is pinned in
 `rust-toolchain.toml`). `dotnet build` also builds the Rust library.
+`scripts/dev-setup.sh` (Linux, macOS) or `scripts\dev-setup.ps1` (Windows)
+installs whatever is missing at the pinned versions, and the
+[dev container](.devcontainer) comes with all of it
+([CONTRIBUTING.md](CONTRIBUTING.md#prerequisites)).
 
 **Linux prerequisites.** The player links ALSA and libudev, so
 `cargo test --workspace` and `dotnet build` (which builds the Export Game
@@ -251,6 +256,7 @@ checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
 | `crates/farm-ui` (Rust) | In-game UI on draw lists: HUD, dialogue, shop, crafting, inventory, quests, panels, minigames, the game shell's screens | `GameView.tsx` and its dialogs |
 | `crates/farm-runtime` (Rust) | Fixed timestep, input bindings, minigames, creator panels, audio model | `packages/engine-runtime` |
 | `crates/farm-render` (Rust) | World and Edit Mode snapshots, art decoration, built-in art, draw lists, a CPU rasterizer and fonts | `packages/renderer-canvas2d`, `packages/game-shell/src/snapshot.ts` |
+| `crates/farm-gpu` (Rust) | The desktop player's GPU renderer: farm-render's draw lists through wgpu (Vulkan, DirectX 12, Metal), with the CPU rasterizer as fallback and reference | —  |
 | `crates/farm-plugins` (Rust) | Plugin sandbox: QuickJS in WebAssembly, one wasmi instance per plugin, fuel budgets | `packages/engine-runtime/src/plugins.ts` |
 
 [docs/PORTING.md](docs/PORTING.md) has the porting conventions.

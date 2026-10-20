@@ -41,6 +41,19 @@ internal static class Ui
     }
 
     /// <summary>
+    /// A button that runs a view model's <paramref name="command"/> on its Click event (which is
+    /// what the UI tests raise), enabled while the command can run.
+    /// </summary>
+    public static Button CommandButton(object content, System.Windows.Input.ICommand command, params string[] classes)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var button = Button(content, () => command.Execute(null), classes);
+        button.IsEnabled = command.CanExecute(null);
+        command.CanExecuteChanged += (_, _) => button.IsEnabled = command.CanExecute(null);
+        return button;
+    }
+
+    /// <summary>
     /// A button whose click runs <paramref name="onClick"/> asynchronously. The button is disabled
     /// while it runs, and an exception goes to <paramref name="onError"/> (and the log) instead of
     /// escaping as an <c>async void</c> to the editor's error screen.

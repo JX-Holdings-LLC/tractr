@@ -18,7 +18,7 @@ public sealed class ContentFormTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectEntry(category, id);
+        view.ViewModel.SelectEntry(category, id);
         Pump();
         return view;
     }
@@ -117,7 +117,7 @@ public sealed class ContentFormTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
         var view = FindByName<ContentEditorView>(host.Window, "ContentEditorView");
-        view.SelectCategory("Events");
+        view.ViewModel.SelectCategory("Events");
         Pump();
         Press(host, "AddContentButton");
         Pump();
@@ -228,7 +228,7 @@ public sealed class ContentFormTests
         Assert.Contains(Picker(host, "ContentField_Kind").Items.OfType<ComboBoxItem>(), item => (string)item.Tag! == "memory-sequence");
         var speed = FindByName<TextBox>(host.Window, "ContentField_Config_Speed");
         Assert.Equal("0.9", speed.Text);
-        Assert.Equal("default: 0.9", speed.Watermark);
+        Assert.Equal("default: 0.9", speed.PlaceholderText);
         speed.Text = "1.5";
         FindByName<TextBox>(host.Window, "ContentField_Config_TargetSize").Text = "";
         Press(host, "ContentAdd_ResultTiers");
@@ -260,7 +260,7 @@ public sealed class ContentFormTests
         using var host = new GameTestHost();
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
         Pump();
-        FindByName<ContentEditorView>(host.Window, "ContentEditorView").SelectCategory("Quests");
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory("Quests");
         Pump();
         Press(host, "AddContentButton");
         Pump();

@@ -49,12 +49,13 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       # The desktop player links ALSA (cpal) and libudev (gilrs); winit loads xkbcommon-x11 at
-      # run time; xvfb runs the window smoke test.
+      # run time; xvfb runs the window smoke test; mesa-vulkan-drivers (lavapipe, a software Vulkan
+      # driver) runs the GPU renderer's parity tests and its window test.
       - name: System packages (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb
+          sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb mesa-vulkan-drivers
 
       - name: Format
         run: cargo fmt --all --check
@@ -64,13 +65,15 @@ jobs:
       - name: Clippy
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
 
-      # On Linux the window smoke test must find Xvfb (it skips only where none is installed).
+      # On Linux the window smoke test must find Xvfb and the GPU tests a Vulkan adapter (they skip
+      # only where none is installed).
       # The proptest seed is the run id, so a failing property replays locally with
       # PROPTEST_RNG_SEED=<run id> (CONTRIBUTING.md "Property tests").
       - name: Test
         run: cargo test --locked --workspace
         env:
           FARM_REQUIRE_DISPLAY: ${{ runner.os == 'Linux' && '1' || '0' }}
+          FARM_REQUIRE_GPU: ${{ runner.os == 'Linux' && '1' || '0' }}
           PROPTEST_RNG_SEED: ${{ github.run_id }}
 
       - name: The tests left fixtures/ unchanged
@@ -153,7 +156,7 @@ jobs:
       - name: System packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb
+          sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb mesa-vulkan-drivers
 
       - name: Test with coverage
         run: |
@@ -272,8 +275,8 @@ jobs:
       - name: Coverage minimums
         run: python3 tools/coverage/check.py dotnet TestResults
 
-      # Committed generated code matches its generators (flatc accessors, RecordJson.fs,
-      # RecordWith.fs), and the version numbers agree (docs/RELEASING.md "Versions").
+      # Committed generated code matches its generators (flatc accessors, SchemaJson.fs,
+      # RecordJson.fs, RecordWith.fs), and the version numbers agree (docs/RELEASING.md "Versions").
       - name: Generated code and versions are current
         run: |
           tools/codegen/check.sh

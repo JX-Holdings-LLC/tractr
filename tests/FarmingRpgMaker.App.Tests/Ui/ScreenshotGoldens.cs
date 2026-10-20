@@ -151,7 +151,7 @@ internal static class ScreenshotGoldens
     private static SKBitmap Decode(Bitmap frame)
     {
         using var png = new MemoryStream();
-        frame.Save(png);
+        frame.Save(png, PngBitmapEncoderOptions.Default);
         png.Position = 0;
         using var decoded = SKBitmap.Decode(png) ?? throw new InvalidOperationException("The capture can't be decoded.");
         // A fixed pixel format, whatever the capture used.

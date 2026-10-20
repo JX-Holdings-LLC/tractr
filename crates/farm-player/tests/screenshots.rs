@@ -1,6 +1,6 @@
 //! Screenshot goldens of the graphical player at 1280×800 (Steam Deck, 16:10) and 1920×1080
 //! (16:9): the title screen, settings, the gameplay HUD, a dialogue and a shop; and the start of
-//! the Cozy Garden and Quest RPG samples at 1280×800.
+//! the Cozy Garden and Quest RPG samples and a pack-defined minigame at 1280×800.
 //!
 //! Frames are rendered at full size, then halved (2×2 box filter) and compared with the PNGs in
 //! `fixtures/player/` within a small tolerance, so the checked-in images stay small.
@@ -15,78 +15,16 @@ mod recording;
 
 static RECORDER: recording::Recorder = recording::Recorder::new("FARM_PLAYER_BLESS", "player screenshots");
 
-use common::{press, Stores, FRAME};
+use common::{new_game, press, scene, Stores, FRAME};
 use farm_player::{Player, PlayerMode};
 use farm_render::images::decode_image;
 use farm_render::tiny_skia::Pixmap;
-use farm_sim::schema::{DialogueState, ShopSession};
 use std::path::PathBuf;
 
 const SIZES: [(u32, u32); 2] = [(1280, 800), (1920, 1080)];
 /// Channel difference that counts as different, and how many pixels may differ.
 const CHANNEL_TOLERANCE: i32 = 6;
 const MAX_DIFFERENT_FRACTION: f64 = 0.004;
-
-fn new_game(stores: &Stores) -> Player {
-    let mut player = stores.standalone(&common::starter());
-    common::idle(&mut player, 1);
-    press(&mut player, "enter");
-    assert_eq!(player.screen(), farm_player::ScreenKind::Playing);
-    player
-}
-
-/// Sets up one screen; returns the player to render.
-fn scene(name: &str) -> Player {
-    let stores = Stores::new();
-    match name {
-        "title" => stores.standalone(&common::starter()),
-        "settings" => {
-            let mut player = stores.standalone(&common::starter());
-            // Focus starts on New Game; Continue and Load are disabled without saves, so the
-            // next entry down is Settings.
-            common::idle(&mut player, 1);
-            press(&mut player, "arrowdown");
-            press(&mut player, "enter");
-            assert_eq!(player.screen(), farm_player::ScreenKind::Settings);
-            player
-        }
-        "hud" => new_game(&stores),
-        "dialogue" => {
-            let mut player = new_game(&stores);
-            let mut state = player.state().unwrap().clone();
-            state.dialogue =
-                Some(DialogueState { npc_id: "npc-merchant".into(), dialogue_id: "dialogue-merchant-greeting".into() });
-            player.replace_state(state).unwrap();
-            player
-        }
-        "shop" => {
-            let mut player = new_game(&stores);
-            let mut state = player.state().unwrap().clone();
-            state.shop = Some(ShopSession { shop_id: "shop-general".into() });
-            player.replace_state(state).unwrap();
-            player
-        }
-        // The sample games (compiled by the authoring core): each starts on its own map.
-        "sample-cozy" | "sample-quest" => {
-            let file = if name == "sample-cozy" { "cozy-garden.cart" } else { "quest-rpg.cart" };
-            let path = common::root().join("fixtures").join("golden").join("cartridges").join(file);
-            let bytes = std::fs::read(path).unwrap();
-            let mut player = Player::from_cartridge_bytes(&bytes, stores.options(PlayerMode::Standalone)).unwrap();
-            common::idle(&mut player, 1);
-            press(&mut player, "enter");
-            if name == "sample-quest" {
-                // Through the farm's south gate to the village square.
-                let mut state = player.state().unwrap().clone();
-                state.player.scene_id = "scene-square".into();
-                state.player.x = farm_sim::units::tile_center(8);
-                state.player.y = farm_sim::units::tile_center(5);
-                player.replace_state(state).unwrap();
-            }
-            player
-        }
-        other => panic!("unknown scene {other}"),
-    }
-}
 
 fn render(mut player: Player, width: u32, height: u32) -> Pixmap {
     // Past the toasts' fade-in, before they leave.
@@ -177,6 +115,12 @@ fn dialogue() {
 #[test]
 fn shop() {
     check_all("shop");
+}
+
+/// A pack-defined minigame's frame, drawn from its plugin's draw list (one size).
+#[test]
+fn pack_minigame() {
+    check("pack-minigame", 1280, 800).unwrap();
 }
 
 /// The samples look different from the starter farm and from each other (one size each).
