@@ -12,6 +12,22 @@ planned.
 
 ## Prerequisites
 
+One command installs everything below that is missing, at the versions the
+repository pins, and checks the result:
+
+```sh
+scripts/dev-setup.sh            # Linux or macOS (--check to only report, --full for the extra CI tools)
+scripts\dev-setup.ps1           # Windows, with winget (-Check, -Full)
+```
+
+Or open the repository in a dev container (VS Code Dev Containers or GitHub
+Codespaces): [.devcontainer](.devcontainer) builds an Ubuntu image with the
+same tools. The script verifies its downloads (rustup by sha256, the .NET SDK
+by the sha512 in Microsoft's release metadata) and asks before it runs
+`apt-get`.
+
+What it installs:
+
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download) (`global.json`
   pins the version).
 - A [Rust toolchain](https://rustup.rs); `rust-toolchain.toml` pins the

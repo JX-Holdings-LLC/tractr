@@ -184,6 +184,10 @@ another folder.
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and a
 [Rust toolchain](https://rustup.rs) (the version is pinned in
 `rust-toolchain.toml`). `dotnet build` also builds the Rust library.
+`scripts/dev-setup.sh` (Linux, macOS) or `scripts\dev-setup.ps1` (Windows)
+installs whatever is missing at the pinned versions, and the
+[dev container](.devcontainer) comes with all of it
+([CONTRIBUTING.md](CONTRIBUTING.md#prerequisites)).
 
 **Linux prerequisites.** The player links ALSA and libudev, so
 `cargo test --workspace` and `dotnet build` (which builds the Export Game
