@@ -48,6 +48,12 @@
     world. A save without a random state gets a new one, and a save/load round
     trip no longer changes which NPC you talk to or the state hash.
 
+- **Saving is faster.** Save slots and JSON saves (the editor's and the web
+  version's) are written straight from the game state instead of through a
+  JSON tree, with byte-for-byte the same text: the state of a mid-size farm
+  takes about 2.5 ms instead of 12 ms to write, and a compressed save slot
+  about half as long as before.
+
 - **Authoring core hardening.**
   - **Hostile project files are refused, not crashes.** Deeply nested JSON is
     an error instead of a stack overflow that killed `farmc` and the editor,

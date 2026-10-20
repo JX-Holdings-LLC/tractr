@@ -46,12 +46,15 @@ pub mod budgets {
     pub const OVERNIGHT_256: f64 = 30.0;
     /// Save: serializing the state on the simulation thread.
     pub const SAVE: f64 = 1.0;
-    /// What CI holds the save to until the serializer meets [`SAVE`]: 1.5x the stable JSON of
-    /// the mid-size state (746 KB) on the machine the budgets were first measured on (10.7 ms).
-    /// Stable JSON is built as a `serde_json::Value` tree (an `IndexMap` and a `String` key per
-    /// field of every tile) and then every object's keys are sorted; allocation dominates the
-    /// profile.
-    pub const SAVE_CEILING: f64 = 16.0;
+    /// What CI holds the save to until the serializer meets [`SAVE`]: about 1.5x the stable
+    /// JSON of the mid-size state (746 KB). Building it as a `serde_json::Value` tree and sorting
+    /// that took 10.7 ms on the machine the budgets were first measured on (12–14 ms on the
+    /// shared 4-core machine of the next measurement); the writer that streams from `Serialize`
+    /// takes about 2.5 ms there. The rest of the gap is the sorting: struct fields arrive in
+    /// declaration order (which the state hash depends on), so every tile is written, then put
+    /// in key order, and `serde_json::to_string`, which does not sort, already takes about 1 ms
+    /// on that machine.
+    pub const SAVE_CEILING: f64 = 4.0;
     /// Cartridge load, sample games.
     pub const CART_LOAD: f64 = 50.0;
     /// A gameplay frame on the CPU rasterizer. The documented frame target (< 4 ms at 1080p)
@@ -497,7 +500,7 @@ pub fn scenarios(scale: f64) -> Vec<Scenario> {
                 },
             )
         }),
-        // Missed by about 10x: see `budgets::SAVE_CEILING`.
+        // Missed by about 2.5x: see `budgets::SAVE_CEILING`.
         Scenario::new("save/stable json (sim thread)", Some(budgets::SAVE), runs(60), |runs| {
             let save = SaveFixture::mid_size();
             sample(runs, || (), |()| save.stable_json())
