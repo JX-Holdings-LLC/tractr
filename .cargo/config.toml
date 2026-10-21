@@ -2,7 +2,7 @@
 # from it) and farm_ffi.dll start on a clean Windows install without the Visual C++
 # redistributable (VCRUNTIME140.dll). CI checks the imports with `dumpbin /dependents`
 # (.github/workflows/ci.yml and release.yml). A RUSTFLAGS environment variable replaces these
-# flags, so release builds must not set one.
+# flags, so a build that sets one repeats them (release.yml's "Map build paths" steps).
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
 

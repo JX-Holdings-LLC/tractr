@@ -10,7 +10,7 @@ it takes to ship an update.
 Actions → Release → Run workflow (main, channel, dry run)
                  ──► .github/workflows/release.yml
                      plan          release.json version not published yet on this channel?
-                     version       on main? CI green? versions agree?
+                     version       on main? versions agree?
                      player-*      templates (Windows, Steam Runtime Linux, web)
                      smoke-linux   export + replay on the release Linux template
                      release       dotnet test, dotnet publish -p:Version=0.3.1,
@@ -54,9 +54,8 @@ never dispatch are simply skipped; the next release's notes include theirs.
    the top of `CHANGELOG.md` with a `DESCRIBE_CHANGES` placeholder. Run
    `cargo check` so `Cargo.lock` follows, and replace the placeholder with the
    change. `tools/release/versions.sh` checks that they agree; CI runs it.
-2. Merge it to `main` and wait until CI is green on that commit. The workflow
-   refuses a commit that is not on `main` or has no successful CI run (it waits
-   for a run still in progress, up to an hour).
+2. Merge it to `main` once CI is green on the pull request (branch protection
+   requires it; CI runs on pull requests, not on every push).
 3. When you want to release the version on `main`, run the **Release**
    workflow (Actions → Release → Run workflow) on `main` with the channel that
    matches the version and **dry run** checked. It builds, packs and verifies
@@ -109,11 +108,25 @@ other.
 
 ### How a release is protected
 
-- **Only `main`, only green, only once.** The `plan` job only runs on
+- **Only `main`, only green, only once.** Branch protection on `main` lets a
+  pull request merge only when it is up to date with `main` and CI passed on
+  it, so every commit on `main` passed CI as it is. The `plan` job only runs on
   `main` and selects the version only if it is not published yet; the
-  `version` job checks that the commit is on `main`, that `ci.yml` passed on
-  it and that the repository is at the release version, before anything is
-  built.
+  `version` job checks that the commit is on `main` and that the repository is
+  at the release version, before anything is built. The release jobs then run
+  the .NET tests, smoke-test exports with each template and check the
+  binaries' imports themselves.
+- **Branch protection.** Settings → Rules → Rulesets → New branch ruleset,
+  targeting the default branch, with **Require a pull request before
+  merging** (0 required approvals lets you merge your own), **Require status
+  checks to pass** with **Require branches to be
+  up to date before merging** checked, and these required checks: `Markdown
+  lint`, `Rust (fmt, clippy, test, wasm) (ubuntu-latest)`, `Rust (fmt, clippy,
+  test, wasm) (windows-latest)`, `Build & test (Linux)`, `Build, test &
+  publish smoke (Windows)`, `Rust coverage`, `Plugin guest (rebuild, fmt,
+  clippy, meter tests)`, `Player template (linux-x64, Steam Runtime sniper)`,
+  `Dependency audit / Dependency audit` and `versions / validate`. Also
+  **Block force pushes** and **Restrict deletions**.
 - **Least privilege.** The workflow token is read-only in every job that
   builds or tests (they compile hundreds of crates and run NuGet build
   targets), and no checkout keeps credentials. Only the shared `finish`

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2
+
+- **Windows release builds need no Visual C++ runtime.** The release workflow's
+  path-mapping flags replaced the static C runtime setting, so the release build
+  of the player template linked the Visual C++ redistributable and stopped at
+  its check. It links the runtime statically again, like CI builds.
+- **Releases start right away.** The release workflow no longer waits for a
+  separate CI run on the commit; CI runs on pull requests, which branch
+  protection requires to pass, and the release builds and tests what it ships.
+
 ## 0.3.1
 
 ### Release infrastructure migration — 2026-10-20
