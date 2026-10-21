@@ -66,6 +66,7 @@ same arguments always give the same image. A script lists input by frame:
 | 1–9 | | Pick a dialogue option |
 | Tab / Shift+Tab | RB / LB | Next / previous tab in the shop and settings |
 | F11, Alt+Enter | | Fullscreen |
+| F12 | | Screenshot ([below](#screenshots)) |
 
 The mouse clicks every button, and the wheel (or the right stick) scrolls
 lists. The toolbar at the top has Inventory, Quests, Craft, Sleep and Menu.
@@ -107,11 +108,14 @@ Settings are stored apart from the saves, as TOML:
 | Windows | `%APPDATA%\<company>\<gameId>\settings.toml` | `%APPDATA%\<company>\<gameId>\saves\` |
 
 Without a company the Windows paths skip that folder. `FARM_PLAYER_USER_DIR`
-puts both under one folder (tests, portable installs). Every field has a
+puts them all (and [screenshots](#screenshots)) under one folder (tests, portable installs). Every field has a
 default, so a partial or older file loads; an unreadable file is ignored.
 
 - **Display:** fullscreen (borderless) or windowed, integer scaling (whole
-  pixel steps, letterboxed) or fit, interface size (75–150 %). The file
+  pixel steps, letterboxed) or fit, pause in the background (on by default:
+  when the window or the web demo's tab loses focus during a game, the pause
+  menu opens; the editor's Play Mode keeps running), interface size
+  (75–150 %). The file
   also keeps the renderer (`renderer = "auto"`, `"gpu"` or `"cpu"` under
   `[display]`; [Renderers](#renderers)), which has no row in the settings
   screen.
@@ -163,6 +167,16 @@ save. Before a slot is replaced, its previous save becomes `slot<N>.bak`: when
 a slot's save is missing or does not load, the slot list shows the backup and
 loading it says so. Temporary files that a crash left behind are removed at
 start-up.
+
+## Screenshots
+
+F12 in the desktop game saves the frame on screen, interface included, as a
+PNG in the game's `screenshots` folder beside `saves` (`$XDG_DATA_HOME/<gameId>/screenshots/`,
+`%APPDATA%\<company>\<gameId>\screenshots\`), named after the time in UTC
+(`screenshot-2026-10-21_17-25-03.png`, with `-1`, `-2`… for more in the same
+second). A toast says where it went. The frame is drawn again by the CPU
+renderer, whichever renderer showed it, so the file matches `--screenshot`
+output. The game never sees F12, like F11.
 
 ## Crash logs
 

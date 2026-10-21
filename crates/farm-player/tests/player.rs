@@ -272,6 +272,56 @@ fn the_pause_menu_stops_time_and_fullscreen_toggles() {
 }
 
 #[test]
+fn losing_focus_pauses_the_game_unless_turned_off() {
+    let stores = Stores::new();
+    let mut player = new_game(&stores);
+    idle(&mut player, 5);
+    player.step(FRAME, &[InputEvent::FocusLost], SIZE.0, SIZE.1).unwrap();
+    assert_eq!(player.screen(), ScreenKind::Pause);
+    let paused = tick(&player);
+    idle(&mut player, 30);
+    assert_eq!(tick(&player), paused, "the game waits in the background");
+    // Losing focus again over a menu leaves it alone.
+    player.step(FRAME, &[InputEvent::FocusLost], SIZE.0, SIZE.1).unwrap();
+    press(&mut player, "escape");
+    assert_eq!(player.screen(), ScreenKind::Playing);
+
+    // Turned off in Display, the game runs on.
+    let mut settings = player.settings().clone();
+    settings.display.pause_in_background = false;
+    player.set_settings(settings);
+    player.step(FRAME, &[InputEvent::FocusLost], SIZE.0, SIZE.1).unwrap();
+    idle(&mut player, 5);
+    assert_eq!(player.screen(), ScreenKind::Playing);
+    assert!(stores.settings.text().unwrap().contains("pause-in-background = false"));
+
+    // The editor's Play Mode keeps running while the creator works in the editor.
+    let mut embedded = Player::from_project(common::starter(), stores.options(PlayerMode::Embedded)).unwrap();
+    idle(&mut embedded, 1);
+    embedded.step(FRAME, &[InputEvent::FocusLost], SIZE.0, SIZE.1).unwrap();
+    assert_eq!(embedded.screen(), ScreenKind::Playing);
+}
+
+#[test]
+fn screenshots_redraw_the_last_frame_and_say_so() {
+    let stores = Stores::new();
+    let mut player = new_game(&stores);
+    // After a frame drawn on the CPU, as the desktop game takes them.
+    let shown = player.frame(FRAME, &[], SIZE.0, SIZE.1).unwrap().pixels.data().to_vec();
+    let shot = player.compose_pixels().unwrap();
+    assert_eq!((shot.width(), shot.height()), SIZE);
+    assert!(shot.data() == shown.as_slice(), "the screenshot is the frame on screen");
+    // And after a frame that was only laid out.
+    player.step(FRAME, &[], 640, 400).unwrap();
+    let shot = player.compose_pixels().unwrap();
+    assert_eq!((shot.width(), shot.height()), (640, 400));
+    // The host reports where it went.
+    player.notify("Screenshot saved: shot.png", ToastKind::Success);
+    idle(&mut player, 1);
+    assert!(player.toasts().iter().any(|toast| toast.text == "Screenshot saved: shot.png"));
+}
+
+#[test]
 fn panels_open_from_the_toolbar_and_close_with_their_key() {
     let stores = Stores::new();
     let mut player = new_game(&stores);

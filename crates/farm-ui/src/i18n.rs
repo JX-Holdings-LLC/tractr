@@ -295,6 +295,7 @@ const EN: &[(&str, &str)] = &[
     ("settings.tabAccessibility", "Accessibility"),
     ("settings.fullscreen", "Fullscreen"),
     ("settings.integerScaling", "Integer scaling (sharpest pixels)"),
+    ("settings.pauseInBackground", "Pause when the game is in the background"),
     ("settings.interfaceSize", "Interface size"),
     ("settings.fullscreenHint", "Fullscreen also toggles with F11 or Alt+Enter."),
     ("settings.masterVolume", "Master volume"),
@@ -349,6 +350,8 @@ const EN: &[(&str, &str)] = &[
     ("toast.saved", "Saved (slot {0})"),
     ("toast.autosaved", "Autosaved (slot {0})"),
     ("toast.saveFailed", "Could not save: {0}"),
+    ("toast.screenshotSaved", "Screenshot saved: {0}"),
+    ("toast.screenshotFailed", "Could not save the screenshot: {0}"),
 ];
 
 /// Spanish (neutral, "tú").
@@ -524,6 +527,7 @@ const ES: &[(&str, &str)] = &[
     ("settings.tabAccessibility", "Accesibilidad"),
     ("settings.fullscreen", "Pantalla completa"),
     ("settings.integerScaling", "Escalado entero (p\u{ed}xeles m\u{e1}s n\u{ed}tidos)"),
+    ("settings.pauseInBackground", "Pausar cuando el juego queda en segundo plano"),
     ("settings.interfaceSize", "Tama\u{f1}o de la interfaz"),
     ("settings.fullscreenHint", "La pantalla completa tambi\u{e9}n se activa con F11 o Alt+Intro."),
     ("settings.masterVolume", "Volumen general"),
@@ -580,6 +584,8 @@ const ES: &[(&str, &str)] = &[
     ("toast.saved", "Partida guardada (ranura {0})"),
     ("toast.autosaved", "Guardado autom\u{e1}tico (ranura {0})"),
     ("toast.saveFailed", "No se pudo guardar: {0}"),
+    ("toast.screenshotSaved", "Captura guardada: {0}"),
+    ("toast.screenshotFailed", "No se pudo guardar la captura: {0}"),
 ];
 
 #[cfg(test)]

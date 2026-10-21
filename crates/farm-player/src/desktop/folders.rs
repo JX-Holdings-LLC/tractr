@@ -1,5 +1,6 @@
 //! User folders (docs/EXPORT.md "Proper user folders"): saves in `<data dir>/<gameId>/saves/`,
-//! settings in `<config dir>/<gameId>/settings.toml`. On Windows the company, when set, comes
+//! screenshots in `<data dir>/<gameId>/screenshots/`, settings in
+//! `<config dir>/<gameId>/settings.toml`. On Windows the company, when set, comes
 //! first (`%APPDATA%\<company>\<gameId>\`). `FARM_PLAYER_USER_DIR` puts both under one folder
 //! (tests, portable installs).
 
@@ -10,6 +11,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserFolders {
     pub saves: PathBuf,
+    pub screenshots: PathBuf,
     pub settings: PathBuf,
 }
 
@@ -64,7 +66,11 @@ impl UserFolders {
     pub fn for_game(game_id: &str, company: Option<&str>) -> Option<Self> {
         if let Some(root) = std::env::var_os("FARM_PLAYER_USER_DIR") {
             let root = PathBuf::from(root).join(folder_name(game_id));
-            return Some(Self { saves: root.join("saves"), settings: root.join("settings.toml") });
+            return Some(Self {
+                saves: root.join("saves"),
+                screenshots: root.join("screenshots"),
+                settings: root.join("settings.toml"),
+            });
         }
         let base = BaseDirs::new()?;
         let game = folder_name(game_id);
@@ -72,8 +78,10 @@ impl UserFolders {
             Some(company) => root.join(folder_name(company)).join(&game),
             None => root.join(&game),
         };
+        let data = scoped(base.data_dir().to_path_buf());
         Some(Self {
-            saves: scoped(base.data_dir().to_path_buf()).join("saves"),
+            saves: data.join("saves"),
+            screenshots: data.join("screenshots"),
             settings: scoped(base.config_dir().to_path_buf()).join("settings.toml"),
         })
     }

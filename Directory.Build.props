@@ -17,7 +17,7 @@
     <EnforceCodeStyleInBuild Condition="'$(MSBuildProjectExtension)' == '.csproj'">true</EnforceCodeStyleInBuild>
     <!-- The release workflow passes -p:Version from the git tag (vX.Y.Z → X.Y.Z). Keep the
          development version in step with the Cargo workspace version (tools/release/versions.sh). -->
-    <Version Condition="'$(Version)' == ''">0.3.0-dev</Version>
+    <Version Condition="'$(Version)' == ''">0.3.1-dev</Version>
     <Authors>Farming RPG Maker contributors</Authors>
     <Product>Farming RPG Maker</Product>
   </PropertyGroup>
