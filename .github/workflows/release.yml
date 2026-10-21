@@ -34,7 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -71,29 +70,6 @@ jobs:
           identical | behind) echo "$SHA is on main ($status)" ;;
           *) echo "::error::$SHA is not on main (compare: $status). Release from main only."; exit 1 ;;
         esac
-    - name: CI passed on the commit
-      env:
-        GH_TOKEN: ${{ github.token }}
-        REPO: ${{ github.repository }}
-        SHA: ${{ github.sha }}
-      run: |
-        for attempt in $(seq 1 60); do
-          runs="repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=100"
-          passed="$(gh api "$runs&status=success" --jq .total_count)"
-          if [[ "$passed" -ge 1 ]]; then
-            echo "CI passed on $SHA"
-            exit 0
-          fi
-          pending="$(gh api "$runs" --jq '[.workflow_runs[] | select(.status != "completed")] | length')"
-          if [[ "$pending" -eq 0 ]]; then
-            echo "::error::No successful CI run for $SHA. Push the commit to main, wait for CI, then release."
-            exit 1
-          fi
-          echo "CI is still running on $SHA ($attempt)"
-          sleep 60
-        done
-        echo "::error::CI did not finish on $SHA within an hour"
-        exit 1
     needs:
     - plan
     if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected

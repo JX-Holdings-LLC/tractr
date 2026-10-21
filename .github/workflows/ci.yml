@@ -4,11 +4,15 @@ name: CI
 # the action pins (.github/dependabot.yml). Checkouts keep no credentials, and the workflow
 # token is read-only.
 
+# Pull requests only, not every push: branch protection on main requires these checks before a
+# merge (docs/RELEASING.md "How a release is protected"), and the release workflow builds and
+# tests what it ships itself. The weekly run on main keeps the caches pull requests restore warm
+# (GitHub drops caches unused for 7 days) and catches toolchain or runner image drift.
 on:
-  push:
-    branches: ['**']
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '41 4 * * 1'
 
 concurrency:
   group: ci-${{ github.ref }}
