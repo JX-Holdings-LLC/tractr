@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2
+
+- **Windows release builds need no Visual C++ runtime.** The release workflow's
+  path-mapping flags replaced the static C runtime setting, so the release build
+  of the player template linked the Visual C++ redistributable and stopped at
+  its check. It links the runtime statically again, like CI builds.
+
 ## 0.3.1
 
 ### Release infrastructure migration — 2026-10-20

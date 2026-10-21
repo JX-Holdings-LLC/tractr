@@ -122,10 +122,12 @@ jobs:
       run: |
         rustup toolchain install
         rustc --version
+    # RUSTFLAGS replaces the target rustflags of .cargo/config.toml, so it repeats +crt-static:
+    # without it the binaries need the Visual C++ runtime and the dumpbin checks below fail.
     - name: Map build paths
       shell: bash
-      run: echo "RUSTFLAGS=--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo --remap-path-prefix=$GITHUB_WORKSPACE=/build"
-        >> "$GITHUB_ENV"
+      run: echo "RUSTFLAGS=-C target-feature=+crt-static --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo
+        --remap-path-prefix=$GITHUB_WORKSPACE=/build" >> "$GITHUB_ENV"
     - name: Build farm-player
       run: cargo build --release --locked -p farm-player
     - name: Stage template
@@ -350,10 +352,12 @@ jobs:
       run: |
         rustup toolchain install
         rustc --version
+    # RUSTFLAGS replaces the target rustflags of .cargo/config.toml, so it repeats +crt-static:
+    # without it the binaries need the Visual C++ runtime and the dumpbin checks below fail.
     - name: Map build paths
       shell: bash
-      run: echo "RUSTFLAGS=--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo --remap-path-prefix=$GITHUB_WORKSPACE=/build"
-        >> "$GITHUB_ENV"
+      run: echo "RUSTFLAGS=-C target-feature=+crt-static --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo
+        --remap-path-prefix=$GITHUB_WORKSPACE=/build" >> "$GITHUB_ENV"
     - name: Download player templates
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
       with:
