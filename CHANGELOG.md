@@ -2,6 +2,11 @@
 
 ## 0.3.0 (unreleased)
 
+### Release infrastructure migration — 2026-10-20
+
+- Adopt the unified release manifest, version-advance validation, manual main-only planning, complete artifact staging, and verified draft publisher. Preserve local packaging, existing updater trust, and distribution identities.
+- Validation: shared engine tests, workflow lint, and prepared manifest/version checks. Native/hosted consumer release dry runs and publication remain unverified until the migration is merged and credentials/settings are checked.
+
 - **Exported games draw on the GPU.** The desktop player has a wgpu renderer
   (Vulkan, DirectX 12, Metal) that draws the same frames as the CPU one at
   the window's resolution, with the same crisp nearest-neighbour scaling and

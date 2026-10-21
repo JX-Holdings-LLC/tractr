@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "apps": {
+    "farming-rpg-maker": {
+      "title": "Farming RPG Maker",
+      "version": "0.3.0-dev"
+    }
+  }
+}
