@@ -24,9 +24,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/plan.yml@181636b602317ba703c3f4bf12775c34560f4efb
+    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/plan.yml@fe43fc63f36cb7be8952ec76d74cc2febf7f390a
     with:
-      toolkit-ref: 181636b602317ba703c3f4bf12775c34560f4efb
+      toolkit-ref: fe43fc63f36cb7be8952ec76d74cc2febf7f390a
       channel: ${{ inputs.channel }}
       app: ${{ inputs.app }}
   version:
@@ -574,7 +574,7 @@ jobs:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         repository: JX-Holdings-LLC/release-infrastructure
-        ref: 181636b602317ba703c3f4bf12775c34560f4efb
+        ref: fe43fc63f36cb7be8952ec76d74cc2febf7f390a
         path: .toolkit
         persist-credentials: false
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -601,11 +601,11 @@ jobs:
     - plan
     - publish
     if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
-    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/finish.yml@181636b602317ba703c3f4bf12775c34560f4efb
+    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/finish.yml@fe43fc63f36cb7be8952ec76d74cc2febf7f390a
     permissions:
       contents: write
     with:
-      toolkit-ref: 181636b602317ba703c3f4bf12775c34560f4efb
+      toolkit-ref: fe43fc63f36cb7be8952ec76d74cc2febf7f390a
       source-sha: ${{ needs.plan.outputs.sha }}
       app: farming-rpg-maker
       security: standard

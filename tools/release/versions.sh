@@ -4,15 +4,17 @@
 #   tools/release/versions.sh                  development: the Cargo workspace version and the
 #                                              Directory.Build.props default are the same
 #                                              X.Y.Z-dev, and CHANGELOG.md starts with
-#                                              "## X.Y.Z (unreleased)"; in both forms,
-#                                              VPK_VERSION in release.yml is the Velopack
-#                                              package version
+#                                              "## X.Y.Z (unreleased)"; a release commit (any
+#                                              other version) gets the --release checks for its
+#                                              own version; in both forms, VPK_VERSION in
+#                                              release.yml is the Velopack package version
 #   tools/release/versions.sh --release X.Y.Z  a release commit: both are X.Y.Z, and for a stable
 #                                              X.Y.Z, CHANGELOG.md has a "## X.Y.Z" section that
 #                                              is not marked unreleased
 #
-# CI runs the first form; the release workflow runs the second before it builds anything, so
-# crash logs, fe_version and the wasm version() report the version that shipped.
+# CI runs the first form, which must pass on the release commit too: the release workflow only
+# releases a commit CI passed on. The release workflow runs the second before it builds
+# anything, so crash logs, fe_version and the wasm version() report the version that shipped.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -42,10 +44,15 @@ vpk="$(sed -n 's/^ *VPK_VERSION: *\([^ #]*\).*/\1/p' "$root/.github/workflows/re
 [[ -n "$velopack" && "$velopack" == "$vpk" ]] ||
   fail "Velopack is '$velopack' in Directory.Packages.props but VPK_VERSION is '$vpk' in release.yml"
 
-case "${1:-}" in
+mode="${1:-}"
+if [[ -z "$mode" && "$cargo_version" != *-dev ]]; then
+  # The commit that sets the release version, before the release workflow runs on it.
+  set -- --release "$cargo_version"
+  mode=--release
+fi
+
+case "$mode" in
   "")
-    [[ "$cargo_version" == *-dev ]] ||
-      fail "development builds use X.Y.Z-dev, Cargo.toml says $cargo_version (bump it after a release)"
     next="${cargo_version%-dev}"
     [[ "$changelog_heading" == "## $next (unreleased)" ]] ||
       fail "CHANGELOG.md should start with \"## $next (unreleased)\", not \"$changelog_heading\""
