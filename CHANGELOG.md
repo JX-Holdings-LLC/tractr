@@ -7,6 +7,16 @@
 - Adopt the unified release manifest, version-advance validation, manual main-only planning, complete artifact staging, and verified draft publisher. Preserve local packaging, existing updater trust, and distribution identities.
 - Validation: shared engine tests, workflow lint, and prepared manifest/version checks. Native/hosted consumer release dry runs and publication remain unverified until the migration is merged and credentials/settings are checked.
 
+- **Quality of life in exported games.**
+  - **The game pauses in the background.** Switching to another window (or
+    another browser tab in the web demo) during a game opens the pause menu
+    instead of letting the day run on. **Settings → Display → Pause when the
+    game is in the background** turns it off; the editor's Play Mode keeps
+    running either way.
+  - **F12 takes a screenshot.** The frame on screen is saved as a PNG in the
+    game's `screenshots` folder beside its saves, and a toast says where
+    ([docs/PLAYER.md](docs/PLAYER.md#screenshots)).
+
 - **Exported games draw on the GPU.** The desktop player has a wgpu renderer
   (Vulkan, DirectX 12, Metal) that draws the same frames as the CPU one at
   the window's resolution, with the same crisp nearest-neighbour scaling and

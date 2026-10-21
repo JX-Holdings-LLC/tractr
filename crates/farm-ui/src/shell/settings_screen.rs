@@ -163,6 +163,17 @@ pub fn settings(
                 changed = true;
             }
             y += row + 4.0;
+            let label = lang.tr("settings.pauseInBackground");
+            if let Some(value) = ui.toggle(
+                id("pause-in-background"),
+                Rect::new(area.x, y, area.width, row),
+                label,
+                display.pause_in_background,
+            ) {
+                display.pause_in_background = value;
+                changed = true;
+            }
+            y += row + 4.0;
             let names: Vec<&str> = UI_SCALES.iter().map(|(name, _)| *name).collect();
             let index = nearest_option(&UI_SCALES, display.ui_scale);
             let label = lang.tr("settings.interfaceSize");

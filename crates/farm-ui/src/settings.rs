@@ -37,11 +37,19 @@ pub struct DisplaySettings {
     /// Which renderer the desktop game draws with (no settings screen row: it is for the
     /// settings file, next to the `--renderer` flag).
     pub renderer: RendererChoice,
+    /// Open the pause menu when the game's window (or browser tab) loses focus.
+    pub pause_in_background: bool,
 }
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { fullscreen: false, integer_scaling: true, ui_scale: 1.0, renderer: RendererChoice::Auto }
+        Self {
+            fullscreen: false,
+            integer_scaling: true,
+            ui_scale: 1.0,
+            renderer: RendererChoice::Auto,
+            pause_in_background: true,
+        }
     }
 }
 

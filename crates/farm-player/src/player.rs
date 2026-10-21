@@ -535,8 +535,8 @@ impl Player {
         }
     }
 
-    /// Rasterizes the frame of the last [`Player::frame_composition`] on the CPU, as
-    /// [`Player::frame`] would have (a host whose renderer could not draw it).
+    /// Rasterizes the last frame on the CPU, as [`Player::frame`] would have: a host whose
+    /// renderer could not draw a [`Player::frame_composition`], or a screenshot after any frame.
     pub fn compose_pixels(&mut self) -> Result<&Pixmap, PlayerError> {
         if let Some(message) = &self.poisoned {
             return Err(PlayerError::Poisoned(message.clone()));
@@ -588,10 +588,12 @@ impl Player {
         let (width, height) = (width.max(1), height.max(1));
         let result = catch_unwind(AssertUnwindSafe(|| {
             self.advance(dt, events, width, height);
+            // The world and the UI were laid out at this size: `compose_pixels` draws at it too.
+            self.planned.size = (width, height);
             match render {
                 Render::None => {}
                 Render::Pixels => self.compose(width, height),
-                Render::Plan => self.plan(width, height),
+                Render::Plan => self.plan(),
             }
         }));
         match result {
@@ -627,6 +629,15 @@ impl Player {
             && self.game.as_ref().is_some_and(|game| self.game_ui.panel.is_some() || game.session.engine_modal_open());
         if playing {
             self.step_game(dt, &input);
+            // A game left in the background (another window, a hidden browser tab) waits in the
+            // pause menu instead of running on. The editor's Play Mode keeps running.
+            if input.focus_lost
+                && self.mode == PlayerMode::Standalone
+                && self.settings.display.pause_in_background
+                && self.screens.is_empty()
+            {
+                self.open_pause();
+            }
         }
         self.game_ui.toasts.tick(dt);
 
@@ -879,8 +890,7 @@ impl Player {
     }
 
     /// Builds the frame's world draw list for [`Player::frame_composition`].
-    fn plan(&mut self, width: u32, height: u32) {
-        self.planned.size = (width, height);
+    fn plan(&mut self) {
         self.planned.tints = self.ui.world_tints().to_vec();
         self.planned.world = self.world.as_mut().map(|(snapshot, view)| {
             let (list, native_width, native_height) = self.renderer.world_list(snapshot, view);
@@ -1536,6 +1546,11 @@ impl Player {
     /// Every toast shown so far (bounded).
     pub fn toast_history(&self) -> &[(String, ToastKind)] {
         self.game_ui.toasts.history()
+    }
+
+    /// Shows a toast from the host (the desktop game's screenshots).
+    pub fn notify(&mut self, text: impl Into<String>, kind: ToastKind) {
+        self.game_ui.toasts.push(text, kind);
     }
 
     /// The previews of the save slots (index 0 is slot 1).

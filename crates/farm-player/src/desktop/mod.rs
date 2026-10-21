@@ -9,6 +9,7 @@
 //! - Pixels are physical: HiDPI screens get a sharp frame, and the UI scales with the window.
 //! - Closing the window while a game runs asks first, like Quit in the pause menu
 //!   ([`Player::request_close`]).
+//! - F12 saves the frame on screen as a PNG in the game's screenshots folder ([`screenshot`]).
 //! - When the game cannot start or stops with an error, the window shows what happened and where
 //!   the crash log is (exported Windows games have no console), until it is closed or Esc /
 //!   Enter is pressed.
@@ -21,16 +22,19 @@ pub mod folders;
 mod gamepad;
 mod keys;
 pub mod present;
+pub mod screenshot;
 
 use crate::input::{InputEvent, PointerButton};
 use crate::player::{Player, PlayerOptions, PlayerRequest};
 use crate::render::error_screen;
 use crate::saves::{FsSaveStore, FsSettingsStore, MemorySaveStore, MemorySettingsStore};
 use crate::speaker::Audio;
+use farm_ui::game::ToastKind;
 use farm_ui::RendererChoice;
 use gamepad::Gamepads;
 use present::Presenter;
 use std::num::NonZeroU32;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use winit::application::ApplicationHandler;
@@ -71,6 +75,10 @@ struct App {
     gamepads: Option<Gamepads>,
     /// The window has keyboard focus (gamepad input is ignored without it).
     focused: bool,
+    /// Where F12 screenshots go (`None` without a user folder).
+    screenshots: Option<PathBuf>,
+    /// F12 was pressed: save the next frame shown.
+    screenshot_requested: bool,
     error: Option<String>,
     /// The error screen's paragraphs once the game stopped.
     failure: Option<Vec<String>>,
@@ -153,6 +161,7 @@ pub fn run(cart: &[u8], options: DesktopOptions) -> Result<(), String> {
 
     let event_loop = EventLoop::new().map_err(|error| format!("Cannot open a window: {error}"))?;
     let mut app = App::new(Some(player), options);
+    app.screenshots = folders.map(|folders| folders.screenshots);
     app.audio = Audio::start();
     app.gamepads = Gamepads::start();
     event_loop.run_app(&mut app).map_err(|error| format!("Window loop: {error}"))?;
@@ -180,6 +189,8 @@ impl App {
             audio: None,
             gamepads: None,
             focused: true,
+            screenshots: None,
+            screenshot_requested: false,
             error: None,
             failure: None,
         }
@@ -208,6 +219,27 @@ impl App {
             event_loop.exit();
         } else if let Some(window) = &self.window {
             window.request_redraw();
+        }
+    }
+
+    /// Saves the frame just shown as a PNG and says where (or why not) in a toast. The frame is
+    /// rasterized on the CPU, whichever renderer showed it, so the file matches `--screenshot`.
+    fn save_screenshot(&mut self) {
+        let Some(player) = self.player.as_mut() else { return };
+        let lang = player.lang();
+        let result = match (&self.screenshots, player.compose_pixels()) {
+            (Some(folder), Ok(pixmap)) => screenshot::write(folder, unix_now(), &farm_render::encode_png(pixmap))
+                .map_err(|error| error.to_string()),
+            (None, _) => Err("there is no folder to save it in".to_owned()),
+            (_, Err(error)) => Err(error.to_string()),
+        };
+        match result {
+            Ok(path) => {
+                let path = path.display().to_string();
+                eprintln!("Screenshot: {path}");
+                player.notify(lang.format("toast.screenshotSaved", &[&path]), ToastKind::Success);
+            }
+            Err(error) => player.notify(lang.format("toast.screenshotFailed", &[&error]), ToastKind::Error),
         }
     }
 
@@ -263,6 +295,9 @@ impl App {
                 PlayerRequest::SetFullscreen(fullscreen) => self.set_fullscreen(fullscreen),
                 PlayerRequest::SetTitle(title) => window.set_title(&title),
             }
+        }
+        if std::mem::take(&mut self.screenshot_requested) {
+            self.save_screenshot();
         }
         self.frames += 1;
         if self.frames.is_multiple_of(60) {
@@ -334,6 +369,13 @@ impl ApplicationHandler for App {
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 if let Some(key) = keys::key_name(&event.logical_key) {
+                    // F12 belongs to the window (like F11): the game never sees it.
+                    if key == screenshot::KEY {
+                        if event.state == ElementState::Pressed && !event.repeat {
+                            self.screenshot_requested = true;
+                        }
+                        return;
+                    }
                     self.events.push(match event.state {
                         ElementState::Pressed => InputEvent::KeyDown { key, repeat: event.repeat },
                         ElementState::Released => InputEvent::KeyUp { key },
