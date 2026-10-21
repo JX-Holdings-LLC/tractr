@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.3.0 (unreleased)
+
 ### Release infrastructure migration — 2026-10-20
 
 - Adopt the unified release manifest, version-advance validation, manual main-only planning, complete artifact staging, and verified draft publisher. Preserve local packaging, existing updater trust, and distribution identities.
