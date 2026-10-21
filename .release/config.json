@@ -19,7 +19,8 @@
           "pattern": "<Version Condition=\"[^\\r\\n]*?\">(?<version>[^<]+)</Version>"
         }
       ],
-      "notes": ".release/notes/{app}/{version}.md",
+      "notes": "CHANGELOG.md",
+      "notesSection": true,
       "assets": [
         "FarmingRpgMaker-{version}-full.nupkg",
         "FarmingRpgMaker-win-Portable.zip",

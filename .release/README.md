@@ -1,6 +1,6 @@
 # Release integration
 
-The workflow and toolkit checkout are pinned to infrastructure commit `fe43fc63f36cb7be8952ec76d74cc2febf7f390a`. Keep those pins equal when upgrading. The local build/package/signing steps remain responsible for application-specific smoke tests and existing updater signatures. The shared final stage runs only pinned toolkit code with repository write permissions.
+The workflow and toolkit checkout are pinned to infrastructure commit `e19545fe8e1520a342ef8b4b4bff6fcdac37b356`. Keep those pins equal when upgrading. The local build/package/signing steps remain responsible for application-specific smoke tests and existing updater signatures. The shared final stage runs only pinned toolkit code with repository write permissions.
 
 `release.json` is authoritative; `.release/config.json` lists embedded version fields, app scopes, required platform deliverables, bounded package variants, release notes, checksum naming, and the executable security profile. Exact required assets must all exist. Any optional filename rule has explicit bounds and does not exempt a required platform.
 
@@ -10,7 +10,7 @@ Before a live release, verify actual environment reviewers/branch restrictions, 
 
 Existing checksum filenames and the primary stable latest-release alias are retained explicitly for installed clients. Auxiliary app releases never take over that alias. Where existing detached GPG checksum signatures are enabled, the shared publisher validates the final coverage and preserves the signed bytes. Required updater signatures remain fail-closed.
 
-To bump locally, obtain the pinned toolkit at `.toolkit`, run `node .toolkit/src/release.mjs bump --app APP_ID`, regenerate any application-specific resources/generated bundles, update the version-specific notes file, and run the repository's checks. All meaningful main changes require at least one advance; shared source/workflow changes require every affected app to advance.
+To bump locally, obtain the pinned toolkit at `.toolkit`, run `node .toolkit/src/release.mjs bump --app APP_ID`, regenerate any application-specific resources/generated bundles (`cargo check` for `Cargo.lock`), replace the placeholder in the new `CHANGELOG.md` section, and run the repository's checks. All meaningful main changes require at least one advance; shared source/workflow changes require every affected app to advance.
 
 Validation for this migration: shared engine syntax/test suite and workflow lint; manifest/embedded-version validation is run against the prepared changes. Hosted/native consumer release dry runs and actual publication have not been performed from these unmerged branches. No release/tag was created by this migration.
 

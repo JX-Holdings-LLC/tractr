@@ -15,10 +15,15 @@
     <!-- The .editorconfig rules set to warning (file-scoped namespaces, …) fail the C# build,
          like any other warning; CI also runs `dotnet format` (CONTRIBUTING.md "Formatting"). -->
     <EnforceCodeStyleInBuild Condition="'$(MSBuildProjectExtension)' == '.csproj'">true</EnforceCodeStyleInBuild>
-    <!-- The release workflow passes -p:Version from the git tag (vX.Y.Z → X.Y.Z). Keep the
-         development version in step with the Cargo workspace version (tools/release/versions.sh). -->
+    <!-- The release workflow passes -p:Version=X.Y.Z; any other build is a development build of
+         the version below, which stays in step with the Cargo workspace version
+         (tools/release/versions.sh). -->
+    <FarmReleaseBuild Condition="'$(Version)' != ''">true</FarmReleaseBuild>
     <Version Condition="'$(Version)' == ''">0.3.1</Version>
     <Authors>Farming RPG Maker contributors</Authors>
     <Product>Farming RPG Maker</Product>
   </PropertyGroup>
+  <ItemGroup Condition="'$(FarmReleaseBuild)' == 'true' And '$(MSBuildProjectExtension)' == '.csproj'">
+    <AssemblyMetadata Include="FarmReleaseBuild" Value="true" />
+  </ItemGroup>
 </Project>

@@ -3,14 +3,21 @@ using System.Reflection;
 namespace FarmingRpgMaker.Updates;
 
 /// <summary>
-/// Version stamped into the build (<c>-p:Version=X.Y.Z</c> in the release workflow,
-/// <c>0.1.0-dev</c> locally). <c>-p:Version</c> is a global MSBuild property, so this
-/// library carries the same version as the app executable.
+/// Version stamped into the build (<c>-p:Version=X.Y.Z</c> in the release workflow, the
+/// <c>Directory.Build.props</c> default locally). <c>-p:Version</c> is a global MSBuild property,
+/// so this library carries the same version as the app executable.
 /// </summary>
 public static class AppVersion
 {
     /// <summary>Informational version without the <c>+commit</c> suffix.</summary>
     public static string Current { get; } = Compute();
+
+    /// <summary>
+    /// Whether the release workflow built this (it passes <c>-p:Version</c>). Other builds carry the
+    /// next version, which may never be released.
+    /// </summary>
+    public static bool IsRelease { get; } = typeof(AppVersion).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        .Any(a => a.Key == "FarmReleaseBuild" && a.Value == "true");
 
     private static string Compute()
     {

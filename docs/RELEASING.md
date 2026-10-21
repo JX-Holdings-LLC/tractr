@@ -36,38 +36,41 @@ Versions are [SemVer](https://semver.org). The tag is `v` + version, and
 | Stable      | `v0.2.0`          | `stable`  | normal         | Stable + Pre-release     |
 | Pre-release | `v0.3.0-beta.1`   | `preview` | pre-release    | Pre-release channel only |
 
-Anything with a `-suffix` is a pre-release, including the `X.Y.Z-dev`
-versions `main` carries between releases. A `-dev` version is not released on
-the stable channel: the plan job fails and says so.
+Anything with a `-suffix` is a pre-release and goes out on the `preview`
+channel; the plan job fails, saying why, when the channel does not match the
+version.
 
-1. On a branch, commit the release version: from the `-dev` version run
-   `node .toolkit/src/release.mjs bump --app farming-rpg-maker --version 0.3.1`
-   with the toolkit pinned in `.release/README.md` checked out at `.toolkit`
-   (or set `release.json`, `version` in the root `Cargo.toml` and the default
-   `<Version>` in `Directory.Build.props` by hand), run `cargo check` so
-   `Cargo.lock` follows, rename the CHANGELOG heading `## 0.3.1 (unreleased)`
-   to `## 0.3.1`, and write `.release/notes/farming-rpg-maker/0.3.1.md`, the
-   GitHub Release body. (Pre-releases such as `0.4.0-beta.1` need the version
-   and notes file, not a CHANGELOG section.) `tools/release/versions.sh`
-   checks that they agree; CI runs it.
+**Every change to `main` advances the version** (`.release/config.json`
+`bumpPolicy`, checked by `release-validation.yml`), so `main` always carries
+a real version. **Nothing is released until you dispatch it.** Versions you
+never dispatch are simply skipped; the next release's notes include theirs.
+
+1. In every pull request, bump the version: with the toolkit pinned in
+   `.release/README.md` checked out at `.toolkit`, run
+   `node .toolkit/src/release.mjs bump --app farming-rpg-maker` (a patch;
+   `--kind minor` or `--version 0.4.0-beta.1` for others). It sets
+   `release.json`, `version` in the root `Cargo.toml` and the default
+   `<Version>` in `Directory.Build.props`, and adds a `## X.Y.Z` section at
+   the top of `CHANGELOG.md` with a `DESCRIBE_CHANGES` placeholder. Run
+   `cargo check` so `Cargo.lock` follows, and replace the placeholder with the
+   change. `tools/release/versions.sh` checks that they agree; CI runs it.
 2. Merge it to `main` and wait until CI is green on that commit. The workflow
    refuses a commit that is not on `main` or has no successful CI run (it waits
    for a run still in progress, up to an hour).
-3. Run the **Release** workflow (Actions → Release → Run workflow) on `main`
-   with the channel that matches the version and **dry run** checked. It builds,
-   packs and verifies the complete bundle without creating a tag or release.
+3. When you want to release the version on `main`, run the **Release**
+   workflow (Actions → Release → Run workflow) on `main` with the channel that
+   matches the version and **dry run** checked. It builds, packs and verifies
+   the complete bundle without creating a tag or release.
 4. Run it again with **dry run** unchecked. When the build is done, the
    publish jobs wait for a reviewer to approve the `release` environment; the
-   final job creates the tag `v0.3.1` on the planned commit, uploads every file
-   to a draft, checks GitHub's digests, then publishes it.
-5. Start the next version: bump `Cargo.toml`, `Directory.Build.props` and
-   `release.json` to `0.3.2-dev`, add `## 0.3.2 (unreleased)` at the top of
-   `CHANGELOG.md` and a `0.3.2-dev.md` notes file. Every change to `main` must
-   advance the version (`.release/config.json` `bumpPolicy`), which
-   `release-validation.yml` checks.
+   final job creates the tag `vX.Y.Z` on the planned commit, uploads every
+   file to a draft, checks GitHub's digests, then publishes it.
 
-The Velopack package embeds the CHANGELOG section of the version (or the
-annotated tag message, or the commit subjects since the previous tag).
+The release notes are the `CHANGELOG.md` sections of every version after the
+latest published release, newest first. They are the GitHub Release body and
+are embedded in the Velopack package (`vpk pack --releaseNotes`), so the
+Update Center shows them. The plan fails while any of those sections still
+holds the placeholder.
 
 A version is released once. The plan skips a version that is already
 published, and the publisher never replaces a published release or moves a
@@ -141,11 +144,13 @@ other.
 
 ### Versions in builds
 
-The Cargo workspace (`Cargo.toml`) and `Directory.Build.props` carry the
-same version: the next release with `-dev` between releases (`0.3.0-dev`),
-the release version in the release commit. The release workflow also passes
-`-p:Version=X.Y.Z`, which stamps both `FarmingRpgMaker.exe` and
-`FarmingRpgMaker.Updates.dll`; `vpk pack --packVersion` uses the same value.
+`release.json`, the Cargo workspace (`Cargo.toml`) and `Directory.Build.props`
+carry the same version, the one the latest change to `main` advanced to. The
+release workflow also passes `-p:Version=X.Y.Z`, which stamps both
+`FarmingRpgMaker.exe` and `FarmingRpgMaker.Updates.dll` and marks them as a
+release build; `vpk pack --packVersion` uses the same value. Other builds
+(`dotnet run`, CI) are development builds: their Help links open the docs on
+`main`, since their version may never get a tag.
 Crash logs, `fe_version` and the web player's `version()` report the Cargo
 version.
 
