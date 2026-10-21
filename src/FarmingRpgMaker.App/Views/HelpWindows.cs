@@ -21,13 +21,13 @@ public static class HelpContent
     /// Where relative links of the guide point: the repository's docs folder at this release's tag, so an
     /// older install reads the docs of its own version (development builds read <c>main</c>).
     /// </summary>
-    public static string DocsBaseUrl { get; } = DocsBaseUrlFor(AppVersion.Current);
+    public static string DocsBaseUrl { get; } = DocsBaseUrlFor(AppVersion.IsRelease ? AppVersion.Current : "");
 
-    /// <summary>The docs folder for an app version: its <c>v</c> tag, or <c>main</c> for a <c>-dev</c> build.</summary>
+    /// <summary>The docs folder for a released app version: its <c>v</c> tag, or <c>main</c> for no version.</summary>
     public static string DocsBaseUrlFor(string version)
     {
         ArgumentNullException.ThrowIfNull(version);
-        var dev = version.Length == 0 || version == "0.0.0" || version.EndsWith("-dev", StringComparison.OrdinalIgnoreCase);
+        var dev = version.Length == 0 || version == "0.0.0";
         var reference = dev ? "main" : "v" + Uri.EscapeDataString(version);
         return $"https://github.com/jxburros/farm-game-engine-native/blob/{reference}/docs/";
     }

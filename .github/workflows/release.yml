@@ -24,9 +24,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/plan.yml@181636b602317ba703c3f4bf12775c34560f4efb
+    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/plan.yml@e19545fe8e1520a342ef8b4b4bff6fcdac37b356
     with:
-      toolkit-ref: 181636b602317ba703c3f4bf12775c34560f4efb
+      toolkit-ref: e19545fe8e1520a342ef8b4b4bff6fcdac37b356
       channel: ${{ inputs.channel }}
       app: ${{ inputs.app }}
   version:
@@ -414,51 +414,21 @@ jobs:
           echo "The Windows and Linux release templates play the sample game differently." >&2
           exit 1
         fi
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        name: release-plan
+        path: plan
     - name: Write release notes
       shell: pwsh
-      env:
-        VERSION: ${{ needs.version.outputs.version }}
-        TAG: ${{ needs.version.outputs.tag }}
       run: |
-        $notes = ''
-
-        # 1) A "## [X.Y.Z]" / "## X.Y.Z" / "## vX.Y.Z" section of CHANGELOG.md.
-        if (Test-Path CHANGELOG.md) {
-          $escaped = [regex]::Escape($env:VERSION)
-          $lines = @(Get-Content CHANGELOG.md)
-          $start = -1
-          $end = $null
-          for ($i = 0; $i -lt $lines.Count; $i++) {
-            if ($start -lt 0 -and $lines[$i] -match "^##\s+\[?v?$escaped\]?(\s|$)") { $start = $i + 1; continue }
-            if ($start -ge 0 -and $lines[$i] -match '^##\s') { $end = $i - 1; break }
-          }
-          if ($start -ge 0) {
-            if ($null -eq $end) { $end = $lines.Count - 1 }
-            if ($end -ge $start) { $notes = ($lines[$start..$end] -join "`n").Trim() }
-          }
-        }
-
-        # 2) The annotated tag's message (git tag -a vX.Y.Z -m "...").
-        if (-not $notes) {
-          git fetch --force origin "refs/tags/$($env:TAG):refs/tags/$($env:TAG)" 2>$null
-          if ((git for-each-ref "refs/tags/$env:TAG" --format='%(objecttype)') -eq 'tag') {
-            $notes = ((git for-each-ref "refs/tags/$env:TAG" --format='%(contents)') -join "`n").Trim()
-            $notes = ($notes -replace '(?s)-----BEGIN (PGP|SSH) SIGNATURE-----.*$', '').Trim()
-          }
-        }
-
-        # 3) Commit subjects since the previous tag.
-        if (-not $notes) {
-          $previous = git describe --tags --abbrev=0 --match 'v*.*.*' "HEAD^" 2>$null
-          $range = if ($LASTEXITCODE -eq 0 -and $previous) { "$previous..HEAD" } else { 'HEAD' }
-          $commits = git log $range --no-merges --pretty='format:- %s' -n 50
-          $notes = "## Changes`n`n" + ($commits -join "`n")
-        }
-
+        # The plan's notes: the CHANGELOG sections of every version since the last release, also the
+        # GitHub Release body.
+        $plan = Get-Content plan/release-plan.json -Raw | ConvertFrom-Json
+        $notes = ($plan.selected | Where-Object app -eq 'farming-rpg-maker').notes
+        if (-not $notes) { throw 'The release plan has no notes for farming-rpg-maker' }
         Set-Content -Path release-notes.md -Value $notes -Encoding utf8
         Write-Host '--- release-notes.md ---'
         Get-Content release-notes.md
-        $global:LASTEXITCODE = 0
     - name: Install vpk
       run: dotnet tool install -g vpk --version $env:VPK_VERSION
     - name: Download previous release (for delta updates)
@@ -574,7 +544,7 @@ jobs:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
         repository: JX-Holdings-LLC/release-infrastructure
-        ref: 181636b602317ba703c3f4bf12775c34560f4efb
+        ref: e19545fe8e1520a342ef8b4b4bff6fcdac37b356
         path: .toolkit
         persist-credentials: false
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -601,11 +571,11 @@ jobs:
     - plan
     - publish
     if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
-    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/finish.yml@181636b602317ba703c3f4bf12775c34560f4efb
+    uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/finish.yml@e19545fe8e1520a342ef8b4b4bff6fcdac37b356
     permissions:
       contents: write
     with:
-      toolkit-ref: 181636b602317ba703c3f4bf12775c34560f4efb
+      toolkit-ref: e19545fe8e1520a342ef8b4b4bff6fcdac37b356
       source-sha: ${{ needs.plan.outputs.sha }}
       app: farming-rpg-maker
       security: standard

@@ -7,15 +7,19 @@ Windows releases are built by GitHub Actions, packaged with
 it takes to ship an update.
 
 ```text
-git tag v0.3.0 ──► .github/workflows/release.yml
-                     version       on main? CI green? versions agree? not released yet?
+Actions → Release → Run workflow (main, channel, dry run)
+                 ──► .github/workflows/release.yml
+                     plan          release.json version not published yet on this channel?
+                     version       on main? CI green? versions agree?
                      player-*      templates (Windows, Steam Runtime Linux, web)
                      smoke-linux   export + replay on the release Linux template
-                     release       dotnet test, dotnet publish -p:Version=0.3.0,
+                     release       dotnet test, dotnet publish -p:Version=0.3.1,
                                    export + replay on the release Windows template,
                                    vpk download/pack, SHA256SUMS      (read-only token)
-                     publish       [environment "release": reviewer approves]
-                                   attest, vpk upload github, gh release upload
+                     publish       [environment "release"] attest, stage the bundle
+                     finish        verify the complete bundle; unless dry run:
+                                   [environment "release"] tag, draft, upload, check
+                                   digests, publish        (shared release-infrastructure)
                                    │
 installed app ◄── Update Center ◄──┘  (Velopack GithubSource + GitHub releases API)
 ```
@@ -24,63 +28,55 @@ installed app ◄── Update Center ◄──┘  (Velopack GithubSource + Git
 
 ## Cutting a release
 
-Versions are [SemVer](https://semver.org). The tag is `v` + version.
+Versions are [SemVer](https://semver.org). The tag is `v` + version, and
+`release.json` holds the version the workflow releases.
 
-| Kind        | Example tag       | GitHub Release | Offered to               |
-|-------------|-------------------|----------------|--------------------------|
-| Stable      | `v0.2.0`          | normal         | Stable + Pre-release     |
-| Pre-release | `v0.3.0-beta.1`   | pre-release    | Pre-release channel only |
+| Kind        | Example tag       | Channel   | GitHub Release | Offered to               |
+|-------------|-------------------|-----------|----------------|--------------------------|
+| Stable      | `v0.2.0`          | `stable`  | normal         | Stable + Pre-release     |
+| Pre-release | `v0.3.0-beta.1`   | `preview` | pre-release    | Pre-release channel only |
 
-Anything with a `-suffix` is a pre-release.
+Anything with a `-suffix` is a pre-release and goes out on the `preview`
+channel; the plan job fails, saying why, when the channel does not match the
+version.
 
-1. On `main`, commit the version: set `version` in the root `Cargo.toml`
-   (`[workspace.package]`) and the default `<Version>` in
-   `Directory.Build.props` to the release version (run `cargo check` so
-   `Cargo.lock` follows), and rename the CHANGELOG heading
-   `## 0.3.0 (unreleased)` to `## 0.3.0`. `tools/release/versions.sh --release
-   0.3.0` checks all three; the workflow runs it and refuses a mismatch.
-   (Pre-releases such as `0.4.0-beta.1` need the version in `Cargo.toml` and
-   `Directory.Build.props`, not a CHANGELOG section.)
-2. Push and wait until CI is green on that commit. The workflow refuses a
-   commit that is not on `main` or has no successful CI run (it waits for a
-   run still in progress, up to an hour).
-3. Release notes come from the first of these the workflow finds:
-   1. a section in `CHANGELOG.md` whose heading is `## [0.3.0]`, `## 0.3.0`
-      or `## v0.3.0` (everything up to the next `##` heading);
-   2. the message of an **annotated** tag (`git tag -a v0.3.0 -m "…"`, or
-      `git tag -a v0.3.0` to write it in your editor — Markdown is fine);
-   3. otherwise, a list of commit subjects since the previous `v*` tag.
-4. Tag and push:
+**Every change to `main` advances the version** (`.release/config.json`
+`bumpPolicy`, checked by `release-validation.yml`), so `main` always carries
+a real version. **Nothing is released until you dispatch it.** Versions you
+never dispatch are simply skipped; the next release's notes include theirs.
 
-   ```sh
-   git tag -a v0.3.0 -m "## What's new
+1. In every pull request, bump the version: with the toolkit pinned in
+   `.release/README.md` checked out at `.toolkit`, run
+   `node .toolkit/src/release.mjs bump --app farming-rpg-maker` (a patch;
+   `--kind minor` or `--version 0.4.0-beta.1` for others). It sets
+   `release.json`, `version` in the root `Cargo.toml` and the default
+   `<Version>` in `Directory.Build.props`, and adds a `## X.Y.Z` section at
+   the top of `CHANGELOG.md` with a `DESCRIBE_CHANGES` placeholder. Run
+   `cargo check` so `Cargo.lock` follows, and replace the placeholder with the
+   change. `tools/release/versions.sh` checks that they agree; CI runs it.
+2. Merge it to `main` and wait until CI is green on that commit. The workflow
+   refuses a commit that is not on `main` or has no successful CI run (it waits
+   for a run still in progress, up to an hour).
+3. When you want to release the version on `main`, run the **Release**
+   workflow (Actions → Release → Run workflow) on `main` with the channel that
+   matches the version and **dry run** checked. It builds, packs and verifies
+   the complete bundle without creating a tag or release.
+4. Run it again with **dry run** unchecked. When the build is done, the
+   publish jobs wait for a reviewer to approve the `release` environment; the
+   final job creates the tag `vX.Y.Z` on the planned commit, uploads every
+   file to a draft, checks GitHub's digests, then publishes it.
 
-   - Fishing mini-game
-   - Faster project loading"
-   git push origin v0.3.0
-   ```
+The release notes are the `CHANGELOG.md` sections of every version after the
+latest published release, newest first. They are the GitHub Release body and
+are embedded in the Velopack package (`vpk pack --releaseNotes`), so the
+Update Center shows them. The plan fails while any of those sections still
+holds the placeholder.
 
-   Or run the **Release** workflow manually (Actions → Release → Run workflow)
-   on `main` with a version such as `0.3.0`; it creates the tag `v0.3.0` on
-   that commit.
-5. Watch the run. When the build is done, the **Publish** job waits for a
-   reviewer to approve the `release` environment; then the release is
-   published (not a draft).
-6. Start the next version: bump `Cargo.toml` and `Directory.Build.props` to
-   `0.4.0-dev` and add `## 0.4.0 (unreleased)` at the top of `CHANGELOG.md`
-   (CI's `tools/release/versions.sh` checks that they agree).
-
-A version is released once. The workflow fails when its GitHub Release
-already exists (or, for a manual run, its tag), and it never merges into or
-replaces the files of a published release: installed apps would see
-different bytes under the same version. If a publish fails half-way, run the
-workflow manually with the same version and **republish** checked; it uploads
-into the existing release (`vpk upload --merge`, replacing attached files).
-Never use it for a release users already have; release a new version
-instead.
-
-The notes are embedded in the Velopack package (`vpk pack --releaseNotes`),
-become the GitHub Release body, and are shown in the Update Center.
+A version is released once. The plan skips a version that is already
+published, and the publisher never replaces a published release or moves a
+tag: installed apps would see different bytes under the same version. If a
+publish fails half-way, run the workflow again on the same commit; it resumes
+the draft bound to that commit. Release a new version for anything else.
 
 ### What the workflow produces
 
@@ -113,21 +109,24 @@ other.
 
 ### How a release is protected
 
-- **Only `main`, only green, only once.** The `version` job checks that the
-  commit is on `main`, that `ci.yml` passed on it, that the repository is at
-  the release version, and that the version is not released yet, before
-  anything is built.
+- **Only `main`, only green, only once.** The `plan` job only runs on
+  `main` and selects the version only if it is not published yet; the
+  `version` job checks that the commit is on `main`, that `ci.yml` passed on
+  it and that the repository is at the release version, before anything is
+  built.
 - **Least privilege.** The workflow token is read-only in every job that
   builds or tests (they compile hundreds of crates and run NuGet build
-  targets), and no checkout keeps credentials. Only `publish` can write. It
-  checks out nothing and runs no repository code: it attests and uploads the
-  bundle `release` built.
-- **Approval.** `publish` runs in the `release` environment. In the repository
-  settings (Settings → Environments → `release`), add required reviewers and
-  restrict deployments to tags matching `v*.*.*`. Also add a tag ruleset
-  (Settings → Rules → Rulesets) that lets only maintainers create `v*` tags.
-  Without the environment settings GitHub creates an unprotected `release`
-  environment and the job runs without approval.
+  targets), and no checkout keeps credentials. Only the shared `finish`
+  publish job can write. It runs only the pinned release-infrastructure code,
+  on the bundle the earlier jobs built and staged.
+- **Approval.** The `publish` jobs run in the `release` environment. In the
+  repository settings (Settings → Environments → `release`), add required
+  reviewers and restrict deployments to the `main` branch (the workflow is
+  dispatched there; a tag-only rule blocks it). A tag ruleset (Settings →
+  Rules → Rulesets) that limits who creates `v*` tags must let GitHub Actions
+  bypass it, since the publisher creates the tag. Without the environment
+  settings GitHub creates an unprotected `release` environment and the jobs
+  run without approval.
 - **Pinned inputs.** Actions are pinned to commit SHAs (with the version in a
   comment; Dependabot bumps them), the Steam Runtime SDK image to a digest,
   `rustup-init` to a checksum (`tools/ci/install-rust.sh`), the .NET SDK to
@@ -145,11 +144,13 @@ other.
 
 ### Versions in builds
 
-The Cargo workspace (`Cargo.toml`) and `Directory.Build.props` carry the
-same version: the next release with `-dev` between releases (`0.3.0-dev`),
-the release version in the release commit. The release workflow also passes
-`-p:Version=X.Y.Z`, which stamps both `FarmingRpgMaker.exe` and
-`FarmingRpgMaker.Updates.dll`; `vpk pack --packVersion` uses the same value.
+`release.json`, the Cargo workspace (`Cargo.toml`) and `Directory.Build.props`
+carry the same version, the one the latest change to `main` advanced to. The
+release workflow also passes `-p:Version=X.Y.Z`, which stamps both
+`FarmingRpgMaker.exe` and `FarmingRpgMaker.Updates.dll` and marks them as a
+release build; `vpk pack --packVersion` uses the same value. Other builds
+(`dotnet run`, CI) are development builds: their Help links open the docs on
+`main`, since their version may never get a tag.
 Crash logs, `fe_version` and the web player's `version()` report the Cargo
 version.
 

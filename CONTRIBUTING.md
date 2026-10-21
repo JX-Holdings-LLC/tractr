@@ -188,9 +188,10 @@ the release).
 
 - Keep commits focused, with a short imperative subject and a body that says
   why.
-- Add a line to the `## X.Y.Z (unreleased)` section of
-  [CHANGELOG.md](CHANGELOG.md) for anything a creator or player would
-  notice.
+- Bump the version in every pull request (`node .toolkit/src/release.mjs
+  bump --app farming-rpg-maker`) and describe the change in the new
+  `## X.Y.Z` section of [CHANGELOG.md](CHANGELOG.md); it becomes the release
+  notes.
 - Versions, tags and the release workflow are in
   [docs/RELEASING.md](docs/RELEASING.md).
 - Report security problems privately ([SECURITY.md](SECURITY.md)).

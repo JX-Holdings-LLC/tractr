@@ -85,7 +85,7 @@ public sealed partial class CreatorGuideNamesTests
         const string Repo = "https://github.com/jxburros/farm-game-engine-native/blob/";
         Assert.Equal(Repo + "v0.3.0/docs/", HelpContent.DocsBaseUrlFor("0.3.0"));
         Assert.Equal(Repo + "v0.4.0-beta.1/docs/", HelpContent.DocsBaseUrlFor("0.4.0-beta.1"));
-        Assert.Equal(Repo + "main/docs/", HelpContent.DocsBaseUrlFor("0.3.0-dev"));
+        Assert.Equal(Repo + "main/docs/", HelpContent.DocsBaseUrlFor(""));
         Assert.Equal(Repo + "main/docs/", HelpContent.DocsBaseUrlFor("0.0.0"));
     }
 }
