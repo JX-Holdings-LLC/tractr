@@ -12,7 +12,10 @@ internal static class Ui
 {
     public static TextBlock Text(string text, params string[] classes)
     {
-        var block = new TextBlock { Text = text, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
+        // Headings and section labels are the label voice (Oswald capitals); KickerText draws them in caps.
+        var block = classes.Any(c => c is "h2" or "h3" or "section" or "category")
+            ? new FarmingRpgMaker.App.Controls.KickerText { Text = text, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center }
+            : new TextBlock { Text = text, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
         foreach (var c in classes)
         {
             block.Classes.Add(c);

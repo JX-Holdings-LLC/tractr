@@ -2,25 +2,50 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:FarmingRpgMaker.App.Controls"
              x:Class="FarmingRpgMaker.App.App"
-             Name="Farming RPG Maker"
+             Name="Tractr"
              RequestedThemeVariant="Light">
 
-  <!-- Warm farm palette from the web app (src/index.css, oklch → sRGB). -->
+  <!-- Tractr's "Seed Catalog" look (docs/brand/STYLE.md): warm paper, a few flat printing inks, a red
+       tractor. Colours are named after the inks. The older Farm* resource names stay (the views
+       use them) and now point at the Seed Catalog palette: Primary is Barn Red, Secondary Field
+       Green, Accent Mustard. -->
   <Application.Resources>
     <ResourceDictionary>
-      <Color x:Key="FarmBackgroundColor">#F8F5EE</Color>
-      <Color x:Key="FarmCardColor">#F0EBE0</Color>
-      <Color x:Key="FarmSurfaceColor">#FFFDF8</Color>
-      <Color x:Key="FarmForegroundColor">#272833</Color>
-      <Color x:Key="FarmPrimaryColor">#095C34</Color>
-      <Color x:Key="FarmPrimaryHoverColor">#0B6E3F</Color>
-      <Color x:Key="FarmSecondaryColor">#E1791B</Color>
-      <Color x:Key="FarmSecondaryHoverColor">#EC8A2E</Color>
-      <Color x:Key="FarmAccentColor">#F9C718</Color>
-      <Color x:Key="FarmMutedColor">#E4DDCF</Color>
-      <Color x:Key="FarmMutedForegroundColor">#5F6275</Color>
-      <Color x:Key="FarmBorderColor">#D4CDBF</Color>
-      <Color x:Key="FarmDestructiveColor">#C62828</Color>
+      <!-- Inks -->
+      <Color x:Key="PaperColor">#F2E5C6</Color>
+      <Color x:Key="LightPaperColor">#F7EED6</Color>
+      <Color x:Key="SandColor">#E9DAB6</Color>
+      <Color x:Key="BarnRedColor">#B5332A</Color>
+      <Color x:Key="BarnRedHoverColor">#9E2B23</Color>
+      <Color x:Key="HubRedColor">#8F2A22</Color>
+      <Color x:Key="FieldGreenColor">#4F6B3A</Color>
+      <Color x:Key="FieldGreenHoverColor">#5E7C45</Color>
+      <Color x:Key="SproutColor">#7D9440</Color>
+      <Color x:Key="MustardColor">#E3A83A</Color>
+      <Color x:Key="MustardHoverColor">#ECBA55</Color>
+      <Color x:Key="SunColor">#F0C35E</Color>
+      <Color x:Key="WheatColor">#C58F2C</Color>
+      <Color x:Key="PondColor">#7FA6A6</Color>
+      <Color x:Key="InkColor">#3A2A1E</Color>
+      <Color x:Key="SaddleColor">#6D5A40</Color>
+      <Color x:Key="KraftColor">#C9B48A</Color>
+
+      <!-- Roles. Foreground on Paper is 11:1, Saddle (small text) 5.3:1, Barn Red and Field Green 4.8:1. -->
+      <Color x:Key="FarmBackgroundColor">#F2E5C6</Color>
+      <Color x:Key="FarmCardColor">#E9DAB6</Color>
+      <Color x:Key="FarmSurfaceColor">#F7EED6</Color>
+      <Color x:Key="FarmForegroundColor">#3A2A1E</Color>
+      <Color x:Key="FarmPrimaryColor">#B5332A</Color>
+      <Color x:Key="FarmPrimaryHoverColor">#9E2B23</Color>
+      <Color x:Key="FarmSecondaryColor">#4F6B3A</Color>
+      <Color x:Key="FarmSecondaryHoverColor">#5E7C45</Color>
+      <Color x:Key="FarmAccentColor">#E3A83A</Color>
+      <Color x:Key="FarmMutedColor">#E4D5B0</Color>
+      <Color x:Key="FarmMutedForegroundColor">#6D5A40</Color>
+      <Color x:Key="FarmBorderColor">#C9B48A</Color>
+      <!-- Errors use Hub Red (the tractor's darker red), always with an icon or a label, so they are
+           not confused with Barn Red primary actions. -->
+      <Color x:Key="FarmDestructiveColor">#8F2A22</Color>
 
       <SolidColorBrush x:Key="FarmBackgroundBrush" Color="{StaticResource FarmBackgroundColor}" />
       <SolidColorBrush x:Key="FarmCardBrush" Color="{StaticResource FarmCardColor}" />
@@ -33,13 +58,159 @@
       <SolidColorBrush x:Key="FarmMutedForegroundBrush" Color="{StaticResource FarmMutedForegroundColor}" />
       <SolidColorBrush x:Key="FarmBorderBrush" Color="{StaticResource FarmBorderColor}" />
       <SolidColorBrush x:Key="FarmDestructiveBrush" Color="{StaticResource FarmDestructiveColor}" />
-      <SolidColorBrush x:Key="FarmCodeBackgroundBrush" Color="#EEE8DA" />
-      <SolidColorBrush x:Key="FarmSuccessTintBrush" Color="#E3F1E7" />
-      <SolidColorBrush x:Key="FarmUpdateTintBrush" Color="#FDF3D0" />
-      <SolidColorBrush x:Key="FarmWarningTintBrush" Color="#FBEBDC" />
-      <SolidColorBrush x:Key="FarmErrorTintBrush" Color="#FBE3E1" />
+      <SolidColorBrush x:Key="FieldGreenBrush" Color="{StaticResource FieldGreenColor}" />
+      <SolidColorBrush x:Key="MustardBrush" Color="{StaticResource MustardColor}" />
+      <SolidColorBrush x:Key="PaperBrush" Color="{StaticResource PaperColor}" />
+      <SolidColorBrush x:Key="InkBrush" Color="{StaticResource InkColor}" />
+      <SolidColorBrush x:Key="FarmCodeBackgroundBrush" Color="#EBDDB9" />
+      <!-- Status tints: flat washes of the inks on Paper. Success is green, update is sun yellow,
+           warning is wheat, error is Hub Red, information is Pond. -->
+      <SolidColorBrush x:Key="FarmSuccessTintBrush" Color="#DEE3C3" />
+      <SolidColorBrush x:Key="FarmUpdateTintBrush" Color="#F6E5AE" />
+      <SolidColorBrush x:Key="FarmWarningTintBrush" Color="#F1D9A2" />
+      <SolidColorBrush x:Key="FarmErrorTintBrush" Color="#F0D3C3" />
+      <SolidColorBrush x:Key="FarmInfoTintBrush" Color="#D9E4DA" />
+      <SolidColorBrush x:Key="FarmSuccessBorderBrush" Color="#9DAE7B" />
+      <SolidColorBrush x:Key="FarmUpdateBorderBrush" Color="#E3A83A" />
+      <SolidColorBrush x:Key="FarmWarningBorderBrush" Color="#C58F2C" />
+      <SolidColorBrush x:Key="FarmErrorBorderBrush" Color="#8F2A22" />
+      <!-- Paper grain, a finish for large fields only (never under small icons or logos). -->
+      <ImageBrush x:Key="PaperGrainBrush" Source="avares://FarmingRpgMaker/Assets/paper-grain.png"
+                  TileMode="Tile" DestinationRect="0,0,256,256" />
 
-      <!-- Icons (Material Design Icons, Apache-2.0). -->
+      <!-- Four type voices (docs/brand/STYLE.md). Inter stays behind them for glyphs they lack. -->
+      <FontFamily x:Key="DisplayFont">avares://FarmingRpgMaker/Assets/Fonts#Alfa Slab One, $Default</FontFamily>
+      <FontFamily x:Key="ScriptFont">avares://FarmingRpgMaker/Assets/Fonts#Lobster, $Default</FontFamily>
+      <FontFamily x:Key="LabelFont">avares://FarmingRpgMaker/Assets/Fonts#Oswald, $Default</FontFamily>
+      <FontFamily x:Key="BodyFont">avares://FarmingRpgMaker/Assets/Fonts#Courier Prime, $Default</FontFamily>
+      <FontFamily x:Key="ContentControlThemeFontFamily">avares://FarmingRpgMaker/Assets/Fonts#Courier Prime, $Default</FontFamily>
+      <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
+
+      <!-- Fluent control colours, mapped to the inks. -->
+      <SolidColorBrush x:Key="ButtonBackground" Color="#F7EED6" />
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#F6E7BC" />
+      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#E9D6A6" />
+      <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#EADFC3" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#B5332A" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#9E2B23" />
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#D8CBA6" />
+      <SolidColorBrush x:Key="ButtonForeground" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#8C7C5E" />
+
+      <SolidColorBrush x:Key="AccentButtonBackground" Color="#B5332A" />
+      <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="#9E2B23" />
+      <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="#8F2A22" />
+      <SolidColorBrush x:Key="AccentButtonBackgroundDisabled" Color="#D9B7A6" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrush" Color="#B5332A" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="#9E2B23" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="#8F2A22" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrushDisabled" Color="#D9B7A6" />
+      <SolidColorBrush x:Key="AccentButtonForeground" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="AccentButtonForegroundDisabled" Color="#F7EED6" />
+
+      <SolidColorBrush x:Key="ToggleButtonBackground" Color="#F7EED6" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#F6E7BC" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#E9D6A6" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="#E3A83A" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="#ECBA55" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="#D79A2B" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="#B5332A" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonForeground" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonForegroundPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonForegroundChecked" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="#3A2A1E" />
+
+      <SolidColorBrush x:Key="HyperlinkButtonForeground" Color="#B5332A" />
+      <SolidColorBrush x:Key="HyperlinkButtonForegroundPointerOver" Color="#8F2A22" />
+      <SolidColorBrush x:Key="HyperlinkButtonForegroundPressed" Color="#6E1D17" />
+
+      <SolidColorBrush x:Key="TextControlBackground" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#FFFAEC" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#6D5A40" />
+      <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#B5332A" />
+      <SolidColorBrush x:Key="TextControlForeground" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6D5A40" />
+      <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#E3A83A" />
+
+      <SolidColorBrush x:Key="ComboBoxBackground" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#F6E7BC" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#6D5A40" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#B5332A" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushFocused" Color="#B5332A" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#F6E7BC" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#E3A83A" />
+      <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#ECBA55" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="#3A2A1E" />
+
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#F7EED6" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#E3A83A" />
+      <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#D79A2B" />
+      <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="#3A2A1E" />
+
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#4F6B3A" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="#5E7C45" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="#3D5530" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked" Color="#4F6B3A" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeCheckedPointerOver" Color="#5E7C45" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeCheckedPressed" Color="#3D5530" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillUnchecked" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUnchecked" Color="#6D5A40" />
+      <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" Color="#F2E5C6" />
+
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFill" Color="#4F6B3A" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFillPointerOver" Color="#5E7C45" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedFillPressed" Color="#3D5530" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStroke" Color="#4F6B3A" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStrokePointerOver" Color="#5E7C45" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseCheckedStrokePressed" Color="#3D5530" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseFill" Color="#FBF5E3" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStroke" Color="#6D5A40" />
+      <SolidColorBrush x:Key="RadioButtonCheckGlyphFill" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="RadioButtonCheckGlyphStroke" Color="#F2E5C6" />
+
+      <SolidColorBrush x:Key="TabItemHeaderForegroundUnselected" Color="#6D5A40" />
+      <SolidColorBrush x:Key="TabItemHeaderForegroundUnselectedPointerOver" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="TabItemHeaderForegroundUnselectedPressed" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="TabItemHeaderForegroundSelected" Color="#B5332A" />
+      <SolidColorBrush x:Key="TabItemHeaderForegroundSelectedPointerOver" Color="#9E2B23" />
+      <SolidColorBrush x:Key="TabItemHeaderForegroundSelectedPressed" Color="#9E2B23" />
+      <SolidColorBrush x:Key="TabItemHeaderSelectedPipeFill" Color="#B5332A" />
+      <x:Double x:Key="TabItemHeaderFontSize">15</x:Double>
+      <FontWeight x:Key="TabItemHeaderThemeFontWeight">Bold</FontWeight>
+
+      <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#F7EED6" />
+      <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#F6E7BC" />
+      <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#E9D6A6" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#C9B48A" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#B5332A" />
+      <SolidColorBrush x:Key="ExpanderHeaderForeground" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#C9B48A" />
+
+      <SolidColorBrush x:Key="ToolTipBackground" Color="#3A2A1E" />
+      <SolidColorBrush x:Key="ToolTipForeground" Color="#F2E5C6" />
+      <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#3A2A1E" />
+
+      <!-- Icons (Material Design Icons, Apache-2.0): filled silhouettes in palette colours. -->
       <StreamGeometry x:Key="IconPlay">M8,5.14V19.14L19,12.14L8,5.14Z</StreamGeometry>
       <StreamGeometry x:Key="IconPencil">M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z</StreamGeometry>
       <StreamGeometry x:Key="IconDownload">M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z</StreamGeometry>
@@ -66,31 +237,48 @@
   <Application.Styles>
     <FluentTheme>
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Light" Accent="#FF095C34" RegionColor="#FFF8F5EE" BaseHigh="#FF272833" />
+        <ColorPaletteResources x:Key="Light" Accent="#FFB5332A" RegionColor="#FFF2E5C6" BaseHigh="#FF3A2A1E"
+                               AltHigh="#FFF7EED6" ErrorText="#FF8F2A22" />
       </FluentTheme.Palettes>
     </FluentTheme>
 
     <StyleInclude Source="avares://FarmingRpgMaker/Game/GameStyles.axaml" />
 
+    <!-- The window is the canvas: Paper with a very fine grain. Text sits on Light paper cards. -->
     <Style Selector="Window">
-      <Setter Property="Background" Value="{StaticResource FarmBackgroundBrush}" />
+      <Setter Property="Background" Value="{StaticResource PaperGrainBrush}" />
       <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
 
-    <!-- Typography -->
+    <!-- Typography. h1 is Alfa Slab One (screen titles, big numbers); h2/h3 are Oswald caps
+         (KickerText draws them in capitals); Courier Prime is the body. -->
     <Style Selector="TextBlock.h1">
-      <Setter Property="FontSize" Value="22" />
-      <Setter Property="FontWeight" Value="Bold" />
-      <Setter Property="LetterSpacing" Value="-0.3" />
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="Normal" />
+      <Setter Property="LetterSpacing" Value="0.5" />
+      <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
     </Style>
     <Style Selector="TextBlock.h2">
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
       <Setter Property="FontSize" Value="16" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="2.2" />
+      <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
     </Style>
     <Style Selector="TextBlock.h3">
-      <Setter Property="FontSize" Value="13" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="2" />
       <Setter Property="Foreground" Value="{StaticResource FarmMutedForegroundBrush}" />
+    </Style>
+    <Style Selector="TextBlock.script">
+      <Setter Property="FontFamily" Value="{StaticResource ScriptFont}" />
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="Normal" />
     </Style>
     <Style Selector="TextBlock.muted, SelectableTextBlock.muted">
       <Setter Property="Foreground" Value="{StaticResource FarmMutedForegroundBrush}" />
@@ -99,7 +287,7 @@
       <Setter Property="FontSize" Value="12" />
     </Style>
 
-    <!-- Surfaces -->
+    <!-- Surfaces: Light paper cards on Paper, Kraft hairlines, soft 10 px corners, no soft shadows. -->
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
       <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
@@ -107,11 +295,11 @@
       <Setter Property="CornerRadius" Value="10" />
       <Setter Property="Padding" Value="18" />
     </Style>
+    <!-- The header band: Light paper under a Barn Red rule, like a catalog page's masthead. -->
     <Style Selector="Border.header">
-      <Setter Property="Background" Value="{StaticResource FarmCardBrush}" />
-      <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="BoxShadow" Value="0 1 3 0 #14000000" />
+      <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmPrimaryBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,3" />
     </Style>
     <Style Selector="Border.placeholder">
       <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
@@ -130,37 +318,54 @@
       <Setter Property="Background" Value="{StaticResource FarmCardBrush}" />
     </Style>
 
-    <!-- Buttons: "accent" (Fluent, green via the palette) and "secondary" (warm orange). -->
+    <!-- Buttons are Oswald (label voice). "accent" is the one primary action in Barn Red,
+         "secondary" is Field Green, "badge" is a Mustard tag. -->
     <Style Selector="Button">
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Padding" Value="14,7" />
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="LetterSpacing" Value="0.8" />
+    </Style>
+    <Style Selector="ToggleButton">
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="0.8" />
     </Style>
     <Style Selector="Button.large">
-      <Setter Property="Padding" Value="16,9" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="18,9" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="LetterSpacing" Value="1.2" />
     </Style>
     <Style Selector="Button.secondary">
       <Setter Property="Background" Value="{StaticResource FarmSecondaryBrush}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmSecondaryBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource PaperBrush}" />
     </Style>
     <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource FarmSecondaryHoverColor}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmSecondaryHoverColor}" />
+      <Setter Property="Foreground" Value="{StaticResource PaperBrush}" />
     </Style>
     <Style Selector="Button.secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="{StaticResource FarmSecondaryColor}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Background" Value="#3D5530" />
+      <Setter Property="BorderBrush" Value="#3D5530" />
+      <Setter Property="Foreground" Value="{StaticResource PaperBrush}" />
     </Style>
     <Style Selector="Button.badge">
       <Setter Property="Background" Value="{StaticResource FarmAccentBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
+      <Setter Property="BorderThickness" Value="1.5" />
       <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
       <Setter Property="CornerRadius" Value="999" />
       <Setter Property="Padding" Value="12,5" />
       <Setter Property="FontSize" Value="12" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1" />
     </Style>
     <Style Selector="Button.badge:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Background" Value="#FBD64D" />
+      <Setter Property="Background" Value="{StaticResource MustardHoverColor}" />
+      <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
       <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
     </Style>
     <Style Selector="Button.subtle">
@@ -173,7 +378,31 @@
       <Setter Property="Height" Value="16" />
     </Style>
 
-    <!-- Update Center status card tones -->
+    <!-- Lists: Light paper, a Kraft hairline, and Mustard for the selection (always with Ink text). -->
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#F6E7BC" />
+      <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource FarmAccentBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
+    </Style>
+
+    <!-- Tabs: Oswald, with a Barn Red rule under the page you are on. -->
+    <Style Selector="TabItem">
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+      <Setter Property="LetterSpacing" Value="1.6" />
+      <Setter Property="Padding" Value="12,6" />
+    </Style>
+
+    <!-- Update Center status card tones: success green, update sun, warning wheat, error Hub Red.
+         Every tone also has its own icon, so colour is never the only signal. -->
     <Style Selector="Border.status">
       <Setter Property="BorderThickness" Value="1,1,1,1" />
       <Setter Property="CornerRadius" Value="10" />
@@ -183,19 +412,19 @@
     </Style>
     <Style Selector="Border.status.success">
       <Setter Property="Background" Value="{StaticResource FarmSuccessTintBrush}" />
-      <Setter Property="BorderBrush" Value="#9CC9A9" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmSuccessBorderBrush}" />
     </Style>
     <Style Selector="Border.status.update">
       <Setter Property="Background" Value="{StaticResource FarmUpdateTintBrush}" />
-      <Setter Property="BorderBrush" Value="#EBC954" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmUpdateBorderBrush}" />
     </Style>
     <Style Selector="Border.status.warning">
       <Setter Property="Background" Value="{StaticResource FarmWarningTintBrush}" />
-      <Setter Property="BorderBrush" Value="#E8B383" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmWarningBorderBrush}" />
     </Style>
     <Style Selector="Border.status.error">
       <Setter Property="Background" Value="{StaticResource FarmErrorTintBrush}" />
-      <Setter Property="BorderBrush" Value="#E7A19B" />
+      <Setter Property="BorderBrush" Value="{StaticResource FarmErrorBorderBrush}" />
     </Style>
     <Style Selector="PathIcon.status-icon">
       <Setter Property="Width" Value="28" />
@@ -203,49 +432,54 @@
       <Setter Property="Foreground" Value="{StaticResource FarmMutedForegroundBrush}" />
     </Style>
     <Style Selector="Border.success PathIcon.status-icon">
-      <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource FieldGreenBrush}" />
     </Style>
     <Style Selector="Border.update PathIcon.status-icon">
-      <Setter Property="Foreground" Value="#B7860B" />
+      <Setter Property="Foreground" Value="#A9741C" />
     </Style>
     <Style Selector="Border.warning PathIcon.status-icon">
-      <Setter Property="Foreground" Value="{StaticResource FarmSecondaryBrush}" />
+      <Setter Property="Foreground" Value="#A9741C" />
     </Style>
     <Style Selector="Border.error PathIcon.status-icon">
       <Setter Property="Foreground" Value="{StaticResource FarmDestructiveBrush}" />
     </Style>
     <Style Selector="ProgressBar">
-      <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource FieldGreenBrush}" />
       <Setter Property="Background" Value="{StaticResource FarmMutedBrush}" />
-      <Setter Property="Height" Value="8" />
-      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Height" Value="10" />
+      <Setter Property="CornerRadius" Value="5" />
     </Style>
 
     <!-- Markdown (controls:MarkdownView) -->
     <Style Selector="controls|MarkdownView SelectableTextBlock">
-      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontSize" Value="13.5" />
       <Setter Property="LineHeight" Value="21" />
-      <Setter Property="SelectionBrush" Value="#66F9C718" />
+      <Setter Property="SelectionBrush" Value="#66E3A83A" />
     </Style>
     <Style Selector="SelectableTextBlock.md-h1">
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
       <Setter Property="FontSize" Value="19" />
       <Setter Property="LineHeight" Value="26" />
-      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontWeight" Value="Normal" />
     </Style>
     <Style Selector="SelectableTextBlock.md-h2">
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
       <Setter Property="FontSize" Value="16" />
       <Setter Property="LineHeight" Value="23" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="1.6" />
       <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
     </Style>
     <Style Selector="SelectableTextBlock.md-h3">
+      <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
       <Setter Property="FontSize" Value="14" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="1.2" />
     </Style>
     <Style Selector="TextBlock.md-marker">
       <Setter Property="FontSize" Value="14" />
       <Setter Property="LineHeight" Value="21" />
-      <Setter Property="Foreground" Value="{StaticResource FarmSecondaryBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="Border.md-quote">

@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.4.0
+
+- **Farming RPG Maker is now Tractr.** The app, its windows, the Update Center,
+  the README and the docs use the new name. What stays for now, so updates and
+  projects carry over: the executable and installer names
+  (`FarmingRpgMaker.exe`, `FarmingRpgMaker-win-Setup.exe`), the
+  `%APPDATA%\FarmingRpgMaker` folder, the Velopack package id, the C# and
+  Rust names, and the "Made with Farming RPG Maker" credit that games can show.
+- **A new look for the editor: the Seed Catalog.** Warm paper, a few flat
+  printing inks (Barn Red, Field Green, Mustard), a red-ribbon wordmark in the
+  header, Alfa Slab One titles, Oswald labels and buttons and Courier Prime
+  text. Barn Red marks the one primary action and the tab you are on, Field
+  Green confirms, Mustard marks a selection, and errors use a deeper Hub Red
+  with an icon or a label. Soft shadows are gone. The map tools panel is a
+  little wider (340 px) to fit the new type, and its width is still yours to
+  drag.
+- **A new app icon:** the Tractr seal. Games you export keep the wheat-and-field
+  icon as their default (`default-game-icon-256.png`); pick your own in the
+  export settings as before.
+- **Games are untouched.** Play Mode, the in-game HUD, dialogue, shops and
+  toasts, the map's tiles and the Starter Farm look exactly as they did.
+- **Docs and marketing.** A new README with a hero banner, four seed packets
+  and catalog plates of Edit Mode, Play Mode and the content forms, all made
+  with Vixl ([docs/brand](docs/brand/README.md)). The brand guide
+  ([STYLE.md](docs/brand/STYLE.md)) and a note on how the editor builds it
+  ([APP-UI.md](docs/brand/APP-UI.md)) are in the repository, with the Vixl
+  scripts that rebuild every picture, and there is a docs index
+  ([docs/README.md](docs/README.md)).
+- **For contributors:** the editor ships Alfa Slab One, Lobster, Oswald and
+  Courier Prime (SIL Open Font License; notices in `THIRD-PARTY-dotnet.txt`).
+  The Welcome window has a new reference screenshot (`fixtures/editor/welcome.png`),
+  as does the Content tab; `scripts/generate-app-icon.py` now cuts the app icon
+  from the brand art and `scripts/generate-game-icon.py` draws the games' icon.
+
 ## 0.3.2
 
 - **Windows release builds need no Visual C++ runtime.** The release workflow's

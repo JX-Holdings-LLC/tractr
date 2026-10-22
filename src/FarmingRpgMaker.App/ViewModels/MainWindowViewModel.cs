@@ -73,7 +73,7 @@ public sealed class MainWindowViewModel : ObservableObject, IShellHost
 
     public UpdateCoordinator Updates { get; }
 
-    public string Title => "Farming RPG Maker";
+    public string Title => "Tractr";
 
     public string ProjectName
     {

@@ -83,6 +83,38 @@ public sealed class ScreenshotTests
         Save(window, "update-center-not-installed.png");
     }
 
+    [AvaloniaFact]
+    public void WelcomeWindow_FirstRun()
+    {
+        var window = new WelcomeWindow();
+        window.Show();
+        Pump();
+
+        Save(window, "welcome.png");
+    }
+
+    /// <summary>
+    /// The About window shows the runtime and OS, which differ between machines, so it is saved
+    /// for docs/media only and not compared with a reference.
+    /// </summary>
+    [AvaloniaFact]
+    public void AboutWindow_ForDocs()
+    {
+        var window = new AboutWindow { DataContext = new AboutViewModel("0.2.0", new RecordingUrlLauncher()) };
+        window.Show();
+        Pump();
+
+        var frame = GameTestHost.Capture(window);
+        Assert.True(frame.PixelSize.Width > 0);
+        if (!string.IsNullOrEmpty(OutputDir))
+        {
+            Directory.CreateDirectory(OutputDir);
+            frame.Save(Path.Combine(OutputDir, "about.png"), PngBitmapEncoderOptions.Default);
+        }
+
+        window.Close();
+    }
+
     private static void Save(Avalonia.Controls.Window window, string fileName)
     {
         var frame = GameTestHost.Capture(window);

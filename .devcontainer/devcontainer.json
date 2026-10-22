@@ -1,5 +1,5 @@
 {
-  "name": "Farming RPG Maker",
+  "name": "Tractr",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."

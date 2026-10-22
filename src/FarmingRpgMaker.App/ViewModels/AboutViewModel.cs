@@ -11,12 +11,12 @@ namespace FarmingRpgMaker.App.ViewModels;
 /// <param name="logFolder">Where the editor's log files are (default <see cref="AppDataPaths.LogsDirectory"/>).</param>
 public sealed class AboutViewModel(string version, IUrlLauncher launcher, string? logFolder = null) : ObservableObject
 {
-    public string Title => "Farming RPG Maker";
+    public string Title => "Tractr";
 
     public string VersionText => $"Version {version}";
 
     public string Description =>
-        "Build and play cozy farming RPGs: design maps, crops, NPCs and quests, then jump straight into play mode.";
+        "The farm game engine. Build and play cozy farming RPGs: design maps, crops, NPCs and quests, then jump straight into play mode.";
 
     public string RuntimeText =>
         $"{RuntimeInformation.FrameworkDescription} · Avalonia {typeof(Avalonia.Application).Assembly.GetName().Version?.ToString(3)} · {RuntimeInformation.OSDescription}";

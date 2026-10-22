@@ -65,10 +65,10 @@ public sealed class ExportGameViewModel : ObservableObject
         OpenFolderCommand = new RelayCommand<string>(path => _launcher.OpenFolder(path));
     }
 
-    /// <summary><c>Documents/Farming RPG Maker/Exports</c> until the creator picks a folder.</summary>
+    /// <summary><c>Documents/Tractr/Exports</c> until the creator picks a folder.</summary>
     public static string DefaultOutputFolder => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments, Environment.SpecialFolderOption.DoNotVerify),
-        "Farming RPG Maker",
+        "Tractr",
         "Exports");
 
     public ExportSummary Summary { get; }

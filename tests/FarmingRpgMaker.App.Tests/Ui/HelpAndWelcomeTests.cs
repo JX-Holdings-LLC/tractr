@@ -100,7 +100,7 @@ public sealed class HelpAndWelcomeTests
         var welcome = Assert.IsType<WelcomeWindow>(window.OpenWelcome);
         Assert.Equal(WelcomeWindow.Steps.Count, FindByName<StackPanel>(welcome, "WelcomeSteps").Children.Count);
         var text = AllVisibleText(welcome);
-        Assert.Contains("Welcome to Farming RPG Maker", text, StringComparison.Ordinal);
+        Assert.Contains("Welcome to Tractr", text, StringComparison.Ordinal);
         Assert.Contains("F5", text, StringComparison.Ordinal);
         Assert.Contains("Export Game", text, StringComparison.Ordinal);
 
@@ -129,7 +129,7 @@ public sealed class HelpAndWelcomeTests
     {
         var (window, viewModel, launcher) = Open(NewDataDirectory());
         Assert.Equal(
-            ["_Welcome Tour", "_Creator Guide", "_Keyboard Shortcuts", "_Language", "_Update Center…", "_About Farming RPG Maker"],
+            ["_Welcome Tour", "_Creator Guide", "_Keyboard Shortcuts", "_Language", "_Update Center…", "_About Tractr"],
             HelpHeaders(window));
 
         viewModel.WelcomeCommand.Execute(null);

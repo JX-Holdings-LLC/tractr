@@ -52,16 +52,15 @@
       </MenuItem>
     </Menu>
 
-    <!-- Header, mirrors the web app: icon + title + "Playing/Editing: name", actions on the right. -->
-    <Border DockPanel.Dock="Top" Classes="header" Padding="20,12">
+    <!-- Masthead: the Tractr ribbon, then where you are ("Editing: Starter Farm"), actions on the right. -->
+    <Border DockPanel.Dock="Top" Classes="header" Padding="20,10">
       <Grid ColumnDefinitions="Auto,*,Auto">
-        <Image Grid.Column="0" Source="avares://FarmingRpgMaker/Assets/app-icon-256.png"
-               Width="40" Height="40" Margin="0,0,12,0" VerticalAlignment="Center"
+        <Image Name="HeaderLogo" Grid.Column="0" Source="avares://FarmingRpgMaker/Assets/tractr-logo.png"
+               Width="224" Height="56" Margin="0,0,22,0" VerticalAlignment="Center"
+               AutomationProperties.Name="{Binding Title}"
                RenderOptions.BitmapInterpolationMode="HighQuality" />
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-          <TextBlock Name="HeaderTitle" Classes="h1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-          <TextBlock Name="HeaderSubtitle" Classes="muted" FontSize="13" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
+        <TextBlock Name="HeaderSubtitle" Grid.Column="1" VerticalAlignment="Center" FontSize="15"
+                   Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
           <Button Name="UpdateBadge" Classes="badge"
                   IsVisible="{Binding IsUpdateBadgeVisible}"

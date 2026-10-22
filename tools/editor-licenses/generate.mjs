@@ -87,13 +87,14 @@ packages.sort((a, b) => a.name.localeCompare(b.name, "en"));
 const standardTexts = { MIT: "MIT.txt", "MS-PL": "MS-PL.txt", "Apache-2.0": "Apache-2.0.txt" };
 const out = [];
 out.push(
-  "Third-party software in the Farming RPG Maker editor",
+  "Third-party software in the Tractr editor",
   "====================================================",
   "",
-  "Farming RPG Maker is free software under the MIT License (LICENSE in the",
+  "Tractr is free software under the MIT License (LICENSE in the",
   "source repository). The editor is a .NET application built on the open-source",
   "NuGet packages listed below; their licenses follow. It also includes the .NET",
-  "runtime, icons from Material Design Icons and the Inter typeface, whose licenses",
+  "runtime, icons from Material Design Icons, the Inter typeface and the Alfa Slab One,",
+  "Lobster, Oswald and Courier Prime fonts, whose licenses",
   "are at the end of this file. The Rust engine library (farm_ffi) and the game",
   "player templates have their own notices in THIRD-PARTY-rust.txt.",
   "",
@@ -159,6 +160,15 @@ out.push(
   "- the Inter typeface, embedded by Avalonia.Fonts.Inter",
   "",
   clean(readFileSync(join(root, "assets", "fonts", "OFL.txt"), "utf8")),
+  "",
+  rule,
+  "OFL-1.1",
+  "",
+  "Used by:",
+  "- Alfa Slab One, Lobster, Oswald and Courier Prime, the editor's interface fonts",
+  "  (src/FarmingRpgMaker.App/Assets/Fonts)",
+  "",
+  clean(readFileSync(join(root, "assets", "fonts", "OFL-TractrInterface.txt"), "utf8")),
   "",
 );
 const generated = out.join("\n");

@@ -3,26 +3,33 @@
         xmlns:vm="using:FarmingRpgMaker.App.ViewModels"
         x:Class="FarmingRpgMaker.App.Views.AboutWindow"
         x:DataType="vm:AboutViewModel"
-        Title="About Farming RPG Maker"
+        Title="About Tractr"
         Icon="avares://FarmingRpgMaker/Assets/app.ico"
-        Width="440" SizeToContent="Height" CanResize="False"
+        Width="480" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
   <StackPanel>
-    <StackPanel Margin="28,28,28,20" Spacing="14" HorizontalAlignment="Stretch">
-      <Image Source="avares://FarmingRpgMaker/Assets/app-icon-256.png" Width="88" Height="88"
-             HorizontalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
+    <!-- The scene alone: sunburst, hills and the red tractor, framed like a catalog plate. -->
+    <Border BorderBrush="{StaticResource FarmPrimaryBrush}" BorderThickness="0,0,0,3" ClipToBounds="True">
+      <Image Name="AboutBanner" Source="avares://FarmingRpgMaker/Assets/about-banner.png" Width="480" Height="180"
+             Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality"
+             AutomationProperties.AccessibilityView="Raw" />
+    </Border>
+    <StackPanel Margin="28,22,28,20" Spacing="14" HorizontalAlignment="Stretch">
+      <Image Name="AboutLogo" Source="avares://FarmingRpgMaker/Assets/tractr-logo.png" Width="300" Height="75"
+             HorizontalAlignment="Center" AutomationProperties.Name="{Binding Title}"
+             RenderOptions.BitmapInterpolationMode="HighQuality" />
       <StackPanel Spacing="2" HorizontalAlignment="Center">
-        <TextBlock Classes="h1" Text="{Binding Title}" HorizontalAlignment="Center" />
+        <TextBlock Classes="script" Text="Grow your own worlds!" HorizontalAlignment="Center" />
         <TextBlock Name="AboutVersionText" Classes="muted" Text="{Binding VersionText}" HorizontalAlignment="Center" />
       </StackPanel>
       <TextBlock Text="{Binding Description}" TextWrapping="Wrap" TextAlignment="Center" LineHeight="20" />
-      <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
         <HyperlinkButton Content="Source on GitHub" Command="{Binding OpenRepositoryCommand}" />
         <HyperlinkButton Content="Release notes" Command="{Binding OpenReleasesCommand}" />
         <HyperlinkButton Name="AboutLicenseLink" Content="License" Command="{Binding OpenLicenseCommand}" />
         <HyperlinkButton Name="OpenLogFolderLink" Content="Log files" Command="{Binding OpenLogFolderCommand}"
                          ToolTip.Tip="{Binding LogFolderText}" />
-      </StackPanel>
+      </WrapPanel>
       <TextBlock Name="AboutLicenseText" Classes="muted small" Text="{Binding LicenseText}" TextWrapping="Wrap" TextAlignment="Center" />
       <TextBlock Classes="muted small" Text="{Binding RuntimeText}" TextWrapping="Wrap" TextAlignment="Center" />
     </StackPanel>

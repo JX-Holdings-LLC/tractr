@@ -28,8 +28,8 @@ public sealed class MainWindowTests
     {
         var (window, viewModel) = Open(new ShellComposition(new PlaceholderGameSurfaceFactory(), new PlaceholderProjectCommandHandler()));
 
-        Assert.Equal("Farming RPG Maker", window.Title);
-        Assert.Equal("Farming RPG Maker", Find<TextBlock>(window, "HeaderTitle").Text);
+        Assert.Equal("Tractr", window.Title);
+        Assert.Equal("Tractr", Avalonia.Automation.AutomationProperties.GetName(Find<Image>(window, "HeaderLogo")));
         Assert.Equal("Editing: Untitled Game", Find<TextBlock>(window, "HeaderSubtitle").Text);
         Assert.Contains("Play Mode", AllVisibleText(Find<Button>(window, "ModeToggle")), StringComparison.Ordinal);
 
@@ -56,7 +56,7 @@ public sealed class MainWindowTests
         var file = menu.Items.OfType<MenuItem>().First().Items.OfType<MenuItem>().Select(m => m.Header as string);
         Assert.Equal(["_New Project", "_Open Project…", "_Import Project JSON…", "_Export Project JSON…", "Export _Game…", "E_xit"], file);
         var help = menu.Items.OfType<MenuItem>().Last().Items.OfType<MenuItem>().Select(m => m.Header as string);
-        Assert.Equal(["_Welcome Tour", "_Creator Guide", "_Keyboard Shortcuts", "_Language", "_Update Center…", "_About Farming RPG Maker"], help);
+        Assert.Equal(["_Welcome Tour", "_Creator Guide", "_Keyboard Shortcuts", "_Language", "_Update Center…", "_About Tractr"], help);
     }
 
     [AvaloniaFact]
@@ -137,7 +137,8 @@ public sealed class MainWindowTests
         Pump();
 
         Assert.Equal("Version 0.2.0", Find<TextBlock>(window, "AboutVersionText").Text);
-        Assert.Contains("Farming RPG Maker", AllVisibleText(window), StringComparison.Ordinal);
+        Assert.Equal("Tractr", Avalonia.Automation.AutomationProperties.GetName(Find<Image>(window, "AboutLogo")));
+        Assert.Contains("farm game engine", AllVisibleText(window), StringComparison.Ordinal);
         Assert.Contains("MIT License", Find<TextBlock>(window, "AboutLicenseText").Text, StringComparison.Ordinal);
         Find<HyperlinkButton>(window, "AboutLicenseLink").Command!.Execute(null);
         Assert.EndsWith("/LICENSE", Assert.Single(launcher.Opened), StringComparison.Ordinal);

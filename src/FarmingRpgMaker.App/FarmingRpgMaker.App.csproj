@@ -4,7 +4,7 @@
     <RootNamespace>FarmingRpgMaker.App</RootNamespace>
     <!-- The executable is FarmingRpgMaker.exe (the Velopack mainExe). -->
     <AssemblyName>FarmingRpgMaker</AssemblyName>
-    <Description>Farming RPG Maker desktop app (Avalonia).</Description>
+    <Description>Tractr desktop app (Avalonia).</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>

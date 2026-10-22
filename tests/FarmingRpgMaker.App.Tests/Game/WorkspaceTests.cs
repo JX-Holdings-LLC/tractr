@@ -53,12 +53,12 @@ public sealed class WorkspaceTests
 
         // At startup it says why, and opens something else.
         var errors = second.OpenStartupProject();
-        Assert.Contains(errors, error => error.Contains("open in another Farming RPG Maker window", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("open in another Tractr window", StringComparison.Ordinal));
         Assert.NotEqual(project.Id, second.Current!.Id);
         // From the project list it is refused, and can't be deleted from there either.
         var refused = second.OpenById(project.Id);
         Assert.False(refused.Ok);
-        Assert.Contains("open in another Farming RPG Maker window", refused.Errors[0], StringComparison.Ordinal);
+        Assert.Contains("open in another Tractr window", refused.Errors[0], StringComparison.Ordinal);
         Assert.Throws<IOException>(() => second.Store.Delete(project.Id));
 
         // Once the first window lets go, it opens.

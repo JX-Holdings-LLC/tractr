@@ -17,7 +17,7 @@ public sealed class MarkdownView : Border
     public static readonly StyledProperty<string?> MarkdownProperty =
         AvaloniaProperty.Register<MarkdownView, string?>(nameof(Markdown));
 
-    private static readonly FontFamily MonoFont = new("Cascadia Mono, Consolas, DejaVu Sans Mono, monospace");
+    private static readonly FontFamily MonoFont = new("avares://FarmingRpgMaker/Assets/Fonts#Courier Prime, Cascadia Mono, Consolas, DejaVu Sans Mono, monospace");
 
     static MarkdownView()
     {
@@ -94,6 +94,8 @@ public sealed class MarkdownView : Border
                 Content = inline.Text,
                 Padding = new Thickness(0),
                 Margin = new Thickness(0),
+                MinHeight = 0,
+                FontSize = 13.5,
                 VerticalAlignment = VerticalAlignment.Center,
                 Classes = { "md-link" },
             };

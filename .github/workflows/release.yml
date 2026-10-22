@@ -437,8 +437,8 @@ jobs:
           '--packDir', 'publish',
           '--runtime', 'win-x64',
           '--mainExe', 'FarmingRpgMaker.exe',
-          '--packTitle', 'Farming RPG Maker',
-          '--packAuthors', 'Farming RPG Maker contributors',
+          '--packTitle', 'Tractr',
+          '--packAuthors', 'Tractr contributors',
           '--icon', 'src/FarmingRpgMaker.App/Assets/app.ico',
           '--releaseNotes', 'release-notes.md',
           '--outputDir', 'Releases'

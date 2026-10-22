@@ -63,7 +63,7 @@ public sealed class MapCanvas : Control, IDisposable
             Child = new Border
             {
                 BorderThickness = new Thickness(2),
-                BorderBrush = new SolidColorBrush(Color.Parse("#E7BA4B")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#E3A83A")),
                 CornerRadius = new CornerRadius(3),
                 Child = new Border
                 {

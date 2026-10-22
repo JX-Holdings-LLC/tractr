@@ -57,7 +57,7 @@ public sealed class FileLog : TraceListener
             }
 
             Trace.Listeners.Add(log);
-            log.WriteLine($"Farming RPG Maker {FarmingRpgMaker.Updates.AppVersion.Current} started on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}.");
+            log.WriteLine($"Tractr {FarmingRpgMaker.Updates.AppVersion.Current} started on {System.Runtime.InteropServices.RuntimeInformation.OSDescription}.");
             return log;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

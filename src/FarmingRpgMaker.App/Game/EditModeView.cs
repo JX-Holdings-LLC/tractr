@@ -21,7 +21,7 @@ namespace FarmingRpgMaker.App.Game;
 public sealed partial class EditModeView : UserControl
 {
     /// <summary>The map tools panel's width until the creator drags its splitter.</summary>
-    public const double DefaultPanelWidth = 300;
+    public const double DefaultPanelWidth = 340;
 
     /// <summary>Edit-mode tile size (web GameView: 28 outside play).</summary>
     public const double TileSize = 28;
@@ -49,8 +49,8 @@ public sealed partial class EditModeView : UserControl
     {
         Name = "EditCursor",
         BorderThickness = new Thickness(2),
-        BorderBrush = new SolidColorBrush(Color.Parse("#E7BA4B")),
-        BoxShadow = BoxShadows.Parse("0 0 0 1 #B3000000, 0 0 8 0 #99E7BA4B"),
+        BorderBrush = new SolidColorBrush(Color.Parse("#E3A83A")),
+        BoxShadow = BoxShadows.Parse("0 0 0 1 #B33A2A1E, 0 0 0 3 #66E3A83A"),
         IsHitTestVisible = false,
         IsVisible = false,
         HorizontalAlignment = HorizontalAlignment.Left,
@@ -175,8 +175,8 @@ public sealed partial class EditModeView : UserControl
     /// <summary>The Map tab's page: the toolbar (scene, markers, zoom, hover readout), the framed map and the cursor status line.</summary>
     private DockPanel BuildMapCenter()
     {
-        var frame = new Border { Child = _scroller, Background = new SolidColorBrush(Color.Parse("#4DE4DDCF")) }.WithClasses("game-frame");
-        frame.Background = new SolidColorBrush(Color.Parse("#66E4DDCF"));
+        var frame = new Border { Child = _scroller, Background = new SolidColorBrush(Color.Parse("#80E9DAB6")) }.WithClasses("game-frame");
+        frame.Background = new SolidColorBrush(Color.Parse("#66E4D5B0"));
 
         _canvas.PointerMoved += OnCanvasPointerMoved;
         _canvas.PointerExited += (_, _) =>
@@ -258,7 +258,7 @@ public sealed partial class EditModeView : UserControl
         var notice = Ui.Wrapped(PortingNotice, "small");
         notice.Name = "EditorNotice";
         var noticeBox = new Border { Child = Ui.HStack(8, Ui.Icon("IconInfo", 16), notice) }.WithClasses("notice");
-        ((StackPanel)noticeBox.Child!).Children[1].Width = 210;
+        ((StackPanel)noticeBox.Child!).Children[1].Width = 252;
 
         var side = new StackPanel { Spacing = 14, Margin = new Thickness(0, 0, 10, 0) };
         side.Children.Add(noticeBox);

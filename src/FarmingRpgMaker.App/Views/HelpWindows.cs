@@ -153,12 +153,13 @@ public sealed class WelcomeWindow : HelpWindowBase
                 Width = 36,
                 Height = 36,
                 CornerRadius = new CornerRadius(18),
-                Background = new SolidColorBrush(Color.Parse("#2e2a25")),
-                BorderBrush = Brushes.Black,
+                Background = (IBrush?)Application.Current?.FindResource("FarmPrimaryBrush"),
+                BorderBrush = (IBrush?)Application.Current?.FindResource("FarmForegroundBrush"),
                 BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Top,
                 Child = Ui.Icon(icon, 18),
             };
+            ((PathIcon)badge.Child).Foreground = (IBrush?)Application.Current?.FindResource("PaperBrush");
             badge.Child.HorizontalAlignment = HorizontalAlignment.Center;
             badge.Child.VerticalAlignment = VerticalAlignment.Center;
             var text = Ui.VStack(2, Ui.Wrapped(EditorStrings.Get(key + ".title"), "h3"), Ui.Wrapped(EditorStrings.Get(key + ".body"), "muted", "small"));
@@ -290,7 +291,7 @@ public sealed class ShortcutsWindow : HelpWindowBase
                 Padding = new Thickness(8, 3),
                 CornerRadius = new CornerRadius(4),
                 BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.Parse("#55504a")),
+                BorderBrush = (IBrush?)Application.Current?.FindResource("FarmBorderBrush"),
                 HorizontalAlignment = HorizontalAlignment.Left,
             };
             var what = Ui.Wrapped(EditorStrings.Get(key));

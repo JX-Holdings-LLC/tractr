@@ -9,7 +9,6 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="12,8" />
-    <Setter Property="BoxShadow" Value="0 1 3 0 #14000000" />
   </Style>
   <Style Selector="TextBlock.hud-label">
     <Setter Property="FontSize" Value="13" />
@@ -25,16 +24,19 @@
     <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
   </Style>
   <Style Selector="TextBlock.hud-value.secondary">
-    <Setter Property="Foreground" Value="#B45F12" />
+    <Setter Property="Foreground" Value="{StaticResource FieldGreenBrush}" />
   </Style>
   <Style Selector="Border.money-chip">
     <Setter Property="Background" Value="{StaticResource FarmAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
     <Setter Property="CornerRadius" Value="5" />
     <Setter Property="Padding" Value="9,3" />
   </Style>
   <Style Selector="Border.money-chip TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
     <Setter Property="FontSize" Value="15" />
-    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
   </Style>
   <Style Selector="ProgressBar.energy">
@@ -63,13 +65,13 @@
     <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="ToggleButton.tool:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.swatch:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#D5EBDC" />
-    <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
+    <Setter Property="Background" Value="{StaticResource MustardHoverColor}" />
+    <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
   </Style>
   <Style Selector="ToggleButton.tool:checked /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource FarmSuccessTintBrush}" />
-    <Setter Property="BorderBrush" Value="#9CC9A9" />
-    <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
+    <Setter Property="Background" Value="{StaticResource FarmAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource InkBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
   </Style>
   <Style Selector="Button.small">
     <Setter Property="Padding" Value="10,4" />
@@ -86,21 +88,20 @@
     <Setter Property="FontWeight" Value="Medium" />
   </Style>
   <Style Selector="Button.option:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#FCEFB8" />
-    <Setter Property="BorderBrush" Value="{StaticResource FarmAccentBrush}" />
+    <Setter Property="Background" Value="#F6E7BC" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmPrimaryBrush}" />
   </Style>
 
   <!-- Game frame around the canvas (web: bg-muted/30 border-2 border-border rounded-xl shadow-lg) -->
   <Style Selector="Border.game-frame">
-    <Setter Property="Background" Value="#4DE4DDCF" />
-    <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
+    <Setter Property="Background" Value="#66E4D5B0" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmPrimaryBrush}" />
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="ClipToBounds" Value="True" />
-    <Setter Property="BoxShadow" Value="0 6 18 0 #22000000" />
   </Style>
   <Style Selector="Border.controls-help">
-    <Setter Property="Background" Value="#80E4DDCF" />
+    <Setter Property="Background" Value="#80E9DAB6" />
     <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
@@ -116,20 +117,19 @@
   </Style>
   <Style Selector="Border.key TextBlock">
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>
 
   <!-- Modals (web: fixed inset-0 bg-background/80 + Card) -->
   <Style Selector="Border.backdrop">
-    <Setter Property="Background" Value="#99F8F5EE" />
+    <Setter Property="Background" Value="#99F2E5C6" />
   </Style>
   <Style Selector="Border.modal">
     <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmPrimaryBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="BoxShadow" Value="0 12 32 0 #33000000" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Margin" Value="24" />
@@ -142,7 +142,7 @@
   <Style Selector="Border.modal-footer">
     <Setter Property="BorderBrush" Value="{StaticResource FarmBorderBrush}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Background" Value="#4DE4DDCF" />
+    <Setter Property="Background" Value="#80E9DAB6" />
     <Setter Property="Padding" Value="16,10" />
     <Setter Property="CornerRadius" Value="0,0,12,12" />
   </Style>
@@ -150,7 +150,7 @@
     <Setter Property="Width" Value="40" />
     <Setter Property="Height" Value="40" />
     <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="#1A095C34" />
+    <Setter Property="Background" Value="#1AB5332A" />
   </Style>
   <Style Selector="Border.icon-tile PathIcon">
     <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
@@ -158,21 +158,21 @@
     <Setter Property="Height" Value="22" />
   </Style>
   <Style Selector="Border.row">
-    <Setter Property="Background" Value="#80F0EBE0" />
-    <Setter Property="BorderBrush" Value="#80D4CDBF" />
+    <Setter Property="Background" Value="#80E9DAB6" />
+    <Setter Property="BorderBrush" Value="#80C9B48A" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="10,8" />
   </Style>
   <!-- Content forms: nested groups, reference chips, pickers keeping a missing id. -->
   <Style Selector="Border.form-group">
-    <Setter Property="BorderBrush" Value="#80D4CDBF" />
+    <Setter Property="BorderBrush" Value="#80C9B48A" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="10,8" />
   </Style>
   <Style Selector="Border.chip">
-    <Setter Property="Background" Value="#1A095C34" />
+    <Setter Property="Background" Value="#1AB5332A" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="8,2,2,2" />
   </Style>
@@ -180,26 +180,29 @@
     <Setter Property="Foreground" Value="{StaticResource FarmDestructiveBrush}" />
   </Style>
   <Style Selector="TextBlock.section">
-    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+    <Setter Property="FontSize" Value="12.5" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="LetterSpacing" Value="0.6" />
+    <Setter Property="LetterSpacing" Value="2.2" />
     <Setter Property="Foreground" Value="{StaticResource FarmMutedForegroundBrush}" />
   </Style>
   <Style Selector="TextBlock.category">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LetterSpacing" Value="0.5" />
+    <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1.8" />
     <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
   </Style>
   <Style Selector="TextBlock.error">
     <Setter Property="Foreground" Value="{StaticResource FarmDestructiveBrush}" />
   </Style>
   <Style Selector="Border.qty-chip">
-    <Setter Property="Background" Value="#1A095C34" />
+    <Setter Property="Background" Value="#1AB5332A" />
     <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Padding" Value="6,1" />
   </Style>
   <Style Selector="Border.qty-chip TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource LabelFont}" />
     <Setter Property="FontSize" Value="12" />
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
@@ -212,14 +215,12 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="12" />
     <Setter Property="Padding" Value="20" />
-    <Setter Property="BoxShadow" Value="0 10 28 0 #33000000" />
   </Style>
   <Style Selector="Border.portrait">
     <Setter Property="Width" Value="56" />
     <Setter Property="Height" Value="56" />
     <Setter Property="CornerRadius" Value="28" />
     <Setter Property="Background" Value="{StaticResource FarmSecondaryBrush}" />
-    <Setter Property="BoxShadow" Value="0 2 6 0 #33000000" />
   </Style>
 
   <!-- Toasts (web sonner: success / error / info) -->
@@ -231,15 +232,14 @@
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="MinWidth" Value="240" />
     <Setter Property="MaxWidth" Value="420" />
-    <Setter Property="BoxShadow" Value="0 4 14 0 #26000000" />
   </Style>
   <Style Selector="Border.toast.success">
     <Setter Property="Background" Value="{StaticResource FarmSuccessTintBrush}" />
-    <Setter Property="BorderBrush" Value="#9CC9A9" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmSuccessBorderBrush}" />
   </Style>
   <Style Selector="Border.toast.error">
     <Setter Property="Background" Value="{StaticResource FarmErrorTintBrush}" />
-    <Setter Property="BorderBrush" Value="#E7A19B" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmErrorBorderBrush}" />
   </Style>
   <Style Selector="Border.toast PathIcon">
     <Setter Property="Width" Value="16" />
@@ -247,7 +247,7 @@
     <Setter Property="Foreground" Value="{StaticResource FarmMutedForegroundBrush}" />
   </Style>
   <Style Selector="Border.toast.success PathIcon">
-    <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource FieldGreenBrush}" />
   </Style>
   <Style Selector="Border.toast.error PathIcon">
     <Setter Property="Foreground" Value="{StaticResource FarmDestructiveBrush}" />
@@ -256,7 +256,7 @@
   <!-- Game panels (creator HUD panels) -->
   <Style Selector="Border.game-panel">
     <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="#718171" />
+    <Setter Property="BorderBrush" Value="#6D5A40" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="10,6" />
@@ -265,11 +265,10 @@
   <!-- Debug drawer -->
   <Style Selector="Border.debug">
     <Setter Property="Background" Value="{StaticResource FarmSurfaceBrush}" />
-    <Setter Property="BorderBrush" Value="#E8C35A" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmAccentBrush}" />
     <Setter Property="BorderThickness" Value="2" />
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="Padding" Value="12" />
-    <Setter Property="BoxShadow" Value="0 8 24 0 #33000000" />
   </Style>
 
   <!-- Editor side panel + notice -->
@@ -282,7 +281,7 @@
   </Style>
   <Style Selector="Border.notice">
     <Setter Property="Background" Value="{StaticResource FarmUpdateTintBrush}" />
-    <Setter Property="BorderBrush" Value="#EBC954" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmUpdateBorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="10,8" />
@@ -302,8 +301,9 @@
     <Setter Property="Padding" Value="10,6" />
   </Style>
   <Style Selector="Border.stat TextBlock.stat-value">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
     <Setter Property="FontSize" Value="18" />
-    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="Foreground" Value="{StaticResource FarmPrimaryBrush}" />
   </Style>
   <Style Selector="ToggleButton.swatch">
@@ -316,7 +316,7 @@
   <Style Selector="ToggleButton.swatch:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource FarmUpdateTintBrush}" />
     <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource FarmSecondaryBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource FarmPrimaryBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
 
@@ -329,10 +329,11 @@
     <Setter Property="Padding" Value="6" />
   </Style>
   <Style Selector="ListBox.projects ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource FarmSuccessTintBrush}" />
+    <Setter Property="Background" Value="{StaticResource FarmAccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource FarmForegroundBrush}" />
   </Style>
   <Style Selector="ListBox.projects ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#D5EBDC" />
+    <Setter Property="Background" Value="{StaticResource MustardHoverColor}" />
   </Style>
   <Style Selector="ListBox.projects ListBoxItem">
     <Setter Property="Padding" Value="10,8" />

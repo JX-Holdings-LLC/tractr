@@ -43,7 +43,7 @@ public sealed class UpdateCenterViewModel : ObservableObject, IDisposable
 
     public UpdateCoordinator Coordinator { get; }
 
-    public string CurrentVersionText => $"Farming RPG Maker {Coordinator.CurrentVersion}";
+    public string CurrentVersionText => $"Tractr {Coordinator.CurrentVersion}";
 
     public UpdateState State => Coordinator.State;
 
@@ -127,18 +127,18 @@ public sealed class UpdateCenterViewModel : ObservableObject, IDisposable
     public string StatusDetail => Coordinator.State switch
     {
         UpdateState.NotInstalled =>
-            $"You're running a development build ({Coordinator.CurrentVersion}). Install Farming RPG Maker with Setup.exe from GitHub Releases to get automatic updates.",
+            $"You're running a development build ({Coordinator.CurrentVersion}). Install Tractr with Setup.exe from GitHub Releases to get automatic updates.",
         UpdateState.Checking => $"Looking at GitHub Releases on the {ChannelName} channel.",
         // Velopack never downgrades: a beta stays until a newer stable release ships.
         UpdateState.UpToDate when Coordinator.Channel == UpdateChannel.Stable && IsPrerelease(Coordinator.CurrentVersion) =>
             $"You're on a pre-release ({Coordinator.CurrentVersion}); the next stable update will be offered when it's newer.",
-        UpdateState.UpToDate => $"Farming RPG Maker {Coordinator.CurrentVersion} is the newest {ChannelName} version.",
+        UpdateState.UpToDate => $"Tractr {Coordinator.CurrentVersion} is the newest {ChannelName} version.",
         UpdateState.Available when Coordinator.IsAvailableUpdateSkipped =>
             $"You chose to skip this version. You're on {Coordinator.CurrentVersion}; you can still download it any time.",
         UpdateState.Available => $"You have {Coordinator.CurrentVersion}. You can keep working while the update downloads.",
         UpdateState.Downloading => "You can keep working while the update downloads.",
         UpdateState.ReadyToInstall =>
-            "Restart Farming RPG Maker to finish updating. If you don't, the update is installed when you close the app.",
+            "Restart Tractr to finish updating. If you don't, the update is installed when you close the app.",
         UpdateState.Error => Coordinator.ErrorMessage ?? "The update check failed.",
         _ => "Updates are published on GitHub Releases. Check now to see whether a newer version is out.",
     };

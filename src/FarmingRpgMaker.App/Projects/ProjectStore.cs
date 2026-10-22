@@ -194,7 +194,7 @@ public sealed class ProjectStore
     {
         if (ProjectLock.IsHeldElsewhere(this, id))
         {
-            throw new IOException("It is open in another Farming RPG Maker window.");
+            throw new IOException("It is open in another Tractr window.");
         }
 
         lock (_gate)

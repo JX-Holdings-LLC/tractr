@@ -32,7 +32,7 @@ public sealed class UpdateCenterWindowTests
         _fake.CurrentVersion = "0.1.0";
         var (window, _) = Open();
 
-        Assert.Equal("Farming RPG Maker 0.1.0", Find<TextBlock>(window, "CurrentVersionText").Text);
+        Assert.Equal("Tractr 0.1.0", Find<TextBlock>(window, "CurrentVersionText").Text);
         Assert.Equal("Stable channel", Find<TextBlock>(window, "ChannelText").Text);
         Assert.Equal("Check for updates", Find<TextBlock>(window, "StatusTitle").Text);
         Assert.Equal("Not checked yet", Find<TextBlock>(window, "LastCheckedText").Text);

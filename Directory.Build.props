@@ -19,9 +19,9 @@
          the version below, which stays in step with the Cargo workspace version
          (tools/release/versions.sh). -->
     <FarmReleaseBuild Condition="'$(Version)' != ''">true</FarmReleaseBuild>
-    <Version Condition="'$(Version)' == ''">0.3.2</Version>
-    <Authors>Farming RPG Maker contributors</Authors>
-    <Product>Farming RPG Maker</Product>
+    <Version Condition="'$(Version)' == ''">0.4.0</Version>
+    <Authors>Tractr contributors</Authors>
+    <Product>Tractr</Product>
   </PropertyGroup>
   <ItemGroup Condition="'$(FarmReleaseBuild)' == 'true' And '$(MSBuildProjectExtension)' == '.csproj'">
     <AssemblyMetadata Include="FarmReleaseBuild" Value="true" />

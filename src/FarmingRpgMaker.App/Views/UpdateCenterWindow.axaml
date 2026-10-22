@@ -7,7 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="760"
         x:Class="FarmingRpgMaker.App.Views.UpdateCenterWindow"
         x:DataType="vm:UpdateCenterViewModel"
-        Title="Update Center — Farming RPG Maker"
+        Title="Update Center — Tractr"
         Icon="avares://FarmingRpgMaker/Assets/app.ico"
         Width="680" Height="760" MinWidth="520" MinHeight="480"
         WindowStartupLocation="CenterOwner"
@@ -49,7 +49,7 @@
             </Panel>
 
             <StackPanel Grid.Column="1" Spacing="4">
-              <TextBlock Name="StatusTitle" Classes="h2" Text="{Binding StatusTitle}" TextWrapping="Wrap" />
+              <controls:KickerText Name="StatusTitle" Classes="h2" Text="{Binding StatusTitle}" TextWrapping="Wrap" />
               <TextBlock Name="StatusDetail" Text="{Binding StatusDetail}" TextWrapping="Wrap" LineHeight="20" />
             </StackPanel>
 
@@ -103,7 +103,7 @@
           <StackPanel Spacing="10">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
-                <TextBlock Name="ReleaseNotesTitle" Classes="h2" Text="{Binding ReleaseNotesTitle}" />
+                <controls:KickerText Name="ReleaseNotesTitle" Classes="h2" Text="{Binding ReleaseNotesTitle}" />
                 <TextBlock Classes="muted small" Text="{Binding ReleaseMetaText}" />
               </StackPanel>
               <HyperlinkButton Grid.Column="1" VerticalAlignment="Top" Content="Open on GitHub"
@@ -120,9 +120,9 @@
         <!-- Preferences -->
         <Border Classes="card">
           <StackPanel Spacing="12">
-            <TextBlock Classes="h2" Text="Preferences" />
+            <controls:KickerText Classes="h2" Text="Preferences" />
             <StackPanel Spacing="6">
-              <TextBlock Classes="h3" Text="Update channel" />
+              <controls:KickerText Classes="h3" Text="Update channel" />
               <RadioButton Name="StableChannelOption" GroupName="channel" IsChecked="{Binding IsStableChannel}">
                 <StackPanel Spacing="1">
                   <TextBlock Text="Stable" FontWeight="SemiBold" />

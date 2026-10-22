@@ -229,7 +229,7 @@ public sealed class ProjectWorkspace
     }
 
     /// <summary>Why a project can't be opened while another window has it.</summary>
-    public const string OpenElsewhere = "It is open in another Farming RPG Maker window. Close it there first, or open a copy (Duplicate in the project list).";
+    public const string OpenElsewhere = "It is open in another Tractr window. Close it there first, or open a copy (Duplicate in the project list).";
 
     /// <summary>Loads project <paramref name="id"/> from the store and opens it (refused while another window has it open).</summary>
     public ProjectLoadResult OpenById(string id)

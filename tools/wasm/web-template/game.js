@@ -1,4 +1,4 @@
-// The web demo of a game made with Farming RPG Maker: farm-wasm's standalone player (title
+// The web demo of a game made with Tractr: farm-wasm's standalone player (title
 // screen, save slots, settings) drawing into a canvas. Saves and settings live in this browser's
 // localStorage, one entry per game id. See docs/EXPORT.md ("Web demo").
 // tools/wasm/game-page.mjs runs this file in Node against the real module (CI).

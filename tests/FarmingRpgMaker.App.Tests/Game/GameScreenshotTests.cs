@@ -134,6 +134,15 @@ public sealed class GameScreenshotTests
         Save(host, "edit-mode.png");
     }
 
+    [AvaloniaFact]
+    public void EditMode_ContentTab()
+    {
+        using var host = new GameTestHost();
+        host.Surface.EditView.SelectedTab = EditorTab.Content;
+        Pump();
+        Save(host, "content-editor.png");
+    }
+
     /// <summary>The live state read back from the Rust player.</summary>
     private sealed record Snapshot(System.Text.Json.Nodes.JsonObject State)
     {

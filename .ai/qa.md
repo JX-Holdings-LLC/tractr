@@ -1,4 +1,4 @@
-# QA profile: Farming RPG Maker (native)
+# QA profile: Tractr (native)
 
 Machine-readable levels are in [qa.yaml](qa.yaml); this page is for people and
 for QA agents deciding what a level means here. Every command is one CI already
