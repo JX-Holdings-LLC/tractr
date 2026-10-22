@@ -1,11 +1,21 @@
-# Native port roadmap
+# Tractr roadmap
 
-The native app is a phased port of the web version,
-`jxburros/farm-game-engine` (a private repository), which was the reference
-implementation until both apps moved onto one engine.
+Tractr (called *Farming RPG Maker* until 0.4.0) began as a phased port of the
+web version, `jxburros/farm-game-engine` (a private repository), which was the
+reference implementation until both apps moved onto one engine.
 The port is complete: phases 1–7 below are done, including phase 7, one
-engine for the web and native versions (see [Phase 7](#phase-7-one-engine)). Each
-phase ships as a normal release through the Update Center.
+engine for the web and native versions (see [Phase 7](#phase-7-one-engine)).
+Each phase shipped as a normal release through the Update Center.
+
+What comes next is in two parts:
+
+- [Toward full-size farm games](#toward-full-size-farm-games): what creators
+  need to make games the size of Stardew Valley, Harvest Moon or Story of
+  Seasons, in any setting, an alien planet included.
+- [Later](#later): platform, polish and infrastructure work.
+
+[Done since the port](#done-since-the-port) lists what 0.3.x and 0.4.0
+added after the port was finished.
 
 ## Done — foundation (v0.1)
 
@@ -83,10 +93,11 @@ and exit criteria for each phase.
 
 ## Remaining work
 
-Status at the end of September 2026: phases 1–7 are done
+Status in October 2026 (0.4.0): phases 1–7 are done
 ([Phase 7](#phase-7-one-engine) below), and so is
 [parity with the web editor](#parity-with-the-web-editor). What's left is under
-[Later](#later).
+[Toward full-size farm games](#toward-full-size-farm-games) and
+[Later](#later). The checklists in this section are the record of the port.
 
 **Rust core (phase 2)**: done.
 
@@ -373,6 +384,185 @@ and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
   ([docs/PLUGINS.md](docs/PLUGINS.md#minigames)). Pointer input and sounds
   for pack minigames are not there yet.
 
+## Done since the port
+
+Shipped in 0.3.x and 0.4.0, after phases 1–7 (details in
+[CHANGELOG.md](CHANGELOG.md)):
+
+- [x] **Tractr.** The app, executable, installer, data folders, C# projects
+  and "Made with" credit carry the new name, and the editor wears the Seed
+  Catalog look ([docs/brand](docs/brand/README.md)).
+- [x] **Music and ambience.** Day and night music, birdsong, crickets and
+  rain, synthesized by the engine (`farm-runtime/src/music.rs`). They follow
+  the clock, the weather and indoor scenes.
+- [x] **More built-in minigames**: Rhythm tap, Moving target and Memory
+  sequence join the timing bar, with per-kind settings in the editor and
+  Problems checks for them.
+- [x] **GPU renderer** for exported desktop games (`farm-gpu`, wgpu), with
+  the CPU renderer as a fallback.
+- [x] **Calendar and clock**: games can start in any season, the clock can
+  pause in dialogue, shops, minigames and menus, and scenes can be marked
+  indoor (no weather).
+- [x] **Exported game quality of life**: pausing in the background, F12
+  screenshots, `.bak` saves, an error screen in place of a silent crash
+  (the "message box when the game crashes" item from [Later](#later)).
+- [x] **Hardening**: `farm-fuzz` targets and invariant tests, hostile project
+  files refused, deletions that keep gated content locked, F#/Rust parity
+  tests.
+
+## Toward full-size farm games
+
+The engine already has most of a farm game's systems: crops with quality,
+mutations, multi-tile growth and regrowth; gathering nodes; machines, recipes
+and crafting stations; animals; fishing; a procedural mine; weather; skills;
+NPC schedules, gifts and birthdays; quests; shops; events, actions,
+minigames and creator panels; a creator-defined calendar; content packs with
+sandboxed plugins. Many of these systems are shallow next to Stardew Valley,
+Harvest Moon or Story of Seasons, though, and the basic vocabulary of the
+world (terrain, tools, item kinds) is fixed in code. That vocabulary is what a
+game on an alien planet would need to change.
+
+The milestones below are roughly in priority order. M1 comes first because
+later milestones build on data-driven terrain, tools and items. Each change to
+the content model goes through the usual path: F# records and checks, Rust
+serde types and parity tests, a schema version bump with a migration, and
+goldens.
+
+### M1: A data-driven world vocabulary
+
+Make the closed enums into content, so a game defines its own world.
+
+- [ ] **Terrain types.** Tile types are a fixed set of seven (`TileTypes`:
+  grass, soil, water, path, wall, door, floor), enforced by `SchemaChecks.fs`.
+  Replace them with terrain definitions that carry their rules: walkable,
+  tillable, water source, fishable, blocks light, hazard, indoor, and which
+  tool turns it into what. The current seven become the base pack's terrain.
+- [ ] **Tool types.** The six tools (`ToolTypes`) have their behaviour in code
+  (`farm-sim/src/content_builtin.rs`: the hoe tills grass or path, the axe and
+  pickaxe act on walls). Make tools data: what they target, what they do
+  (till, water, harvest, break, place, transform terrain), area per tier,
+  energy cost, and their key. Then a game can have a plasma cutter, a
+  terraformer or a seed drone.
+- [ ] **Item categories.** The eight item types (`ItemTypes`) become open
+  categories with optional behaviours (edible with energy or health
+  restored, plantable, placeable, giftable, sellable, equippable).
+- [ ] **Crop qualities and mutations.** Quality tiers (normal, silver, gold,
+  iridium) and mutations (giant, golden, ancient) become definitions with
+  names, price multipliers and visuals.
+- [ ] **Growth requirements.** Crops can need more than water and a season:
+  terrain or soil type, light, temperature or another per-scene condition,
+  fertilizer kinds, and neighbouring crops or terrain.
+- [ ] **Atmosphere.** Make the day/night tint curve (`farm-render/src/atmosphere.rs`)
+  and the weather overlays (only `rain` and `snow` today) data per game, per
+  season and per scene. Let games choose the length of a day (today it's
+  always 1440 minutes): twin suns, endless nights, acid rain.
+- [ ] **Words of the game**: the currency name, the energy name and the skill
+  names are set per game, in every language.
+
+### M2: Sound and cutscenes
+
+- [ ] **Custom audio.** Import sound effects and music (OGG, WAV) as project
+  assets, ship them in the cartridge, and let `playSound`, scenes, seasons,
+  weather, festivals and events pick music. Today `playSound` takes a name
+  the host plays, and sounds are not project content (`References.fs`).
+  The built-in synthesized music stays as the default.
+- [ ] **Cutscenes.** A sequence of steps that run over time: move NPCs and
+  the player, face directions, emotes, wait, camera pan, fade, music change,
+  dialogue, choices that branch the sequence. This is what heart events,
+  festivals and story beats are built from. Events today run their outcomes
+  at once.
+- [ ] **Sound and pointer input for pack minigames** (from
+  [Content packs](#content-packs)).
+
+### M3: Event logic for creators who don't write code
+
+- [ ] **Variables.** Number and text variables with set, add and compare,
+  alongside the true/false flags (`FlagCondition` only checks a boolean
+  today; plugins can already store numbers and strings).
+- [ ] **Logic.** All, any and not groups of conditions; a random chance
+  condition.
+- [ ] **More triggers.** Day start, a time of day, harvesting, selling,
+  crafting, catching a fish, picking up an item, a friendship level, a quest
+  changing. Triggers are only enter, interact and tick today.
+- [ ] **More outcomes**: move an NPC, start a cutscene, change the weather,
+  give experience, change a shop's stock, place or remove a node or machine.
+
+### M4: Dialogue and relationships
+
+- [ ] **Daily lines.** NPCs pick a line by day, season, weather, location,
+  hearts and flags, with variety, without the creator writing a dialogue
+  tree for each.
+- [ ] **Text substitution**: player name, farm name, NPC names, item names,
+  the date and variables in any game text.
+- [ ] **Portrait expressions** chosen per line.
+- [ ] **Relationships**: friendship decay, heart events as a first-class
+  content type (at given hearts, with a cutscene), dating, marriage, a spouse
+  who moves in and helps, children. All optional and per game.
+- [ ] **Player character**: a character creator (body, hair, clothing
+  colours), clothing and hats as equippable items, a name and a farm name.
+
+### M5: Building the farm
+
+- [ ] **Placeable objects**: chests and other storage, fences and gates,
+  sprinklers, scarecrows and other area-of-effect objects, furniture and
+  decoration, all placed and picked up in play.
+- [ ] **Buildings**: barns, coops, sheds and greenhouses with their own
+  interiors, built by an NPC for money and materials, with upgrades. The
+  player's house upgrades the same way.
+- [ ] **Animals with housing**: animals live in a building, several products
+  per species, product quality from mood, babies, and an animal shop flow.
+- [ ] **Farm layouts**: a choice of farm maps when a new game starts.
+
+### M6: Long-term goals
+
+- [ ] **Shipping bin**: items sold overnight, with a log of what has been
+  shipped.
+- [ ] **Collections**: a museum or catalogue of items found, with rewards.
+- [ ] **Bundles**: Community Center-style lists of items to hand in, which
+  unlock rewards or fix the world.
+- [ ] **Achievements**, shown in the game (and later on Steam, see
+  [Later](#later)).
+- [ ] **Mail**: letters that arrive in the morning from events, quests,
+  NPCs and birthdays, with items attached.
+
+### M7: Combat and adventure (optional per game)
+
+- [ ] **Player health**, damage, fainting and recovery, separate from energy.
+- [ ] **Monsters**: definitions with health, movement, attacks and drops,
+  spawned in mine bands and in scenes.
+- [ ] **Weapons** and the combat skill (the skill name exists, the system
+  doesn't).
+- [ ] **Mine floors with hazards and treasure**, not only rocks.
+
+### M8: Projects at full size
+
+- [ ] **Assets as files.** Images live as base64 `dataUrl` strings inside
+  the project JSON (`CustomAsset.DataUrl`), so a game with hundreds of
+  sprites makes a huge file that is slow to open and impossible to review in
+  git. Move to a project folder: project JSON plus one file per asset,
+  with JSON import and export kept for the web version.
+- [ ] **Split project files** (scenes, NPCs, dialogue, items) so teams can
+  work on a game together through version control.
+- [ ] **Bigger and richer maps**: scenes above 256×256 tiles, more than the
+  three fixed layers, autotiling, and tall objects drawn in front of or
+  behind the player.
+- [ ] **Light sources** at night (lamps, glowing crops, windows), with the
+  GPU lighting pass from [Later](#later).
+
+### M9: More power for content packs
+
+- [ ] **Game panels from packs** (the `uiPanels` permission is reserved and
+  grants nothing yet).
+- [ ] **More hooks and mutations**: hooks for harvest, sale, craft, catch,
+  scene entry and time of day; mutations for the M3 outcomes; plugins that
+  add their own systems with saved state.
+
+### M10: Playing together
+
+- [ ] **Local and online co-op.** The deterministic engine and its command
+  log are a good base for lockstep multiplayer: shared farm, separate
+  inventories and energy, and a split-screen or networked player.
+
 ## Later
 
 - **Localization** of the rest of the editor UI (tabs, forms and Problems;
@@ -390,8 +580,7 @@ and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
   drawing the remaining shapes (circles, strokes, blurs) in the shader
   instead of as CPU-rasterized sprites; the GPU path for the editor's Play
   Mode (it hands CPU pixels to the C# app). Gamepad rebinding in the controls
-  menu (keys are rebindable today); a message box when the game crashes (it
-  writes a crash log today).
+  menu (keys are rebindable today).
 - **macOS/Linux builds** of the editor. Avalonia and Velopack already support
   them; this needs packaging and CI jobs. (Exported *games* get Linux builds
   in phase 6, whatever the editor runs on.)
