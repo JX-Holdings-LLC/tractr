@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1
+
+- **A new roadmap.** [ROADMAP.md](ROADMAP.md) is up to date for Tractr and
+  0.4.0, lists what has shipped since the port, and plans what creators need
+  for games the size of Stardew Valley or Story of Seasons, in any setting:
+  terrain, tools and items defined by the game, custom sound and music,
+  cutscenes, event variables and more triggers, deeper dialogue and
+  relationships, buildings and placeable objects, collections and bundles,
+  optional combat, projects with assets as files, more power for content
+  packs, and co-op. No changes to the app or to games.
+
 ## 0.4.0
 
 - **Farming RPG Maker is now Tractr, all the way down.** The app, its windows,
