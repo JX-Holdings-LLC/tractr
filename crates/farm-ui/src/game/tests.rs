@@ -288,7 +288,7 @@ fn hud_toolbar_and_creator_panels_run_their_actions() {
         Some(&Command::PerformAction { action_id: "action-growth-blessing".into() })
     );
     assert!(fixture.texts().iter().any(|text| text == "Gold: 100"), "{:?}", fixture.texts());
-    assert!(fixture.texts().iter().any(|text| text == "Made with Farming RPG Maker"));
+    assert!(fixture.texts().iter().any(|text| text == "Made with Tractr"));
     // While a panel is open, creator actions are disabled (and the HUD is under its backdrop).
     fixture.game_ui.panel = Some(Panel::Inventory);
     fixture.idle();

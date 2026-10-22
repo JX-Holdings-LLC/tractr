@@ -47,7 +47,7 @@ never dispatch are simply skipped; the next release's notes include theirs.
 
 1. In every pull request, bump the version: with the toolkit pinned in
    `.release/README.md` checked out at `.toolkit`, run
-   `node .toolkit/src/release.mjs bump --app farming-rpg-maker` (a patch;
+   `node .toolkit/src/release.mjs bump --app tractr` (a patch;
    `--kind minor` or `--version 0.4.0-beta.1` for others). It sets
    `release.json`, `version` in the root `Cargo.toml` and the default
    `<Version>` in `Directory.Build.props`, and adds a `## X.Y.Z` section at
@@ -83,10 +83,10 @@ Assets attached to the GitHub Release (Velopack's default `win` channel):
 
 | File                                   | Purpose                                                              |
 |----------------------------------------|----------------------------------------------------------------------|
-| `FarmingRpgMaker-win-Setup.exe`        | Installer for new users. Installs per-user to `%LocalAppData%\FarmingRpgMaker`, adds Start-menu and desktop shortcuts, no admin rights needed. |
-| `FarmingRpgMaker-win-Portable.zip`     | Portable copy (unzip and run; still self-updates).                   |
-| `FarmingRpgMaker-X.Y.Z-full.nupkg`     | Full update package.                                                 |
-| `FarmingRpgMaker-X.Y.Z-delta.nupkg`    | Delta from the previous release (small download). Only when a previous release exists. |
+| `Tractr-win-Setup.exe`        | Installer for new users. Installs per-user to `%LocalAppData%\Tractr`, adds Start-menu and desktop shortcuts, no admin rights needed. |
+| `Tractr-win-Portable.zip`     | Portable copy (unzip and run; still self-updates).                   |
+| `Tractr-X.Y.Z-full.nupkg`     | Full update package.                                                 |
+| `Tractr-X.Y.Z-delta.nupkg`    | Delta from the previous release (small download). Only when a previous release exists. |
 | `releases.win.json`, `assets.win.json` | Update feed read by the app.                                         |
 | `RELEASES`                             | Legacy (Squirrel-compatible) feed.                                   |
 | `player-windows-x64.zip`, `player-linux-x64.tar.gz`, `player-web.tar.gz` | Export Game player templates for this version (docs/EXPORT.md). The installer already ships them in `players/`. |
@@ -148,7 +148,7 @@ other.
 - **Checksums and provenance.** `SHA256SUMS` lists every published file, and
   GitHub's build provenance attestation covers them. To check a download:
   `sha256sum --check --ignore-missing SHA256SUMS`, or
-  `gh attestation verify FarmingRpgMaker-win-Setup.exe --repo jxburros/farm-game-engine-native`.
+  `gh attestation verify Tractr-win-Setup.exe --repo jxburros/farm-game-engine-native`.
 - **Reproducibility.** .NET release builds set `ContinuousIntegrationBuild`
   (source paths become `/_/`), cargo builds map the runner's paths away
   (`--remap-path-prefix`) and ship without debug info, so no runner path ends
@@ -160,7 +160,7 @@ other.
 `release.json`, the Cargo workspace (`Cargo.toml`) and `Directory.Build.props`
 carry the same version, the one the latest change to `main` advanced to. The
 release workflow also passes `-p:Version=X.Y.Z`, which stamps both
-`FarmingRpgMaker.exe` and `FarmingRpgMaker.Updates.dll` and marks them as a
+`Tractr.exe` and `Tractr.Updates.dll` and marks them as a
 release build; `vpk pack --packVersion` uses the same value. Other builds
 (`dotnet run`, CI) are development builds: their Help links open the docs on
 `main`, since their version may never get a tag.
@@ -210,9 +210,9 @@ and the plugin guest's and meter's lock files), on a vulnerable NuGet package
   auto-download for that version; a newer version is offered again.
 - A downloaded update is installed by **Restart & install**, or silently when
   the app exits (`UpdateManager.WaitExitThenApplyUpdates`).
-- Preferences live in `%APPDATA%\FarmingRpgMaker\settings.json` under
+- Preferences live in `%APPDATA%\Tractr\settings.json` under
   `"updates"` (next to the editor's `"workspace"` section; with
-  `FARMING_RPG_MAKER_DATA_DIR` set, in that folder instead). Both stores write
+  `TRACTR_DATA_DIR` set, in that folder instead). Both stores write
   the file atomically, keep the previous version as `settings.json.bak`, and
   never rewrite a file they could not read.
 - When the Stable channel is chosen while a pre-release is installed, the
@@ -223,11 +223,11 @@ Development builds (`dotnet run`, an IDE, or an unzipped `dotnet publish`
 folder) are not Velopack installs. The Update Center then shows
 **"Updates are available only in the installed app"** and offers a link to the
 installer instead of checking. To work on the Update Center UI without an
-install, set `FARMING_RPG_MAKER_FAKE_UPDATES` to `available`, `uptodate`,
+install, set `TRACTR_FAKE_UPDATES` to `available`, `uptodate`,
 `error` or `notinstalled`:
 
 ```sh
-FARMING_RPG_MAKER_FAKE_UPDATES=available dotnet run --project src/FarmingRpgMaker.App
+TRACTR_FAKE_UPDATES=available dotnet run --project src/Tractr.App
 ```
 
 ## Unsigned builds and SmartScreen
@@ -275,12 +275,12 @@ the first downloads.
 ## Testing an update end to end
 
 1. Tag and publish `v0.1.0` (see above).
-2. On a Windows machine, download `FarmingRpgMaker-win-Setup.exe` from the
+2. On a Windows machine, download `Tractr-win-Setup.exe` from the
    release and run it (SmartScreen: **More info → Run anyway**). The app installs
    and starts. Help → About shows **Version 0.1.0**.
 3. Help → Update Center → **Check for updates** → *"You're up to date"*.
 4. Merge any change, then tag and publish `v0.1.1` with some release notes.
-   This release also contains `FarmingRpgMaker-0.1.1-delta.nupkg`.
+   This release also contains `Tractr-0.1.1-delta.nupkg`.
 5. In the running 0.1.0 app, click **Check for updates** (or restart the app;
    the background check runs if the last check is older than 6 hours). The header
    shows **Update available** and the Update Center shows *"Version 0.1.1 is
@@ -301,11 +301,11 @@ error, no crash).
 `vpk` can build Windows packages from Linux or macOS:
 
 ```sh
-dotnet publish src/FarmingRpgMaker.App -c Release -r win-x64 --self-contained -p:Version=0.1.0 -o publish
+dotnet publish src/Tractr.App -c Release -r win-x64 --self-contained -p:Version=0.1.0 -o publish
 dotnet tool install -g vpk --version 1.2.158
-vpk "[win]" pack --packId FarmingRpgMaker --packVersion 0.1.0 --packDir publish \
-  --runtime win-x64 --mainExe FarmingRpgMaker.exe --packTitle "Tractr" \
-  --icon src/FarmingRpgMaker.App/Assets/app.ico --outputDir Releases
+vpk "[win]" pack --packId Tractr --packVersion 0.1.0 --packDir publish \
+  --runtime win-x64 --mainExe Tractr.exe --packTitle "Tractr" \
+  --icon src/Tractr.App/Assets/app.ico --outputDir Releases
 ```
 
 Nothing is uploaded; inspect `Releases/`. (The `[win]` directive is only for

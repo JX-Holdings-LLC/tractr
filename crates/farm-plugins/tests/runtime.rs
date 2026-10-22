@@ -1,5 +1,5 @@
 //! `PluginRuntime` with a real `farm-sim` session: the bridge tests of `PluginsTests.cs`, the
-//! plugin tests of `FarmingRpgMaker.App.Tests` (`MinigameAndPanelsTests`, `PlayEngineTests`),
+//! plugin tests of `Tractr.App.Tests` (`MinigameAndPanelsTests`, `PlayEngineTests`),
 //! and the golden "content packs and plugins" scenario.
 
 mod common;

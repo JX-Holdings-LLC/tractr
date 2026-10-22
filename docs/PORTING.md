@@ -28,7 +28,7 @@ units in JSON.
 | `packages/content-default/src`, `src/lib/templates.ts` | `src/FarmEngine.Authoring` (`StarterContent`, `SampleProjects`, `ProjectCatalog`) |
 | `packages/engine-runtime/src`           | `crates/farm-runtime`, plugins in `crates/farm-plugins` |
 | `packages/renderer-canvas2d/src`, `packages/game-shell` | `crates/farm-render`, `crates/farm-ui`, `crates/farm-player` |
-| `src/` (React editor)                   | `src/FarmingRpgMaker.App` (Avalonia) over `src/FarmEngine.Authoring` (F#) |
+| `src/` (React editor)                   | `src/Tractr.App` (Avalonia) over `src/FarmEngine.Authoring` (F#) |
 
 ## Files and names (Rust)
 

@@ -12,11 +12,11 @@ stay as they were. A creator's game must never change because the editor changed
 
 | What | Where |
 | --- | --- |
-| Inks, roles, status tints, fonts, Fluent control overrides, buttons, tabs, lists, Markdown | `src/FarmingRpgMaker.App/App.axaml` |
-| Panels, chips, toasts, modals, the map frame, form groups, tool buttons | `src/FarmingRpgMaker.App/Game/GameStyles.axaml` |
-| The four fonts (OFL) | `src/FarmingRpgMaker.App/Assets/Fonts` |
-| App icon, header logo, About banner, paper grain | `src/FarmingRpgMaker.App/Assets` (made by `scripts/generate-app-icon.py` and `docs/brand/vixl/kit/build_marketing.py`) |
-| Capital letters for labels | `src/FarmingRpgMaker.App/Controls/KickerText.cs` |
+| Inks, roles, status tints, fonts, Fluent control overrides, buttons, tabs, lists, Markdown | `src/Tractr.App/App.axaml` |
+| Panels, chips, toasts, modals, the map frame, form groups, tool buttons | `src/Tractr.App/Game/GameStyles.axaml` |
+| The four fonts (OFL) | `src/Tractr.App/Assets/Fonts` |
+| App icon, header logo, About banner, paper grain | `src/Tractr.App/Assets` (made by `scripts/generate-app-icon.py` and `docs/brand/vixl/kit/build_marketing.py`) |
+| Capital letters for labels | `src/Tractr.App/Controls/KickerText.cs` |
 
 ## Colour tokens
 

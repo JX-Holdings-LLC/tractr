@@ -2,12 +2,17 @@
 
 ## 0.4.0
 
-- **Farming RPG Maker is now Tractr.** The app, its windows, the Update Center,
-  the README and the docs use the new name. What stays for now, so updates and
-  projects carry over: the executable and installer names
-  (`FarmingRpgMaker.exe`, `FarmingRpgMaker-win-Setup.exe`), the
-  `%APPDATA%\FarmingRpgMaker` folder, the Velopack package id, the C# and
-  Rust names, and the "Made with Farming RPG Maker" credit that games can show.
+- **Farming RPG Maker is now Tractr, all the way down.** The app, its windows,
+  the Update Center, the README and the docs use the new name, and so do the
+  things underneath. Breaking, with no migration: the executable is
+  `Tractr.exe` and the installer `Tractr-win-Setup.exe`; your projects and
+  settings live in `%APPDATA%\Tractr` (`~/.config/Tractr`), so projects made
+  with an earlier version must be brought in with **File → Import Project
+  JSON** from a backup; the data folder variable is `TRACTR_DATA_DIR` and the
+  Update Center demo switch `TRACTR_FAKE_UPDATES`; the release app id is
+  `tractr`, so earlier installs do not update into this one (install it fresh);
+  the C# projects, namespaces and the assembly are `Tractr.*`; and games can
+  show "Made with Tractr" (it was "Made with Farming RPG Maker").
 - **A new look for the editor: the Seed Catalog.** Warm paper, a few flat
   printing inks (Barn Red, Field Green, Mustard), a red-ribbon wordmark in the
   header, Alfa Slab One titles, Oswald labels and buttons and Courier Prime

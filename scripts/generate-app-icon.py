@@ -2,7 +2,7 @@
 """Builds the Tractr app icon and the in-app brand images from docs/brand/logo.
 
 The art itself is drawn with Vixl (docs/brand/vixl); this script only resizes it. Writes, into
-src/FarmingRpgMaker.App/Assets:
+src/Tractr.App/Assets:
 
   app-icon-256.png     the seal on a paper tile (About, Update Center, window headers)
   app.ico              16-256 px; 64 px and up use the paper tile, smaller sizes the bare seal
@@ -18,7 +18,7 @@ from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 LOGO = os.path.join(ROOT, "docs", "brand", "logo")
-OUT = os.path.join(ROOT, "src", "FarmingRpgMaker.App", "Assets")
+OUT = os.path.join(ROOT, "src", "Tractr.App", "Assets")
 PAPER = (0xF2, 0xE5, 0xC6)
 
 

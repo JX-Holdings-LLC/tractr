@@ -1,4 +1,4 @@
-//! `farm-sim`: the deterministic simulation core of Farming RPG Maker.
+//! `farm-sim`: the deterministic simulation core of Tractr.
 //!
 //! This crate is a reducer: `(state, content, command | ticks) → (state, effects, hook events)`.
 //! It does no I/O, spawns no threads and never reads a clock. Same seed + same command log ⇒

@@ -52,7 +52,7 @@ python build_plates.py SHOT.png "FIG. 1" "EDIT MODE" "A caption." plate-edit-mod
 
 The editor's own images (`app-icon-256.png`, `app.ico`, the header logo and the paper grain) are cut from `logo/`
 with `python3 scripts/generate-app-icon.py` (needs Pillow). The About banner is
-`src/FarmingRpgMaker.App/Assets/about-banner.png`, from `build_marketing.py about`.
+`src/Tractr.App/Assets/about-banner.png`, from `build_marketing.py about`.
 
 ## Making something new
 
@@ -62,6 +62,6 @@ at the render next to `style-board.png`. Add new pictures to `docs/media` and li
 that use them.
 
 The fonts are Alfa Slab One, Lobster, Oswald and Courier Prime, all free under the SIL Open Font License. The editor
-ships them in `src/FarmingRpgMaker.App/Assets/Fonts`; their notices are in
+ships them in `src/Tractr.App/Assets/Fonts`; their notices are in
 `assets/fonts/OFL-TractrInterface.txt` and the editor's `THIRD-PARTY-dotnet.txt`. The product name, taglines and
 catalog numbers are placeholder copy and may change.

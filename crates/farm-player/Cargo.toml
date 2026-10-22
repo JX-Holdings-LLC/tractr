@@ -1,6 +1,6 @@
 [package]
 name = "farm-player"
-description = "The Farming RPG Maker game player: headless replays, the embeddable graphical player and the desktop game"
+description = "The Tractr game player: headless replays, the embeddable graphical player and the desktop game"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

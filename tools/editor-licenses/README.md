@@ -2,7 +2,7 @@
 
 `THIRD-PARTY-dotnet.txt` lists the software the editor ships besides its own
 code and the Rust engine library: every NuGet package with run-time assets in
-`src/FarmingRpgMaker.App`'s restore graph (with its license and copyright from
+`src/Tractr.App`'s restore graph (with its license and copyright from
 its `.nuspec`, and the license files and third-party notices inside the
 package), the .NET runtime, the Material Design Icons and the Inter typeface.
 The app copies it to `licenses/THIRD-PARTY-dotnet.txt`, next to
@@ -10,7 +10,7 @@ The app copies it to `licenses/THIRD-PARTY-dotnet.txt`, next to
 and `LICENSE.txt`.
 
 ```sh
-dotnet restore src/FarmingRpgMaker.App
+dotnet restore src/Tractr.App
 node tools/editor-licenses/generate.mjs           # rewrite THIRD-PARTY-dotnet.txt
 node tools/editor-licenses/generate.mjs --check   # fail when it is out of date (CI)
 ```

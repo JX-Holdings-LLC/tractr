@@ -1,6 +1,6 @@
 [package]
 name = "farm-ui"
-description = "In-game UI of Farming RPG Maker games: HUD, dialogue, shop, panels and the game shell, drawn onto farm-render draw lists"
+description = "In-game UI of Tractr games: HUD, dialogue, shop, panels and the game shell, drawn onto farm-render draw lists"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

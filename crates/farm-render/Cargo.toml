@@ -1,6 +1,6 @@
 [package]
 name = "farm-render"
-description = "World snapshots, draw lists and a CPU rasterizer for Farming RPG Maker games"
+description = "World snapshots, draw lists and a CPU rasterizer for Tractr games"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

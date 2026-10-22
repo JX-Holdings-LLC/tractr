@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // Regenerates THIRD-PARTY-dotnet.txt: the license notices for the NuGet packages the editor
-// (src/FarmingRpgMaker.App) ships, plus the .NET runtime, the Material Design Icons and the Inter
+// (src/Tractr.App) ships, plus the .NET runtime, the Material Design Icons and the Inter
 // typeface. The app copies it to licenses/THIRD-PARTY-dotnet.txt next to the executable (the Rust
 // engine library's notices are licenses/THIRD-PARTY-rust.txt, from tools/player-licenses).
 //
-// Reads the package graph from src/FarmingRpgMaker.App/obj/project.assets.json, so restore first.
+// Reads the package graph from src/Tractr.App/obj/project.assets.json, so restore first.
 // Every package with run-time assets is listed with its license and copyright from its .nuspec;
 // license files and third-party notices inside the packages are copied in full. Run it after
 // changing a PackageVersion in Directory.Packages.props and commit the result.
 //
-//   dotnet restore src/FarmingRpgMaker.App
+//   dotnet restore src/Tractr.App
 //   node tools/editor-licenses/generate.mjs           # rewrite THIRD-PARTY-dotnet.txt
 //   node tools/editor-licenses/generate.mjs --check   # fail if it is out of date (CI)
 import { createHash } from "node:crypto";
@@ -20,11 +20,11 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
 const output = join(here, "THIRD-PARTY-dotnet.txt");
-const assetsPath = join(root, "src", "FarmingRpgMaker.App", "obj", "project.assets.json");
+const assetsPath = join(root, "src", "Tractr.App", "obj", "project.assets.json");
 const rule = "-".repeat(80);
 
 if (!existsSync(assetsPath)) {
-  console.error(`${assetsPath} is missing: run dotnet restore src/FarmingRpgMaker.App first.`);
+  console.error(`${assetsPath} is missing: run dotnet restore src/Tractr.App first.`);
   process.exit(1);
 }
 
@@ -149,7 +149,7 @@ out.push(
   "",
   "Used by:",
   "- Material Design Icons (Pictogrammers, https://pictogrammers.com/library/mdi/): the",
-  "  editor's toolbar and status icons (src/FarmingRpgMaker.App/App.axaml)",
+  "  editor's toolbar and status icons (src/Tractr.App/App.axaml)",
   "",
   text("Apache-2.0.txt"),
   "",
@@ -166,7 +166,7 @@ out.push(
   "",
   "Used by:",
   "- Alfa Slab One, Lobster, Oswald and Courier Prime, the editor's interface fonts",
-  "  (src/FarmingRpgMaker.App/Assets/Fonts)",
+  "  (src/Tractr.App/Assets/Fonts)",
   "",
   clean(readFileSync(join(root, "assets", "fonts", "OFL-TractrInterface.txt"), "utf8")),
   "",

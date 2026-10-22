@@ -2939,7 +2939,7 @@ Apache-2.0
 
 Used by:
 - Material Design Icons (Pictogrammers, https://pictogrammers.com/library/mdi/): the
-  editor's toolbar and status icons (src/FarmingRpgMaker.App/App.axaml)
+  editor's toolbar and status icons (src/Tractr.App/App.axaml)
 
 Apache License
                            Version 2.0, January 2004
@@ -3249,7 +3249,7 @@ OFL-1.1
 
 Used by:
 - Alfa Slab One, Lobster, Oswald and Courier Prime, the editor's interface fonts
-  (src/FarmingRpgMaker.App/Assets/Fonts)
+  (src/Tractr.App/Assets/Fonts)
 
 Copyright 2016 The Alfa Slab One Project Authors (http://www.jmsole.cl | info@jmsole.cl), with Reserved Font Name "Alfa Slab".
 Copyright 2010 The Lobster Project Authors (https://github.com/impallari/The-Lobster-Font), with Reserved Font Name "Lobster".

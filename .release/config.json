@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "bumpPolicy": "every-main-change",
   "apps": {
-    "farming-rpg-maker": {
+    "tractr": {
       "tagPrefix": "v",
       "paths": [
         "**"
@@ -22,9 +22,9 @@
       "notes": "CHANGELOG.md",
       "notesSection": true,
       "assets": [
-        "FarmingRpgMaker-{version}-full.nupkg",
-        "FarmingRpgMaker-win-Portable.zip",
-        "FarmingRpgMaker-win-Setup.exe",
+        "Tractr-{version}-full.nupkg",
+        "Tractr-win-Portable.zip",
+        "Tractr-win-Setup.exe",
         "RELEASES",
         "releases.win.json",
         "player-windows-x64.zip",
@@ -37,7 +37,7 @@
       "legacyLatest": true,
       "optionalAssets": [
         {
-          "pattern": "^FarmingRpgMaker-{version}-delta\\.nupkg$",
+          "pattern": "^Tractr-{version}-delta\\.nupkg$",
           "min": 0,
           "max": 1
         }

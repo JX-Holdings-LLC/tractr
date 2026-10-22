@@ -8,7 +8,7 @@ scripts/generate-app-icon.py.
 Pure standard library (no Pillow): shapes are rasterised on a 1024x1024
 supersampled grid and box-filtered down. Writes
 
-  src/FarmingRpgMaker.App/Assets/default-game-icon-256.png
+  src/Tractr.App/Assets/default-game-icon-256.png
 
 Run from the repo root:  python3 scripts/generate-game-icon.py
 """
@@ -18,7 +18,7 @@ import struct
 import zlib
 
 SS = 1024  # supersampled canvas
-OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "src", "FarmingRpgMaker.App", "Assets")
+OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "src", "Tractr.App", "Assets")
 
 
 def hex_rgb(h):

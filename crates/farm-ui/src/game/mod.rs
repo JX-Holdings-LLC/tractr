@@ -122,7 +122,7 @@ pub struct GameView<'a> {
     pub minigame: Option<&'a MinigameView>,
     pub art: ItemArt<'a>,
     pub bindings: &'a Bindings,
-    /// Show "Made with Farming RPG Maker".
+    /// Show "Made with Tractr".
     pub show_made_with: bool,
     /// The game UI owns keyboard and gamepad this frame (digits pick dialogue options, tabs
     /// switch shop tabs). False while a shell screen (pause, settings) is on top.

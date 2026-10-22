@@ -115,7 +115,7 @@ const EN: &[(&str, &str)] = &[
     ("hud.time", "Time:"),
     ("hud.energy", "Energy:"),
     ("hud.sunny", "Sunny"),
-    ("hud.madeWith", "Made with Farming RPG Maker"),
+    ("hud.madeWith", "Made with Tractr"),
     // Toolbar (web `toolbar.*`).
     ("toolbar.inventory", "Inventory {0}/{1}"),
     ("toolbar.quests", "Quests"),
@@ -364,7 +364,7 @@ const ES: &[(&str, &str)] = &[
     ("hud.time", "Hora:"),
     ("hud.energy", "Energ\u{ed}a:"),
     ("hud.sunny", "Soleado"),
-    ("hud.madeWith", "Hecho con Farming RPG Maker"),
+    ("hud.madeWith", "Hecho con Tractr"),
     ("toolbar.inventory", "Inventario {0}/{1}"),
     ("toolbar.quests", "Misiones"),
     ("toolbar.craft", "Fabricar"),

@@ -40,8 +40,8 @@ levels:
     commands:
       - cargo fmt --all --check
       - cargo clippy --locked --workspace --all-targets -- -D warnings
-      - dotnet format whitespace FarmingRpgMaker.sln --no-restore --verify-no-changes
-      - dotnet format style FarmingRpgMaker.sln --no-restore --verify-no-changes
+      - dotnet format whitespace Tractr.sln --no-restore --verify-no-changes
+      - dotnet format style Tractr.sln --no-restore --verify-no-changes
       - python3 tools/ci/text-style.py
       - npx --yes markdownlint-cli2@0.23.3
   unit:
@@ -105,7 +105,7 @@ risky_areas:
   - Plugin sandbox (crates/farm-plugins, docs/PLUGINS.md): budgets, permissions, hostile packs.
   - Project, pack and save import (F# migrations, crates/farm-cart): untrusted files.
   - Export Game (src/FarmEngine.Export, docs/EXPORT.md): templates, archives, PE patching.
-  - Update Center (src/FarmingRpgMaker.Updates): Velopack and GitHub Releases.
+  - Update Center (src/Tractr.Updates): Velopack and GitHub Releases.
   - F#/Rust schema parity (two project pipelines, docs/LANGUAGES.md).
 
 issues:

@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="FarmingRpgMaker.App.Tests" />
+    <InternalsVisibleTo Include="Tractr.App.Tests" />
   </ItemGroup>
 
   <!--

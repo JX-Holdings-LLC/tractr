@@ -12,9 +12,7 @@ F#; the editor's desktop UI is C# on .NET 10 with
 The app updates itself from GitHub Releases through the built-in **Update
 Center**.
 
-Tractr was called *Farming RPG Maker*. The code, the installer and your
-project files keep their old names for now, so updates and projects carry
-over untouched.
+Tractr was called *Farming RPG Maker* until version 0.4.0.
 
 ![Four seed packets: Edit, Play, Mod and Ship.](docs/media/tractr-packets.png)
 
@@ -87,7 +85,7 @@ give the same game, on the desktop, in exported games and in the browser.
 
 ## Install
 
-Download `FarmingRpgMaker-win-Setup.exe` from the
+Download `Tractr-win-Setup.exe` from the
 [latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
 and run it. It installs per-user and needs no admin rights. A portable zip is
 attached to the release too.
@@ -128,7 +126,7 @@ whole scene or clear its crops and items. To make a door,
 choose **Door**, click its departure tile, choose a destination and save it;
 **Return door** creates the reverse link in the same undo step.
 
-Projects are saved in `%APPDATA%\FarmingRpgMaker\projects\`.
+Projects are saved in `%APPDATA%\Tractr\projects\`.
 
 ## Export Game
 
@@ -168,13 +166,13 @@ is not code-signed yet. Choose **More info → Run anyway** (see
 
 **The Update Center says "Updates are available only in the installed app".**
 You are running a development or source build, which Velopack cannot
-update. Install with `FarmingRpgMaker-win-Setup.exe`
+update. Install with `Tractr-win-Setup.exe`
 from the [latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
 to get updates; your projects stay where they are.
 
 ![The Update Center in a development build](docs/media/update-center-not-installed.png)
 
-**Where are my projects?** In `%APPDATA%\FarmingRpgMaker\projects\`, one
+**Where are my projects?** In `%APPDATA%\Tractr\projects\`, one
 `.json` file per project. **File → Export Project JSON** writes a copy anywhere,
 and **File → Import Project JSON** reads one back.
 
@@ -219,9 +217,9 @@ sudo apt-get install libxkbcommon-x11-0 xvfb   # to run the window; xvfb for the
 Without `xvfb`, the player's window test is skipped.
 
 ```sh
-dotnet build FarmingRpgMaker.sln
-dotnet test FarmingRpgMaker.sln
-dotnet run --project src/FarmingRpgMaker.App
+dotnet build Tractr.sln
+dotnet test Tractr.sln
+dotnet run --project src/Tractr.App
 cargo test --workspace   # Rust engine tests, including the golden replays
 ```
 
@@ -255,8 +253,8 @@ checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
 
 | Project | What it is | Ported from (web repo) |
 |---|---|---|
-| `FarmingRpgMaker.Updates` | Update Center backend (Velopack + GitHub Releases) | — |
-| `FarmingRpgMaker.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog | `src/` (React app) |
+| `Tractr.Updates` | Update Center backend (Velopack + GitHub Releases) | — |
+| `Tractr.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog | `src/` (React app) |
 | `FarmEngine.Interop` | P/Invoke bindings to the Rust library (`RustPlayer`, `RustPreview`, `RustSession`) | — |
 | `FarmEngine.Authoring` (F#) | The schema records and their JSON, project edits, undo/redo, migrations, validation, Problems, content compiler, packs, sample templates, cartridge compiler and reader; compiles to JavaScript with Fable (`WebApi.fs`) | `src/components/*` decisions, `packages/engine-schemas`, `packages/content-default`, `src/lib/templates.ts` |
 | `FarmEngine.Authoring.Net` (F#) | The .NET edge of the F# core: `System.Text.Json` conversion, `RecordJson` and the generated `RecordWith` extensions the C# app builds records with | — |

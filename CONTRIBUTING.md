@@ -60,7 +60,7 @@ Export Game has no macOS host template yet.
 dotnet build -c Release            # also builds crates/farm-ffi and the player templates
 dotnet test -c Release --no-build
 cargo test --workspace             # Rust engine tests, including the golden replays
-dotnet run --project src/FarmingRpgMaker.App
+dotnet run --project src/Tractr.App
 ```
 
 Before you push, run what CI runs on your change:
@@ -68,8 +68,8 @@ Before you push, run what CI runs on your change:
 ```sh
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-dotnet format whitespace FarmingRpgMaker.sln --verify-no-changes
-dotnet format style FarmingRpgMaker.sln --verify-no-changes
+dotnet format whitespace Tractr.sln --verify-no-changes
+dotnet format style Tractr.sln --verify-no-changes
 python3 tools/ci/text-style.py
 npx --yes markdownlint-cli2@0.23.3
 ```
@@ -112,7 +112,7 @@ leave `fixtures/` changed (`tools/golden/ci-guard.sh`).
 | `FARM_RECORD_CARTRIDGES=1` | `fixtures/golden/cartridges/*.cart` | `dotnet test tests/FarmEngine.Authoring.Tests --filter "FullyQualifiedName~CartridgeTests\|FullyQualifiedName~ValidationTests"` |
 | `FARM_RECORD_SNAPSHOTS=1` | `fixtures/authoring/snapshots.json` | `dotnet test tests/FarmEngine.Authoring.Tests --filter FullyQualifiedName~SnapshotTests` |
 | `FARM_RECORD_CONTENT_LINTS=1` | `fixtures/projects/content-lints.json` | `dotnet test tests/FarmEngine.Authoring.Tests --filter FullyQualifiedName~ValidationCaseTests` |
-| `FARM_EDITOR_BLESS=1` | `fixtures/editor/*.png` (editor screenshots at half size, compared with a tolerance on Linux) | `dotnet test tests/FarmingRpgMaker.App.Tests --filter "FullyQualifiedName~Screenshot"` |
+| `FARM_EDITOR_BLESS=1` | `fixtures/editor/*.png` (editor screenshots at half size, compared with a tolerance on Linux) | `dotnet test tests/Tractr.App.Tests --filter "FullyQualifiedName~Screenshot"` |
 
 Never re-record `fixtures/golden/v8/`: those are the frozen TypeScript
 goldens and the v8 outcomes, kept as migration inputs
@@ -121,7 +121,7 @@ goldens and the v8 outcomes, kept as migration inputs
 `tools/golden/generate.sh` either; it regenerates them from the TypeScript
 engine.
 
-The editor screenshot comparison (`tests/FarmingRpgMaker.App.Tests/Ui/ScreenshotGoldens.cs`)
+The editor screenshot comparison (`tests/Tractr.App.Tests/Ui/ScreenshotGoldens.cs`)
 averages 8×8 blocks of the half-size image, so anti-aliasing and font hinting
 pass while a moved, missing or recoloured control fails. The references are
 Linux renders; on Windows and macOS the capture is checked but not compared.
@@ -178,8 +178,8 @@ needs that tool. CI checks that each matches its generator.
 | Plugin sandbox guest (`crates/farm-plugins/guest/farm_plugin_guest.wasm`) | `tools/plugin-guest/build.sh`, then update the hashes in [its README](crates/farm-plugins/guest/README.md) | `crates/farm-plugin-guest` or the meter changes | `build.sh --check` |
 | Built-in art (`assets/builtin-art/`) | `python3 tools/art/build_art.py` (Blender 4.5 as a module, Pillow, numpy; [tools/art](tools/art/README.md)) | the art changes | — |
 | PE test fixture (`tests/FarmEngine.Export.Tests/Fixtures/pe/player-fixture.exe`) | `tests/FarmEngine.Export.Tests/Fixtures/pe/build.sh` (mingw-w64) | the template's placeholder resources change | — |
-| Editor screenshots (`docs/media/*.png`) | `FRM_SCREENSHOT_DIR="$PWD/docs/media" dotnet test tests/FarmingRpgMaker.App.Tests --filter "FullyQualifiedName~Screenshot"`, then keep only the images the docs use | the editor's look changes | — |
-| App icon, header logo, paper grain (`src/FarmingRpgMaker.App/Assets/`) | `python3 scripts/generate-app-icon.py` (Pillow; cuts them from `docs/brand/logo`) | the logo changes | — |
+| Editor screenshots (`docs/media/*.png`) | `FRM_SCREENSHOT_DIR="$PWD/docs/media" dotnet test tests/Tractr.App.Tests --filter "FullyQualifiedName~Screenshot"`, then keep only the images the docs use | the editor's look changes | — |
+| App icon, header logo, paper grain (`src/Tractr.App/Assets/`) | `python3 scripts/generate-app-icon.py` (Pillow; cuts them from `docs/brand/logo`) | the logo changes | — |
 | Default icon of exported games (`default-game-icon-256.png`) | `python3 scripts/generate-game-icon.py` | the games' icon changes | — |
 | Brand pictures (`docs/media/tractr-*.png`, `plate-*.png`, `Assets/about-banner.png`) | the Vixl scripts in `docs/brand/vixl/kit` ([docs/brand/README.md](docs/brand/README.md#rebuilding-the-pictures)) | the brand or the screenshots change | — |
 
@@ -195,7 +195,7 @@ the release).
 - Keep commits focused, with a short imperative subject and a body that says
   why.
 - Bump the version in every pull request (`node .toolkit/src/release.mjs
-  bump --app farming-rpg-maker`) and describe the change in the new
+  bump --app tractr`) and describe the change in the new
   `## X.Y.Z` section of [CHANGELOG.md](CHANGELOG.md); it becomes the release
   notes.
 - Versions, tags and the release workflow are in

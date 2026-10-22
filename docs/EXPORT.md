@@ -273,7 +273,7 @@ The version info has `ProductName` and `FileDescription` (the title; Task
 Manager shows the description), `FileVersion`/`ProductVersion` (the version
 string, and its leading numbers in the fixed info), `CompanyName` and
 `LegalCopyright` (the company, else the author), `InternalName`,
-`OriginalFilename` and a "Made with Farming RPG Maker" comment. The icon is the
+`OriginalFilename` and a "Made with Tractr" comment. The icon is the
 export `icon` asset scaled into a square, or the default wheat-and-field icon when none is set.
 
 The tests patch `tests/FarmEngine.Export.Tests/Fixtures/pe/player-fixture.exe`,
@@ -453,7 +453,7 @@ archives and folders from two exports, the tar execute bit, the `.desktop`
 text, icon sizes, the PE patch round trip on the fixture (and its failures),
 template version and checksum refusal, a missing template failing one target,
 and an end-to-end export for the host target whose player runs headless and
-reports the right game id, version and hash. `FarmingRpgMaker.App.Tests` drives
+reports the right game id, version and hash. `Tractr.App.Tests` drives
 the dialog. CI exports `project-v8.json` on Linux and Windows and runs the
 exported game against the checked-in replay.
 

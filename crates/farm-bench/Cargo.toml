@@ -1,6 +1,6 @@
 [package]
 name = "farm-bench"
-description = "Benchmarks and CI time budgets of the Farming RPG Maker runtime"
+description = "Benchmarks and CI time budgets of the Tractr runtime"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
