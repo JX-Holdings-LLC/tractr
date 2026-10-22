@@ -79,11 +79,11 @@
                   TileMode="Tile" DestinationRect="0,0,256,256" />
 
       <!-- Four type voices (docs/brand/STYLE.md). Inter stays behind them for glyphs they lack. -->
-      <FontFamily x:Key="DisplayFont">avares://Tractr/Assets/Fonts#Alfa Slab One, $Default</FontFamily>
-      <FontFamily x:Key="ScriptFont">avares://Tractr/Assets/Fonts#Lobster, $Default</FontFamily>
-      <FontFamily x:Key="LabelFont">avares://Tractr/Assets/Fonts#Oswald, $Default</FontFamily>
-      <FontFamily x:Key="BodyFont">avares://Tractr/Assets/Fonts#Courier Prime, $Default</FontFamily>
-      <FontFamily x:Key="ContentControlThemeFontFamily">avares://Tractr/Assets/Fonts#Courier Prime, $Default</FontFamily>
+      <FontFamily x:Key="DisplayFont">avares://Tractr/Assets/Fonts#Alfa Slab One, fonts:Inter#Inter</FontFamily>
+      <FontFamily x:Key="ScriptFont">avares://Tractr/Assets/Fonts#Lobster, fonts:Inter#Inter</FontFamily>
+      <FontFamily x:Key="LabelFont">avares://Tractr/Assets/Fonts#Oswald, fonts:Inter#Inter</FontFamily>
+      <FontFamily x:Key="BodyFont">avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter</FontFamily>
+      <FontFamily x:Key="ContentControlThemeFontFamily">avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter</FontFamily>
       <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
 
       <!-- Fluent control colours, mapped to the inks. -->

@@ -1197,7 +1197,7 @@ internal sealed class ContentForm : IContentDraft
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
             MinHeight = 70,
-            FontFamily = new FontFamily("avares://Tractr/Assets/Fonts#Courier Prime, Cascadia Mono, Consolas, DejaVu Sans Mono, monospace"),
+            FontFamily = new FontFamily("avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter"),
         }, $"{label} as JSON");
         var apply = Accessible(SmallButton($"ContentJsonApply_{path}", "Apply JSON", "Replace this field with the JSON above", () => Structural(() => { })), $"Apply {label} JSON");
         _json.Add(new JsonEscape(label, box, text, nullable, node => target[key] = node));

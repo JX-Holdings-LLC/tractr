@@ -17,7 +17,7 @@ public sealed class MarkdownView : Border
     public static readonly StyledProperty<string?> MarkdownProperty =
         AvaloniaProperty.Register<MarkdownView, string?>(nameof(Markdown));
 
-    private static readonly FontFamily MonoFont = new("avares://Tractr/Assets/Fonts#Courier Prime, Cascadia Mono, Consolas, DejaVu Sans Mono, monospace");
+    private static readonly FontFamily MonoFont = new("avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter");
 
     static MarkdownView()
     {

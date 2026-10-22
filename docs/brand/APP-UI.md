@@ -58,7 +58,7 @@ Rules that follow from the style guide:
 what it draws: `Text` keeps its real casing for screen readers, tests and bindings. `Ui.Text(...)` creates one
 automatically for those classes; in XAML write `<controls:KickerText Classes="h2" .../>`.
 
-Inter stays registered behind all four fonts, so a glyph they lack (other scripts, symbols) still draws.
+Inter is named explicitly behind all four fonts (`fonts:Inter#Inter`, never `$Default` or a system font), so a glyph they lack, like the `→` in "File → Export Game", draws the same on every machine. A system fallback made the Linux CI render differ from a developer's by a few pixels.
 
 ### Where the editor departs from STYLE.md
 

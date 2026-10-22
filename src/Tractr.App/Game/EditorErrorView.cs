@@ -36,7 +36,7 @@ public sealed class EditorErrorView : UserControl
             Name = "EditorErrorDetails",
             Text = $"{error.GetType().Name}: {error.Message}",
             TextWrapping = TextWrapping.Wrap,
-            FontFamily = new FontFamily("avares://Tractr/Assets/Fonts#Courier Prime, Cascadia Mono, Consolas, DejaVu Sans Mono, monospace"),
+            FontFamily = new FontFamily("avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter"),
             FontSize = 12,
         };
         AutomationProperties.SetName(details, "Error details");
