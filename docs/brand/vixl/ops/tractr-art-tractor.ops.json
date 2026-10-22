@@ -1,0 +1,362 @@
+[
+ {
+  "type": "shape",
+  "shape": "arc",
+  "name": "tr-fender",
+  "x": 20.0,
+  "y": 220.0,
+  "width": 680.0,
+  "height": 680.0,
+  "fill": "#b5332a",
+  "start_angle": 180,
+  "end_angle": 360,
+  "inner_radius": 0.86
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-frame",
+  "x": 340.0,
+  "y": 450.0,
+  "width": 340.0,
+  "height": 120.0,
+  "fill": "#b5332a",
+  "radius": 20.0
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-engine",
+  "x": 620.0,
+  "y": 510.0,
+  "width": 450.0,
+  "height": 120.0,
+  "fill": "#3a2a1e",
+  "radius": 12.0
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin0",
+  "x": 660.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin1",
+  "x": 724.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin2",
+  "x": 788.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin3",
+  "x": 852.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin4",
+  "x": 916.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-fin5",
+  "x": 980.0,
+  "y": 530.0,
+  "width": 20.0,
+  "height": 80.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "path",
+  "name": "tr-hood",
+  "x": 0,
+  "y": 0,
+  "path": "M 520.0 530.0 L 520.0 370.0 Q 520.0 340.0 556.0 340.0 L 1080.0 340.0 Q 1144.0 340.0 1150.0 410.0 L 1150.0 530.0 Z",
+  "fill": "#b5332a"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-stripe",
+  "x": 544.0,
+  "y": 396.0,
+  "width": 580.0,
+  "height": 24.0,
+  "fill": "#f2e5c6"
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-grill",
+  "x": 1124.0,
+  "y": 336.0,
+  "width": 60.0,
+  "height": 216.0,
+  "fill": "#3a2a1e",
+  "radius": 12.0
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-grillbar0",
+  "x": 1134.0,
+  "y": 360.0,
+  "width": 40.0,
+  "height": 10.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-grillbar1",
+  "x": 1134.0,
+  "y": 396.0,
+  "width": 40.0,
+  "height": 10.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-grillbar2",
+  "x": 1134.0,
+  "y": 432.0,
+  "width": 40.0,
+  "height": 10.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-grillbar3",
+  "x": 1134.0,
+  "y": 468.0,
+  "width": 40.0,
+  "height": 10.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-grillbar4",
+  "x": 1134.0,
+  "y": 504.0,
+  "width": 40.0,
+  "height": 10.0,
+  "fill": "#8f2a22"
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-stack",
+  "x": 924.0,
+  "y": 176.0,
+  "width": 32.0,
+  "height": 172.0,
+  "fill": "#3a2a1e"
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-cap",
+  "x": 912.0,
+  "y": 156.0,
+  "width": 56.0,
+  "height": 28.0,
+  "fill": "#3a2a1e",
+  "radius": 6.0
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-intake",
+  "x": 810.0,
+  "y": 256.0,
+  "width": 36.0,
+  "height": 92.0,
+  "fill": "#3a2a1e",
+  "radius": 8.0
+ },
+ {
+  "type": "shape",
+  "shape": "rectangle",
+  "name": "tr-seatpost",
+  "x": 324.0,
+  "y": 340.0,
+  "width": 28.0,
+  "height": 120.0,
+  "fill": "#3a2a1e"
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-seat",
+  "x": 250.0,
+  "y": 316.0,
+  "width": 180.0,
+  "height": 36.0,
+  "fill": "#3a2a1e",
+  "radius": 16.0
+ },
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tr-seatback",
+  "x": 236.0,
+  "y": 232.0,
+  "width": 36.0,
+  "height": 112.0,
+  "fill": "#3a2a1e",
+  "radius": 16.0
+ },
+ {
+  "type": "shape",
+  "shape": "path",
+  "name": "tr-column",
+  "x": 0,
+  "y": 0,
+  "path": "M 604.0 350.0 L 512.0 228.0",
+  "stroke": "#3a2a1e",
+  "stroke_width": 18.0,
+  "line_cap": "round"
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-wheel",
+  "x": 444.0,
+  "y": 208.0,
+  "width": 140.0,
+  "height": 40.0,
+  "fill": "transparent",
+  "stroke": "#3a2a1e",
+  "stroke_width": 14.0,
+  "rotation": -18
+ },
+ {
+  "type": "shape",
+  "shape": "cog",
+  "name": "tr-rtire",
+  "x": 70.0,
+  "y": 270.0,
+  "width": 580.0,
+  "height": 580.0,
+  "fill": "#2a1f18",
+  "teeth": 26,
+  "depth": 0.05,
+  "hole": 0
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-rrim",
+  "x": 184.0,
+  "y": 384.0,
+  "width": 352.0,
+  "height": 352.0,
+  "fill": "#e3a83a"
+ },
+ {
+  "type": "shape",
+  "shape": "ring",
+  "name": "tr-rring",
+  "x": 224.0,
+  "y": 424.0,
+  "width": 272.0,
+  "height": 272.0,
+  "fill": "#8f2a22",
+  "thickness": 0.12
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-rhub",
+  "x": 300.0,
+  "y": 500.0,
+  "width": 120.0,
+  "height": 120.0,
+  "fill": "#b5332a"
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-rbolt",
+  "x": 340.0,
+  "y": 540.0,
+  "width": 40.0,
+  "height": 40.0,
+  "fill": "#3a2a1e"
+ },
+ {
+  "type": "shape",
+  "shape": "cog",
+  "name": "tr-ftire",
+  "x": 856.0,
+  "y": 556.0,
+  "width": 296.0,
+  "height": 296.0,
+  "fill": "#2a1f18",
+  "teeth": 16,
+  "depth": 0.07,
+  "hole": 0
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-frim",
+  "x": 920.0,
+  "y": 620.0,
+  "width": 168.0,
+  "height": 168.0,
+  "fill": "#e3a83a"
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-fhub",
+  "x": 972.0,
+  "y": 672.0,
+  "width": 64.0,
+  "height": 64.0,
+  "fill": "#b5332a"
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "tr-lamp",
+  "x": 1060.0,
+  "y": 284.0,
+  "width": 52.0,
+  "height": 52.0,
+  "fill": "#fff4d6"
+ }
+]

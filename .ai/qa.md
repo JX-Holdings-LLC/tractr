@@ -1,4 +1,4 @@
-# QA profile: Farming RPG Maker (native)
+# QA profile: Tractr (native)
 
 Machine-readable levels are in [qa.yaml](qa.yaml); this page is for people and
 for QA agents deciding what a level means here. Every command is one CI already
@@ -9,7 +9,7 @@ runs ([.github/workflows/ci.yml](../.github/workflows/ci.yml));
 
 A native desktop app, not a web app: a Rust game engine and player
 (`crates/`), an F# authoring core and Export Game (`src/FarmEngine.*`), and a
-C# Avalonia editor (`src/FarmingRpgMaker.App`). There is no dev server, no
+C# Avalonia editor (`src/Tractr.App`). There is no dev server, no
 `package.json` and no npm dependency tree. Node 22 only runs test scripts.
 
 ## Prerequisites

@@ -1,0 +1,136 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
+using Tractr.App.Hosting;
+using Tractr.App.Localization;
+using Tractr.App.Projects;
+using Tractr.App.Services;
+using Tractr.App.ViewModels;
+using Tractr.App.Views;
+using Tractr.Updates;
+using Tractr.Updates.Testing;
+
+namespace Tractr.App;
+
+public sealed class App : Application
+{
+    /// <summary>
+    /// Set to <c>available</c>, <c>uptodate</c>, <c>error</c> or <c>notinstalled</c> to run the
+    /// Update Center against <see cref="FakeUpdateService"/> (UI demos, screenshots).
+    /// </summary>
+    public const string FakeUpdatesVariable = "TRACTR_FAKE_UPDATES";
+
+    /// <summary>Delay before the background startup check, so it never competes with first paint.</summary>
+    public static readonly TimeSpan StartupCheckDelay = TimeSpan.FromSeconds(2);
+
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            // The same settings.json as the editor's settings (and the same data folder override).
+            var store = new JsonSettingsStore(AppDataPaths.SettingsFile());
+            var service = CreateUpdateService(store.Load().Channel);
+            var coordinator = new UpdateCoordinator(service, store);
+            var composition = ShellComposition.CreateDefault();
+            // The editor's language: the creator's choice (Help → Language), else the system's.
+            EditorStrings.SetLanguage(EditorStrings.ResolveForSystem(composition.Workspace?.Settings.Load().EditorLanguage));
+            var viewModel = new MainWindowViewModel(coordinator, composition);
+            var window = new MainWindow(new ShellUrlLauncher()) { DataContext = viewModel };
+            desktop.MainWindow = window;
+
+            // Nothing a creator did in the last second is lost: flush before any exit path. Closing
+            // the window and Restart & install ask first when saving fails (MainWindow.OnClosing).
+            desktop.ShutdownRequested += (_, e) =>
+            {
+                if (!window.IsExitConfirmed && !viewModel.PrepareForExit())
+                {
+                    // Shutdown with the window still open (logging off, Quit from the dock): the
+                    // window asks about the edits that could not be saved, then closes.
+                    e.Cancel = true;
+                    Dispatcher.UIThread.Post(window.Close);
+                    return;
+                }
+
+                composition.PrepareForShutdown();
+                coordinator.ApplyOnExitIfReady();
+            };
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                System.Diagnostics.Trace.TraceError($"Unhandled exception: {e.Exception}");
+                // The editor shows the error with Try Again (web ErrorFallback) and keeps going.
+                try
+                {
+                    if (composition.TryRecover(e.Exception))
+                    {
+                        e.Handled = true;
+                        return;
+                    }
+                }
+#pragma warning disable CA1031 // Recovery failed; fall through to the last-chance save.
+                catch (Exception recoverError)
+#pragma warning restore CA1031
+                {
+                    System.Diagnostics.Trace.TraceError($"Showing the error failed: {recoverError}");
+                }
+
+                // Last chance before the process dies: save what we can, then let it crash.
+                try
+                {
+                    composition.PrepareForShutdown();
+                }
+#pragma warning disable CA1031 // Already crashing; a second failure must not hide the first.
+                catch (Exception flushError)
+#pragma warning restore CA1031
+                {
+                    System.Diagnostics.Trace.TraceError($"Flush after crash failed: {flushError}");
+                }
+            };
+            window.Opened += (_, _) => DispatcherTimer.RunOnce(
+                () => _ = RunStartupCheckAsync(coordinator),
+                StartupCheckDelay);
+            // First launch: the welcome tour (it remembers when it was dismissed).
+            window.Opened += (_, _) => Dispatcher.UIThread.Post(() => window.ShowWelcomeIfFirstRun());
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task RunStartupCheckAsync(UpdateCoordinator coordinator)
+    {
+        try
+        {
+            await coordinator.RunStartupCheckAsync().ConfigureAwait(true);
+        }
+#pragma warning disable CA1031 // A failed background check must never affect the app.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            System.Diagnostics.Trace.TraceWarning($"Startup update check failed: {ex}");
+        }
+    }
+
+    private static IUpdateService CreateUpdateService(UpdateChannel channel)
+    {
+        var fake = Environment.GetEnvironmentVariable(FakeUpdatesVariable);
+        if (string.IsNullOrWhiteSpace(fake))
+        {
+            return new VelopackUpdateService(channel);
+        }
+
+        return new FakeUpdateService
+        {
+            Channel = channel,
+            IsInstalled = !fake.Equals("notinstalled", StringComparison.OrdinalIgnoreCase),
+            CheckDelay = TimeSpan.FromMilliseconds(600),
+            NextResult = fake.ToLowerInvariant() switch
+            {
+                "uptodate" => new UpdateCheckResult.UpToDate(),
+                "error" => new UpdateCheckResult.Error("Couldn't reach GitHub. Check your internet connection and try again."),
+                _ => FakeUpdateService.SampleUpdate(),
+            },
+        };
+    }
+}

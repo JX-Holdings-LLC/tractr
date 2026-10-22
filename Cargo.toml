@@ -1,4 +1,4 @@
-# Rust workspace: the part of Farming RPG Maker that runs while a game is
+# Rust workspace: the part of Tractr that runs while a game is
 # being played (see docs/LANGUAGES.md). `farm-sim` is the deterministic core,
 # `farm-cart` the cartridge and save formats, `farm-runtime` the timestep, input
 # and minigame logic, `farm-host` the JSON protocol hosts speak, `farm-ffi` the C ABI
@@ -27,7 +27,7 @@ members = [
 exclude = ["crates/farm-plugin-guest", "fuzz"]
 
 [workspace.package]
-version = "0.3.2"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.88"
 license = "MIT"

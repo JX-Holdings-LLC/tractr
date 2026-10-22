@@ -1,6 +1,6 @@
 # Creator guide: build a farm game without code
 
-This guide walks through Farming RPG Maker on the desktop: start a project, build
+This guide walks through Tractr on the desktop: start a project, build
 the world in **Edit Mode**, playtest in **Play Mode**, and export a game that
 anyone can play. Everything happens in the editor; you never need to write
 code. The editor shows this guide under **Help → Creator Guide** (F1).
@@ -19,8 +19,8 @@ code. The editor shows this guide under **Help → Creator Guide** (F1).
 - **Blank**: an empty scene and the default item catalog.
 
 **File → Open Project** (Ctrl+O) lists your projects. They are saved
-automatically in the app's data folder (`%APPDATA%\FarmingRpgMaker` on
-Windows, `~/.config/FarmingRpgMaker` on Linux). **File → Export Project JSON**
+automatically in the app's data folder (`%APPDATA%\Tractr` on
+Windows, `~/.config/Tractr` on Linux). **File → Export Project JSON**
 writes a backup you can keep anywhere, and **Import Project JSON** brings one
 back, including projects made with the web version.
 

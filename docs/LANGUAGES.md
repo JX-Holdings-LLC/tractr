@@ -73,7 +73,7 @@ led here):
 
 ```text
                        ┌──────────────────────────── .NET (one solution) ─────────────────────────────┐
- project.json ───────▶ │ FarmEngine.Authoring (F#)            FarmingRpgMaker.App (C#, Avalonia)      │
+ project.json ───────▶ │ FarmEngine.Authoring (F#)            Tractr.App (C#, Avalonia)      │
  (v9, web-compatible)  │  schema · migrations · validation      views · view models · dialogs         │
                        │  packs · edits + undo · problems  ◀──── calls F# for every project change    │
                        │  compiler ──▶ cartridge bytes          hosts Rust player / preview surfaces   │
@@ -320,12 +320,12 @@ src/
   FarmEngine.Export/             # F#, .NET-only: Export Game (templates, PE resources, archives)
   FarmEngine.Cli/                # F#: the farmc CLI (the balancing lab is still to come)
   FarmEngine.Interop/            # C#: hand-written LibraryImport bindings + owning wrappers; builds farm-ffi
-  FarmingRpgMaker.Updates/       # C#, unchanged
-  FarmingRpgMaker.App/           # C#, Avalonia
+  Tractr.Updates/       # C#, unchanged
+  Tractr.App/           # C#, Avalonia
 tests/
   FarmEngine.Authoring.Tests/    # F# (xUnit + FsCheck)
   FarmEngine.Export.Tests/       # F#
-  FarmingRpgMaker.App.Tests/     # C#, unchanged role
+  Tractr.App.Tests/     # C#, unchanged role
 tools/fable/                     # Fable build of FarmEngine.Authoring + Node smoke test
 tools/wasm/                      # farm-wasm build + Node smoke test
 tools/codegen/                   # generators for SchemaJson.fs, RecordWith.fs and RecordJson.fs tables
@@ -511,7 +511,7 @@ Later passes on it would add the farming-specific visuals a CPU rasterizer
 can't do cheaply: day/night lighting, season palette swaps (the same art in autumn
 or snow), rain, snow and wind particles, and water shimmer on watered soil.
 
-### `FarmingRpgMaker.App` (C#), what stays and what changes
+### `Tractr.App` (C#), what stays and what changes
 
 | Area | Fate |
 |---|---|
@@ -522,7 +522,7 @@ or snow), rain, snow and wind particles, and water shimmer on watered soil.
 | `PlayOverlays.cs`, `PlaySession.cs`, `PlayEngine.cs`, `GameCanvas.cs`, `MinigameOverlay.cs`, `SpriteImage.cs`, `RuntimeBridge.cs`, `GameStateMirror.cs` | Deleted. |
 | `Game/DebugDrawer.cs` | Stays C#, over the game: `fe_player_debug` for actions, `fe_player_query_json` for its summary. |
 
-`FarmingRpgMaker.Updates` stays C# and unchanged. Velopack packaging ships
+`Tractr.Updates` stays C# and unchanged. Velopack packaging ships
 `farm_ffi.dll` and the player templates for Export Game.
 
 How the app's views are put together, the shared helpers to use, and the
@@ -538,7 +538,7 @@ move from code-built views towards view models are in
 | `Schemas/*`, `JsSemanticsTests.cs` | F# `SchemaRecordTests`, `JsonTests` and `MigrationTests` (the C# `FarmEngine.Schemas.Tests` went with the records in phase 7) |
 | `Core/*`, `Runtime/*` characterization tests | Ported to Rust tests next to each module |
 | `Content/*` | F# tests against the TypeScript goldens |
-| `FarmingRpgMaker.App.Tests` | Stay C# (headless Avalonia), driving the embedded Rust player |
+| `Tractr.App.Tests` | Stay C# (headless Avalonia), driving the embedded Rust player |
 
 New tests:
 

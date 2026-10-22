@@ -1,20 +1,35 @@
-# Farming RPG Maker — native Windows app
+![Tractr: Grow your own worlds! The farm game engine. A red tractor on a hill under a sunburst.](docs/media/tractr-hero.png)
 
-A native desktop rewrite of Farming RPG Maker, a 2D farming-RPG game engine
-and maker that started as a web app (`jxburros/farm-game-engine`, a private
-repository). The game engine, renderer, in-game UI and player are Rust;
-project edits, validation, the content compiler and Export Game are F#; the
-editor's desktop UI is C# on .NET 10 with [Avalonia](https://avaloniaui.net).
-There is no browser or web view inside. The app updates itself from GitHub
-Releases through the built-in **Update Center**.
+# Tractr: the farm game engine
 
-| Play Mode | Edit Mode |
-|---|---|
-| ![Play Mode: the Rust player's HUD, a farm with planted wheat and toasts](docs/media/play-mode.png) | ![Edit Mode: scene map with tile brush and hover inspector](docs/media/edit-mode.png) |
+*Grow your own worlds!* Tractr is a free, open-source maker for 2D farming
+games. Lay out the fields, plant the crops, write the neighbours and their
+quests, then ship it to Windows, Linux and the web, all without writing code.
+It is a native desktop app: the game engine, renderer, in-game UI and player
+are Rust; project edits, validation, the content compiler and Export Game are
+F#; the editor's desktop UI is C# on .NET 10 with
+[Avalonia](https://avaloniaui.net). There is no browser or web view inside.
+The app updates itself from GitHub Releases through the built-in **Update
+Center**.
 
-| Dialogue | Update Center |
-|---|---|
-| ![Talking to the Old Farmer](docs/media/play-dialogue.png) | ![Update Center with release notes and download](docs/media/update-center.png) |
+Tractr was called *Farming RPG Maker* until version 0.4.0.
+
+![Four seed packets: Edit, Play, Mod and Ship.](docs/media/tractr-packets.png)
+
+## A look around
+
+![Fig. 1, Edit Mode: the map with the tile brush, tools and project counts.](docs/media/plate-edit-mode.png)
+![Fig. 2, Play Mode: the game player with its HUD, a planted field and toasts.](docs/media/plate-play-mode.png)
+![Fig. 3, Content forms: editing an NPC.](docs/media/plate-content.png)
+
+| Welcome | Talking to the Old Farmer | Update Center |
+|---|---|---|
+| ![The welcome screen: four steps from playtesting to sharing](docs/media/welcome.png) | ![The Old Farmer's dialogue box in Play Mode](docs/media/play-dialogue.png) | ![Update Center with release notes and download](docs/media/update-center.png) |
+
+The farm in these pictures is the Starter Farm that ships with Tractr. The
+games you make look like games, not like the editor: the editor wears the
+Tractr look (see [docs/brand](docs/brand/README.md)), and the player draws
+your game its own way.
 
 ## Status
 
@@ -70,7 +85,7 @@ give the same game, on the desktop, in exported games and in the browser.
 
 ## Install
 
-Download `FarmingRpgMaker-win-Setup.exe` from the
+Download `Tractr-win-Setup.exe` from the
 [latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
 and run it. It installs per-user and needs no admin rights. A portable zip is
 attached to the release too.
@@ -111,7 +126,7 @@ whole scene or clear its crops and items. To make a door,
 choose **Door**, click its departure tile, choose a destination and save it;
 **Return door** creates the reverse link in the same undo step.
 
-Projects are saved in `%APPDATA%\FarmingRpgMaker\projects\`.
+Projects are saved in `%APPDATA%\Tractr\projects\`.
 
 ## Export Game
 
@@ -151,13 +166,13 @@ is not code-signed yet. Choose **More info → Run anyway** (see
 
 **The Update Center says "Updates are available only in the installed app".**
 You are running a development or source build, which Velopack cannot
-update. Install with `FarmingRpgMaker-win-Setup.exe`
+update. Install with `Tractr-win-Setup.exe`
 from the [latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
 to get updates; your projects stay where they are.
 
 ![The Update Center in a development build](docs/media/update-center-not-installed.png)
 
-**Where are my projects?** In `%APPDATA%\FarmingRpgMaker\projects\`, one
+**Where are my projects?** In `%APPDATA%\Tractr\projects\`, one
 `.json` file per project. **File → Export Project JSON** writes a copy anywhere,
 and **File → Import Project JSON** reads one back.
 
@@ -202,9 +217,9 @@ sudo apt-get install libxkbcommon-x11-0 xvfb   # to run the window; xvfb for the
 Without `xvfb`, the player's window test is skipped.
 
 ```sh
-dotnet build FarmingRpgMaker.sln
-dotnet test FarmingRpgMaker.sln
-dotnet run --project src/FarmingRpgMaker.App
+dotnet build Tractr.sln
+dotnet test Tractr.sln
+dotnet run --project src/Tractr.App
 cargo test --workspace   # Rust engine tests, including the golden replays
 ```
 
@@ -238,8 +253,8 @@ checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
 
 | Project | What it is | Ported from (web repo) |
 |---|---|---|
-| `FarmingRpgMaker.Updates` | Update Center backend (Velopack + GitHub Releases) | — |
-| `FarmingRpgMaker.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog | `src/` (React app) |
+| `Tractr.Updates` | Update Center backend (Velopack + GitHub Releases) | — |
+| `Tractr.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog | `src/` (React app) |
 | `FarmEngine.Interop` | P/Invoke bindings to the Rust library (`RustPlayer`, `RustPreview`, `RustSession`) | — |
 | `FarmEngine.Authoring` (F#) | The schema records and their JSON, project edits, undo/redo, migrations, validation, Problems, content compiler, packs, sample templates, cartridge compiler and reader; compiles to JavaScript with Fable (`WebApi.fs`) | `src/components/*` decisions, `packages/engine-schemas`, `packages/content-default`, `src/lib/templates.ts` |
 | `FarmEngine.Authoring.Net` (F#) | The .NET edge of the F# core: `System.Text.Json` conversion, `RecordJson` and the generated `RecordWith` extensions the C# app builds records with | — |
@@ -287,11 +302,11 @@ Installed apps find the release in their Update Center. See
 
 ## License
 
-Farming RPG Maker is free software under the [MIT License](LICENSE). The app
+Tractr is free software under the [MIT License](LICENSE). The app
 ships the notices of the software it includes in its `licenses` folder
 (`THIRD-PARTY-dotnet.txt` for the .NET packages, the runtime, icons and
 fonts; `THIRD-PARTY-rust.txt` for the engine library), and **Help → About
-Farming RPG Maker**
+Tractr**
 links to the license. Every exported game carries
 `licenses/THIRD-PARTY.txt`, which ends with the engine's MIT license: the
 player is free to ship in games you sell, and your project's content stays

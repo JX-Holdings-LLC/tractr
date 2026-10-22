@@ -246,6 +246,6 @@ fi
 say "Ready. Add the tools to your shell:"
 echo "  export PATH=\"\$HOME/.cargo/bin:\$HOME/.dotnet:\$HOME/.dotnet/tools:\$PATH\""
 echo "Then:"
-echo "  dotnet build FarmingRpgMaker.sln && dotnet test FarmingRpgMaker.sln --no-build"
+echo "  dotnet build Tractr.sln && dotnet test Tractr.sln --no-build"
 echo "  cargo test --workspace"
-echo "  dotnet run --project src/FarmingRpgMaker.App"
+echo "  dotnet run --project src/Tractr.App"

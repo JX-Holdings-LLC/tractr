@@ -1,0 +1,367 @@
+using System.ComponentModel;
+using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Data;
+using FarmEngine.Authoring;
+using Tractr.App.Projects;
+using Tractr.App.ViewModels.EditMode;
+
+namespace Tractr.App.Game;
+
+/// <summary>
+/// The Settings tab: shows and collects the sections of its <see cref="SettingsViewModel"/>
+/// (project and calendar, weather odds, the mine, export settings).
+/// </summary>
+public sealed class SettingsEditorView : UserControl, IRetirable
+{
+    private readonly StackPanel _seasons = new() { Spacing = 5 };
+    private readonly StackPanel _festivals = new() { Spacing = 5 };
+    private readonly StackPanel _skillLevels = new() { Name = "SkillLevels", Spacing = 5 };
+    private readonly StackPanel _weather = new() { Name = "WeatherOdds", Spacing = 6 };
+    private readonly StackPanel _exportProblems = new() { Name = "ExportSettingsProblems", Spacing = 4 };
+    private readonly StackPanel _mineFields = new() { Name = "MineFields", Spacing = 6 };
+    private readonly CheckBox _mineEnabled = new() { Name = "Mine_Enabled", Content = "Mine enabled" };
+    private readonly ComboBox _mineScene = new() { Name = "Mine_EntranceScene", MinWidth = 220 };
+    private readonly ComboBox _exportIcon = new() { Name = "Export_Icon", MinWidth = 260 };
+    private readonly ComboBox _exportPixelScale = new() { Name = "Export_PixelScale", MinWidth = 260 };
+    private readonly DraftRows<SeasonDraft> _seasonRows;
+    private readonly Dictionary<SeasonDraft, (Button Up, Button Down)> _seasonArrows = [];
+    private bool _filling;
+
+    /// <param name="workspace">The open project.</param>
+    /// <param name="pickOnMap">Lets the creator click the mine entrance on the map (scene id, prompt, what to do with the tile); null hides the button.</param>
+    public SettingsEditorView(ProjectWorkspace workspace, Action<string, string, Action<int, int>>? pickOnMap = null)
+    {
+        ViewModel = new SettingsViewModel(workspace, pickOnMap, () => IsEffectivelyVisible);
+        DataContext = ViewModel;
+        Name = "SettingsEditorView";
+        var message = Shown("SettingsMessage", nameof(SettingsViewModel.Message));
+        var form = new StackPanel { Spacing = 10, Margin = new Thickness(20), MaxWidth = 760 };
+        form.Children.Add(Ui.Text("PROJECT", "section"));
+        Field(form, SettingsViewModel.NameLabel, "Setting_Name", nameof(SettingsViewModel.Name));
+        Field(form, SettingsViewModel.VersionLabel, "Setting_Version", nameof(SettingsViewModel.Version));
+        Field(form, SettingsViewModel.LocaleLabel, "Setting_Locale", nameof(SettingsViewModel.Locale));
+        form.Children.Add(Ui.Text("GAMEPLAY", "section"));
+        form.Children.Add(Ui.HStack(15,
+            Check("Setting_EnergyEnabled", "Energy enabled", nameof(SettingsViewModel.EnergyEnabled)),
+            Check("Setting_SkillsEnabled", "Skills enabled", nameof(SettingsViewModel.SkillsEnabled)),
+            Check("Setting_ShowMadeWithCredit", "Show creator credit", nameof(SettingsViewModel.ShowCredit))));
+        Field(form, SettingsViewModel.PlayerSpeedLabel, "Setting_PlayerSpeed", nameof(SettingsViewModel.PlayerSpeed));
+        Field(form, SettingsViewModel.MaxEnergyLabel, "Setting_MaxEnergy", nameof(SettingsViewModel.MaxEnergy));
+        Field(form, SettingsViewModel.CollapseFractionLabel, "Setting_CollapseEnergyFraction", nameof(SettingsViewModel.CollapseFraction));
+        Field(form, SettingsViewModel.CollapsePenaltyLabel, "Setting_CollapseMoneyPenalty", nameof(SettingsViewModel.CollapsePenalty));
+        form.Children.Add(Ui.Text("Skill levels", "muted", "small"));
+        form.Children.Add(Ui.Wrapped("The total XP a skill needs to reach each level. Players start at level 0; the game announces \"Farming level 1!\" once farming XP reaches level 1's amount.", "muted", "small"));
+        form.Children.Add(_skillLevels);
+        var addSkillLevel = Ui.CommandButton("Add level", ViewModel.AddSkillLevelCommand, "tool");
+        addSkillLevel.Name = "AddSkillLevelButton";
+        form.Children.Add(addSkillLevel);
+        form.Children.Add(Ui.Text("TIME", "section"));
+        Field(form, SettingsViewModel.DayStartLabel, "Setting_DayStartMinute", nameof(SettingsViewModel.DayStart));
+        Field(form, SettingsViewModel.DayEndLabel, "Setting_DayEndMinute", nameof(SettingsViewModel.DayEnd));
+        Field(form, SettingsViewModel.MinutesPerSecondLabel, "Setting_MinutesPerRealSecond", nameof(SettingsViewModel.MinutesPerSecond));
+        form.Children.Add(Check("Setting_PauseInModals", "Pause the clock in dialogue, shops, minigames and menus", nameof(SettingsViewModel.PauseInModals)));
+        form.Children.Add(Ui.Text("SEASONS", "section"));
+        form.Children.Add(_seasons);
+        var addSeason = Ui.CommandButton("Add season", ViewModel.AddSeasonCommand, "tool");
+        addSeason.Name = "AddSeasonButton";
+        form.Children.Add(addSeason);
+        form.Children.Add(Ui.Text("FESTIVALS", "section"));
+        form.Children.Add(_festivals);
+        var addFestival = Ui.CommandButton("Add festival", ViewModel.AddFestivalCommand, "tool");
+        addFestival.Name = "AddFestivalButton";
+        form.Children.Add(addFestival);
+        form.Children.Add(message);
+        var save = Ui.CommandButton("Save project settings", ViewModel.SaveCommand, "accent");
+        save.Name = "SaveSettingsButton";
+        var revert = Ui.CommandButton("Revert fields", ViewModel.RevertCommand, "tool");
+        revert.Name = "RevertSettingsButton";
+        form.Children.Add(Ui.HStack(8, save, revert));
+        form.Children.Add(Ui.Text("WEATHER ODDS PER SEASON", "section"));
+        form.Children.Add(Ui.Wrapped("Weights, rolled at each day start. Rain waters the soil, storms can damage crops. 0 means never.", "muted", "small"));
+        form.Children.Add(_weather);
+        form.Children.Add(Shown("WeatherMessage", nameof(SettingsViewModel.WeatherMessage)));
+        var saveWeather = Ui.CommandButton("Save weather odds", ViewModel.SaveWeatherCommand, "accent");
+        saveWeather.Name = "SaveWeatherButton";
+        form.Children.Add(saveWeather);
+        form.Children.Add(Ui.Text("MINE", "section"));
+        form.Children.Add(Ui.Wrapped("Procedural floors below an entrance tile; broken rocks reveal the ladder down.", "muted", "small"));
+        _mineEnabled.Click += (_, _) => ViewModel.SetMineEnabled(_mineEnabled.IsChecked == true);
+        form.Children.Add(_mineEnabled);
+        var mineX = Box("Mine_EntranceX", nameof(SettingsViewModel.MineX), 70);
+        var mineY = Box("Mine_EntranceY", nameof(SettingsViewModel.MineY), 70);
+        var mineFloors = Box("Mine_Floors", nameof(SettingsViewModel.MineFloors), 70);
+        var mineLadder = Box("Mine_LadderChance", nameof(SettingsViewModel.MineLadder), 70);
+        var exportWidth = Box("Export_WindowWidth", nameof(SettingsViewModel.ExportWidth), 90);
+        var exportHeight = Box("Export_WindowHeight", nameof(SettingsViewModel.ExportHeight), 90);
+        Ui.Label((_mineScene, SettingsViewModel.MineSceneLabel), (mineX, SettingsViewModel.MineXLabel), (mineY, SettingsViewModel.MineYLabel),
+            (mineFloors, SettingsViewModel.MineFloorsLabel), (mineLadder, SettingsViewModel.MineLadderLabel), (_exportIcon, "Icon (PNG artwork, at least 256×256)"),
+            (exportWidth, SettingsViewModel.WindowWidthLabel), (exportHeight, SettingsViewModel.WindowHeightLabel), (_exportPixelScale, "Pixel scale"));
+        _mineFields.Children.Add(Ui.HStack(8, Ui.Text("Entrance scene", "muted", "small"), _mineScene));
+        var mineRow = Ui.HStack(8, Ui.Text("Entrance X", "muted", "small"), mineX, Ui.Text("Y", "muted", "small"), mineY);
+        if (ViewModel.CanPickOnMap)
+        {
+            var pick = Ui.CommandButton("Pick on map", ViewModel.PickMineEntranceCommand, "tool", "small");
+            pick.Name = "Mine_PickOnMap";
+            AutomationProperties.SetName(pick, "Pick the mine entrance on the map");
+            mineRow.Children.Add(pick);
+        }
+
+        _mineFields.Children.Add(mineRow);
+        _mineFields.Children.Add(Ui.HStack(8, Ui.Text("Floors", "muted", "small"), mineFloors, Ui.Text("Ladder chance (0.02–1)", "muted", "small"), mineLadder));
+        _mineFields.Children.Add(Shown("MineNote", nameof(SettingsViewModel.MineNote)));
+        var saveMine = Ui.CommandButton("Save mine", ViewModel.SaveMineCommand, "accent");
+        saveMine.Name = "SaveMineButton";
+        _mineFields.Children.Add(saveMine);
+        form.Children.Add(_mineFields);
+        form.Children.Add(Shown("MineMessage", nameof(SettingsViewModel.MineMessage)));
+        form.Children.Add(Ui.Text("EXPORT", "section"));
+        form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
+        Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
+        Field(form, "Executable name", "Export_ExecutableName", nameof(SettingsViewModel.ExportExecutable));
+        Field(form, "Game version", "Export_Version", nameof(SettingsViewModel.ExportVersion)).PlaceholderText = "Project version";
+        Field(form, "Author", "Export_Author", nameof(SettingsViewModel.ExportAuthor));
+        Field(form, "Company", "Export_Company", nameof(SettingsViewModel.ExportCompany));
+        var gameId = Field(form, "Game id (keeps save folders stable; set once)", "Export_GameId", nameof(SettingsViewModel.ExportGameId), BindingMode.OneWay);
+        gameId.IsReadOnly = true;
+        form.Children.Add(Ui.Text("Icon (PNG artwork, at least 256×256)", "muted", "small"));
+        form.Children.Add(_exportIcon);
+        form.Children.Add(Ui.HStack(8, Ui.Text("Window", "muted", "small"), exportWidth, Ui.Text("×"), exportHeight,
+            Check("Export_Fullscreen", "Start fullscreen", nameof(SettingsViewModel.ExportFullscreen))));
+        form.Children.Add(Ui.Text("Pixel scale", "muted", "small"));
+        form.Children.Add(_exportPixelScale);
+        var credits = Field(form, "Credits", "Export_Credits", nameof(SettingsViewModel.ExportCredits));
+        credits.AcceptsReturn = true;
+        credits.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        credits.MinHeight = 60;
+        form.Children.Add(_exportProblems);
+        form.Children.Add(Shown("ExportSettingsMessage", nameof(SettingsViewModel.ExportMessage)));
+        var saveExport = Ui.CommandButton("Save export settings", ViewModel.SaveExportCommand, "accent");
+        saveExport.Name = "SaveExportSettingsButton";
+        form.Children.Add(saveExport);
+        Content = new ScrollViewer { Content = form };
+
+        _mineScene.SelectionChanged += (_, _) =>
+        {
+            if (!_filling) ViewModel.MineSceneId = (_mineScene.SelectedItem as ComboBoxItem)?.Tag as string;
+        };
+        _exportIcon.SelectionChanged += (_, _) =>
+        {
+            if (!_filling) ViewModel.ExportIcon = (_exportIcon.SelectedItem as ComboBoxItem)?.Tag as string;
+        };
+        _exportPixelScale.SelectionChanged += (_, _) =>
+        {
+            if (!_filling) ViewModel.ExportPixelScale = (_exportPixelScale.SelectedItem as ComboBoxItem)?.Tag as string;
+        };
+        _seasonRows = new DraftRows<SeasonDraft>(_seasons, ViewModel.Seasons, SeasonRow, UpdateSeasonArrows);
+        UpdateSeasonArrows();
+        _ = new DraftRows<FestivalDraft>(_festivals, ViewModel.Festivals, FestivalRow);
+        ViewModel.SkillLevels.CollectionChanged += (_, _) => ShowSkillLevels();
+        ShowSkillLevels();
+        ShowWeather();
+        ShowMine();
+        ShowMineScenes();
+        ShowIcons();
+        ShowPixelScales();
+        ShowExportProblems();
+        ViewModel.PropertyChanged += OnViewModelChanged;
+    }
+
+    public SettingsViewModel ViewModel { get; }
+
+    /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
+    public void Retire() => ViewModel.Retire();
+
+    public void Refresh() => ViewModel.Refresh();
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(SettingsViewModel.Weather): ShowWeather(); break;
+            case nameof(SettingsViewModel.MineEnabled): ShowMine(); break;
+            case nameof(SettingsViewModel.MineScenes) or nameof(SettingsViewModel.MineSceneId): ShowMineScenes(); break;
+            case nameof(SettingsViewModel.IconOptions) or nameof(SettingsViewModel.ExportIcon): ShowIcons(); break;
+            case nameof(SettingsViewModel.PixelScaleOptions) or nameof(SettingsViewModel.ExportPixelScale): ShowPixelScales(); break;
+            case nameof(SettingsViewModel.ExportProblems): ShowExportProblems(); break;
+        }
+    }
+
+    private static TextBlock Shown(string name, string property)
+    {
+        var block = Ui.Wrapped("", "muted", "small");
+        block.Name = name;
+        block.Bind(TextBlock.TextProperty, new Binding(property));
+        return block;
+    }
+
+    private static TextBox Field(StackPanel form, string label, string name, string property, BindingMode mode = BindingMode.TwoWay)
+    {
+        var input = new TextBox { Name = name };
+        input.Bind(TextBox.TextProperty, new Binding(property) { Mode = mode });
+        Ui.Label((input, label));
+        form.Children.Add(Ui.Text(label, "muted", "small"));
+        form.Children.Add(input);
+        return input;
+    }
+
+    private static TextBox Box(string name, string property, double width, object? source = null)
+    {
+        var box = new TextBox { Name = name, Width = width };
+        var binding = new Binding(property) { Mode = BindingMode.TwoWay };
+        if (source is not null) binding.Source = source;
+        box.Bind(TextBox.TextProperty, binding);
+        return box;
+    }
+
+    private static CheckBox Check(string name, string content, string property)
+    {
+        var check = new CheckBox { Name = name, Content = content };
+        check.Bind(ToggleButton.IsCheckedProperty, new Binding(property) { Mode = BindingMode.TwoWay });
+        return check;
+    }
+
+    /// <summary>
+    /// One row per skill level: "Level 0 [0] XP", "Level 1 [50] XP", … (the curve's index is the
+    /// level the game reports). Rebuilt whenever a level is added or removed, so the names follow
+    /// the levels.
+    /// </summary>
+    private void ShowSkillLevels()
+    {
+        _skillLevels.Children.Clear();
+        for (var index = 0; index < ViewModel.SkillLevels.Count; index++)
+        {
+            var i = index;
+            var box = Box($"Setting_SkillLevel_{i}", nameof(SkillLevelDraft.Xp), 90, ViewModel.SkillLevels[i]);
+            AutomationProperties.SetName(box, $"Level {i} XP");
+            var remove = Ui.Button("Remove", () => ViewModel.RemoveSkillLevel(i), "tool", "small");
+            remove.Name = $"Setting_SkillLevelRemove_{i}";
+            AutomationProperties.SetName(remove, $"Remove level {i}");
+            _skillLevels.Children.Add(Ui.HStack(8, new TextBlock { Text = $"Level {i}", Width = 70, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
+                box, Ui.Text("XP", "muted", "small"), remove));
+        }
+    }
+
+    private Control SeasonRow(SeasonDraft season)
+    {
+        var id = Box("Season_Id", nameof(SeasonDraft.Id), 115, season);
+        id.IsReadOnly = season.IsSaved;
+        var name = Box("Season_Name", nameof(SeasonDraft.Name), 145, season);
+        var days = Box("Season_Days", nameof(SeasonDraft.Days), 65, season);
+        Ui.Label((id, season.IdLabel), (name, season.NameLabel), (days, season.DaysLabel));
+        // Removing and moving change the rows; Save project settings applies them (#70).
+        var remove = Ui.Button("Remove", () => ViewModel.RemoveSeason(season), "tool", "small");
+        remove.Name = $"Season_Remove_{season.Key}";
+        Ui.Label((remove, $"Remove {season.What}"));
+        var up = Ui.Button("↑", () => ViewModel.MoveSeason(season, -1), "tool", "small");
+        up.Name = $"Season_Up_{season.Key}";
+        ToolTip.SetTip(up, "Earlier in the year");
+        var down = Ui.Button("↓", () => ViewModel.MoveSeason(season, 1), "tool", "small");
+        down.Name = $"Season_Down_{season.Key}";
+        ToolTip.SetTip(down, "Later in the year");
+        Ui.Label((up, $"Move {season.What} earlier in the year"), (down, $"Move {season.What} later in the year"));
+        _seasonArrows[season] = (up, down);
+        return Ui.HStack(8, up, down, id, name, days, remove);
+    }
+
+    /// <summary>The first season can't move earlier, the last can't move later.</summary>
+    private void UpdateSeasonArrows()
+    {
+        // Called while the rows are first built too: the constructor updates them once it has them.
+        if (_seasonRows is null) return;
+        var shown = _seasonRows.Rows.Select(row => row.Item).ToHashSet();
+        foreach (var gone in _seasonArrows.Keys.Where(season => !shown.Contains(season)).ToList()) _seasonArrows.Remove(gone);
+        foreach (var (season, (up, down)) in _seasonArrows)
+        {
+            up.IsEnabled = ViewModel.CanMoveSeason(season, -1);
+            down.IsEnabled = ViewModel.CanMoveSeason(season, 1);
+        }
+    }
+
+    private Control FestivalRow(FestivalDraft festival)
+    {
+        var id = Box("Festival_Id", nameof(FestivalDraft.Id), 110, festival);
+        var name = Box("Festival_Name", nameof(FestivalDraft.Name), 145, festival);
+        var season = Box("Festival_SeasonId", nameof(FestivalDraft.SeasonId), 110, festival);
+        var day = Box("Festival_Day", nameof(FestivalDraft.Day), 60, festival);
+        Ui.Label((id, festival.IdLabel), (name, festival.NameLabel), (season, festival.SeasonIdLabel), (day, festival.DayLabel));
+        var remove = Ui.Button("Remove", () => ViewModel.RemoveFestival(festival), "tool", "small");
+        Ui.Label((remove, $"Remove {festival.What}"));
+        return Ui.HStack(8, id, name, season, day, remove);
+    }
+
+    private void ShowWeather()
+    {
+        _weather.Children.Clear();
+        foreach (var season in ViewModel.Weather)
+        {
+            var row = Ui.HStack(6, new TextBlock { Text = season.SeasonName, Width = 110, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+            foreach (var cell in season.Cells)
+            {
+                var box = Box($"Weather_{cell.SeasonId}_{cell.WeatherId}", nameof(WeatherCellDraft.Weight), 55, cell);
+                ToolTip.SetTip(box, cell.Tip);
+                Ui.Label((box, cell.Label));
+                row.Children.Add(Ui.Text(cell.WeatherName, "muted", "small"));
+                row.Children.Add(box);
+            }
+
+            _weather.Children.Add(row);
+        }
+    }
+
+    private void ShowMine()
+    {
+        _mineEnabled.IsChecked = ViewModel.MineEnabled;
+        _mineFields.IsVisible = ViewModel.MineEnabled;
+    }
+
+    private void ShowMineScenes() =>
+        Fill(_mineScene, ViewModel.MineScenes.Select(scene => (scene.Id, scene.Name, false)), ViewModel.MineSceneId);
+
+    private void ShowIcons() =>
+        Fill(_exportIcon, ViewModel.IconOptions.Select(option => (option.Id, option.Label, option.Missing)), ViewModel.ExportIcon);
+
+    private void ShowPixelScales() =>
+        Fill(_exportPixelScale, ViewModel.PixelScaleOptions.Select(option => (option.Id, option.Label, option.Missing)), ViewModel.ExportPixelScale);
+
+    /// <summary>Fills a picker with the choices, unless it already has them, and selects <paramref name="current"/>.</summary>
+    private void Fill(ComboBox box, IEnumerable<(string Id, string Label, bool Missing)> options, string? current)
+    {
+        _filling = true;
+        try
+        {
+            var choices = options.ToList();
+            var items = box.Items.OfType<ComboBoxItem>().ToList();
+            var same = items.Count == choices.Count && items.Zip(choices).All(pair =>
+                Equals(pair.First.Tag, pair.Second.Id) && Equals(pair.First.Content, pair.Second.Label) && pair.First.Classes.Contains("missing") == pair.Second.Missing);
+            if (!same)
+            {
+                box.SelectedItem = null;
+                box.Items.Clear();
+                foreach (var (id, label, missing) in choices)
+                {
+                    var item = new ComboBoxItem { Content = label, Tag = id };
+                    if (missing) item.Classes.Add("missing");
+                    box.Items.Add(item);
+                }
+            }
+
+            box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(item => current is not null && Equals(item.Tag, current));
+        }
+        finally { _filling = false; }
+    }
+
+    private void ShowExportProblems()
+    {
+        _exportProblems.Children.Clear();
+        var problems = ViewModel.ExportProblems;
+        for (var i = 0; i < problems.Count; i++)
+        {
+            var line = Ui.Wrapped(problems[i].Message, problems[i].IsError ? "error" : "muted", "small");
+            line.Name = $"ExportSettingsProblem_{i}";
+            _exportProblems.Children.Add(line);
+        }
+    }
+}

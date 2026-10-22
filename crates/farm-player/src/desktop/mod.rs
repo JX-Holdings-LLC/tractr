@@ -321,7 +321,7 @@ impl ApplicationHandler for App {
                 let info = player.info();
                 (info.title.clone(), info.window_width.max(320), info.window_height.max(200))
             }
-            None => ("Farming RPG Maker".to_owned(), 800, 500),
+            None => ("Tractr".to_owned(), 800, 500),
         };
         let attributes = Window::default_attributes()
             .with_title(title)

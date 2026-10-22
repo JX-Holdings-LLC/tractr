@@ -65,12 +65,12 @@ guest_notice() {
   guest_notice "BSD 2-Clause \"Simplified\" License (BSD-2-Clause)" "cloudlibc, through wasi-libc" cloudlibc.txt
 } >> "$generated"
 
-# The player itself: Farming RPG Maker's own crates (the workspace license, ../../LICENSE).
+# The player itself: Tractr's own crates (the workspace license, ../../LICENSE).
 {
   printf '\n%s\n' "--------------------------------------------------------------------------------"
   printf '%s\n\n' "MIT License (MIT)"
   printf '%s\n' "Used by:"
-  printf '%s\n\n' "- farm-player and the Farming RPG Maker engine crates"
+  printf '%s\n\n' "- farm-player and the Tractr engine crates"
   cat "$root/LICENSE"
 } >> "$generated"
 

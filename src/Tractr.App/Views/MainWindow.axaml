@@ -1,0 +1,104 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Tractr.App.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
+        x:Class="Tractr.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Icon="avares://Tractr/Assets/app.ico"
+        Width="1280" Height="800" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewProjectCommand}" />
+    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding ExportGameCommand}" />
+    <KeyBinding Gesture="F5" Command="{Binding PlayModeCommand}" />
+    <KeyBinding Gesture="F6" Command="{Binding EditModeCommand}" />
+    <KeyBinding Gesture="F1" Command="{Binding CreatorGuideCommand}" />
+  </Window.KeyBindings>
+
+  <DockPanel>
+    <Menu DockPanel.Dock="Top" Name="MainMenu">
+      <MenuItem Name="FileMenu" Header="{Binding FileMenuText}">
+        <MenuItem Header="{Binding NewProjectMenuText}" InputGesture="Ctrl+N" Command="{Binding NewProjectCommand}" />
+        <MenuItem Header="{Binding OpenProjectMenuText}" InputGesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
+        <Separator />
+        <MenuItem Header="{Binding ImportJsonMenuText}" Command="{Binding ImportProjectJsonCommand}" />
+        <MenuItem Header="{Binding ExportJsonMenuText}" Command="{Binding ExportProjectJsonCommand}" />
+        <Separator />
+        <MenuItem Name="ExportGameMenuItem" Header="{Binding ExportGameMenuText}" InputGesture="Ctrl+Shift+E" Command="{Binding ExportGameCommand}" />
+        <Separator />
+        <MenuItem Header="{Binding ExitMenuText}" InputGesture="Alt+F4" Command="{Binding ExitCommand}" />
+      </MenuItem>
+      <MenuItem Name="GameMenu" Header="{Binding GameMenuText}">
+        <MenuItem Name="PlayModeMenuItem" Header="{Binding PlayModeMenuText}" InputGesture="F5" ToggleType="Radio" GroupName="mode"
+                  IsChecked="{Binding IsPlayMode, Mode=OneWay}" Command="{Binding PlayModeCommand}" />
+        <MenuItem Name="EditModeMenuItem" Header="{Binding EditModeMenuText}" InputGesture="F6" ToggleType="Radio" GroupName="mode"
+                  IsChecked="{Binding IsEditMode, Mode=OneWay}" Command="{Binding EditModeCommand}" />
+      </MenuItem>
+      <MenuItem Name="HelpMenu" Header="{Binding HelpMenuText}">
+        <MenuItem Name="WelcomeMenuItem" Header="{Binding WelcomeMenuText}" Command="{Binding WelcomeCommand}" />
+        <MenuItem Name="CreatorGuideMenuItem" Header="{Binding CreatorGuideMenuText}" InputGesture="F1" Command="{Binding CreatorGuideCommand}" />
+        <MenuItem Name="ShortcutsMenuItem" Header="{Binding ShortcutsMenuText}" Command="{Binding ShortcutsCommand}" />
+        <!-- One radio item per language, added by MainWindow from EditorStrings.Languages. -->
+        <MenuItem Name="LanguageMenuItem" Header="{Binding LanguageMenuText}" />
+        <Separator />
+        <MenuItem Header="{Binding UpdateCenterMenuText}" Command="{Binding OpenUpdateCenterCommand}" />
+        <Separator />
+        <MenuItem Header="{Binding AboutMenuText}" Command="{Binding AboutCommand}" />
+      </MenuItem>
+    </Menu>
+
+    <!-- Masthead: the Tractr ribbon, then where you are ("Editing: Starter Farm"), actions on the right. -->
+    <Border DockPanel.Dock="Top" Classes="header" Padding="20,10">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Image Name="HeaderLogo" Grid.Column="0" Source="avares://Tractr/Assets/tractr-logo.png"
+               Width="224" Height="56" Margin="0,0,22,0" VerticalAlignment="Center"
+               AutomationProperties.Name="{Binding Title}"
+               RenderOptions.BitmapInterpolationMode="HighQuality" />
+        <TextBlock Name="HeaderSubtitle" Grid.Column="1" VerticalAlignment="Center" FontSize="15"
+                   Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Name="UpdateBadge" Classes="badge"
+                  IsVisible="{Binding IsUpdateBadgeVisible}"
+                  Command="{Binding OpenUpdateCenterCommand}"
+                  ToolTip.Tip="Open the Update Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Data="{StaticResource IconDownload}" Width="13" Height="13" />
+              <TextBlock Text="{Binding UpdateBadgeText}" />
+            </StackPanel>
+          </Button>
+          <Button Name="ModeToggle" Classes="large"
+                  AutomationProperties.Name="{Binding ModeToggleText}"
+                  Classes.accent="{Binding IsPlayMode}"
+                  Classes.secondary="{Binding IsEditMode}"
+                  Command="{Binding ToggleModeCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Classes="button-icon" Data="{StaticResource IconPencil}" IsVisible="{Binding IsPlayMode}" />
+              <PathIcon Classes="button-icon" Data="{StaticResource IconPlay}" IsVisible="{Binding IsEditMode}" />
+              <TextBlock Text="{Binding ModeToggleText}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Classes="statusbar">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Name="StatusText" Classes="muted small" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis"
+                   AutomationProperties.LiveSetting="Polite" />
+        <TextBlock Grid.Column="1" Classes="muted small" Text="{Binding VersionText}" />
+      </Grid>
+    </Border>
+
+    <!-- Game host: IGameSurfaceFactory output (MainWindowViewModel.GameContent). -->
+    <ContentControl Name="GameHostPresenter"
+                    Margin="16"
+                    Content="{Binding GameContent}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch" />
+  </DockPanel>
+</Window>

@@ -134,7 +134,7 @@ module Exporter =
               "OriginalFilename", game.ExecutableName + ".exe"
               "ProductName", game.Title
               "ProductVersion", game.Version
-              "Comments", "Made with Farming RPG Maker " + editorVersion ] }
+              "Comments", "Made with Tractr " + editorVersion ] }
 
     /// A web page with `ExportTarget.webContentSecurityPolicy`: a template page that sets no
     /// policy (an older template) gets it as the first element of its `<head>`, or first of all.

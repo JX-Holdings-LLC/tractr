@@ -19,8 +19,8 @@
     <Compile Include="GameExporter.fs" />
   </ItemGroup>
   <ItemGroup>
-    <!-- The editor's own icon is the default game icon, as engines usually do (Godot too). -->
-    <EmbeddedResource Include="../FarmingRpgMaker.App/Assets/app-icon-256.png" LogicalName="default-icon.png" Link="Assets/default-icon.png" />
+    <!-- The default game icon is the wheat-and-field icon, not the app's own Tractr seal: exported games keep their own look. -->
+    <EmbeddedResource Include="../Tractr.App/Assets/default-game-icon-256.png" LogicalName="default-icon.png" Link="Assets/default-icon.png" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />

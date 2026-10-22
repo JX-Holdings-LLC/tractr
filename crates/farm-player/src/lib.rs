@@ -1,4 +1,4 @@
-//! `farm-player`: the Farming RPG Maker game player.
+//! `farm-player`: the Tractr game player.
 //!
 //! - [`Player`] is the embeddable graphical player: a [`session::PlaySession`], the in-game UI
 //!   (`farm-ui`), the game shell (title, save slots, pause menu, settings, credits), saves and

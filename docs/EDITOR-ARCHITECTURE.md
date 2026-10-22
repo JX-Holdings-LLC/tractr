@@ -1,6 +1,6 @@
 # Editor architecture (C# app)
 
-This note describes how the Avalonia editor (`src/FarmingRpgMaker.App`) is put
+This note describes how the Avalonia editor (`src/Tractr.App`) is put
 together today, the structure it is moving towards, and the steps that are
 left. [LANGUAGES.md](LANGUAGES.md) has the rule that decides which language
 owns what: **F# understands the project, Rust runs the game, C# is the
@@ -14,7 +14,7 @@ tested without building the view.**
 |---|---|---|
 | Shell | `Views/MainWindow.axaml`, `AboutWindow.axaml`, `UpdateCenterWindow.axaml` with `ViewModels/MainWindowViewModel`, `AboutViewModel`, `UpdateCenterViewModel`; `ExportGameViewModel` behind `Projects/ExportGameWindow` | MVVM: XAML bound to view models (`Mvvm/ObservableObject`, `RelayCommand`) |
 | Game surface | `Game/GameWorkspaceView` (switches Edit and Play Mode), `Game/PlayModeView`, `Game/DebugDrawer` | Code-built views over the Rust player |
-| Edit Mode tabs with view models | `Game/ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView`, `ContentEditorView` over `ViewModels/EditMode/ProblemsViewModel`, `SettingsViewModel`, `ModsViewModel`, `WorkshopViewModel`, `InterfaceViewModel`, `ContentEditorViewModel` | Code-built views that show and collect; the view model owns the state, calls F# and `ProjectWorkspace` (tests: `tests/FarmingRpgMaker.App.Tests/ViewModels`) |
+| Edit Mode tabs with view models | `Game/ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView`, `ContentEditorView` over `ViewModels/EditMode/ProblemsViewModel`, `SettingsViewModel`, `ModsViewModel`, `WorkshopViewModel`, `InterfaceViewModel`, `ContentEditorViewModel` | Code-built views that show and collect; the view model owns the state, calls F# and `ProjectWorkspace` (tests: `tests/Tractr.App.Tests/ViewModels`) |
 | Edit Mode, not yet moved | `Game/EditModeView` (+ `EditModeTools`, `EditModeFind`), `ArtEditorView`, and the fields of `ContentForm` | Code-built `UserControl`s (`Ui` builders) that hold their state and call `ProjectWorkspace` |
 | Project | `Projects/ProjectWorkspace` (the open F# `Document`, undo/redo, autosave), `ProjectStore`, `ProjectDialogs`, `ProjectCommandHandler` | Plain classes; dialogs code-built |
 | Engine | F# `FarmEngine.Authoring` (edits, validation, form metadata, readouts), Rust through `FarmEngine.Interop` | Called by the views and view models |
@@ -38,23 +38,25 @@ Use these instead of writing another copy:
 | Open an Edit Mode tab | `EditModeView.SelectedTab` with the `EditorTab` enum (the enum's order is the tab order; `AddTab` asserts it) |
 | Where a Workshop link or a Problems row leads | `EditorNavigation.WorkshopTarget`, `EditorNavigation.ContentCategory` |
 | File sizes, download sizes, "5 minutes ago", numbers in text fields | `DisplayFormat` (`FileSize` is the F# `GameExporter.FormatSize` that Export Game and `farmc` print) |
-| Write a file without leaving half of it behind | `FarmingRpgMaker.Updates.AtomicFile` |
+| Write a file without leaving half of it behind | `Tractr.Updates.AtomicFile` |
 | Read or change one section of `settings.json` | `SettingsFile` through `AppSettingsStore` / `JsonSettingsStore`; `AppSettingsStore.TryUpdate` for preferences that must never stop the creator |
 | Read or write a file the creator picked | `Projects/PickedFiles` (size caps, atomic local saves) |
 | Ask about unsaved form fields | `ViewModels/EditMode/DraftPrompt` (the question, owned by the view model), shown by `Game/DraftBar` |
 | Run a view model's command from a code-built button | `Ui.CommandButton` (it follows `CanExecute`, and the UI tests' raised Click events run it) |
 | Keep a panel's rows in step with a view model's draft rows | `Game/DraftRows` (rows keep their controls when others move or go) |
-| A temp-folder `ProjectWorkspace` for view model tests | `tests/FarmingRpgMaker.App.Tests/ViewModels/TestWorkspace` |
+| A temp-folder `ProjectWorkspace` for view model tests | `tests/Tractr.App.Tests/ViewModels/TestWorkspace` |
 | Common controls (buttons, rows, icons, modal cards, accessible names) | `Game/Ui` |
+| Colours, fonts and surfaces | the role brushes and font resources in `App.axaml` and the classes in `Game/GameStyles.axaml` ([brand/APP-UI.md](brand/APP-UI.md)); never a hex value in a view |
+| A label drawn in capitals (kickers, headings) | `Controls/KickerText` (`Ui.Text` makes one for the `h2`, `h3`, `section` and `category` classes) |
 | Reflection over the schema records for generated forms | `Game/ContentFormSchema` (no controls); layout pieces in `Game/ContentFormLayout` |
 
 Error messages name what the creator sees (the field's label, which is also
 its accessible name), never a control's `Name`.
 
 Test doubles stay in the test project: the shell's placeholder game surface
-and project commands live in `tests/FarmingRpgMaker.App.Tests/Ui/Placeholders.cs`.
-`FakeUpdateService` still ships in `FarmingRpgMaker.Updates` because the
-`FARMING_RPG_MAKER_FAKE_UPDATES` demo mode ([RELEASING.md](RELEASING.md))
+and project commands live in `tests/Tractr.App.Tests/Ui/Placeholders.cs`.
+`FakeUpdateService` still ships in `Tractr.Updates` because the
+`TRACTR_FAKE_UPDATES` demo mode ([RELEASING.md](RELEASING.md))
 uses it; see the remaining steps.
 
 ## Target structure
@@ -108,7 +110,7 @@ In order; each step is a separate change that keeps the UI tests passing.
 5. **Localization.** Route the remaining views' text through `EditorStrings`
    and refresh Play Mode's toolbar when the language changes (#59).
 6. **Demo-only code.** Move `FakeUpdateService` into a test-support assembly
-   and keep the `FARMING_RPG_MAKER_FAKE_UPDATES` switch only in debug builds,
+   and keep the `TRACTR_FAKE_UPDATES` switch only in debug builds,
    once the release docs no longer point at it for UI demos.
 7. **Tests use the names.** The UI tests still select tabs by index
    (`SelectedIndex = 1`); move them to `EditModeView.SelectedTab` when the test

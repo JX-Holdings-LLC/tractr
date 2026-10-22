@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // Regenerates THIRD-PARTY-dotnet.txt: the license notices for the NuGet packages the editor
-// (src/FarmingRpgMaker.App) ships, plus the .NET runtime, the Material Design Icons and the Inter
+// (src/Tractr.App) ships, plus the .NET runtime, the Material Design Icons and the Inter
 // typeface. The app copies it to licenses/THIRD-PARTY-dotnet.txt next to the executable (the Rust
 // engine library's notices are licenses/THIRD-PARTY-rust.txt, from tools/player-licenses).
 //
-// Reads the package graph from src/FarmingRpgMaker.App/obj/project.assets.json, so restore first.
+// Reads the package graph from src/Tractr.App/obj/project.assets.json, so restore first.
 // Every package with run-time assets is listed with its license and copyright from its .nuspec;
 // license files and third-party notices inside the packages are copied in full. Run it after
 // changing a PackageVersion in Directory.Packages.props and commit the result.
 //
-//   dotnet restore src/FarmingRpgMaker.App
+//   dotnet restore src/Tractr.App
 //   node tools/editor-licenses/generate.mjs           # rewrite THIRD-PARTY-dotnet.txt
 //   node tools/editor-licenses/generate.mjs --check   # fail if it is out of date (CI)
 import { createHash } from "node:crypto";
@@ -20,11 +20,11 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
 const output = join(here, "THIRD-PARTY-dotnet.txt");
-const assetsPath = join(root, "src", "FarmingRpgMaker.App", "obj", "project.assets.json");
+const assetsPath = join(root, "src", "Tractr.App", "obj", "project.assets.json");
 const rule = "-".repeat(80);
 
 if (!existsSync(assetsPath)) {
-  console.error(`${assetsPath} is missing: run dotnet restore src/FarmingRpgMaker.App first.`);
+  console.error(`${assetsPath} is missing: run dotnet restore src/Tractr.App first.`);
   process.exit(1);
 }
 
@@ -87,13 +87,14 @@ packages.sort((a, b) => a.name.localeCompare(b.name, "en"));
 const standardTexts = { MIT: "MIT.txt", "MS-PL": "MS-PL.txt", "Apache-2.0": "Apache-2.0.txt" };
 const out = [];
 out.push(
-  "Third-party software in the Farming RPG Maker editor",
+  "Third-party software in the Tractr editor",
   "====================================================",
   "",
-  "Farming RPG Maker is free software under the MIT License (LICENSE in the",
+  "Tractr is free software under the MIT License (LICENSE in the",
   "source repository). The editor is a .NET application built on the open-source",
   "NuGet packages listed below; their licenses follow. It also includes the .NET",
-  "runtime, icons from Material Design Icons and the Inter typeface, whose licenses",
+  "runtime, icons from Material Design Icons, the Inter typeface and the Alfa Slab One,",
+  "Lobster, Oswald and Courier Prime fonts, whose licenses",
   "are at the end of this file. The Rust engine library (farm_ffi) and the game",
   "player templates have their own notices in THIRD-PARTY-rust.txt.",
   "",
@@ -148,7 +149,7 @@ out.push(
   "",
   "Used by:",
   "- Material Design Icons (Pictogrammers, https://pictogrammers.com/library/mdi/): the",
-  "  editor's toolbar and status icons (src/FarmingRpgMaker.App/App.axaml)",
+  "  editor's toolbar and status icons (src/Tractr.App/App.axaml)",
   "",
   text("Apache-2.0.txt"),
   "",
@@ -159,6 +160,15 @@ out.push(
   "- the Inter typeface, embedded by Avalonia.Fonts.Inter",
   "",
   clean(readFileSync(join(root, "assets", "fonts", "OFL.txt"), "utf8")),
+  "",
+  rule,
+  "OFL-1.1",
+  "",
+  "Used by:",
+  "- Alfa Slab One, Lobster, Oswald and Courier Prime, the editor's interface fonts",
+  "  (src/Tractr.App/Assets/Fonts)",
+  "",
+  clean(readFileSync(join(root, "assets", "fonts", "OFL-TractrInterface.txt"), "utf8")),
   "",
 );
 const generated = out.join("\n");

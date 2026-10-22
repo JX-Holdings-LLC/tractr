@@ -153,7 +153,7 @@ pub struct Presentation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
     pub game_panels: Vec<GamePanel>,
-    /// Show "Made with Farming RPG Maker" (project setting `showMadeWithCredit`).
+    /// Show "Made with Tractr" (project setting `showMadeWithCredit`).
     pub show_made_with_credit: bool,
 }
 

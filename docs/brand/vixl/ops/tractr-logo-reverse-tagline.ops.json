@@ -1,0 +1,39 @@
+[
+ {
+  "type": "shape",
+  "shape": "ribbon",
+  "name": "ribbon",
+  "x": 40,
+  "y": 40,
+  "width": 1120,
+  "height": 220,
+  "fill": "#f2e5c6"
+ },
+ {
+  "type": "text",
+  "name": "wordmark",
+  "text": "TRACTR",
+  "size": 146,
+  "color": "#b5332a",
+  "font": "alfa-slab-one-400",
+  "tracking": 8,
+  "within": "ribbon"
+ },
+ {
+  "type": "text",
+  "name": "tagline",
+  "text": "Grow your own worlds!",
+  "x": 0,
+  "y": 280,
+  "size": 80,
+  "color": "#f2e5c6",
+  "font": "lobster-400"
+ },
+ {
+  "type": "constrain",
+  "target": "tagline",
+  "constraints": {
+   "center-x": "canvas.center-x"
+  }
+ }
+]

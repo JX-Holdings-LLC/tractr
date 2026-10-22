@@ -102,6 +102,6 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 Say 'Ready. Open a new terminal (so PATH is current), then:'
-Write-Host '  dotnet build FarmingRpgMaker.sln; dotnet test FarmingRpgMaker.sln --no-build'
+Write-Host '  dotnet build Tractr.sln; dotnet test Tractr.sln --no-build'
 Write-Host '  cargo test --workspace'
-Write-Host '  dotnet run --project src/FarmingRpgMaker.App'
+Write-Host '  dotnet run --project src/Tractr.App'

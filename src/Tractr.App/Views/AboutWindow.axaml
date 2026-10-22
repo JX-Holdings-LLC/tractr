@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Tractr.App.ViewModels"
+        x:Class="Tractr.App.Views.AboutWindow"
+        x:DataType="vm:AboutViewModel"
+        Title="About Tractr"
+        Icon="avares://Tractr/Assets/app.ico"
+        Width="480" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <StackPanel>
+    <!-- The scene alone: sunburst, hills and the red tractor, framed like a catalog plate. -->
+    <Border BorderBrush="{StaticResource FarmPrimaryBrush}" BorderThickness="0,0,0,3" ClipToBounds="True">
+      <Image Name="AboutBanner" Source="avares://Tractr/Assets/about-banner.png" Width="480" Height="180"
+             Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality"
+             AutomationProperties.AccessibilityView="Raw" />
+    </Border>
+    <StackPanel Margin="28,22,28,20" Spacing="14" HorizontalAlignment="Stretch">
+      <Image Name="AboutLogo" Source="avares://Tractr/Assets/tractr-logo.png" Width="300" Height="75"
+             HorizontalAlignment="Center" AutomationProperties.Name="{Binding Title}"
+             RenderOptions.BitmapInterpolationMode="HighQuality" />
+      <StackPanel Spacing="2" HorizontalAlignment="Center">
+        <TextBlock Classes="script" Text="Grow your own worlds!" HorizontalAlignment="Center" />
+        <TextBlock Name="AboutVersionText" Classes="muted" Text="{Binding VersionText}" HorizontalAlignment="Center" />
+      </StackPanel>
+      <TextBlock Text="{Binding Description}" TextWrapping="Wrap" TextAlignment="Center" LineHeight="20" />
+      <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+        <HyperlinkButton Content="Source on GitHub" Command="{Binding OpenRepositoryCommand}" />
+        <HyperlinkButton Content="Release notes" Command="{Binding OpenReleasesCommand}" />
+        <HyperlinkButton Name="AboutLicenseLink" Content="License" Command="{Binding OpenLicenseCommand}" />
+        <HyperlinkButton Name="OpenLogFolderLink" Content="Log files" Command="{Binding OpenLogFolderCommand}"
+                         ToolTip.Tip="{Binding LogFolderText}" />
+      </WrapPanel>
+      <TextBlock Name="AboutLicenseText" Classes="muted small" Text="{Binding LicenseText}" TextWrapping="Wrap" TextAlignment="Center" />
+      <TextBlock Classes="muted small" Text="{Binding RuntimeText}" TextWrapping="Wrap" TextAlignment="Center" />
+    </StackPanel>
+    <Border Classes="statusbar" Padding="16,10">
+      <Button Classes="accent" Content="Close" HorizontalAlignment="Right" MinWidth="88"
+              HorizontalContentAlignment="Center" Click="OnCloseClicked" IsDefault="True" IsCancel="True" />
+    </Border>
+  </StackPanel>
+</Window>

@@ -133,7 +133,7 @@ pub fn write(detail: &str) -> Option<PathBuf> {
         let frame = FRAME.load(Ordering::Relaxed);
         let age = frame.saturating_sub(context.report_frame);
         let header = format!(
-            "Farming RPG Maker player crash\nPlayer version: {}\nTime: {time}\nFrame: {frame} (report below from frame {}, {age} frames earlier)\n\n{}\n",
+            "Tractr player crash\nPlayer version: {}\nTime: {time}\nFrame: {frame} (report below from frame {}, {age} frames earlier)\n\n{}\n",
             env!("CARGO_PKG_VERSION"),
             context.report_frame,
             context.report

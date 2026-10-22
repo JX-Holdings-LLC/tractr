@@ -23,7 +23,7 @@ module Icons =
             with :? FormatException ->
                 Error "The icon asset's image data is damaged."
 
-    /// The default game icon (the editor's icon, as engines usually do).
+    /// The default game icon: the wheat-and-field icon (the editor itself wears the Tractr seal).
     let defaultIcon () : byte[] =
         use stream =
             match typeof<PackageFile>.Assembly.GetManifestResourceStream "default-icon.png" with
