@@ -1,6 +1,6 @@
 //! Verified FlatBuffers cartridge reader (`schemas/cart.fbs`).
 //!
-//! Format 2 splits a project into compiled content, the inputs of a new game
+//! A cartridge (format 3) splits a project into compiled content, the inputs of a new game
 //! ([`farm_sim::StartState`]) and what presentation reads ([`farm_sim::Presentation`]), so the
 //! player never reads project JSON. The sections are JSON in authoring units, converted to the
 //! simulation's fixed-unit integers as they are read (docs/NUMERICS.md). Embedded files live in
@@ -319,9 +319,9 @@ mod tests {
     #[test]
     fn fsharp_compiled_cartridge_matches_the_project() {
         let cart = read_cartridge(CART).expect("F# cartridge parses in Rust");
-        assert_eq!(cart.project_schema_version, 9);
+        assert_eq!(cart.project_schema_version, 10);
         assert_eq!(cart.info.game_id, "local.project-1");
-        assert_eq!(cart.info.title, "Current V7 Farm");
+        assert_eq!(cart.info.title, "Fixture Farm");
         let loaded = load_cartridge(CART).unwrap();
         let project = project();
         let inline = |value: serde_json::Value| {

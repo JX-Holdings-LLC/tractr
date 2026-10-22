@@ -1,8 +1,7 @@
 {
   "content/blank.json": [],
   "content/cozy-garden.json": [],
-  "content/fixture-v1.json": [],
-  "content/fixture-v8.json": [],
+  "content/fixture-farm.json": [],
   "content/lab-calendar.json": [],
   "content/packs-all-disabled.json": [],
   "content/packs-de.json": [
@@ -13,6 +12,7 @@
   ],
   "content/packs-nodes.json": [],
   "content/quest-rpg.json": [],
+  "content/small-farm.json": [],
   "content/starter-farm.json": [],
   "replays/actions-items-minigames.json": [],
   "replays/animals-ranch.json": [],
@@ -35,7 +35,6 @@
   "replays/free-movement.json": [],
   "replays/fuzz-thousand-commands.json": [],
   "replays/gathering-and-tools.json": [],
-  "replays/legacy-v1-fixture-play.json": [],
   "replays/mines-descent.json": [],
   "replays/npc-schedules-and-movement.json": [
     "warning|scenes|Scene \"Annex\" is unreachable (no transition leads to it)|annex"
@@ -46,6 +45,7 @@
     "error|dialogue|Dialogue \"dlg-vendor\" opens missing shop \"shop-nope\"|npc-vendor",
     "error|shops|Shop \"Picky Shop\" stocks missing item \"ghost-item\"|shop-picky"
   ],
+  "replays/small-farm-play.json": [],
   "replays/starter-farm-first-week.json": [],
   "replays/weather-seasons-long-run.json": [],
   "fixtures/fixture-project.json": [],

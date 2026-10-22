@@ -43,7 +43,6 @@ module ModRegistry =
         "name": "Glowshroom",
         "seedCost": 45,
         "baseHarvestValue": 110,
-        "growthTime": 30000,
         "growthDays": 6,
         "stages": 5,
         "seasons": ["fall", "winter"],

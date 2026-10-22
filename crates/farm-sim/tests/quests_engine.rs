@@ -56,7 +56,6 @@ fn make_project(mutate: impl FnOnce(&mut GameProject)) -> GameProject {
         start_scene_id: "farm".to_owned(),
         mode: "play".to_owned(),
         selected_tile_type: "grass".to_owned(),
-        current_time: 1.0,
         current_season: "spring".to_owned(),
         current_day: 1,
         current_time_minutes: units::minutes(6 * 60),
@@ -268,9 +267,8 @@ fn selects_by_membership_in_the_player_lists() {
     assert_eq!(done, vec!["c"]);
 }
 
-/// The one deliberate difference from the C#: completing a quest that never had a progress
-/// entry produces `{ status: 'completed' }` with no `objectives` key, as the TypeScript spread
-/// `{ ...state.quests[questId], status: 'completed' }` does.
+/// Completing a quest that never had a progress entry produces `{ status: 'completed' }` with no
+/// `objectives` key.
 #[test]
 fn completing_a_quest_without_a_progress_entry_writes_no_objectives_key() {
     let (ctx, mut state) = make_engine(|p| {

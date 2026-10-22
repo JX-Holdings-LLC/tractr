@@ -792,7 +792,7 @@ fn world_outcomes_warp_dialogue_npcs_and_transitions() {
                 ..outcome("modifyFriendship")
             },
             EventOutcome { npc_id: Some("npc-test".to_owned()), ..outcome("startDialogue") },
-            EventOutcome { scene_id: Some("scene-b".to_owned()), ..outcome("unlockScene") },
+            EventOutcome { x: Some(0), y: Some(0), ..outcome("unlockTransition") },
             EventOutcome { x: Some(2), y: Some(2), ..outcome("lockTransition") },
             EventOutcome { scene_id: Some("scene-b".to_owned()), x: Some(1), y: Some(2), ..outcome("warpPlayer") },
         ],

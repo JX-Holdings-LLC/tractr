@@ -41,7 +41,6 @@ fn crop(
     name: &str,
     seed_cost: i64,
     base_harvest_value: i64,
-    growth_time: i64,
     growth_days: u32,
     stages: u32,
     seasons: &[&str],
@@ -54,7 +53,6 @@ fn crop(
         name: name.to_owned(),
         seed_cost,
         base_harvest_value,
-        growth_time,
         growth_days: Some(growth_days),
         stages,
         seasons: strings(seasons),
@@ -66,9 +64,8 @@ fn crop(
     }
 }
 
-fn regrowing(mut definition: CropDefinition, regrowth_time: i64, regrowth_days: u32) -> CropDefinition {
+fn regrowing(mut definition: CropDefinition, regrowth_days: u32) -> CropDefinition {
     definition.can_regrow = true;
-    definition.regrowth_time = Some(regrowth_time);
     definition.regrowth_days = Some(regrowth_days);
     definition
 }
@@ -81,15 +78,15 @@ fn multi_tile(mut definition: CropDefinition, width: u32, height: u32) -> CropDe
 /// TS `CROP_DEFINITIONS`, keyed by crop id in declaration order.
 pub fn crop_definitions() -> IndexMap<String, CropDefinition> {
     let definitions = [
-        crop("wheat", "Wheat", 10, 25, 15000, 3, 4, &["spring", "fall"], 1, 2, 0.01),
-        crop("corn", "Corn", 15, 40, 25000, 5, 5, &["summer", "fall"], 1, 3, 0.015),
-        regrowing(crop("tomato", "Tomato", 20, 50, 20000, 4, 5, &["summer"], 1, 3, 0.02), 8000, 2),
-        crop("carrot", "Carrot", 8, 20, 12000, 2, 4, &["spring", "fall", "winter"], 1, 2, 0.008),
-        crop("potato", "Potato", 12, 30, 18000, 4, 4, &["spring", "fall"], 2, 4, 0.012),
-        regrowing(crop("strawberry", "Strawberry", 30, 60, 22000, 4, 5, &["spring"], 1, 2, 0.025), 10000, 2),
-        multi_tile(crop("pumpkin", "Pumpkin", 50, 150, 35000, 7, 6, &["fall"], 1, 1, 0.05), 2, 2),
-        multi_tile(crop("cauliflower", "Cauliflower", 40, 120, 28000, 6, 5, &["spring"], 1, 1, 0.04), 2, 2),
-        regrowing(crop("blueberry", "Blueberry", 35, 70, 24000, 5, 5, &["summer"], 2, 5, 0.03), 9000, 2),
+        crop("wheat", "Wheat", 10, 25, 3, 4, &["spring", "fall"], 1, 2, 0.01),
+        crop("corn", "Corn", 15, 40, 5, 5, &["summer", "fall"], 1, 3, 0.015),
+        regrowing(crop("tomato", "Tomato", 20, 50, 4, 5, &["summer"], 1, 3, 0.02), 2),
+        crop("carrot", "Carrot", 8, 20, 2, 4, &["spring", "fall", "winter"], 1, 2, 0.008),
+        crop("potato", "Potato", 12, 30, 4, 4, &["spring", "fall"], 2, 4, 0.012),
+        regrowing(crop("strawberry", "Strawberry", 30, 60, 4, 5, &["spring"], 1, 2, 0.025), 2),
+        multi_tile(crop("pumpkin", "Pumpkin", 50, 150, 7, 6, &["fall"], 1, 1, 0.05), 2, 2),
+        multi_tile(crop("cauliflower", "Cauliflower", 40, 120, 6, 5, &["spring"], 1, 1, 0.04), 2, 2),
+        regrowing(crop("blueberry", "Blueberry", 35, 70, 5, 5, &["summer"], 2, 5, 0.03), 2),
     ];
     definitions.into_iter().map(|definition| (definition.id.clone(), definition)).collect()
 }

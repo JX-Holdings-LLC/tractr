@@ -76,7 +76,7 @@ pub fn starter_farm_project() -> GameProject {
         .expect("starter-farm project is a GameProject")
 }
 
-/// The web version's Glow Farm demo mod (C# test fixture `demo-mod.json`).
+/// The Glow Farm demo mod (`fixtures/projects/demo-mod.json`).
 pub fn demo_mod() -> ContentPack {
     serde_json::from_value(read_json("fixtures/projects/demo-mod.json")).expect("demo mod is a pack")
 }

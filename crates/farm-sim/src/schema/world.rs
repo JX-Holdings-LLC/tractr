@@ -68,8 +68,6 @@ pub struct Tile {
     pub ladder_down: Option<bool>,
     pub collision: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_image: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub visuals: Option<TileVisuals>,
     /// One of [`super::soil_states`].
     #[serde(skip_serializing_if = "Option::is_none")]

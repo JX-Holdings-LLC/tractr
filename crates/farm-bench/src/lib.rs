@@ -72,8 +72,7 @@ pub fn repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
 }
 
-/// A project of `fixtures/golden/content` (the sample games and test projects, as the
-/// TypeScript engine recorded them).
+/// A project of `fixtures/golden/content` (the sample games and test projects).
 pub fn golden_project(name: &str) -> GameProject {
     let path = repo_root().join("fixtures").join("golden").join("content").join(format!("{name}.json"));
     let text = std::fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
@@ -266,7 +265,7 @@ impl SaveFixture {
         save_file::write_save_binary(&self.state, &self.target, &SavePreview::of_state(&self.state))
     }
 
-    /// A JSON save (editor debug tools, the web version).
+    /// A JSON save (debugging).
     pub fn write_json(&self) -> String {
         save_file::write_save(&self.state, &self.target)
     }

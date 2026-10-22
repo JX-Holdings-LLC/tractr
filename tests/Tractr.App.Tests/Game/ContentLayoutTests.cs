@@ -92,7 +92,6 @@ public sealed class ContentLayoutTests
         Assert.True(InTab(host, "ContentTab_Growth", "ContentField_Stages"));
         Assert.True(InTab(host, "ContentTab_Growth", "ContentGroup_MultiTile"));
         Assert.True(InTab(host, "ContentTab_Asset", "ContentGroup_Visual"));
-        Assert.True(InTab(host, "ContentTab_Asset", "ContentField_CustomAsset"));
         Assert.False(InTab(host, "ContentTab_Basic", "ContentField_Stages"));
 
         // Every field is on exactly one tab.
@@ -365,30 +364,6 @@ public sealed class ContentLayoutTests
         Press(host, "RevertContentButton");
         OpenEntry(host, "NPCs", host.Workspace.Current!.Npcs[1].Id);
         Assert.Null(TryFindByName<Border>(host.Window, "ContentArt_Visual"));
-    }
-
-    [AvaloniaFact]
-    public void LegacyImageFieldsShowAThumbnailOfADataUrlOrAnAsset()
-    {
-        using var host = new GameTestHost();
-        var art = AddArt(host, "coral.png", SKColors.Coral);
-        var item = host.Workspace.Current!.Items[0];
-        host.Workspace.Apply(Edits.UpsertItem(item.WithCustomImage(art.DataUrl)));
-        OpenEntry(host, "Items", item.Id);
-
-        Border Thumbnail() => FindByName<Border>(host.Window, "ContentThumb_CustomImage");
-        Assert.IsType<Image>(Thumbnail().Child);
-        Assert.Equal("Custom Image preview", AutomationProperties.GetName(Thumbnail()));
-        Type(host, "ContentField_CustomImage", art.Id);
-        Assert.IsType<Image>(Thumbnail().Child);
-        Type(host, "ContentField_CustomImage", "data:image/png;base64,AAAA");
-        Assert.Null(Thumbnail().Child);
-        Type(host, "ContentField_CustomImage", "data:image/png;base64,not base64!");
-        Assert.Null(Thumbnail().Child);
-        Type(host, "ContentField_CustomImage", "no-such-asset");
-        Assert.Null(Thumbnail().Child);
-        Type(host, "ContentField_CustomImage", "");
-        Assert.Null(Thumbnail().Child);
     }
 
     // ---- Accessible names ----

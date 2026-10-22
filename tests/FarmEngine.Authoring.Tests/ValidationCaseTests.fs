@@ -62,21 +62,6 @@ let private asObject (raw: Json) : Json option =
     | JObject _ -> Some raw
     | _ -> None
 
-let private editorOnlyKeys =
-    [ "id"; "mode"; "selectedTileType"; "selectedNPCId"; "selectedItemId"; "currentTime"; "eventFlags"; "selectedTileVisual"; "rngState" ]
-
-/// A project's JSON as exported games: as is (editor-only keys ride as passthrough keys),
-/// without the editor-only keys (the web export) and without the player too.
-let private exportedForms (json: Json) : (string * ExportedGame) list =
-    let without (keys: string list) =
-        match json with
-        | JObject members -> JObject(members |> List.filter (fun (key, _) -> not (List.contains key keys)))
-        | other -> other
-    [ "as exported game", json
-      "exported", without editorOnlyKeys
-      "exported without player", without ("player" :: editorOnlyKeys) ]
-    |> List.choose (fun (form, json) -> decode SchemaJson.decodeExportedGame json |> Option.map (fun game -> form, game))
-
 let jsonSourceNames () : seq<obj[]> = jsonSources () |> Seq.map (fun (name, _) -> [| box name |])
 let codeSourceNames () : seq<obj[]> = codeSources () |> Seq.map (fun (name, _) -> [| box name |])
 let brokenCaseNames () : seq<obj[]> = BrokenProjects.cases |> Seq.map (fun c -> [| box c.Name |])
@@ -95,8 +80,6 @@ let private assertLoadMatchesChecks (label: string) (raw: Json) =
         Assert.Equal<string list>(List.truncate 20 errors, if result.Ok then [] else result.Errors |> List.truncate 20)
         Assert.Equal(errors.IsEmpty, result.Ok)
     | None -> Assert.False(result.Ok, label + ": an unreadable project loaded")
-    let game = ProjectLoad.loadExportedGame raw
-    Assert.True(game.Ok || not game.Errors.IsEmpty, label + ": exported game refused without an error")
 
 [<Theory>]
 [<MemberData(nameof jsonSourceNames)>]
@@ -108,26 +91,16 @@ let ``golden and fixture projects load and check without throwing`` (name: strin
         Assert.True((attempt (fun () -> SchemaChecks.validateProject project, SchemaChecks.lintProject project)) |> Result.isOk)
         checkedForms <- checkedForms + 1
     | None -> ()
-    match asObject raw with
-    | Some json ->
+    if (asObject raw).IsSome then
         assertLoadMatchesChecks name raw
-        for form, game in exportedForms json do
-            match attempt (fun () -> SchemaChecks.validateExportedGame game) with
-            | Ok _ -> checkedForms <- checkedForms + 1
-            | Error message -> failwithf "%s (%s): %s" name form message
-    | None -> ()
     Assert.True(checkedForms > 0, name + ": nothing checked")
 
 [<Theory>]
 [<MemberData(nameof codeSourceNames)>]
-let ``sample and template projects are valid in every exported form`` (name: string) =
+let ``sample and template projects are valid`` (name: string) =
     let project = (codeSources () |> List.find (fun (n, _) -> n = name) |> snd) ()
     Assert.Empty(SchemaChecks.validateProject project)
-    let json = ProjectLoad.toJson project
-    assertLoadMatchesChecks name json
-    for form, game in exportedForms json do
-        let errors = SchemaChecks.validateExportedGame game
-        Assert.True(errors.IsEmpty, sprintf "%s (%s): %s" name form (String.concat "\n" errors))
+    assertLoadMatchesChecks name (ProjectLoad.toJson project)
 
 // ── Content lints: the recorded findings ─────────────────────────────────────
 
@@ -191,8 +164,6 @@ let ``every broken project reaches the check it was written for`` (name: string)
         // Loading refuses another schema version before the checks run.
         if case.Typed project = project && project.SchemaVersion = ProjectSchema.CurrentProjectSchemaVersion then
             assertLoadMatchesChecks name raw
-        for form, game in exportedForms raw do
-            Assert.True(attempt (fun () -> SchemaChecks.validateExportedGame game) |> Result.isOk, sprintf "%s (%s) throws" name form)
     for expect in case.Expect do
         match expect with
         | BrokenProjects.Parse prefix ->
@@ -219,20 +190,3 @@ let ``the combined broken project hits the 20-error cap`` () =
     Assert.True((result.Errors.Length = 20), String.concat "\n" result.Errors)
     Assert.True(SchemaChecks.validateProject (BrokenProjects.project case) |> List.length > 20)
 
-/// A `rngState` an exported game carries as a passthrough key is checked.
-[<Fact>]
-let ``exported game passthrough rngState is checked`` () =
-    let json = BrokenProjects.starterJson ()
-    json.Remove "id" |> ignore
-    let gameWith (rngState: string) =
-        json.["rngState"] <- System.Text.Json.Nodes.JsonNode.Parse rngState
-        decodeJson SchemaJson.decodeExportedGame (Net.JsonInterop.ofNode json)
-    let expected =
-        [ """{"algorithm":"xoshiro128ss","s":[1,2,3,4]}""", []
-          """{"algorithm":"mt19937","s":[1,2,3]}""",
-          [ "rngState.algorithm: Invalid literal value, expected \"xoshiro128ss\""; "rngState.s: Expected a tuple of 4 integers" ]
-          """{"algorithm":"xoshiro128ss","s":[1,2,3,4,5]}""", [ "rngState.s: Expected a tuple of 4 integers" ] ]
-    for rngState, errors in expected do
-        Assert.Equal<string list>(errors, SchemaChecks.validateExportedGame (gameWith rngState) |> List.filter (fun e -> e.StartsWith "rngState"))
-    for rngState in [ """{"algorithm":null,"s":null}"""; """{"s":[1,2,3,4]}"""; """{"algorithm":"xoshiro128ss"}"""; "null" ] do
-        Assert.True(attempt (fun () -> SchemaChecks.validateExportedGame (gameWith rngState)) |> Result.isOk, rngState)

@@ -1,6 +1,6 @@
 /// The schema records' JSON codecs (ported from the retired C# FarmEngine.Schemas tests): defaults
 /// for absent keys, undeclared keys kept on passthrough records and dropped elsewhere, the
-/// condition union and a lossless round trip of the v8 fixture.
+/// condition union and a lossless round trip of the fixture project.
 module FarmEngine.Authoring.Tests.SchemaRecordTests
 
 open Xunit
@@ -45,7 +45,7 @@ let ``sprite sheets apply the slicing defaults and plain assets stay static`` ()
     Assert.DoesNotContain("\"sheet\"", encoded SchemaJson.encodeCustomAsset asset)
 
 [<Fact>]
-let ``the v8 fixture round trips stably and keeps present-as-null keys`` () =
+let ``the fixture project round trips stably and keeps present-as-null keys`` () =
     let json = readJson [ "Fixtures"; "fixture-project.json" ]
     let project = projectOf json
     let first = Json.stringify (ProjectLoad.toJson project)

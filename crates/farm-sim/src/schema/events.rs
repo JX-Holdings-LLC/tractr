@@ -168,8 +168,6 @@ pub mod event_outcome_types {
     pub const PERFORM_ACTION: &str = "performAction";
     /// Open a declared minigame; its score resolves via the command log.
     pub const START_MINIGAME: &str = "startMinigame";
-    /// legacy (pre-v5), still honored by the migration
-    pub const UNLOCK_SCENE: &str = "unlockScene";
 
     pub const ALL: &[&str] = &[
         MESSAGE,
@@ -194,7 +192,6 @@ pub mod event_outcome_types {
         PLAY_SOUND,
         PERFORM_ACTION,
         START_MINIGAME,
-        UNLOCK_SCENE,
     ];
 }
 
@@ -226,12 +223,11 @@ pub enum OutcomeKind {
     PlaySound,
     PerformAction,
     StartMinigame,
-    UnlockScene,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 23] = [
+    pub const ALL: [OutcomeKind; 22] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -254,7 +250,6 @@ impl OutcomeKind {
         Self::PlaySound,
         Self::PerformAction,
         Self::StartMinigame,
-        Self::UnlockScene,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -283,7 +278,6 @@ impl OutcomeKind {
             Self::PlaySound => t::PLAY_SOUND,
             Self::PerformAction => t::PERFORM_ACTION,
             Self::StartMinigame => t::START_MINIGAME,
-            Self::UnlockScene => t::UNLOCK_SCENE,
         }
     }
 

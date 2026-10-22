@@ -3,8 +3,7 @@ namespace FarmEngine.Authoring
 open System
 open FarmEngine.Schemas
 
-/// Native export settings are additive to project schema v8, so the Problems pipeline validates
-/// them separately from the web-compatible Zod checks. No export binary is produced yet.
+/// The export settings' checks (Export Game reads them), kept apart from the schema checks.
 module internal ChecksExport =
     let private gameIdAllowed (id: string) =
         let validPart (part: string) =

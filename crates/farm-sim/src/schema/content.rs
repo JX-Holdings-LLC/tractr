@@ -30,18 +30,14 @@ pub struct CropDefinition {
     pub seed_cost: i64,
     #[serde(with = "crate::units::money")]
     pub base_harvest_value: i64,
-    /// Legacy wall-clock growth duration (ms). Kept for pre-v4 data; the engine uses growthDays.
-    #[serde(with = "crate::units::long")]
-    pub growth_time: i64,
-    /// In-game days from planting to maturity (authoritative from schema v4). positive.
+    /// In-game days from planting to maturity. positive; validation requires it (absent or 0
+    /// grows in one day).
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub growth_days: Option<u32>,
     /// int, positive.
     #[serde(with = "crate::units::count")]
     pub stages: u32,
     pub seasons: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::long::opt")]
-    pub regrowth_time: Option<i64>,
     /// In-game days between repeat harvests for regrowing crops. positive.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub regrowth_days: Option<u32>,
@@ -75,18 +71,14 @@ pub struct CustomCropDefinition {
     pub seed_cost: i64,
     #[serde(with = "crate::units::money")]
     pub base_harvest_value: i64,
-    /// Legacy wall-clock growth duration (ms). Kept for pre-v4 data; the engine uses growthDays.
-    #[serde(with = "crate::units::long")]
-    pub growth_time: i64,
-    /// In-game days from planting to maturity (authoritative from schema v4). positive.
+    /// In-game days from planting to maturity. positive; validation requires it (absent or 0
+    /// grows in one day).
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub growth_days: Option<u32>,
     /// int, positive.
     #[serde(with = "crate::units::count")]
     pub stages: u32,
     pub seasons: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::long::opt")]
-    pub regrowth_time: Option<i64>,
     /// In-game days between repeat harvests for regrowing crops. positive.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub regrowth_days: Option<u32>,
@@ -102,8 +94,6 @@ pub struct CustomCropDefinition {
     /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub harvest_item_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_asset: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -125,8 +115,6 @@ pub struct Item {
     pub value: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crop_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_image: Option<String>,
     /// One of [`super::tool_types`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_type: Option<String>,
@@ -174,13 +162,10 @@ impl InventorySlot {
 #[serde(rename_all = "camelCase", default)]
 pub struct Crop {
     pub r#type: String,
-    /// Legacy wall-clock plant timestamp (ms). Superseded by plantedOnDay from schema v4.
-    #[serde(with = "crate::units::long")]
-    pub planted_at: i64,
-    /// Absolute in-game day the crop was planted (schema v4+). int.
+    /// Absolute in-game day the crop was planted. int.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub planted_on_day: Option<u32>,
-    /// Watered in-game days accumulated toward growthDays (schema v4+).
+    /// Watered in-game days accumulated toward growthDays.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub days_grown: Option<u32>,
     /// Killed by season change; renders dead and can be cleared.

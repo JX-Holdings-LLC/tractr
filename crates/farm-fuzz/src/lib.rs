@@ -124,7 +124,7 @@ impl Target {
             }
             Self::Project => {
                 let mut seeds = Vec::new();
-                for name in ["blank", "fixture-v8", "lab-calendar"] {
+                for name in ["blank", "fixture-farm", "lab-calendar"] {
                     let mut seed = project_fixture_json(name);
                     seed.push(0xFF);
                     seed.extend_from_slice(b"\x01\x03\x00\x06\x01\x0e\x00\xff");

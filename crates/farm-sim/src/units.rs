@@ -150,10 +150,6 @@ scaled_unit!(
     Int, i32, 1
 );
 scaled_unit!(
-    /// Whole signed numbers that need 64 bits (money-sized deltas, legacy millisecond times).
-    Long, i64, 1
-);
-scaled_unit!(
     /// Clock ticks.
     Ticks, u64, 1
 );
@@ -549,10 +545,6 @@ unit_module!(
     int, crate::units::Int
 );
 unit_module!(
-    /// [`Long`] (`i64`, whole).
-    long, crate::units::Long
-);
-unit_module!(
     /// [`Ticks`] (`u64`).
     ticks, crate::units::Ticks
 );
@@ -750,8 +742,8 @@ pub const fn scale_probability(threshold: u64, numerator: u64, denominator: u64)
 
 // ─── Authoring numbers at the boundary (display, JSON values, hosts) ────────────────────────
 
-/// JavaScript `String(number)` / template-literal formatting of a number: messages, stable
-/// JSON and hosts print numbers the way the web version does.
+/// JavaScript `String(number)` formatting of a number: how messages, stable JSON and hosts print
+/// numbers.
 pub fn format_number(value: f64) -> String {
     if value.is_nan() {
         return "NaN".to_owned();

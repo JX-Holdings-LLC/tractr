@@ -1,13 +1,13 @@
 [
   {
     "name": "replay-three-days",
-    "description": "replay.test.ts THREE_DAYS on makeFarmProject (seed \"golden\"); the v9 recording ends at 9356330e045ae312 (the TypeScript golden in v8/replays ended at 6f884fd1bf6e2b5e).",
+    "description": "Three days on the farm test project (seed \"golden\").",
     "seed": "golden",
     "autoStartQuests": false
   },
   {
     "name": "fuzz-thousand-commands",
-    "description": "replay.test.ts 1,000 LCG-generated discrete commands (move/interact/tools/sleep/closeDialogue + small tick runs) on makeFarmProject.",
+    "description": "1,000 LCG-generated discrete commands (move/interact/tools/sleep/closeDialogue + small tick runs) on makeFarmProject.",
     "seed": "thousand",
     "autoStartQuests": false
   },
@@ -67,7 +67,7 @@
   },
   {
     "name": "events-showcase",
-    "description": "Event runtime: enter/interact/tick triggers, region + flag + inventorySpace + hasItem + dayRange + season + yearRange + weather + questStatus + timeOfDay conditions, fire-once vs repeatable, inactive events, outcomes message/giveMoney/setFlag/playSound/giveItem/takeItem/unlockTransition/lockTransition/removeNPC/spawnNPC/changeTile/startDialogue/waterArea/startQuest/performAction(modifyEnergy)/warpPlayer/completeQuest/modifyFriendship/clearFlag/takeMoney/unlockScene/startMinigame.",
+    "description": "Event runtime: enter/interact/tick triggers, region + flag + inventorySpace + hasItem + dayRange + season + yearRange + weather + questStatus + timeOfDay conditions, fire-once vs repeatable, inactive events, outcomes message/giveMoney/setFlag/playSound/giveItem/takeItem/unlockTransition/lockTransition/removeNPC/spawnNPC/changeTile/startDialogue/waterArea/startQuest/performAction(modifyEnergy)/warpPlayer/completeQuest/modifyFriendship/clearFlag/takeMoney/startMinigame.",
     "seed": "events",
     "autoStartQuests": false
   },
@@ -132,8 +132,8 @@
     "autoStartQuests": false
   },
   {
-    "name": "legacy-v1-fixture-play",
-    "description": "tests/fixtures/project-v1.json migrated v1→v8 (layered tiles, backfills, default weather/settings) and played: legacy crop without daysGrown grows over sleeps (watered flag from v1), door tile walking, blocked moves, default weather rolls.",
+    "name": "small-farm-play",
+    "description": "The small fixture farm played: a crop without daysGrown grows over sleeps, door tile walking, blocked moves, default weather rolls.",
     "seed": "legacy-v1",
     "autoStartQuests": false
   }

@@ -270,7 +270,7 @@ module Cleanup =
                 | None -> false
                 | Some frame -> refers frame.AssetId assetId)
 
-    /// An asset is gone: every binding, custom image and animation frame that used it is cleared
+    /// An asset is gone: every binding and animation frame that used it is cleared
     /// (the web refuses to remove art in use; here the objects just fall back to the default look).
     let dropAsset (assetId: string) (project: GameProject) : GameProject =
         let clear (visual: VisualRef option) = if visualUses assetId visual then None else visual
@@ -278,21 +278,13 @@ module Cleanup =
         project
         |> fun p -> if unchangedVisual p.PlayerVisual then p else { p with PlayerVisual = None }
         |> fun p -> if unchangedVisual p.SelectedTileVisual then p else { p with SelectedTileVisual = None }
-        |> fun p -> if refers p.PlayerCustomImage assetId then { p with PlayerCustomImage = None } else p
-        |> mapNpcs (fun n ->
-            if unchangedVisual n.Visual && not (refers n.CustomImage assetId) then n
-            else { n with Visual = clear n.Visual; CustomImage = unless assetId n.CustomImage })
-        |> mapItems (fun i ->
-            if unchangedVisual i.Visual && not (refers i.CustomImage assetId) then i
-            else { i with Visual = clear i.Visual; CustomImage = unless assetId i.CustomImage })
-        |> mapCustomCrops (fun c ->
-            if unchangedVisual c.Visual && not (refers c.CustomAsset assetId) then c
-            else { c with Visual = clear c.Visual; CustomAsset = unless assetId c.CustomAsset })
+        |> mapNpcs (fun n -> if unchangedVisual n.Visual then n else { n with Visual = clear n.Visual })
+        |> mapItems (fun i -> if unchangedVisual i.Visual then i else { i with Visual = clear i.Visual })
+        |> mapCustomCrops (fun c -> if unchangedVisual c.Visual then c else { c with Visual = clear c.Visual })
         |> mapNodeTypes (fun n -> if unchangedVisual n.Visual then n else { n with Visual = None })
         |> mapSpecies (fun s -> if unchangedVisual s.Visual then s else { s with Visual = None })
         |> mapMachineTypes (fun m -> if unchangedVisual m.Visual then m else { m with Visual = None })
         |> mapTiles (fun t ->
-            let t = if refers t.CustomImage assetId then { t with CustomImage = None } else t
             let t =
                 match t.Item with
                 | Some item when visualUses assetId item.Visual -> { t with Item = Some { item with Visual = None } }

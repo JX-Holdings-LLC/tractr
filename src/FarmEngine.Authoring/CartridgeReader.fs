@@ -134,11 +134,11 @@ module CartridgeReader =
               Fullscreen = field b info 8 |> Option.map (fun at -> u8 b at <> 0) |> Option.defaultValue false
               PixelScale = optionalString b info 9
               Credits = optionalString b info 10 }
-          ContentJson = text b root 4 "content_json"
-          StartJson = text b root 5 "start_json"
-          PresentationJson = text b root 6 "presentation_json"
+          ContentJson = text b root 3 "content_json"
+          StartJson = text b root 4 "start_json"
+          PresentationJson = text b root 5 "presentation_json"
           Assets =
-            [ for asset in tables b root 7 ->
+            [ for asset in tables b root 6 ->
                   let data =
                       match field b asset 2 with
                       | Some at ->
@@ -147,7 +147,7 @@ module CartridgeReader =
                       | None -> raise (Malformed "asset data is missing")
                   { Id = requiredString b asset 0 "asset.id"; Mime = requiredString b asset 1 "asset.mime"; Data = data } ]
           Plugins =
-            [ for plugin in tables b root 8 ->
+            [ for plugin in tables b root 7 ->
                   { Id = requiredString b plugin 0 "plugin.id"
                     PackId = requiredString b plugin 1 "plugin.pack_id"
                     Source = requiredString b plugin 2 "plugin.source"

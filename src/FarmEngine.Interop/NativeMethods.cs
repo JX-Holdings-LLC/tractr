@@ -22,7 +22,7 @@ internal static unsafe partial class NativeMethods
     public const string Library = "farm_ffi";
 
     /// <summary>The <c>FE_ABI_VERSION</c> these declarations were written for (<c>crates/farm-ffi/src/lib.rs</c>).</summary>
-    public const uint AbiVersion = 2;
+    public const uint AbiVersion = 3;
 
     /// <summary>A Rust-allocated buffer (<c>FeBytes</c>). Free with <see cref="fe_bytes_free"/>.</summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -76,9 +76,6 @@ internal static unsafe partial class NativeMethods
 
     [LibraryImport(Library, EntryPoint = "fe_bytes_free")]
     public static partial void fe_bytes_free(FeBytes bytes);
-
-    [LibraryImport(Library, EntryPoint = "fe_hash_text")]
-    public static partial FeResult fe_hash_text(byte* text, nuint len, FeBytes* output);
 
     // ---- crates/farm-ffi/src/session.rs -----------------------------------------------------
 

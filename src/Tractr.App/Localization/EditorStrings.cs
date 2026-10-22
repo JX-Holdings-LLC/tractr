@@ -6,7 +6,7 @@ namespace Tractr.App.Localization;
 public sealed record EditorLanguage(string Code, string NativeName);
 
 /// <summary>
-/// String tables of the editor's own chrome (the web version's <c>src/lib/i18n.ts</c>): mode
+/// String tables of the editor's own chrome: mode
 /// names, the Play Mode toolbar, the whole menu bar, the welcome tour and the shortcuts list. The
 /// game's interface is localized by the Rust player (farm-ui); editor tabs, forms and Problems
 /// stay English until the full editor pass (ROADMAP "Later").

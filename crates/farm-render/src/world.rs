@@ -210,17 +210,6 @@ impl<'a, 'l> Builder<'a, 'l> {
         true
     }
 
-    /// Draws a whole image (`image` is its id, width and height) into a box.
-    fn draw_whole_image(&mut self, image: (ImageId, f64, f64), x: f64, y: f64, w: f64, h: f64) {
-        let (id, width, height) = image;
-        self.push_image(id, rect(0.0, 0.0, width, height), rect(x, y, w, h), 1.0, None);
-    }
-
-    /// Whole custom image (tile, item, entity `imageUrl`) when it decodes to a non-empty image.
-    fn whole_image(&mut self, source: Option<&Arc<str>>) -> Option<(ImageId, f64, f64)> {
-        self.image(source?).filter(|(_, width, _)| *width > 0.0)
-    }
-
     fn draw_shadow(&mut self, px: f64, py: f64, width_factor: f64) {
         let ts = self.ts;
         let rx = (ts * width_factor / 2.0) as f32;
@@ -350,13 +339,9 @@ impl<'a, 'l> Builder<'a, 'l> {
                         tile.machine.as_ref().filter(|machine| machine.sprite.is_none()).map(|_| 0.7)
                     }
                     (DrawKind::Item, Some(tile), _) => {
-                        tile.item.as_ref().filter(|item| item.sprite.is_none() && item.image_url.is_none()).map(|_| 0.4)
+                        tile.item.as_ref().filter(|item| item.sprite.is_none()).map(|_| 0.4)
                     }
-                    (DrawKind::Entity | DrawKind::Player, _, Some(entity))
-                        if entity.sprite.is_none() && entity.image_url.is_none() =>
-                    {
-                        Some(0.55)
-                    }
+                    (DrawKind::Entity | DrawKind::Player, _, Some(entity)) if entity.sprite.is_none() => Some(0.55),
                     _ => None,
                 };
                 if let Some(factor) = factor {
@@ -450,50 +435,44 @@ impl<'a, 'l> Builder<'a, 'l> {
                 let tile_rect = rect(px, py, ts, ts);
 
                 self.fill_rect(tile_rect, canvas2d::tile_color(Some(&tile.background), "grass"));
-                if let Some(url) = &tile.image_url {
-                    if let Some((id, width, height)) = self.whole_image(Some(url)) {
-                        self.draw_whole_image((id, width, height), px, py, ts, ts);
-                    }
-                } else {
-                    if !self.draw_sprite(tile.art_layer(0), px, py, ts, ts, 1.0) {
-                        if let Some(art) = art {
-                            if tile.background == "soil" {
-                                // Farmable soil is drawn tilled; wet after watering, speckled when fertilized.
-                                self.draw_builtin(art.soil(tile.watered, x, y), px, py, 1.0, false, true);
-                                if tile.fertilized {
-                                    self.draw_builtin(art.fertilized_marker(), px, py, 1.0, false, true);
-                                }
-                            } else {
-                                self.draw_builtin(
-                                    art.tile(Some(&tile.background), season, x, y, tick),
-                                    px,
-                                    py,
-                                    1.0,
-                                    false,
-                                    true,
-                                );
+                if !self.draw_sprite(tile.art_layer(0), px, py, ts, ts, 1.0) {
+                    if let Some(art) = art {
+                        if tile.background == "soil" {
+                            // Farmable soil is drawn tilled; wet after watering, speckled when fertilized.
+                            self.draw_builtin(art.soil(tile.watered, x, y), px, py, 1.0, false, true);
+                            if tile.fertilized {
+                                self.draw_builtin(art.fertilized_marker(), px, py, 1.0, false, true);
                             }
+                        } else {
+                            self.draw_builtin(
+                                art.tile(Some(&tile.background), season, x, y, tick),
+                                px,
+                                py,
+                                1.0,
+                                false,
+                                true,
+                            );
                         }
                     }
+                }
 
-                    if let Some(overlay) = &tile.overlay {
-                        if !self.draw_sprite(tile.art_layer(1), px, py, ts, ts, 1.0)
-                            && !art.is_some_and(|art| {
-                                self.draw_builtin(art.tile(Some(overlay), None, x, y, tick), px, py, 1.0, false, true)
-                            })
-                        {
-                            self.fill_rect(tile_rect, canvas2d::tile_color(Some(overlay), "path").with_opacity(0.7));
-                        }
+                if let Some(overlay) = &tile.overlay {
+                    if !self.draw_sprite(tile.art_layer(1), px, py, ts, ts, 1.0)
+                        && !art.is_some_and(|art| {
+                            self.draw_builtin(art.tile(Some(overlay), None, x, y, tick), px, py, 1.0, false, true)
+                        })
+                    {
+                        self.fill_rect(tile_rect, canvas2d::tile_color(Some(overlay), "path").with_opacity(0.7));
                     }
+                }
 
-                    if let Some(object) = &tile.object {
-                        if !self.draw_sprite(tile.art_layer(2), px, py, ts, ts, 1.0)
-                            && !art.is_some_and(|art| {
-                                self.draw_builtin(art.tile(Some(object), None, x, y, tick), px, py, 1.0, false, true)
-                            })
-                        {
-                            self.fill_rect(tile_rect, canvas2d::tile_color(Some(object), "wall"));
-                        }
+                if let Some(object) = &tile.object {
+                    if !self.draw_sprite(tile.art_layer(2), px, py, ts, ts, 1.0)
+                        && !art.is_some_and(|art| {
+                            self.draw_builtin(art.tile(Some(object), None, x, y, tick), px, py, 1.0, false, true)
+                        })
+                    {
+                        self.fill_rect(tile_rect, canvas2d::tile_color(Some(object), "wall"));
                     }
                 }
 
@@ -608,19 +587,6 @@ impl<'a, 'l> Builder<'a, 'l> {
         if self.draw_sprite(item.sprite.as_ref(), px, py, ts, ts, 1.0) {
             return;
         }
-        if item.image_url.is_some() {
-            if let Some((id, width, height)) = self.whole_image(item.image_url.as_ref()) {
-                let size = (ts * 0.5).floor();
-                self.draw_whole_image(
-                    (id, width, height),
-                    px + ((ts - size) / 2.0),
-                    py + ((ts - size) / 2.0),
-                    size,
-                    size,
-                );
-            }
-            return;
-        }
         if let Some(art) = self.art {
             if self.draw_builtin(art.item(item.item_type.as_deref()), px, py, 1.0, false, false) {
                 return;
@@ -634,23 +600,16 @@ impl<'a, 'l> Builder<'a, 'l> {
         });
     }
 
-    /// Creator sprite, then the entity's whole image, then built-in art (`builtin` picks it).
+    /// Creator sprite, then built-in art (`builtin` picks it).
     fn entity_art(
         &mut self,
         entity: &SnapshotEntity,
         px: f64,
         py: f64,
-        body_width: f64,
-        body_height: f64,
         builtin: impl FnOnce(&BuiltinArt) -> Option<SnapshotSprite>,
     ) -> bool {
         let ts = self.ts;
         if entity.sprite.is_some() && self.draw_sprite(entity.sprite.as_ref(), px, py, ts, ts, 1.0) {
-            return true;
-        }
-        if let Some((id, width, height)) = self.whole_image(entity.image_url.as_ref()) {
-            let (x, y) = (px + ((ts - body_width) / 2.0), py + ((ts - body_height) / 2.0));
-            self.draw_whole_image((id, width, height), x, y, body_width, body_height);
             return true;
         }
         match self.art {
@@ -664,7 +623,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
         let npc_w = (ts * 0.65).floor();
         let npc_h = (ts * 0.75).floor();
-        let drawn = self.entity_art(npc, px, py, npc_w, npc_h, |art| {
+        let drawn = self.entity_art(npc, px, py, |art| {
             if npc.kind == "animal" {
                 art.animal(npc.species_id.as_deref(), Some(&npc.direction), tick, npc.moving)
             } else {
@@ -690,9 +649,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
         let player_w = (ts * 0.65).floor();
         let player_h = (ts * 0.75).floor();
-        if self.entity_art(player, px, py, player_w, player_h, |art| {
-            art.player(Some(&player.direction), tick, player.moving)
-        }) {
+        if self.entity_art(player, px, py, |art| art.player(Some(&player.direction), tick, player.moving)) {
             return;
         }
         let body = rect(px + ((ts - player_w) / 2.0), py + ((ts - player_h) / 2.0), player_w, player_h);

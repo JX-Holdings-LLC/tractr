@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "id": "project-1",
-  "name": "Current V7 Farm",
+  "name": "Fixture Farm",
   "version": "2.0",
   "scenes": [
     {
@@ -77,10 +77,6 @@
     "money": 500,
     "activeQuests": [],
     "completedQuests": [],
-    "pixelX": 0,
-    "pixelY": 0,
-    "targetX": 0,
-    "targetY": 0,
     "energy": 80,
     "maxEnergy": 100,
     "skills": {
@@ -96,7 +92,6 @@
   "selectedTileType": "grass",
   "selectedNPCId": null,
   "selectedItemId": null,
-  "currentTime": 0,
   "customAssets": [],
   "currentSeason": "spring",
   "currentDay": 1,

@@ -3,28 +3,26 @@ namespace FarmEngine.Authoring
 open System
 open FarmEngine.Schemas
 
-/// One failed schema check: zod's dotted issue path (`scenes.0.tiles.1.2.background`) and the
-/// zod-style message.
+/// One failed schema check: its dotted path (`scenes.0.tiles.1.2.background`) and message.
 type SchemaIssue =
     { Path: string
       Message: string }
 
-    /// `path: message`, the string form the C# `SchemaValidation` and the migrations report.
+    /// `path: message`, the string form loading reports.
     override this.ToString() = this.Path + ": " + this.Message
 
-/// Port of `SchemaValidation.cs` (`ValidateProject`, `LintProject`, `ValidateExportedGame`).
+/// The schema checks of a project.
 ///
-/// Decoding (SchemaJson.fs) checks value kinds; it does not enforce zod refinements (int,
-/// positive, min/max, enum membership, …). `projectIssues` re-checks exactly the constraints the
-/// web's zod schemas enforce on parse, so a project the web version accepts loads here too. `projectLints` adds
-/// the structural checks zod does not have (empty ids, duplicate scene ids, tile grid vs.
+/// Decoding (SchemaJson.fs) checks value kinds; it does not check value constraints (int,
+/// positive, min/max, enum membership, …). `projectIssues` checks those: a project that fails
+/// them does not load. `projectLints` adds structural checks (empty ids, duplicate scene ids, tile grid vs.
 /// width/height, a dangling start scene, inverted regions and ranges): problems for the Problems
 /// panel, never reasons to refuse a file. Not exhaustive.
 ///
 /// Saves (`ValidateGameState`) are Rust-owned and not here.
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SchemaChecks =
-    /// Parse-level (what zod rejects) or lint-level (what the web editor lets a creator save).
+    /// Parse-level (refuses the file) or lint-level (a problem the editor shows).
     [<RequireQualifiedAccess>]
     type private Level =
         | Parse
@@ -400,102 +398,6 @@ module SchemaChecks =
         let all = findings project
         at Level.Parse all, at Level.Lint all
 
-    // ── Exported games ───────────────────────────────────────────────────────
-
-    /// The checks on a `rngState` key an exported game carries as an undeclared (passthrough) key:
-    /// the same checks as the project's own `rngState`, the last check, so appending keeps the
-    /// order. A value that is not an object, or whose fields have the wrong kind, is skipped (the
-    /// export keeps it as it is).
-    let private passthroughRngState (extra: (string * Json) list) : Finding list =
-        let word (value: Json) : uint32 option =
-            match value with
-            | JNumber n when n = Math.Floor n && n >= 0.0 && n <= 4294967295.0 -> Some(uint32 n)
-            | _ -> None
-        let words (items: Json list) : uint32 list option =
-            let values = items |> List.map word
-            if List.forall Option.isSome values then Some(List.choose id values) else None
-        match extra |> List.tryFind (fun (key, _) -> key = "rngState") with
-        | Some(_, (JObject _ as rng)) ->
-            let algorithm : string option option =
-                match Json.tryGet "algorithm" rng with
-                | None -> Some(Some "xoshiro128ss")
-                | Some(JString value) -> Some(Some value)
-                | Some JNull -> Some None
-                | _ -> None
-            let s : uint32 list option option =
-                match Json.tryGet "s" rng with
-                | None -> Some(Some [ 0u; 0u; 0u; 0u ])
-                | Some(JArray items) -> words items |> Option.map Some
-                | Some JNull -> Some None
-                | _ -> None
-            match algorithm, s with
-            | Some algorithm, Some s -> rngState algorithm s
-            | _ -> []
-        | _ -> []
-
-    /// The exported game as the project it is validated as: its own fields plus fixed editor-only
-    /// fields and, when it carries no player, a skeleton player (`rngState` is checked by
-    /// `passthroughRngState`).
-    let private asProject (game: ExportedGame) : GameProject =
-        { GameProject.Default with
-            SchemaVersion = defaultArg game.SchemaVersion 0.0
-            Id = "exported-game"
-            Mode = EditorModes.Play
-            SelectedTileType = TileTypes.Grass
-            Version = game.Version
-            Name = game.Name
-            Scenes = game.Scenes
-            Npcs = game.Npcs
-            Items = game.Items
-            Events = game.Events
-            Dialogues = game.Dialogues
-            Quests = game.Quests
-            StartSceneId = game.StartSceneId
-            CustomAssets = game.CustomAssets
-            CustomCrops = game.CustomCrops
-            PlayerCustomImage = game.PlayerCustomImage
-            PlayerVisual = game.PlayerVisual
-            Graphics = game.Graphics
-            GamePanels = game.GamePanels
-            CurrentSeason = game.CurrentSeason
-            CurrentDay = game.CurrentDay
-            CurrentTimeMinutes = game.CurrentTimeMinutes
-            CurrentYear = game.CurrentYear
-            GameStartTime = game.GameStartTime
-            Shops = game.Shops
-            NodeTypes = game.NodeTypes
-            Settings = game.Settings
-            Recipes = game.Recipes
-            MachineTypes = game.MachineTypes
-            Weather = game.Weather
-            AnimalSpecies = game.AnimalSpecies
-            Animals = game.Animals
-            FishTables = game.FishTables
-            Mine = game.Mine
-            Actions = game.Actions
-            Minigames = game.Minigames
-            ContentPacks = game.ContentPacks
-            Player = defaultArg game.Player { Player.Default with Direction = Directions.Down; SceneId = "exported-game" }
-            CurrentWeatherId = game.CurrentWeatherId
-            SocialState = game.SocialState
-            MineDeepestFloor = game.MineDeepestFloor
-            QuarantinedItems = game.QuarantinedItems }
-
-    /// The checks of the project an exported game is validated as: `projectIssues` minus the
-    /// editor-only fields (`id`, `mode`, `selectedTileType`) and, when the game carries no player,
-    /// the player.
-    let exportedProjectIssues (hasPlayer: bool) (project: GameProject) : SchemaIssue list =
-        let editorOnly (issue: SchemaIssue) =
-            match issue.Path with
-            | "id" | "mode" | "selectedTileType" -> true
-            | path -> not hasPlayer && path.StartsWith("player.", StringComparison.Ordinal)
-        projectIssues project |> List.filter (editorOnly >> not)
-
-    /// `projectIssues` for an `ExportedGame` (web `validateExportedGame`): the same checks minus
-    /// the editor-only fields and the player when the export carries none.
-    let exportedGameIssues (game: ExportedGame) : SchemaIssue list =
-        exportedProjectIssues game.Player.IsSome (asProject game) @ (passthroughRngState game.Extra |> at Level.Parse)
-
     let private strings (issues: SchemaIssue list) = issues |> List.map string
 
     /// `projectIssues` as `path: message` strings .
@@ -504,5 +406,3 @@ module SchemaChecks =
     /// `projectLints` as `path: message` strings (C# `SchemaValidation.LintProject`).
     let lintProject (project: GameProject) : string list = projectLints project |> strings
 
-    /// `exportedGameIssues` as `path: message` strings (C# `SchemaValidation.ValidateExportedGame`).
-    let validateExportedGame (game: ExportedGame) : string list = exportedGameIssues game |> strings

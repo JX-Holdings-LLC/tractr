@@ -5,8 +5,11 @@ web version, `jxburros/farm-game-engine` (a private repository), which was the
 reference implementation until both apps moved onto one engine.
 The port is complete: phases 1–7 below are done, including phase 7, one
 engine for the web and native versions (see [Phase 7](#phase-7-one-engine)).
-Since 0.5.0 the two are separate projects
-([Separate projects](#separate-projects-050)).
+Since 0.5.0 the two are separate projects, and Tractr keeps nothing for the
+web version or for older files
+([Separate projects](#separate-projects-050-060)). The port's checklists below
+are a record of what was done; what they say about migrations, the Fable build
+and matching the TypeScript engine was removed in 0.5.0 and 0.6.0.
 Each phase shipped as a normal release through the Update Center.
 
 What comes next is in two parts:
@@ -34,12 +37,12 @@ added after the port was finished.
 - [x] **Play Mode.** Native Skia renderer, HUD, dialogue, shops, crafting,
   inventory, quests, minigames and playtest snapshots.
 - [x] **Project management.** Projects stored as JSON files, JSON
-  import/export that works with the web version, and templates.
+  import/export, and templates.
 
 ## Done — editor port
 
 Each part was ported following the checklist in
-[docs/LANGUAGES.md](docs/LANGUAGES.md#checklist-porting-a-new-part-of-the-web-editor):
+[docs/LANGUAGES.md](docs/LANGUAGES.md#checklist-adding-an-editor-feature):
 project logic in F#, views in C#, anything that runs in play in Rust.
 
 The web editor lives in `src/components/*` of the web repo (~13k lines of React).
@@ -95,9 +98,9 @@ and exit criteria for each phase.
 
 ## Remaining work
 
-Status in October 2026 (0.4.0): phases 1–7 are done
-([Phase 7](#phase-7-one-engine) below), and so is
-[parity with the web editor](#parity-with-the-web-editor). What's left is under
+Status in October 2026 (0.6.0): phases 1–7 are done
+([Phase 7](#phase-7-one-engine) below), and so are the
+[editor gaps found after phase 7](#editor-gaps-closed-after-phase-7). What's left is under
 [Toward full-size farm games](#toward-full-size-farm-games) and
 [Later](#later). The checklists in this section are the record of the port.
 
@@ -334,7 +337,7 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
 - [x] **Web demo export**: Export Game's web target runs `farm-wasm`'s
   standalone player in a page for itch.io.
 
-## Separate projects (0.5.0)
+## Separate projects (0.5.0, 0.6.0)
 
 Tractr and the web version are separate projects now, and neither has old
 projects to carry forward, so the compatibility code is gone:
@@ -348,13 +351,22 @@ projects to carry forward, so the compatibility code is gone:
   outcomes (`fixtures/golden/v8`, `v8_outcomes`); every golden is recorded
   from Rust. The RNG and stable-JSON vectors stay as fixed vectors
   (`fixtures/golden/vectors`).
-- [x] `farm-wasm` is the web demo's player only (0.5.1): `Session`,
+- [x] `farm-wasm` is the web demo's player only (0.6.0): `Session`,
   `Preview`, `renderJson` and `hashText` are removed.
+- [x] Project schema v10 (0.6.0): the fields kept only for older files are
+  gone (crop millisecond growth times and `plantedAt`, the `customImage`,
+  `playerCustomImage` and crop `customAsset` image fields, the `unlockScene`
+  outcome, the player's pixel and target fields, `currentTime`).
+- [x] Web interchange (0.6.0): Import Project JSON reads whole projects only
+  (no web "exported game" files), JSON saves need their header (no bare
+  `GameState`), the old text hash (`fe_hash_text`) and cartridge format 2's
+  reserved project slot are gone (cartridge format 3), and the TypeScript
+  reference fixture `packs-project.ts-reference.json` and its tests are
+  deleted.
 
-## Parity with the web editor
+## Editor gaps closed after phase 7
 
-After phase 7 a review listed what the web editor still did better. All of it
-is ported:
+After phase 7 a review listed what the editor still lacked. All of it is done:
 
 - [x] Keyboard map editing (arrow-key cursor, Enter/Space applies the tool,
   announced tile position) and screen-reader names across the editor.
@@ -380,7 +392,7 @@ Export makes real desktop games, not browser games. It copies a prebuilt
 `farm-player` for the target, renames it, and puts the compiled `game.cart`
 next to it. Windows and Linux (including Steam Deck) came first; a web demo
 for itch.io pages (the `farm-wasm` player in a page) is done too, and macOS
-comes later. The web version's single-file HTML export is not ported.
+comes later.
 
 Packaging works now: **File → Export Game…** and `farmc export` build the
 Windows, Linux and web folders and archives from the prebuilt templates. The games

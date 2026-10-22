@@ -16,26 +16,14 @@ let ``truthiness follows JS`` () =
         Assert.True(Json.truthy value, sprintf "%A" value)
 
 [<Fact>]
-let ``Number() follows JS for strings, arrays and objects`` () =
+let ``number parsing follows JS Number() for strings`` () =
     let cases =
-        [ JString "  12  ", 12.0
-          JString "", 0.0
-          JString " \n", 0.0
-          JString "0x10", 16.0
-          JString "0b101", 5.0
-          JString "1e3", 1000.0
-          JString "-.5", -0.5
-          JString "5.", 5.0
-          JString "-Infinity", -infinity
-          JBool true, 1.0
-          JNull, 0.0
-          JArray [], 0.0
-          JArray [ JNumber 5.0 ], 5.0
-          JArray [ JNull ], 0.0 ]
-    for value, expected in cases do
-        Assert.Equal(expected, Json.toNumber value)
-    for value in [ JString "abc"; JString "1,000"; JString "1e"; JString "0x"; JString "+-1"; JString "infinity"; obj []; JArray [ JNumber 1.0; JNumber 2.0 ] ] do
-        Assert.True(System.Double.IsNaN(Json.toNumber value), sprintf "%A" value)
+        [ "  12  ", 12.0; "", 0.0; " \n", 0.0; "0x10", 16.0; "0b101", 5.0; "1e3", 1000.0; "-.5", -0.5; "5.", 5.0
+          "-Infinity", -infinity ]
+    for text, expected in cases do
+        Assert.Equal(expected, JsNumber.parse text)
+    for text in [ "abc"; "1,000"; "1e"; "0x"; "+-1"; "infinity" ] do
+        Assert.True(System.Double.IsNaN(JsNumber.parse text), text)
 
 [<Fact>]
 let ``number formatting matches JS Number.prototype.toString`` () =
@@ -71,37 +59,10 @@ let ``stringifyIndented matches JSON.stringify with two spaces`` () =
     Assert.Equal("{\n  \"a\": [\n    1,\n    {}\n  ],\n  \"b\": [],\n  \"c\": {\n    \"d\": \"é\"\n  }\n}", Json.stringifyIndented value)
 
 [<Fact>]
-let ``x + n concatenates for strings, arrays and objects`` () =
-    Assert.Equal(JNumber 60.0, Json.add JNull 60.0)
-    Assert.Equal(JNumber 61.0, Json.add (JBool true) 60.0)
-    Assert.Equal(JNumber 65.0, Json.add (JNumber 5.0) 60.0)
-    Assert.Equal(JString "560", Json.add (JString "5") 60.0)
-    Assert.Equal(JString "1,260", Json.add (JArray [ JNumber 1.0; JNumber 2.0 ]) 60.0)
-    Assert.Equal(JString "[object Object]60", Json.add (obj []) 60.0)
-
-[<Fact>]
-let ``property keys coerce like a JS object lookup`` () =
-    let value =
-        obj
-            [ "n", JNull
-              "d", JNumber 1.5
-              "a", JArray [ JNumber 1.0; JNull; JArray [ JNumber 2.0; JString "x" ] ]
-              "o", obj [ "k", JNumber 1.0 ]
-              "b", JBool false ]
-    Assert.Equal("undefined", Json.propertyKey "missing" value)
-    Assert.Equal("null", Json.propertyKey "n" value)
-    Assert.Equal("1.5", Json.propertyKey "d" value)
-    Assert.Equal("1,,2,x", Json.propertyKey "a" value)
-    Assert.Equal("[object Object]", Json.propertyKey "o" value)
-    Assert.Equal("false", Json.propertyKey "b" value)
-
-[<Fact>]
-let ``spread, set, withDefault and remove keep JS member order`` () =
+let ``spread, set and remove keep JS member order`` () =
     let value = obj [ "a", JNumber 1.0; "b", JNull; "c", JNumber 3.0 ]
     Assert.Equal(obj [ "a", JNumber 1.0; "b", JNumber 2.0; "c", JNumber 3.0 ], Json.set "b" (JNumber 2.0) value)
     Assert.Equal(obj [ "a", JNumber 1.0; "b", JNull; "c", JNumber 3.0; "d", JBool true ], Json.set "d" (JBool true) value)
-    Assert.Equal(obj [ "a", JNumber 1.0; "b", JString "x"; "c", JNumber 3.0 ], Json.withDefault "b" (fun () -> JString "x") value)
-    Assert.Equal(value, Json.withDefault "a" (fun () -> failwith "fallback must not run") value)
     Assert.Equal(obj [ "a", JNumber 1.0; "c", JNumber 3.0 ], Json.remove "b" value)
     Assert.Equal(obj [ "0", JString "x"; "1", JNumber 2.0 ], Json.set "1" (JNumber 2.0) (JArray [ JString "x"; JNull ]))
     Assert.Equal<(string * Json) list>([ "0", JString "h"; "1", JString "i" ], Json.spread (JString "hi"))
@@ -109,7 +70,6 @@ let ``spread, set, withDefault and remove keep JS member order`` () =
     Assert.True(Json.has "b" value)
     Assert.False(Json.has "z" value)
     Assert.Equal(JNull, Json.get "b" value)
-    Assert.Equal(JNull, Json.index 5 (JArray [ JNumber 1.0 ]))
 
 [<Fact>]
 let ``elements raises a JS TypeError for a non-array`` () =

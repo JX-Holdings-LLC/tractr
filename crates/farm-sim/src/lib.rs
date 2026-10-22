@@ -2,7 +2,7 @@
 //!
 //! This crate is a reducer: `(state, content, command | ticks) → (state, effects, hook events)`.
 //! It does no I/O, spawns no threads and never reads a clock. Same seed + same command log ⇒
-//! the same state, byte for byte, on every platform (and in the web version through wasm).
+//! the same state, byte for byte, on every platform (WebAssembly included).
 //!
 //! **Native numerics** (schema v9, docs/NUMERICS.md): every quantity is an integer in a fixed
 //! unit ([`units`]); game logic never does float arithmetic (`clippy::float_arithmetic` is
@@ -10,7 +10,7 @@
 //! hash is xxh3-64 over a canonical binary encoding ([`hash`]). Rust is the reference
 //! implementation: the golden replays are recorded from this crate.
 //!
-//! Layout mirrors the retired C# `FarmEngine.Core` (docs/PORTING.md): the data shapes live in [`schema`],
+//! Layout (docs/CONVENTIONS.md): the data shapes live in [`schema`],
 //! the root modules are the engine files, and gameplay systems live in their folders
 //! (`farming`, …).
 #![forbid(unsafe_code)]
@@ -60,7 +60,7 @@ pub use commands::Command;
 pub use effects::Effect;
 pub use engine::{advance_tick, apply_command};
 pub use engine_types::{CommandRules, Effects, EngineContext, StepOutput};
-pub use hash::{hash_state, hash_text, stable_stringify};
+pub use hash::{hash_state, stable_stringify};
 pub use hooks::{HookBus, HookEvent};
 pub use rng::{Rng, RngState};
 pub use schema::{GameContent, GameProject, GameState};

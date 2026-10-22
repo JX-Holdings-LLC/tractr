@@ -5,68 +5,15 @@ open FarmEngine.Authoring
 open FarmEngine.Authoring.Tests.TestProjects
 open FarmEngine.Schemas
 
-// ── TypeScript reference: fixtures/projects/packs-project.json ───────────────
-// `packs-project.ts-reference.json` holds the TS engine's output for that project (recorded,
-// never hand-edited); the Rust `packs_and_state` tests check the same file.
-
-let private reference (key: string) : Json = Json.get key (readJson [ "Fixtures"; "packs-project.ts-reference.json" ])
-
 let private packsProject () = projectOf (readJson [ "Fixtures"; "packs-project.json" ])
 
-/// The TS base content, so the merge is checked on exactly the TS input.
-let private tsBaseContent () = decodeJson SchemaJson.decodeGameContent (reference "base")
-
-let private matches (label: string) (expected: Json) (actual: Json) =
-    assertSameStable label (Json.stableStringify expected) (Json.stableStringify actual)
-
-let private referenceProblems (json: Json) =
-    [ for p in Json.elements "problems" json ->
-          Json.toJsString (Json.get "packId" p), Json.toJsString (Json.get "severity" p), Json.toJsString (Json.get "message" p) ]
-
-let private problemTuples (problems: PackProblem list) =
-    problems |> List.map (fun p -> p.PackId, p.Severity, p.Message)
-
 [<Fact>]
-let ``base and compiled content match TypeScript`` () =
-    let project = packsProject ()
-    matches "base" (reference "base") (SchemaJson.encodeGameContent (ContentCompiler.baseContent project))
-    matches "content" (reference "content") (SchemaJson.encodeGameContent (ContentCompiler.compile project))
-
-[<Fact>]
-let ``pack order matches TypeScript`` () =
-    let packs, problems = PackMerge.resolveOrder (packsProject ()).ContentPacks
-    let expected = reference "order"
-    matches "order" (Json.get "packs" expected) (Encode.list SchemaJson.encodeContentPack packs)
-    Assert.Equal<(string * string * string) list>(referenceProblems (Json.get "problems" expected), problemTuples problems)
-
-[<Fact>]
-let ``namespacing matches TypeScript`` () =
-    let project = packsProject ()
-    matches "namespacedA" (reference "namespacedA") (SchemaJson.encodeContentPack (PackRules.namespacePack project.ContentPacks.[1].Pack))
-    matches "namespacedB" (reference "namespacedB") (SchemaJson.encodeContentPack (PackRules.namespacePack project.ContentPacks.[0].Pack))
-
-[<Fact>]
-let ``pack merge matches TypeScript`` () =
-    let merged, problems = PackMerge.mergeIntoContent (tsBaseContent ()) (packsProject ()).ContentPacks
-    let expected = reference "merged"
-    matches "merged" (Json.get "content" expected) (SchemaJson.encodeGameContent merged)
-    Assert.Equal<(string * string * string) list>(referenceProblems (Json.get "problems" expected), problemTuples problems)
-
-[<Fact>]
-let ``localization matches TypeScript and unknown locales change nothing`` () =
+let ``localization uses later packs and unknown locales change nothing`` () =
     let installs = (packsProject ()).ContentPacks
-    let merged, _ = PackMerge.mergeIntoContent (tsBaseContent ()) installs
-    matches "localized" (reference "localized") (SchemaJson.encodeGameContent (PackMerge.applyLocaleStrings merged installs "fr"))
+    let merged, _ = PackMerge.mergeIntoContent (ContentCompiler.baseContent (packsProject ())) installs
+    Assert.NotEqual(merged, PackMerge.applyLocaleStrings merged installs "fr")
     Assert.Same(merged, PackMerge.applyLocaleStrings merged installs "xx")
     Assert.Same(merged, PackMerge.applyLocaleStrings merged installs "")
-
-[<Fact>]
-let ``pack import matches TypeScript`` () =
-    let project = packsProject ()
-    let imported, problems = PackMerge.applyToProject project project.ContentPacks.[1].Pack
-    let expected = reference "applyA"
-    matches "applyA" (Json.get "project" expected) (SchemaJson.encodeGameProject imported)
-    Assert.Equal<(string * string * string) list>(referenceProblems (Json.get "problems" expected), problemTuples problems)
 
 // ── Order, overrides and conflicts ───────────────────────────────────────────
 

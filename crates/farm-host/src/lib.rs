@@ -1,8 +1,8 @@
 //! `farm-host`: what a host that embeds the game asks of it, independent of how it calls.
 //!
 //! Both bindings speak the same JSON protocol and share this crate, so the editor's Play Mode
-//! (.NET, through the C ABI in `farm-ffi`) and the web version (JavaScript, through
-//! `wasm-bindgen` in `farm-wasm`) run exactly the same code:
+//! (.NET, through the C ABI in `farm-ffi`) and the web demo export (JavaScript, through
+//! `wasm-bindgen` in `farm-wasm`, the player only) run exactly the same code:
 //!
 //! - [`player::HostPlayer`]: the graphical player (`farm_player::Player`), driven by
 //!   `{dt, events, width, height, render}` frame requests;

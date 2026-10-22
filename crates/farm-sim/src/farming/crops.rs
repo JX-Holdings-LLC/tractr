@@ -5,7 +5,6 @@
 use crate::content_builtin;
 use crate::schema::{CropDefinition, CustomCropDefinition};
 use indexmap::IndexMap;
-use serde_json::{Map, Value};
 
 /// Merge built-in crop definitions with a project's custom crops.
 pub fn merge_crop_definitions(custom_crops: &[CropDefinition]) -> IndexMap<String, CropDefinition> {
@@ -16,35 +15,23 @@ pub fn merge_crop_definitions(custom_crops: &[CropDefinition]) -> IndexMap<Strin
     merged
 }
 
-/// `project.customCrops` variant: in TS a CustomCropDefinition IS a CropDefinition (structural
-/// typing, passthrough keeps `customAsset`); here each one is converted via
-/// [`to_crop_definition`].
+/// `project.customCrops` variant: each one is converted via [`to_crop_definition`].
 pub fn merge_custom_crop_definitions(custom_crops: &[CustomCropDefinition]) -> IndexMap<String, CropDefinition> {
     let converted: Vec<CropDefinition> = custom_crops.iter().map(to_crop_definition).collect();
     merge_crop_definitions(&converted)
 }
 
-/// CustomCropDefinition → CropDefinition: every key survives, `customAsset` (and any
-/// passthrough extras) ride along in `extra` exactly like the TS object would carry them.
+/// CustomCropDefinition → CropDefinition: every key survives (undeclared ones in `extra`).
 pub fn to_crop_definition(custom: &CustomCropDefinition) -> CropDefinition {
-    let mut extra = Map::new();
-    if let Some(asset) = &custom.custom_asset {
-        extra.insert("customAsset".to_owned(), Value::String(asset.clone()));
-    }
-    for (key, value) in &custom.extra {
-        extra.insert(key.clone(), value.clone());
-    }
     CropDefinition {
         id: custom.id.clone(),
         name: custom.name.clone(),
         visual: custom.visual.clone(),
         seed_cost: custom.seed_cost,
         base_harvest_value: custom.base_harvest_value,
-        growth_time: custom.growth_time,
         growth_days: custom.growth_days,
         stages: custom.stages,
         seasons: custom.seasons.clone(),
-        regrowth_time: custom.regrowth_time,
         regrowth_days: custom.regrowth_days,
         can_regrow: custom.can_regrow,
         multi_tile: custom.multi_tile.clone(),
@@ -52,33 +39,21 @@ pub fn to_crop_definition(custom: &CustomCropDefinition) -> CropDefinition {
         yield_min: custom.yield_min,
         yield_max: custom.yield_max,
         harvest_item_id: custom.harvest_item_id.clone(),
-        extra,
+        extra: custom.extra.clone(),
     }
 }
 
-/// CropDefinition → CustomCropDefinition (a pack crop stored as a project custom crop): a string
-/// `customAsset` in the extras becomes the typed field, like the C# JSON round-trip.
+/// CropDefinition → CustomCropDefinition (a pack crop stored as a project custom crop).
 pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition {
-    let mut extra = crop.extra.clone();
-    let custom_asset = match extra.get("customAsset") {
-        Some(Value::String(asset)) => {
-            let asset = asset.clone();
-            extra.shift_remove("customAsset");
-            Some(asset)
-        }
-        _ => None,
-    };
     CustomCropDefinition {
         id: crop.id.clone(),
         name: crop.name.clone(),
         visual: crop.visual.clone(),
         seed_cost: crop.seed_cost,
         base_harvest_value: crop.base_harvest_value,
-        growth_time: crop.growth_time,
         growth_days: crop.growth_days,
         stages: crop.stages,
         seasons: crop.seasons.clone(),
-        regrowth_time: crop.regrowth_time,
         regrowth_days: crop.regrowth_days,
         can_regrow: crop.can_regrow,
         multi_tile: crop.multi_tile.clone(),
@@ -86,8 +61,7 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
         yield_min: crop.yield_min,
         yield_max: crop.yield_max,
         harvest_item_id: crop.harvest_item_id.clone(),
-        custom_asset,
-        extra,
+        extra: crop.extra.clone(),
     }
 }
 
@@ -95,25 +69,6 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
 
 use crate::rng::RandomSource;
 use crate::schema::{crop_mutations, crop_qualities, tile_types, Crop, GameContent, Tile};
-use crate::units;
-
-/// Legacy wall-clock stage (pre-v4 data): `min(floor(elapsed × waterFactor / (growthTime /
-/// stages)), stages − 1)`, where an unwatered crop grows at half speed. Times in milliseconds.
-/// Test-only: the engine no longer calls it; the tests pin the reference behaviour.
-#[cfg(test)]
-pub fn get_crop_stage(planted_at: i64, current_time: i64, growth_time: i64, stages: i64, watered: bool) -> i64 {
-    let elapsed = i128::from(current_time) - i128::from(planted_at);
-    // adjusted / stageTime = elapsed × stages / growthTime (÷ 2 when unwatered).
-    let numerator = elapsed * i128::from(stages);
-    let denominator = i128::from(growth_time) * if watered { 1 } else { 2 };
-    let last = stages - 1;
-    if denominator <= 0 {
-        // JS divides by zero into ±Infinity (or NaN), which `Math.min` clamps to the last stage.
-        return last;
-    }
-    let stage = numerator.div_euclid(denominator);
-    i64::try_from(stage).map_or(last, |stage| stage.min(last))
-}
 
 /// Test-only: the engine no longer calls it; the tests pin the reference behaviour.
 #[cfg(test)]
@@ -268,36 +223,14 @@ pub fn get_day_in_season(game_day: i64) -> i64 {
     (game_day % i64::from(content_builtin::DAYS_PER_SEASON)) + 1
 }
 
-/// Legacy millisecond growth time → days: `min(28, max(1, round(ms / 5000)))`.
-fn legacy_days(ms: i64) -> u32 {
-    let days = units::div_round(ms, 5000).clamp(1, 28);
-    u32::try_from(days).unwrap_or(1)
-}
-
-/// In-game days to maturity for a definition (with legacy-ms fallback).
+/// In-game days to maturity for a definition; at least one (validation requires the field).
 pub fn crop_growth_days(definition: &CropDefinition) -> u32 {
-    if let Some(days) = definition.growth_days {
-        if days > 0 {
-            return days;
-        }
-    }
-    legacy_days(definition.growth_time)
+    definition.growth_days.unwrap_or(0).max(1)
 }
 
-/// In-game days between repeat harvests for regrowing crops.
+/// In-game days between repeat harvests for regrowing crops; one when absent or 0.
 pub fn crop_regrowth_days(definition: &CropDefinition) -> u32 {
-    if let Some(days) = definition.regrowth_days {
-        if days > 0 {
-            return days;
-        }
-    }
-    // `if (definition.regrowthTime)` — 0 is falsy.
-    if let Some(time) = definition.regrowth_time {
-        if time != 0 {
-            return legacy_days(time);
-        }
-    }
-    1
+    definition.regrowth_days.unwrap_or(0).max(1)
 }
 
 /// Visual growth stage for the day-based model (0 .. stages-1).
@@ -361,30 +294,11 @@ pub fn harvest_quality(planted_quality: &str, farming_level: u32) -> String {
 pub fn create_planted_crop(crop_type: &str, planted_on_day: u32, fertilized: bool) -> Crop {
     Crop {
         r#type: crop_type.to_owned(),
-        planted_at: 0,
         planted_on_day: Some(planted_on_day),
         days_grown: Some(0),
         stage: 0,
         watered: false,
         last_watered_day: None,
-        quality: if fertilized { crop_qualities::SILVER.to_owned() } else { crop_qualities::NORMAL.to_owned() },
-        mutation: None,
-        harvest_count: 0,
-        days_without_water: 0,
-        ..Crop::default()
-    }
-}
-
-/// A crop planted watered (the reference's `initializeCrop`; planting uses [`create_planted_crop`]).
-/// Test-only: the engine no longer calls it; the tests pin the reference behaviour.
-#[cfg(test)]
-pub fn initialize_crop(crop_type: &str, planted_at: i64, fertilized: bool) -> Crop {
-    Crop {
-        r#type: crop_type.to_owned(),
-        planted_at,
-        stage: 0,
-        watered: true,
-        last_watered_day: Some(0),
         quality: if fertilized { crop_qualities::SILVER.to_owned() } else { crop_qualities::NORMAL.to_owned() },
         mutation: None,
         harvest_count: 0,
@@ -427,19 +341,17 @@ mod tests {
     use crate::stable_json;
 
     #[test]
-    fn custom_crops_override_builtins_by_id_and_keep_custom_asset() {
+    fn custom_crops_override_builtins_by_id() {
         let custom = CustomCropDefinition {
             id: "wheat".to_owned(),
             name: "Blue Wheat".to_owned(),
-            custom_asset: Some("asset-1".to_owned()),
             ..CustomCropDefinition::default()
         };
         let merged = merge_custom_crop_definitions(std::slice::from_ref(&custom));
         assert_eq!(merged.len(), content_builtin::crop_definitions().len());
         assert_eq!(merged.get_index_of("wheat"), Some(0));
         assert_eq!(merged["wheat"].name, "Blue Wheat");
-        assert_eq!(merged["wheat"].extra.get("customAsset"), Some(&Value::String("asset-1".to_owned())));
-        // The JSON shapes are identical: the field just moves between typed and extra.
+        // The JSON shapes are identical.
         assert_eq!(stable_json::stringify(&merged["wheat"]), stable_json::stringify(&custom));
         assert_eq!(to_custom_crop_definition(&merged["wheat"]), custom);
     }
@@ -455,6 +367,7 @@ mod characterization_tests {
     use super::*;
     use crate::stable_json;
     use crate::text;
+    use crate::units;
 
     /// TS legacyRandom with Math.random pinned to a fixed roll; counts draws.
     /// The pinned roll is a fraction of 2³², like v8's `Math.random()` value.
@@ -488,7 +401,7 @@ mod characterization_tests {
             name: "Custom".to_owned(),
             seed_cost: 5,
             base_harvest_value: 100,
-            growth_time: 10000,
+            growth_days: Some(2),
             stages: 5,
             seasons: vec!["winter".to_owned()],
             can_regrow: false,
@@ -608,7 +521,7 @@ mod characterization_tests {
         // written back as its exact value.
         assert_eq!(
             stable_json::stringify(&content_builtin::crop_definitions()["wheat"]),
-            r#"{"baseHarvestValue":25,"canRegrow":false,"growthDays":3,"growthTime":15000,"id":"wheat","mutationChance":0.010000000009313226,"name":"Wheat","seasons":["spring","fall"],"seedCost":10,"stages":4,"yieldMax":2,"yieldMin":1}"#
+            r#"{"baseHarvestValue":25,"canRegrow":false,"growthDays":3,"id":"wheat","mutationChance":0.010000000009313226,"name":"Wheat","seasons":["spring","fall"],"seedCost":10,"stages":4,"yieldMax":2,"yieldMin":1}"#
         );
     }
 
@@ -646,25 +559,6 @@ mod characterization_tests {
         let custom = [make_custom_crop("moonberry"), named("wheat", "Evil Wheat")];
         assert_eq!(get_crop_definition("moonberry", &custom).map(|d| d.id), Some("moonberry".to_owned()));
         assert_eq!(get_crop_definition("wheat", &custom).map(|d| d.name), Some("Evil Wheat".to_owned()));
-    }
-
-    // --- getCropStage (wheat-like numbers: growthTime 15000, stages 4 → stageTime 3750) ---
-
-    #[test]
-    fn get_crop_stage_pins_its_behavior() {
-        assert_eq!(get_crop_stage(0, 0, 15000, 4, true), 0);
-        assert_eq!(get_crop_stage(0, 3749, 15000, 4, true), 0);
-        assert_eq!(get_crop_stage(0, 3750, 15000, 4, true), 1);
-        // clamps to stages - 1 at and beyond full growth time
-        assert_eq!(get_crop_stage(0, 15000, 15000, 4, true), 3);
-        assert_eq!(get_crop_stage(0, 1_000_000, 15000, 4, true), 3);
-        // unwatered halves effective elapsed time (0.5 penalty)
-        assert_eq!(get_crop_stage(0, 7500, 15000, 4, true), 2);
-        assert_eq!(get_crop_stage(0, 7500, 15000, 4, false), 1);
-        assert_eq!(get_crop_stage(0, 15000, 15000, 4, false), 2);
-        assert_eq!(get_crop_stage(0, 30000, 15000, 4, false), 3);
-        // QUIRK: currentTime before plantedAt yields a NEGATIVE stage (no lower clamp)
-        assert_eq!(get_crop_stage(1000, 0, 15000, 4, true), -1);
     }
 
     #[test]
@@ -861,55 +755,27 @@ mod characterization_tests {
         }
     }
 
-    // --- initializeCrop ---
-
-    #[test]
-    fn unfertilized_crop_starts_normal_quality_with_all_counters_zeroed() {
-        assert_eq!(
-            stable_json::stringify(&initialize_crop("wheat", 12345, false)),
-            r#"{"daysWithoutWater":0,"harvestCount":0,"lastWateredDay":0,"mutation":null,"plantedAt":12345,"quality":"normal","stage":0,"type":"wheat","watered":true}"#
-        );
-    }
-
-    #[test]
-    fn fertilized_crop_starts_at_silver_quality_and_types_are_unvalidated() {
-        assert_eq!(initialize_crop("tomato", 0, true).quality, "silver");
-        assert_eq!(initialize_crop("not-a-real-crop", 7, false).r#type, "not-a-real-crop");
-    }
-
     // --- createPlantedCrop / day-based helpers ---
 
     #[test]
     fn planted_crop_starts_unwatered_on_its_planting_day() {
         assert_eq!(
             stable_json::stringify(&create_planted_crop("wheat", 3, false)),
-            r#"{"daysGrown":0,"daysWithoutWater":0,"harvestCount":0,"mutation":null,"plantedAt":0,"plantedOnDay":3,"quality":"normal","stage":0,"type":"wheat","watered":false}"#
+            r#"{"daysGrown":0,"daysWithoutWater":0,"harvestCount":0,"mutation":null,"plantedOnDay":3,"quality":"normal","stage":0,"type":"wheat","watered":false}"#
         );
         assert_eq!(create_planted_crop("wheat", 3, true).quality, "silver");
     }
 
     #[test]
-    fn growth_days_prefer_the_day_field_and_fall_back_to_legacy_ms() {
+    fn growth_and_regrowth_days_are_at_least_one() {
         let wheat = &content_builtin::crop_definitions()["wheat"];
         assert_eq!(crop_growth_days(wheat), 3);
-        let legacy = CropDefinition { growth_days: None, growth_time: 15000, ..wheat.clone() };
-        assert_eq!(crop_growth_days(&legacy), 3);
-        let tiny = CropDefinition { growth_days: None, growth_time: 1, ..wheat.clone() };
-        assert_eq!(crop_growth_days(&tiny), 1);
-        let huge = CropDefinition { growth_days: None, growth_time: 1_000_000, ..wheat.clone() };
-        assert_eq!(crop_growth_days(&huge), 28);
-    }
-
-    #[test]
-    fn regrowth_days_prefer_the_day_field_then_legacy_ms_then_one() {
+        assert_eq!(crop_growth_days(&CropDefinition { growth_days: None, ..wheat.clone() }), 1);
+        assert_eq!(crop_growth_days(&CropDefinition { growth_days: Some(0), ..wheat.clone() }), 1);
         let tomato = &content_builtin::crop_definitions()["tomato"];
         assert_eq!(crop_regrowth_days(tomato), 2);
-        let legacy = CropDefinition { regrowth_days: None, regrowth_time: Some(20000), ..tomato.clone() };
-        assert_eq!(crop_regrowth_days(&legacy), 4);
-        let zero = CropDefinition { regrowth_days: None, regrowth_time: Some(0), ..tomato.clone() };
-        assert_eq!(crop_regrowth_days(&zero), 1);
-        let none = CropDefinition { regrowth_days: None, regrowth_time: None, ..tomato.clone() };
-        assert_eq!(crop_regrowth_days(&none), 1);
+        assert_eq!(crop_regrowth_days(&CropDefinition { regrowth_days: None, ..tomato.clone() }), 1);
+        assert_eq!(crop_regrowth_days(&CropDefinition { regrowth_days: Some(0), ..tomato.clone() }), 1);
     }
 
     #[test]

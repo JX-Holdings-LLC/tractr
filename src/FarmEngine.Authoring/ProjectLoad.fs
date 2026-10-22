@@ -61,13 +61,6 @@ module ProjectLoad =
     /// `loadProject` over JSON text.
     let loadProjectText (text: string) : LoadResult<GameProject> = parseThen "Project" loadProject text
 
-    /// Parse and validate raw exported-game data (`SchemaChecks.validateExportedGame`).
-    let loadExportedGame (raw: Json) : LoadResult<ExportedGame> =
-        load "Game" SchemaJson.decodeExportedGame id SchemaChecks.validateExportedGame raw
-
-    /// `loadExportedGame` over JSON text.
-    let loadExportedGameText (text: string) : LoadResult<ExportedGame> = parseThen "Game" loadExportedGame text
-
     /// A project as JSON (members in schema order).
     let toJson (project: GameProject) : Json = SchemaJson.encodeGameProject project
 

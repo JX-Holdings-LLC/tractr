@@ -85,11 +85,8 @@ module Readouts =
     /// "Profit per harvest: $15" (the line under the crop form).
     let cropProfitText (crop: CropDefinition) : string = "Profit per harvest: " + money (cropProfit crop)
 
-    /// Days from planting to harvest: `growthDays`, else the legacy wall-clock time in days.
-    let growthDays (crop: CropDefinition) : float =
-        match crop.GrowthDays with
-        | Some days -> days
-        | None -> min 28.0 (max 1.0 (round (crop.GrowthTime / 5000.0)))
+    /// Days from planting to harvest: `growthDays`, at least one (as the engine counts them).
+    let growthDays (crop: CropDefinition) : float = max 1.0 (defaultArg crop.GrowthDays 0.0)
 
     let private seasonName (project: GameProject) (id: string) =
         project.Settings.Calendar.Seasons
@@ -104,8 +101,6 @@ module Readouts =
         let mutationText =
             let text = JsNumber.format mutation
             if text.Contains "." then text else text + ".0"
-        // The web shows the regrowth row when either field is set and not 0 (JS truthiness).
-        let set (value: float option) = value |> Option.exists (fun v -> v <> 0.0)
         [ line "Seed cost" (money crop.SeedCost)
           line "Harvest value" (money crop.BaseHarvestValue)
           line "Profit per harvest" (money (cropProfit crop))
@@ -115,11 +110,8 @@ module Readouts =
           line "Yield range" (sprintf "%s – %s" (JsNumber.format crop.YieldMin) (JsNumber.format crop.YieldMax))
           line "Mutation chance" (mutationText + "%")
           line "Can regrow" (if crop.CanRegrow then "Yes" else "No")
-          if crop.CanRegrow && (set crop.RegrowthDays || set crop.RegrowthTime) then
-              let days =
-                  match crop.RegrowthDays with
-                  | Some days -> days
-                  | None -> round ((defaultArg crop.RegrowthTime 10000.0) / 5000.0)
+          if crop.CanRegrow then
+              let days = max 1.0 (defaultArg crop.RegrowthDays 0.0)
               line "Regrowth time" (sprintf "%s day(s)" (JsNumber.format days))
           match crop.MultiTile with
           | Some size -> line "Multi-tile size" (sprintf "%s × %s tiles" (JsNumber.format size.Width) (JsNumber.format size.Height))
@@ -213,6 +205,6 @@ module Readouts =
         match recordType with
         | "CustomCropDefinition" ->
             [ { Title = "Basic"; Properties = [ "Id"; "Name"; "SeedCost"; "BaseHarvestValue"; "Seasons"; "YieldMin"; "YieldMax" ] }
-              { Title = "Growth"; Properties = [ "GrowthDays"; "Stages"; "CanRegrow"; "RegrowthDays"; "MutationChance"; "MultiTile"; "GrowthTime"; "RegrowthTime" ] }
-              { Title = "Asset"; Properties = [ "Visual"; "CustomAsset" ] } ]
+              { Title = "Growth"; Properties = [ "GrowthDays"; "Stages"; "CanRegrow"; "RegrowthDays"; "MutationChance"; "MultiTile" ] }
+              { Title = "Asset"; Properties = [ "Visual" ] } ]
         | _ -> []

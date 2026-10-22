@@ -50,33 +50,6 @@ public static class FarmFfi
         }
     }
 
-    /// <summary>The v8 text hash (FNV-1a, <c>hashText</c>) of <paramref name="text"/>, computed by Rust. Not the
-    /// state hash since v9: hashing a state's JSON with it never matches <c>StateHash()</c>.</summary>
-    public static string HashText(string text)
-    {
-        ArgumentNullException.ThrowIfNull(text);
-        EnsureAvailable();
-        var bytes = Encoding.UTF8.GetBytes(text);
-        unsafe
-        {
-            // An empty array pins to null; Rust accepts null with length 0.
-            fixed (byte* input = bytes)
-            {
-                NativeMethods.FeBytes output = default;
-                var result = NativeMethods.fe_hash_text(input, (nuint)bytes.Length, &output);
-                try
-                {
-                    Check(result, nameof(HashText));
-                    return Encoding.ASCII.GetString(output.Ptr, (int)output.Len);
-                }
-                finally
-                {
-                    NativeMethods.fe_bytes_free(output);
-                }
-            }
-        }
-    }
-
     /// <summary>Throws <see cref="FarmFfiException"/> with <see cref="LoadError"/> when the library is not available.</summary>
     internal static void EnsureAvailable()
     {

@@ -15,8 +15,6 @@ use farm_sim::schema::{directions, soil_states, tile_types, GameContent, GamePro
 use farm_sim::units::{self, MicroMinutes};
 use farm_sim::world::tiles;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
-use std::sync::Arc;
 
 /// Options of [`shell_snapshot`] (C# `ShellSnapshotOptions`).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -34,52 +32,12 @@ pub struct SnapshotOptions {
     pub tile_window: Option<TileWindow>,
 }
 
-/// Image URLs shared between frames: the same text gives the same `Arc`, so the renderer's
-/// image cache recognises a URL by its pointer instead of comparing (possibly very long `data:`)
-/// strings, and a frame allocates no URL copies. Keep one per game.
-#[derive(Debug, Clone, Default)]
-pub struct SharedUrls {
-    urls: BTreeSet<Arc<str>>,
-}
-
-/// URLs kept at most; past this the set starts over (old URLs are gone from the game).
-const MAX_SHARED_URLS: usize = 4096;
-
-impl SharedUrls {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// The shared `Arc` for `url`.
-    pub fn get(&mut self, url: &str) -> Arc<str> {
-        if let Some(shared) = self.urls.get(url) {
-            return Arc::clone(shared);
-        }
-        if self.urls.len() >= MAX_SHARED_URLS {
-            self.urls.clear();
-        }
-        let shared: Arc<str> = Arc::from(url);
-        self.urls.insert(Arc::clone(&shared));
-        shared
-    }
-
-    /// URLs held.
-    pub fn len(&self) -> usize {
-        self.urls.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.urls.is_empty()
-    }
-}
-
 /// A cell outside the snapshot's tile window: never drawn, allocates nothing.
 fn unbuilt_tile() -> SnapshotTile {
     SnapshotTile {
         background: String::new(),
         overlay: None,
         object: None,
-        image_url: None,
         art_layers: None,
         crop: None,
         node: None,
@@ -127,7 +85,6 @@ fn build_tiles(
     content: &GameContent,
     hide_item_at: impl Fn(usize, usize) -> bool,
     window: Option<TileWindow>,
-    urls: &mut SharedUrls,
 ) -> Vec<Vec<SnapshotTile>> {
     let mut rows = Vec::with_capacity(cells(scene.height));
     for y in 0..cells(scene.height) {
@@ -185,16 +142,15 @@ fn build_tiles(
                 output_ready: machine.output.as_ref().is_some_and(|output| !output.is_empty()),
                 type_id: Some(machine.type_id.clone()),
             });
-            let item = tile.item.as_ref().filter(|_| !hide_item_at(x, y)).map(|item| SnapshotItem {
-                image_url: item.custom_image.as_deref().map(|url| urls.get(url)),
-                sprite: None,
-                item_type: Some(item.r#type.clone()),
-            });
+            let item = tile
+                .item
+                .as_ref()
+                .filter(|_| !hide_item_at(x, y))
+                .map(|item| SnapshotItem { sprite: None, item_type: Some(item.r#type.clone()) });
             row.push(SnapshotTile {
                 background,
                 overlay: tile.overlay.clone(),
                 object: tile.object.clone(),
-                image_url: tile.custom_image.as_deref().map(|url| urls.get(url)),
                 art_layers: None,
                 crop,
                 node,
@@ -212,27 +168,15 @@ fn build_tiles(
 }
 
 /// Port of `ShellSnapshot.BuildShellSnapshot`: the play-mode world of `scene` from content and
-/// live state, with a contiguous world (no editor seams) and the clock's atmosphere.
+/// live state, with a contiguous world (no editor seams) and the clock's atmosphere. With
+/// [`SnapshotOptions::tile_window`] only those tiles are built.
 pub fn shell_snapshot(
     content: &GameContent,
     state: &GameState,
     scene: &Scene,
     options: &SnapshotOptions,
 ) -> WorldSnapshot {
-    shell_snapshot_shared(content, state, scene, options, &mut SharedUrls::new())
-}
-
-/// [`shell_snapshot`] for a host drawing frame after frame: image URLs come from `urls`, so they
-/// are the same `Arc`s every frame. With [`SnapshotOptions::tile_window`] only those tiles are
-/// built.
-pub fn shell_snapshot_shared(
-    content: &GameContent,
-    state: &GameState,
-    scene: &Scene,
-    options: &SnapshotOptions,
-    urls: &mut SharedUrls,
-) -> WorldSnapshot {
-    let tiles = build_tiles(scene, content, |_, _| false, options.tile_window, urls);
+    let tiles = build_tiles(scene, content, |_, _| false, options.tile_window);
 
     let mut npcs = Vec::new();
     for npc in &content.npcs {
@@ -247,7 +191,6 @@ pub fn shell_snapshot_shared(
         npcs.push(SnapshotEntity {
             x,
             y,
-            image_url: npc.custom_image.as_deref().map(|url| urls.get(url)),
             appearance: Some(npc.appearance.clone()),
             direction: next
                 .map_or(directions::DOWN, |next| direction_toward(x, y, f64::from(next.x), f64::from(next.y)))
@@ -330,14 +273,13 @@ pub fn editor_snapshot(
         (player.scene_id == scene.id && units::tile_of(player.x) == x && units::tile_of(player.y) == y)
             || scene_npcs.iter().any(|npc| npc.x == units::tiles(x) && npc.y == units::tiles(y))
     };
-    let tiles = build_tiles(scene, content, occupied, None, &mut SharedUrls::new());
+    let tiles = build_tiles(scene, content, occupied, None);
 
     let mut npcs: Vec<SnapshotEntity> = scene_npcs
         .iter()
         .map(|npc| SnapshotEntity {
             x: tiles_of(npc.x),
             y: tiles_of(npc.y),
-            image_url: npc.custom_image.as_deref().map(Arc::from),
             appearance: Some(npc.appearance.clone()),
             ..SnapshotEntity::default()
         })
@@ -370,7 +312,6 @@ pub fn editor_snapshot(
             x: if on_scene { tiles_of(player.x) } else { -1000.0 },
             y: if on_scene { tiles_of(player.y) } else { -1000.0 },
             direction: if player.direction.is_empty() { directions::DOWN.to_owned() } else { player.direction.clone() },
-            image_url: project.player_custom_image.as_deref().map(Arc::from),
             ..SnapshotEntity::default()
         },
         pops: None,
@@ -461,17 +402,15 @@ mod tests {
     }
 
     #[test]
-    fn a_tile_window_builds_only_its_tiles_and_shares_urls() {
+    fn a_tile_window_builds_only_its_tiles() {
         let project = starter();
         let content = farm_sim::state::create_content_from_project(&project);
-        let mut state = farm_sim::state::create_game_state(&project, None);
-        state.world.scenes[0].tiles[2][3].custom_image = Some("data:image/png;base64,AAAA".into());
+        let state = farm_sim::state::create_game_state(&project, None);
         let scene = &state.world.scenes[0];
         let full = shell_snapshot(&content, &state, scene, &SnapshotOptions { tile_size: 32.0, ..Default::default() });
         let window = TileWindow { x0: 2, y0: 1, x1: 4, y1: 3 };
         let options = SnapshotOptions { tile_size: 32.0, tile_window: Some(window), ..Default::default() };
-        let mut urls = SharedUrls::new();
-        let part = shell_snapshot_shared(&content, &state, scene, &options, &mut urls);
+        let part = shell_snapshot(&content, &state, scene, &options);
         assert_eq!(part.tile_window, Some(window));
         assert_eq!(part.tiles.len(), full.tiles.len(), "rows keep their indices");
         assert!(part.tiles[0].is_empty() && part.tiles[4].is_empty());
@@ -482,12 +421,6 @@ mod tests {
                 assert_eq!(part.tiles[y][x], full.tiles[y][x], "tile {x},{y}");
             }
         }
-        // The same URL is the same allocation on the next frame.
-        let again = shell_snapshot_shared(&content, &state, scene, &options, &mut urls);
-        let (first, second) =
-            (part.tiles[2][3].image_url.clone().unwrap(), again.tiles[2][3].image_url.clone().unwrap());
-        assert!(Arc::ptr_eq(&first, &second));
-        assert_eq!(urls.len(), 1);
         // A window past the scene's edge stops at it.
         let wide = TileWindow { x0: 0, y0: 0, x1: 10_000, y1: 10_000 };
         let options = SnapshotOptions { tile_size: 32.0, tile_window: Some(wide), ..Default::default() };

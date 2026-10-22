@@ -75,8 +75,6 @@ impl Default for SnapshotMachine {
 #[serde(rename_all = "camelCase", default)]
 pub struct SnapshotItem {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<Arc<str>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub sprite: Option<SnapshotSprite>,
     /// Item type (`seed`, `crop`, `tool`, …) for the built-in art.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -92,9 +90,6 @@ pub struct SnapshotTile {
     pub overlay: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub object: Option<String>,
-    /// Pre-resolved custom image URL for the whole tile, if any.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<Arc<str>>,
     /// Per-layer artwork: `[background, overlay, object]` (entries may be null).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub art_layers: Option<Vec<Option<SnapshotSprite>>>,
@@ -122,7 +117,6 @@ impl Default for SnapshotTile {
             background: "grass".to_owned(),
             overlay: None,
             object: None,
-            image_url: None,
             art_layers: None,
             crop: None,
             node: None,
@@ -167,9 +161,7 @@ pub struct SnapshotSprite {
 pub struct SnapshotEntity {
     pub x: f64,
     pub y: f64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image_url: Option<Arc<str>>,
-    /// Animated sprite sheet; takes precedence over `image_url` when present.
+    /// Creator art (an animated sprite sheet or one frame).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sprite: Option<SnapshotSprite>,
     /// Fallback fill color (defaults to the NPC gold).
@@ -199,7 +191,6 @@ impl Default for SnapshotEntity {
         Self {
             x: 0.0,
             y: 0.0,
-            image_url: None,
             sprite: None,
             color: None,
             kind: "npc".to_owned(),

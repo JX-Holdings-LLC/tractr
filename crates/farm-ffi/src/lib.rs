@@ -35,7 +35,8 @@ pub use session::FeSession;
 ///
 /// - 2: errors in `out` for every handle, `fe_*_last_error` for previews and players,
 ///   `fe_player_frame_info` / `fe_player_copy_pixels`, `fe_preview_set_scene`.
-pub const FE_ABI_VERSION: u32 = 2;
+/// - 3: `fe_hash_text` is gone.
+pub const FE_ABI_VERSION: u32 = 3;
 
 /// A Rust-allocated byte buffer handed to .NET. Free it with [`fe_bytes_free`].
 #[repr(C)]
@@ -167,66 +168,10 @@ pub unsafe extern "C" fn fe_bytes_free(bytes: FeBytes) {
     }
 }
 
-/// FNV-1a state hash (two 32-bit lanes, hex) of `len` UTF-8 bytes at `text`, written to `out`
-/// as 16 ASCII characters (no terminator). Lets .NET check that both sides agree on the hash
-/// primitive before any state crosses the boundary. `text` may be null when `len` is 0.
-///
-/// # Safety
-/// `text` must point to `len` readable bytes of valid UTF-8 (or be null with `len == 0`); `out`
-/// must be a valid pointer.
-#[no_mangle]
-pub unsafe extern "C" fn fe_hash_text(text: *const u8, len: usize, out: *mut FeBytes) -> FeResult {
-    // SAFETY: `out` is valid or null (checked by `write_empty`).
-    unsafe { write_empty(out) };
-    if out.is_null() {
-        return FeResult::InvalidArgument;
-    }
-    // SAFETY: the caller guarantees `len` readable bytes at `text`.
-    let Some(input) = (unsafe { bytes_arg(text, len) }) else {
-        return FeResult::InvalidArgument;
-    };
-    let Ok(input) = std::str::from_utf8(input) else {
-        return FeResult::InvalidArgument;
-    };
-    match catch_unwind(AssertUnwindSafe(|| farm_sim::hash_text(input))) {
-        Ok(hash) => {
-            // SAFETY: `out` is valid (checked above).
-            unsafe { write(out, hash.into_bytes()) };
-            FeResult::Ok
-        }
-        Err(_) => FeResult::Panic,
-    }
-}
-
 #[cfg(test)]
 #[allow(clippy::undocumented_unsafe_blocks)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn hashes_through_the_c_abi() {
-        let text = "{}";
-        let mut out = FeBytes::empty();
-        let result = unsafe { fe_hash_text(text.as_ptr(), text.len(), &mut out) };
-        assert_eq!(result, FeResult::Ok);
-        let hash = unsafe { std::slice::from_raw_parts(out.ptr, out.len) }.to_vec();
-        assert_eq!(String::from_utf8(hash).unwrap(), "5465b8257807bf56");
-        unsafe { fe_bytes_free(out) };
-    }
-
-    #[test]
-    fn hashes_empty_text_from_a_null_pointer() {
-        // .NET's `fixed` gives null for an empty array.
-        let mut out = FeBytes { ptr: std::ptr::dangling_mut(), len: 7, cap: 7 };
-        assert_eq!(unsafe { fe_hash_text(std::ptr::null(), 0, &mut out) }, FeResult::Ok);
-        assert_eq!(out.len, 16);
-        unsafe { fe_bytes_free(out) };
-        // A null pointer with a length is refused, and `out` is still written (empty).
-        let mut out = FeBytes { ptr: std::ptr::dangling_mut(), len: 7, cap: 7 };
-        assert_eq!(unsafe { fe_hash_text(std::ptr::null(), 3, &mut out) }, FeResult::InvalidArgument);
-        assert!(out.ptr.is_null());
-        assert_eq!(unsafe { fe_hash_text(b"{}".as_ptr(), 2, std::ptr::null_mut()) }, FeResult::InvalidArgument);
-    }
 
     #[test]
     fn the_abi_version_is_exported() {

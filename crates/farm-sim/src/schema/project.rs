@@ -55,13 +55,9 @@ pub struct GameProject {
     pub selected_npc_id: Option<String>,
     /// Present-as-null.
     pub selected_item_id: Option<String>,
-    #[serde(with = "crate::units::exact")]
-    pub current_time: f64,
     pub custom_assets: Vec<CustomAsset>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub player_custom_image: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -123,87 +119,12 @@ pub struct GameProject {
     pub extra: Map<String, Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ExportedGame {
-    /// int.
-    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
-    pub schema_version: Option<u32>,
-    pub version: String,
-    pub name: String,
-    pub scenes: Vec<Scene>,
-    pub npcs: Vec<Npc>,
-    pub items: Vec<Item>,
-    pub events: Vec<GameEvent>,
-    pub dialogues: Vec<Dialogue>,
-    pub quests: Vec<Quest>,
-    pub start_scene_id: String,
-    pub custom_assets: Vec<CustomAsset>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_crops: Option<Vec<CustomCropDefinition>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub player_custom_image: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub player_visual: Option<VisualRef>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub graphics: Option<GraphicsSettings>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub game_panels: Option<Vec<GamePanel>>,
-    pub current_season: String,
-    #[serde(with = "crate::units::count")]
-    pub current_day: u32,
-    #[serde(with = "crate::units::micro_minutes")]
-    pub current_time_minutes: u32,
-    /// int.
-    #[serde(with = "crate::units::count")]
-    pub current_year: u32,
-    #[serde(with = "crate::units::exact")]
-    pub game_start_time: f64,
-    pub shops: Vec<ShopDefinition>,
-    pub node_types: Vec<NodeTypeDefinition>,
-    pub settings: ProjectSettings,
-    pub recipes: Vec<RecipeDefinition>,
-    pub machine_types: Vec<MachineTypeDefinition>,
-    pub weather: WeatherConfig,
-    pub animal_species: Vec<AnimalSpeciesDefinition>,
-    pub animals: Vec<AnimalState>,
-    pub fish_tables: Vec<FishTable>,
-    pub mine: MineConfig,
-    pub actions: Vec<ActionDef>,
-    pub minigames: Vec<MinigameDef>,
-    pub content_packs: Vec<PackInstallation>,
-    /// Player start state (M6): included so exported games start identically.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub player: Option<Player>,
-    // Runtime state mirrored into saves (exported-game saves are projected through
-    // applyStateToProject); see GameProject.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_weather_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub social_state: Option<IndexMap<String, NpcSocialState>>,
-    /// int, nonnegative.
-    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
-    pub mine_deepest_floor: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quarantined_items: Option<Vec<InventorySlot>>,
-    #[serde(flatten)]
-    pub extra: Map<String, Value>,
-}
-
-/// The project schema version. Bump when the persisted shape changes and add a migration plus a
-/// fixture in tests/.
+/// The project schema version. Only this version loads (there are no migrations): bump it when
+/// the persisted shape changes, so files of another shape are refused with a message.
 ///
-/// - v1 — original prototype (tiles without layer fields)
-/// - v2 — layered tiles (background/overlay/object)
-/// - v3 — explicit schemaVersion + guaranteed presence of customAssets, season/day fields, quests
-///   and player pixel/quest fields (replaces the ad-hoc backfill effects that lived in App.tsx)
-/// - v4 — day-based game time (M2): crop growthDays/plantedOnDay/daysGrown, shops, gathering node
-///   types, project settings (energy/time), player energy, currentTimeMinutes
-/// - v5 — events v2 (M3): trigger + combinable conditions + sequenced outcomes; NPC schedules;
-///   lockable transitions; quest availability
-/// - v6 — simulation depth (M4): recipes, machine types, weather config, animal species +
-///   animals, fish tables, mine config, gift tastes, player skills
-/// - v7 — content packs (M5): installed packs (with load order + enable flags) travel inside the
-///   project
-/// - v8 — graphics settings (pixel-art rendering on by default)
-pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 9;
+/// - v9 — the native numerics grid (docs/NUMERICS.md)
+/// - v10 — the fields kept only for older files are gone (crop `growthTime`/`regrowthTime`/
+///   `plantedAt`, the `customImage`, `playerCustomImage` and crop `customAsset` image fields, the
+///   `unlockScene` outcome, the player's `pixelX`/`pixelY`/`targetX`/`targetY` and the project's
+///   `currentTime`)
+pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 10;

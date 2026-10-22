@@ -15,10 +15,10 @@ let ``authoring has no reference to the C sharp engine assemblies`` () =
     for engine in [ "FarmEngine.Core"; "FarmEngine.Content"; "FarmEngine.Runtime"; "FarmEngine.Rendering" ] do
         Assert.DoesNotContain(engine, referenced)
 
-/// `fixtures/projects/content-builtin.json`: content-builtin.ts's catalogs, recorded from the
-/// TypeScript engine (the Rust `packs_and_state` tests check the same file).
+/// `fixtures/projects/content-builtin.json`: the built-in catalogs, pinned (the Rust
+/// `builtin_and_packs` tests check the same file).
 [<Fact>]
-let ``all built in content definitions match TypeScript`` () =
+let ``all built in content definitions match the pinned catalogs`` () =
     let expected = readJson [ "Fixtures"; "content-builtin.json" ]
     let check (key: string) (actual: Json) =
         assertSameStable key (Json.stableStringify (Json.get key expected)) (Json.stableStringify actual)
@@ -58,12 +58,12 @@ let ``project node types and custom crops replace the built in ones`` () =
     Assert.Equal("Custom tree", (nodes |> Seq.last).Name)
     let crops =
         (ContentCompiler.baseContent
-            ({ project with CustomCrops = Some [ { CustomCropDefinition.Default with Id = "wheat"; Name = "Custom wheat"; CustomAsset = Some("art") } ] })).Crops
+            ({ project with CustomCrops = Some [ { CustomCropDefinition.Default with Id = "wheat"; Name = "Custom wheat"; HarvestItemId = Some "art" } ] })).Crops
     Assert.Equal<string list>(Builtin.crops () |> List.map fst, crops |> List.map fst)
     let wheat = crops |> List.find (fst >> (=) "wheat") |> snd
     Assert.Equal("Custom wheat", wheat.Name)
-    // The custom crop's own fields (customAsset included) carry over.
-    Assert.Contains("\"customAsset\":\"art\"", stableOf SchemaJson.encodeCropDefinition wheat)
+    // The custom crop's own fields carry over.
+    Assert.Equal(Some "art", wheat.HarvestItemId)
 
 // ── Authored tiles (game-helpers.ts, characterized by the C# GameHelpersCharacterizationTests) ──
 
@@ -121,16 +121,13 @@ let ``set tile layer paints one layer and returns a new tile`` () =
 let ``set tile layer with a visual binds it to the painted layer`` () =
     let tile =
         { AuthoringTiles.CreateEmptyTile(3.0, 4.0, "grass") with
-            CustomImage = Some "legacy.png"
             Visuals = Some { TileVisuals.Default with Overlay = Some { VisualRef.Default with AssetId = "old" } } }
     let before = stableOf SchemaJson.encodeTile tile
     let painted = AuthoringTiles.SetTileLayer(tile, "wall", Some { VisualRef.Default with AssetId = "art" })
-    Assert.Equal(None, painted.CustomImage)
     Assert.Equal("art", painted.Visuals.Value.Object.Value.AssetId)
     Assert.Equal("old", painted.Visuals.Value.Overlay.Value.AssetId)
-    // Without a visual the legacy image stays and the layer's binding clears.
+    // Without a visual the layer's binding clears.
     let plain = AuthoringTiles.SetTileLayer(tile, "path")
-    Assert.Equal(Some "legacy.png", plain.CustomImage)
     Assert.Equal(None, plain.Visuals.Value.Overlay)
     Assert.Equal(before, stableOf SchemaJson.encodeTile tile)
 

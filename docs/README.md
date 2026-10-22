@@ -19,8 +19,8 @@ are doing.
 - [Contributing](../CONTRIBUTING.md): build, test, and regenerate the checked-in files.
 - [Editor architecture](EDITOR-ARCHITECTURE.md): how the C# app's views fit together.
 - [Languages](LANGUAGES.md): why the engine is Rust, the authoring core F# and the editor C#.
-- [Native numerics](NUMERICS.md): integer arithmetic, schema v9 and the goldens.
-- [Porting guide](PORTING.md): how the web version's TypeScript engine moved over.
+- [Native numerics](NUMERICS.md): integer arithmetic and the goldens.
+- [Code conventions](CONVENTIONS.md): schema records, state, determinism rules and tests.
 - [SkiaSharp and Avalonia migration](SKIA-MIGRATION.md): what draws the editor.
 - [Releasing](RELEASING.md): cutting a release and how the Update Center finds it.
 

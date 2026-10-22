@@ -55,7 +55,7 @@ module Vocabulary =
           "questStatus", "Quest status"
           "festivalId", "Festival" ]
 
-    /// `OUTCOME_TYPES`, in the web order (the legacy `unlockScene` is not offered).
+    /// The outcome types the editor offers, in its order.
     let outcomeTypes =
         [ EventOutcomeTypes.ModifyFriendship, "Change friendship"
           EventOutcomeTypes.ModifyEnergy, "Restore / spend energy"

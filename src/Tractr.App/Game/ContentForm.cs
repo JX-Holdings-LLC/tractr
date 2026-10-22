@@ -32,7 +32,7 @@ namespace Tractr.App.Game;
 /// it back into the record with <see cref="Commit"/> and applies one F# upsert.
 /// Where the web has its own layout the form follows it: tabs F# lists for the record (crops),
 /// compact schedule and waypoint rows (NPCs), stock cards (shops), and art previews beside visual
-/// bindings and legacy image fields.
+/// bindings.
 /// </summary>
 internal sealed class ContentForm : IContentDraft
 {
@@ -49,8 +49,6 @@ internal sealed class ContentForm : IContentDraft
     private readonly Dictionary<string, IReadOnlyList<PickerOption>> _options = [];
     private Dictionary<string, Item>? _items;
     private VisualPreview? _art;
-    /// <summary>The bitmaps of the legacy image thumbnails on show, freed when the form rebuilds.</summary>
-    private readonly List<Bitmap> _thumbnails = [];
     private int _tab;
 
     /// <summary>"Pick on map" for tile coordinates (scene id, prompt, what to do with the tile); null hides the buttons (#47).</summary>
@@ -174,7 +172,6 @@ internal sealed class ContentForm : IContentDraft
     private void Rebuild()
     {
         _root.Children.Clear();
-        ReleaseImages();
         _writers.Clear();
         _json.Clear();
         _options.Clear();
@@ -286,7 +283,7 @@ internal sealed class ContentForm : IContentDraft
             var control = StringControl(target, key, name, label, field, nullable,
                 multiline: property.Name is "Description" or "Text" or "Message" or "FailMessage",
                 rebuildOnChange: property.Name == "Type" || (owner == typeof(MinigameDef) && property.Name == "Kind"));
-            panel.Children.Add(control is TextBox box && property.Name is "CustomImage" or "CustomAsset" ? WithThumbnail(box, path, label) : control);
+            panel.Children.Add(control);
             return;
         }
 
@@ -986,63 +983,6 @@ internal sealed class ContentForm : IContentDraft
         if (_art is not null) return _art.Render(_project, visual, 0, ArtSize);
         using var art = new VisualPreview();
         return art.Render(_project, visual, 0, ArtSize);
-    }
-
-    /// <summary>Frees the thumbnail bitmaps (the form rebuilds, or the editor moves to another entry).</summary>
-    public void ReleaseImages()
-    {
-        foreach (var bitmap in _thumbnails) bitmap.Dispose();
-        _thumbnails.Clear();
-    }
-
-    /// <summary>
-    /// A legacy image field (an asset id or a data URL) with a thumbnail of what it holds. Typing
-    /// decodes again only when the image the text names changes, and the replaced bitmap is freed.
-    /// </summary>
-    private Grid WithThumbnail(TextBox box, string path, string label)
-    {
-        var thumbnail = Accessible(new Border
-        {
-            Name = $"ContentThumb_{path}",
-            Width = 40,
-            Height = 40,
-            VerticalAlignment = VerticalAlignment.Center,
-        }, $"{label} preview");
-        string? shownUrl = null;
-        void Update()
-        {
-            var url = ThumbnailUrl(box.Text);
-            if (url == shownUrl) return;
-            shownUrl = url;
-            var previous = (thumbnail.Child as Image)?.Source as Bitmap;
-            Show(thumbnail, Thumbnail(url));
-            if (previous is not null && _thumbnails.Remove(previous)) previous.Dispose();
-        }
-
-        Update();
-        box.TextChanged += (_, _) => Update();
-        return Columns("*,Auto", box, thumbnail);
-    }
-
-    /// <summary>The data URL a legacy image field names: the text itself, or the URL of the asset with that id ("" for none).</summary>
-    private string ThumbnailUrl(string? text)
-    {
-        var url = (text ?? "").Trim();
-        if (url.Length == 0 || url.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return url;
-        return _project.CustomAssets.FirstOrDefault(asset => asset.Id == url)?.DataUrl ?? "";
-    }
-
-    /// <summary>
-    /// The image of a <c>data:image/…;base64,</c> URL decoded at thumbnail size (2× the 40px frame),
-    /// or null when there is none, it does not decode, or it is over the art import limits.
-    /// </summary>
-    private Image? Thumbnail(string url)
-    {
-        if (url.Length == 0 || ArtBitmaps.Thumbnail(url, 80) is not { } bitmap) return null;
-        _thumbnails.Add(bitmap);
-        var image = new Image { Source = bitmap, Stretch = Stretch.Uniform };
-        RenderOptions.SetBitmapInterpolationMode(image, BitmapInterpolationMode.None);
-        return image;
     }
 
     // ---- Condition and outcome vocabulary ----

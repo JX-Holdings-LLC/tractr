@@ -8,7 +8,7 @@ namespace Tractr.App.Tests.Interop;
 
 /// <summary>
 /// The headless Rust session (<c>fe_session_*</c>) and the F# cartridge compiler. The Rust tests
-/// check the engine against the TypeScript goldens; these check the .NET side of the boundary.
+/// check the engine against its goldens; these check the .NET side of the boundary.
 /// They need the Rust library: a missing one fails them (see <see cref="NativeTests"/>).
 /// </summary>
 public sealed class RustSessionTests
@@ -16,7 +16,7 @@ public sealed class RustSessionTests
     private static GameProject Starter() => ProjectCatalog.CreateInitialProject(0);
 
     [NativeFact]
-    public void CreatedStateHashesLikeTheTypeScriptGolden()
+    public void CreatedStateHashesLikeTheContentGolden()
     {
         // The content golden records the state hash of createGameState(project, "content:starter-farm")
         // (xxh3 over the canonical binary state since v9, docs/NUMERICS.md).
@@ -35,7 +35,7 @@ public sealed class RustSessionTests
         Assert.Equal(bytes, CartridgeCompiler.Compile(project));
         Assert.True(CartridgeReader.hasIdentifier(bytes));
         var cart = CartridgeReader.read(bytes).ResultValue;
-        Assert.Equal(2u, cart.CartFormat);
+        Assert.Equal(3u, cart.CartFormat);
         Assert.NotEmpty(cart.StartJson);
         Assert.NotEmpty(cart.PresentationJson);
         Assert.Equal("local.test-farm", cart.Info.GameId);

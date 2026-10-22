@@ -147,8 +147,6 @@ pub struct Npc {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birthday: Option<NpcBirthday>,
     pub appearance: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_image: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -180,18 +178,6 @@ pub struct Player {
     pub completed_quests: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equipped_tool: Option<String>,
-    /// Pixel X position for smooth movement interpolation
-    #[serde(with = "crate::units::screen")]
-    pub pixel_x: f64,
-    /// Pixel Y position for smooth movement interpolation
-    #[serde(with = "crate::units::screen")]
-    pub pixel_y: f64,
-    /// Target pixel X for interpolation
-    #[serde(with = "crate::units::screen")]
-    pub target_x: f64,
-    /// Target pixel Y for interpolation
-    #[serde(with = "crate::units::screen")]
-    pub target_y: f64,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

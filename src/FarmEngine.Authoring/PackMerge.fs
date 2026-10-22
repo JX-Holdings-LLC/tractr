@@ -46,7 +46,7 @@ module PackMerge =
     let private problem id severity message = { PackId = id; Severity = severity; Message = message }
 
     /// Install order with dependencies before dependents. Missing dependencies and cycles stay
-    /// visible as errors while the pack remains inspectable, like the web editor.
+    /// visible as errors while the pack remains inspectable.
     let resolveOrder (installs: PackInstallation list) : ContentPack list * PackProblem list =
         let enabled = installs |> List.filter (fun installation -> installation.Enabled) |> List.map (fun installation -> installation.Pack)
         // JavaScript Map(entries): the last duplicate id supplies dependency lookups.
@@ -233,12 +233,12 @@ module PackMerge =
     let private customCrop (crop: CropDefinition) : CustomCropDefinition =
         { Id = crop.Id; Name = crop.Name; Visual = crop.Visual
           SeedCost = crop.SeedCost; BaseHarvestValue = crop.BaseHarvestValue
-          GrowthTime = crop.GrowthTime; GrowthDays = crop.GrowthDays
+          GrowthDays = crop.GrowthDays
           Stages = crop.Stages; Seasons = crop.Seasons
-          RegrowthTime = crop.RegrowthTime; RegrowthDays = crop.RegrowthDays
+          RegrowthDays = crop.RegrowthDays
           CanRegrow = crop.CanRegrow; MultiTile = crop.MultiTile
           MutationChance = crop.MutationChance; YieldMin = crop.YieldMin
-          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; CustomAsset = None; Extra = crop.Extra }
+          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Extra = crop.Extra }
 
     /// A pack's art (`PackRules.packAssets`) added to the project's custom assets: assets with an
     /// id the project lacks are appended in pack order. An id the project already has keeps the

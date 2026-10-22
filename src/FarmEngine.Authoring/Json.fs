@@ -157,21 +157,9 @@ module JsNumber =
                     let fraction = if k > 1 then "." + digits.Substring 1 else ""
                     sign + digits.Substring(0, 1) + fraction + "e" + (if e >= 0 then "+" else "-") + string (abs e)
 
-    // The two roundings of the authoring core (.NET's own `Math.Round` rounds halves to even
-    // and is not used for game values):
-    //   `round`          JS `Math.round`, halves toward +∞: code ported from the TypeScript
-    //                    that recomputes values the way the web did.
-    //   `roundHalfAway`  halves away from zero: Rust `f64::round`, which the engine uses when it
-    //                    loads a value onto its integer grid, and JS `toFixed(0)`, which the web
-    //                    readouts display. For what the game will make of a value, and readouts.
-
-    /// JS `Math.round`: halves round toward +∞ (.NET rounds to even).
-    let round (x: float) : float =
-        if Double.IsNaN x || Double.IsInfinity x then
-            x
-        else
-            let f = Math.Floor x
-            if x - f >= 0.5 then f + 1.0 else f
+    // The rounding of the authoring core (.NET's own `Math.Round` rounds halves to even and is
+    // not used for game values): halves away from zero, as the engine rounds a value onto its
+    // integer grid.
 
     /// Rust `f64::round` and JS `toFixed(0)`: to the nearest integer, halves away from zero (so
     /// -2.5 is -3). Exact for every double (no `floor (x + 0.5)`, which turns
@@ -206,12 +194,6 @@ module Json =
     /// `obj.key !== undefined` (a JSON null counts as defined).
     let has (key: string) (value: Json) : bool = (tryGet key value).IsSome
 
-    /// `arr?.[i]`: `JNull` out of range and for non-arrays.
-    let index (i: int) (value: Json) : Json =
-        match value with
-        | JArray items when i >= 0 -> items |> List.tryItem i |> Option.defaultValue JNull
-        | _ -> JNull
-
     /// `a ?? b`.
     let orElse (fallback: Json) (value: Json) : Json = if isNullish value then fallback else value
 
@@ -230,47 +212,6 @@ module Json =
         | JString s -> s.Length > 0
         | JArray _
         | JObject _ -> true
-
-    /// JS `String(x)` (and the key `obj[x]` coerces `x` to): arrays join their elements with
-    /// ",", null elements as "", objects are "[object Object]".
-    let rec toJsString (value: Json) : string =
-        match value with
-        | JNull -> "null"
-        | JBool true -> "true"
-        | JBool false -> "false"
-        | JNumber n -> JsNumber.format n
-        | JString s -> s
-        | JArray items ->
-            items
-            |> List.map (fun item -> if isNullish item then "" else toJsString item)
-            |> String.concat ","
-        | JObject _ -> "[object Object]"
-
-    /// JS `Number(x)`. Objects and arrays convert through their string form, like JS.
-    let toNumber (value: Json) : float =
-        match value with
-        | JNull -> 0.0
-        | JBool b -> if b then 1.0 else 0.0
-        | JNumber n -> n
-        | JString s -> JsNumber.parse s
-        | JArray _
-        | JObject _ -> JsNumber.parse (toJsString value)
-
-    /// JS `x + n`: string concatenation when `x` is a string, array or object (their string form),
-    /// numeric addition otherwise (`null + 1` is 1, `true + 1` is 2).
-    let add (value: Json) (n: float) : Json =
-        match value with
-        | JString _
-        | JArray _
-        | JObject _ -> JString(toJsString value + JsNumber.format n)
-        | _ -> JNumber(toNumber value + n)
-
-    /// The string a JS object lookup `lookup[obj.key]` coerces `obj.key` to ("undefined" when
-    /// the key is missing).
-    let propertyKey (key: string) (value: Json) : string =
-        match tryGet key value with
-        | None -> "undefined"
-        | Some v -> toJsString v
 
     // ── Building ───────────────────────────────────────────────────────────
 
@@ -298,16 +239,8 @@ module Json =
     /// `{ ...value, key: v }`.
     let set (key: string) (v: Json) (value: Json) : Json = JObject(setMember key v (spread value))
 
-    /// `{ ...value, key: value.key ?? fallback() }`: the fallback only runs when the key is
-    /// nullish.
-    let withDefault (key: string) (fallback: unit -> Json) (value: Json) : Json =
-        if isNullish (get key value) then set key (fallback ()) value else JObject(spread value)
-
     /// `delete copy[key]` on `{ ...value }`.
     let remove (key: string) (value: Json) : Json = JObject(removeMember key (spread value))
-
-    /// The keys of `{ ...value }`, in order.
-    let keys (value: Json) : string list = spread value |> List.map fst
 
     // ── Throwing reads (JS TypeErrors) ─────────────────────────────────────
 

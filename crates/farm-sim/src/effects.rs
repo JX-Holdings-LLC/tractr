@@ -93,7 +93,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn serializes_like_the_typescript_union() {
+    fn serializes_as_a_tagged_union() {
         let effect = Effect::message(message_levels::INFO, "hi");
         assert_eq!(serde_json::to_value(&effect).unwrap(), json!({"type": "message", "level": "info", "text": "hi"}));
         let parsed: Effect =

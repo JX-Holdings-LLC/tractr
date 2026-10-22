@@ -34,7 +34,7 @@ let ``the fixture project validates`` () =
     Assert.Empty(SchemaChecks.validateProject (parse (fixtureJson ())))
 
 [<Fact>]
-let ``native export settings survive the web compatible import path`` () =
+let ``export settings survive saving and loading`` () =
     let project = starter ()
     let settings = Defaults.newExportSettings project
     let project = project |> apply (SetExportSettings(Some settings))
@@ -72,11 +72,11 @@ let ``validateProject reports constraint violations`` () =
         JsonNode.Parse
             """[{"id":"","name":"E","trigger":"enter","conditions":[{"type":"inventorySpace","itemId":"a","quantity":0},{"type":"timeOfDay","minMinute":800,"maxMinute":300}],"outcomes":[{"type":"waterArea","radius":11}]}]"""
     let broken = parse json
-    // Parse-level: what zod rejects.
+    // Parse-level: refuses the file.
     let errors = SchemaChecks.validateProject broken
     for prefix in [ "mode:"; "scenes.0.height:"; "scenes.0.tiles.0.0.background:"; "quests.0.status:"; "events.0.conditions.0.quantity:"; "events.0.outcomes.0.radius:" ] do
         Assert.True(startsWith prefix errors, prefix)
-    // Lint-level: what the web editor lets a creator save. Never a parse error.
+    // Lint-level: a problem the editor shows. Never a parse error.
     for prefix in [ "scenes.0.tiles.0:"; "events.0.id:"; "events.0.conditions.1:" ] do
         Assert.False(startsWith prefix errors, prefix)
     let lint = SchemaChecks.lintProject broken
@@ -86,11 +86,10 @@ let ``validateProject reports constraint violations`` () =
     Assert.False(startsWith "events.0.conditions.1:" lint)
     Assert.False(startsWith "mode:" lint)
 
-/// Shapes the web editor produces and zod accepts (no refinements exist for them) must load
-/// here: inverted regions, inverted day ranges, a start scene that was deleted, an empty id.
-/// Import parity, not lint cleanliness.
+/// Shapes an editor can leave behind load: inverted regions, inverted day ranges, a start scene
+/// that was deleted, an empty id. They are lints, not reasons to refuse the file.
 [<Fact>]
-let ``validateProject accepts what zod accepts`` () =
+let ``validateProject accepts shapes that are only lints`` () =
     let json = fixtureJson ()
     json.["startSceneId"] <- JsonValue.Create "scene-that-was-deleted"
     json.["items"].AsArray().Add(
@@ -166,7 +165,6 @@ let private makeProject () : GameProject =
         StartSceneId = "scene-test"
         Mode = "play"
         SelectedTileType = "grass"
-        CurrentTime = 1_000_000.0
         CurrentSeason = "spring"
         CurrentDay = 1.0
         CurrentTimeMinutes = 360.0
@@ -265,14 +263,3 @@ let ``schema issues carry the path and message the string form joins`` () =
     Assert.Equal<string list>(SchemaChecks.validateProject broken, issues |> List.map string)
     Assert.Equal("currentYear: Expected integer, received 1.5", string issues.[1])
 
-[<Fact>]
-let ``exported games skip the editor-only fields and an absent player`` () =
-    let json = BrokenProjects.starterJson ()
-    json.["player"].["direction"] <- JsonValue.Create "north"
-    let game (json: JsonNode) =
-        match Decode.run SchemaJson.decodeExportedGame (JsonInterop.ofNode json) with
-        | Ok game -> game
-        | Error issue -> failwith issue
-    Assert.Equal<string list>([ "player.direction: Invalid enum value. Expected 'up' | 'down' | 'left' | 'right', received 'north'" ], SchemaChecks.validateExportedGame (game json))
-    json.Remove "player" |> ignore
-    Assert.Empty(SchemaChecks.validateExportedGame (game json))

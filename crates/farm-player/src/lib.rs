@@ -69,7 +69,7 @@ pub struct HeadlessReport {
 #[derive(Debug, Clone)]
 pub struct HeadlessRun {
     pub report: HeadlessReport,
-    /// The final state as a JSON save (debugging, the web version).
+    /// The final state as a JSON save (debugging).
     pub save_json: String,
     /// The final state as a binary `FGSV` save (what the player writes to its save slots).
     pub save_binary: Vec<u8>,

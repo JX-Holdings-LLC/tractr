@@ -175,7 +175,7 @@ public sealed class ProjectCommandTests
     }
 
     [AvaloniaFact]
-    public void ImportAndExport_RoundTripWebJson()
+    public void ImportAndExport_RoundTripProjectJson()
     {
         var dialogs = new FakeDialogs
         {
@@ -185,7 +185,7 @@ public sealed class ProjectCommandTests
 
         host.ViewModel.ImportProjectJsonCommand.Execute(null);
         PumpUntil(() => host.ViewModel.StatusMessage.StartsWith("Imported", StringComparison.Ordinal), "import");
-        Assert.Equal("Imported fixture-project.json as \"Current V7 Farm\".", host.ViewModel.StatusMessage);
+        Assert.Equal("Imported fixture-project.json as \"Fixture Farm\".", host.ViewModel.StatusMessage);
         var imported = host.Workspace.Current!;
 
         host.ViewModel.ExportProjectJsonCommand.Execute(null);

@@ -317,11 +317,7 @@ module EventOutcomeTypes =
     [<Literal>]
     let StartMinigame = "startMinigame"
 
-    /// legacy (pre-v5), still honored by the migration
-    [<Literal>]
-    let UnlockScene = "unlockScene"
-
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; UnlockScene ]
+    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -457,22 +453,15 @@ module SettingsSchema =
 
 [<RequireQualifiedAccess>]
 module ProjectSchema =
-    /// The project schema version. Bump when the persisted shape changes and add a migration plus
-    /// a fixture in tests/.
+    /// The project schema version. Only this version loads (there are no migrations): bump it
+    /// when the persisted shape changes, so files of another shape are refused with a message.
     ///
-    /// v1 — original prototype (tiles without layer fields); v2 — layered tiles
-    /// (background/overlay/object); v3 — explicit schemaVersion + guaranteed presence of
-    /// customAssets, season/day fields, quests and player pixel/quest fields; v4 — day-based game
-    /// time (M2): crop growthDays/plantedOnDay/daysGrown, shops, gathering node types, project
-    /// settings (energy/time), player energy, currentTimeMinutes; v5 — events v2 (M3): trigger +
-    /// combinable conditions + sequenced outcomes, NPC schedules, lockable transitions, quest
-    /// availability; v6 — simulation depth (M4): recipes, machine types, weather config, animal
-    /// species + animals, fish tables, mine config, gift tastes, player skills; v7 — content packs
-    /// (M5): installed packs (with load order + enable flags) travel inside the project; v8 —
-    /// project graphics settings (`graphics`, pixel art by default); v9 — the native numerics
-    /// grid (docs/NUMERICS.md): positions, energy, money and the time of day on the engine's grid.
+    /// v9 — the native numerics grid (docs/NUMERICS.md); v10 — the fields kept only for older
+    /// files are gone (crop `growthTime`/`regrowthTime`/`plantedAt`, the `customImage`,
+    /// `playerCustomImage` and crop `customAsset` image fields, the `unlockScene` outcome, the
+    /// player's `pixelX`/`pixelY`/`targetX`/`targetY` and the project's `currentTime`).
     [<Literal>]
-    let CurrentProjectSchemaVersion = 9.0
+    let CurrentProjectSchemaVersion = 10.0
 
 [<RequireQualifiedAccess>]
 module GameContentSchema =

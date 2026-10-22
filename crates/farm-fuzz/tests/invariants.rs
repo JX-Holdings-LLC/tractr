@@ -13,7 +13,7 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
-const BASES: [&str; 6] = ["starter-farm", "cozy-garden", "quest-rpg", "lab-calendar", "blank", "fixture-v8"];
+const BASES: [&str; 6] = ["starter-farm", "cozy-garden", "quest-rpg", "lab-calendar", "blank", "fixture-farm"];
 
 static PROJECTS: LazyLock<Vec<GameProject>> = LazyLock::new(|| {
     BASES

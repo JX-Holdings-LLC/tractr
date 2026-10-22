@@ -23,10 +23,8 @@
 //! - the binary save (`schemas/save.fbs`, identifier `FGSV`) the standalone player writes: the
 //!   header, a slot preview (farm name, date, money, play time, thumbnail) readable without
 //!   touching the state, and the state as zstd-compressed stable JSON;
-//! - JSON (`{"header": {…}, "state": {…}}`), for the editor's debug tools and the web version.
-//!
-//! A bare `GameState` (what the web version writes) also loads: it has no header, so it is
-//! treated as coming from unknown content.
+//! - JSON (`{"header": {…}, "state": {…}}`), for debugging and tools (`farm-player --headless`,
+//!   farm-bench, the session API).
 
 use crate::save::load_game_state_owned;
 use farm_cart_schema::farm_engine::save as fb_save;
@@ -133,7 +131,7 @@ pub fn write_save(state: &GameState, target: &SaveTarget) -> String {
 pub struct LoadedSave {
     pub ok: bool,
     pub state: Option<GameState>,
-    /// The header, when the file had one (bare web saves have none).
+    /// The header, when the file got as far as one.
     pub header: Option<SaveHeader>,
     /// Why the save was refused (at most 20), in English.
     pub errors: Vec<String>,
@@ -151,8 +149,7 @@ pub struct LoadedSave {
     pub restored: Vec<String>,
 }
 
-/// Loads a JSON save file (or a bare web `GameState`) for the running game `target` with
-/// `content`. Never panics.
+/// Loads a JSON save file for the running game `target` with `content`. Never panics.
 pub fn load_save(text: &str, target: &SaveTarget, content: &GameContent) -> LoadedSave {
     if text.len() > MAX_STATE_BYTES {
         return refused(None, messages::SAVE_TOO_LARGE.with(&[]));
@@ -184,22 +181,21 @@ pub fn load_save_bytes(bytes: &[u8], target: &SaveTarget, content: &GameContent)
         Ok(raw) => raw,
         Err(error) => return refused(Some(header), damaged(format!("Save state is not valid JSON: {error}"))),
     };
-    load_parts(Some(header), raw, target, content)
+    load_parts(header, raw, target, content)
 }
 
-fn load_parts(header: Option<SaveHeader>, state_raw: Value, target: &SaveTarget, content: &GameContent) -> LoadedSave {
+fn load_parts(header: SaveHeader, state_raw: Value, target: &SaveTarget, content: &GameContent) -> LoadedSave {
     let mut warnings: Vec<Message> = Vec::new();
-    if let Some(header) = &header {
-        if header.format > SAVE_FORMAT {
-            return refused(Some(header.clone()), format_too_new(header.format));
-        }
-        if header.game_id != target.game_id {
-            return refused(Some(header.clone()), messages::SAVE_OTHER_GAME.with(&[&header.game_id, &target.game_id]));
-        }
-        if compare_versions(&header.game_version, &target.game_version) == Ordering::Greater {
-            warnings.push(messages::SAVE_NEWER_VERSION.with(&[&header.game_version, &target.game_version]));
-        }
+    if header.format > SAVE_FORMAT {
+        return refused(Some(header.clone()), format_too_new(header.format));
     }
+    if header.game_id != target.game_id {
+        return refused(Some(header.clone()), messages::SAVE_OTHER_GAME.with(&[&header.game_id, &target.game_id]));
+    }
+    if compare_versions(&header.game_version, &target.game_version) == Ordering::Greater {
+        warnings.push(messages::SAVE_NEWER_VERSION.with(&[&header.game_version, &target.game_version]));
+    }
+    let header = Some(header);
 
     let loaded = load_game_state_owned(state_raw);
     let Some(mut state) = loaded.data.filter(|_| loaded.ok) else {
@@ -223,12 +219,9 @@ fn load_parts(header: Option<SaveHeader>, state_raw: Value, target: &SaveTarget,
     let same_content = header.as_ref().is_some_and(|h| h.cart_hash == target.cart_hash);
     let (quarantined, restored) =
         if same_content { (Vec::new(), Vec::new()) } else { reconcile_items(&mut state, content) };
-    // A save written by another version of this game takes its maps; a headerless save may be
-    // from this very content, and a rebase would undo what events changed on the map.
-    if header.is_some() && !same_content {
-        rebase_world(&mut state, content);
-    }
+    // A save written by another version of this game takes its maps and meets its new NPCs.
     if !same_content {
+        rebase_world(&mut state, content);
         add_missing_npcs(&mut state, content);
     }
     // Season lengths may have changed since the save was written (#23).
@@ -569,17 +562,17 @@ pub fn compare_versions(a: &str, b: &str) -> Ordering {
     Ordering::Equal
 }
 
-/// `{"header", "state"}` → its parts; any other object is a bare `GameState`.
-fn split_envelope(raw: Value) -> Result<(Option<SaveHeader>, Value), Message> {
+/// `{"header", "state"}` → its parts.
+fn split_envelope(raw: Value) -> Result<(SaveHeader, Value), Message> {
     let Value::Object(mut map) = raw else {
-        return Ok((None, raw));
+        return Err(damaged("Save file is not a JSON object".to_owned()));
     };
     if !(map.contains_key("header") && map.contains_key("state")) {
-        return Ok((None, Value::Object(map)));
+        return Err(damaged("Save file has no header and state".to_owned()));
     }
     let header = SaveHeader::deserialize(&map["header"])
         .map_err(|error| damaged(format!("Save header is not valid: {error}")))?;
-    Ok((Some(header), map.swap_remove("state").unwrap_or_default()))
+    Ok((header, map.swap_remove("state").unwrap_or_default()))
 }
 
 fn refused(header: Option<SaveHeader>, error: Message) -> LoadedSave {

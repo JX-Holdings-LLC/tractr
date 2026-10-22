@@ -181,7 +181,7 @@ public sealed unsafe class RustSession : IDisposable
     }
 
     /// <summary>
-    /// Replaces the state with a save file (or a bare web <c>GameState</c>). Items the game no
+    /// Replaces the state with a save file. Items the game no
     /// longer has are quarantined. A save from another game or an older save version, or one
     /// that fails validation, throws <see cref="FarmFfiException"/> and leaves the state as
     /// it was.

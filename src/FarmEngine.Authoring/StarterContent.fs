@@ -175,7 +175,7 @@ module StarterContent =
         { GameProject.Default with
             SchemaVersion = ProjectSchema.CurrentProjectSchemaVersion; Id = "project-1"; Name = "My Farming Game"
             Version = "2.0"; Player = player ""; StartSceneId = ""; Mode = "play"; SelectedTileType = "grass"
-            CurrentTime = now; CurrentSeason = "spring"; CurrentDay = 1.0
+            CurrentSeason = "spring"; CurrentDay = 1.0
             CurrentTimeMinutes = SettingsSchema.DefaultProjectSettings.Time.DayStartMinute; CurrentYear = 1.0
             Settings = SettingsSchema.DefaultProjectSettings; GameStartTime = now }
 

@@ -18,7 +18,7 @@ public sealed class FarmFfiTests
         {
             Assert.Null(FarmFfi.Version);
             Assert.False(string.IsNullOrEmpty(FarmFfi.LoadError));
-            var error = Assert.Throws<FarmFfiException>(() => FarmFfi.HashText("{}"));
+            var error = Assert.Throws<FarmFfiException>(() => RustPreview.Create(FarmEngine.Authoring.ProjectCatalog.CreateInitialProject(0)));
             Assert.Contains(FarmFfi.LoadError!, error.Message, StringComparison.Ordinal);
         }
         else
@@ -53,7 +53,7 @@ public sealed class FarmFfiTests
     public void TheLibrarySpeaksTheAbiTheseBindingsExpect()
     {
         Assert.Null(FarmFfi.LoadError);
-        Assert.Equal(2u, FarmFfi.AbiVersion);
+        Assert.Equal(3u, FarmFfi.AbiVersion);
         // Loaded from the application's folder, not from wherever the OS would search.
         var loaded = System.Diagnostics.Process.GetCurrentProcess().Modules
             .Cast<System.Diagnostics.ProcessModule>()
@@ -64,14 +64,8 @@ public sealed class FarmFfiTests
     }
 
     [NativeFact]
-    public void HashesTextLikeTheTypeScriptEngine()
+    public void ReportsItsVersion()
     {
         Assert.Matches(@"^\d+\.\d+\.\d+", FarmFfi.Version);
-        Assert.Equal("5465b8257807bf56", FarmFfi.HashText("{}"));
-        Assert.Equal("741638a538a6be56", FarmFfi.HashText("[]"));
-        Assert.Equal("77074ba4d9fff516", FarmFfi.HashText("null"));
-        Assert.Matches("^[0-9a-f]{16}$", FarmFfi.HashText("{\"a\":[1,2.5,\"x\"],\"é\":\"農場🌾\"}"));
-        // An empty array pins to a null pointer; Rust accepts it with length 0.
-        Assert.Matches("^[0-9a-f]{16}$", FarmFfi.HashText(""));
     }
 }
