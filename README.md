@@ -257,9 +257,9 @@ checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
 | `FarmEngine.Export` (F#) | Export Game: player templates, Windows icon/version patching, folders and archives | — |
 | `FarmEngine.Cli` (F#) | `farmc compile` and `farmc export` | — |
 | `crates/farm-sim` (Rust) | Deterministic simulation, golden-verified | `packages/engine-core` |
-| `crates/farm-host` (Rust) | The host protocol shared by `farm-ffi` and `farm-wasm`: player, session and preview requests and responses | — |
+| `crates/farm-host` (Rust) | The host protocol of `farm-ffi` (player, sessions, previews), whose player `farm-wasm` shares | — |
 | `crates/farm-ffi` (Rust) | C ABI the app loads: the embedded player, map previews, headless sessions | — |
-| `crates/farm-wasm` (Rust) | The same for web pages (wasm-bindgen): `Player`, `Session`, `Preview`; used by the web demo export | — |
+| `crates/farm-wasm` (Rust) | The same for web pages (wasm-bindgen): the `Player`, for the web demo export | — |
 | `crates/farm-bench` (Rust) | Benchmarks and the CI time-budget check | — |
 | `crates/farm-cart` (Rust) | Cartridge reader, save files and save loading | `packages/engine-schemas/src/save.ts` |
 | `crates/farm-cart-schema` (Rust) | Generated FlatBuffers accessors, isolated from hand-written safe Rust | — |

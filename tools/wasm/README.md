@@ -7,7 +7,7 @@ build.
 ```sh
 tools/wasm/build.sh             # wasm-bindgen --target web output in tools/wasm/dist (not checked in)
 tools/wasm/build.sh out/dir     # somewhere else
-node tools/wasm/smoke.mjs       # the player, storage, plugins and every golden replay, in Node 22
+node tools/wasm/smoke.mjs       # the player, storage, plugins, hashes and sounds, in Node 22
 node tools/wasm/game-page.mjs   # the web demo page's script (web-template/game.js) against the build
 ```
 

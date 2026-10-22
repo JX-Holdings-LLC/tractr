@@ -1,9 +1,10 @@
 # farm-wasm
 
-The game for web pages: a `wasm-bindgen` API over the same player, headless sessions and
-previews the desktop editor reaches through `farm-ffi`. Both crates are thin bindings over
-`farm-host`, which holds the JSON protocol, so a page sends the same requests as .NET and gets
-the same pixels, sounds and state hashes. Export Game's web demo target uses it.
+The game for web pages: a `wasm-bindgen` API over the same player the desktop editor reaches
+through `farm-ffi`. Both crates are thin bindings over `farm-host`, which holds the JSON
+protocol, so a page sends the same requests as .NET and gets the same pixels, sounds and state
+hashes. Export Game's web demo target uses it. Headless sessions and Edit Mode previews are
+`farm-ffi` only: the editor is the desktop app.
 
 ## Build
 
@@ -25,7 +26,7 @@ Sizes (0.2.0): 9.9 MB after wasm-bindgen, 8.5 MB after `wasm-opt -O3`, 3.0 MB gz
 ## Loading
 
 ```ts
-import init, { Player, Session, Preview, hashState, sfxSamples } from "./farm_wasm.js";
+import init, { Player, hashState, sfxSamples } from "./farm_wasm.js";
 
 await init();                                  // fetches farm_wasm_bg.wasm next to the module
 // or: await init({ module_or_path: url });   Node: initSync({ module: bytes })
@@ -36,7 +37,7 @@ Every call is synchronous and runs on the calling thread. A frame of the starter
 (post the pixels back as a transferable, or draw into an `OffscreenCanvas`).
 
 Arguments documented as JSON take either a JavaScript value or its JSON text. JSON results
-(`stateJson`, `apply`, `queryJson`, …) are strings, exactly the bytes farm-ffi returns, so
+(`stateJson`, `syncedProject`, `queryJson`) are strings, exactly the bytes farm-ffi returns, so
 hashes can be checked (`hashState(player.stateJson()) === player.hash()`); `JSON.parse` them as
 needed. A value `JSON.stringify` cannot turn into JSON (a function, a symbol) throws a
 `FarmError` of kind `"invalid"` like malformed JSON does. Games are project JSON (text, object or UTF-8 bytes, at the current project
@@ -147,47 +148,12 @@ guest in `wasmi`, a WebAssembly interpreter written in Rust, with the same fuel 
 they are deterministic and synchronous with the frame. Their errors are in
 `queryJson({type: "pluginErrors"})`.
 
-## `Session`
-
-A headless game (tools, tests, replays); mirrors `fe_session_*`.
-
-| Member | |
-|---|---|
-| `new Session(game, seed?, autoStartQuests?)` | Without `seed`, the project's own seed. |
-| `apply(commands)` | Applies commands in order; returns their effects (JSON array). |
-| `tick(ticks)` | Advances ticks (20 per second); returns their effects. |
-| `stateJson()`, `hash()` | The state (stable JSON) and its hash. |
-| `projectJson()` | The project with the state written back (throws for a cartridge). |
-| `skipDay()` | The overnight pass without a bed (the debug drawer). |
-| `hookEvents()` | Drains the hook events since the last call (`[{hook, payload}]`). |
-| `setState(state)` | Replaces the state, taken as it is (tile grids that don't match their scene's size are fixed). |
-| `setScripted(scripted)` | `true`: commands apply wherever the player stands (scripts, the goldens). By default they apply only where a player could give them: no `descendMine` away from the mine, no `openShop` without facing the merchant, only the open dialogue's, shop's or minigame's own commands while one is open. |
-| `save()`, `loadSave(save)` | A JSON save of the state; loading quarantines unknown items and returns `{warnings, quarantined, restored}`. |
-
-The smoke test replays every golden in `fixtures/golden/replays` (recorded from the Rust
-engine) through a scripted `Session` and checks each step's hash and effects.
-
-## `Preview` and `renderJson`
-
-Edit Mode's map and the art studio's previews; mirror `fe_preview_*` and `fe_render_json`.
-
-- `new Preview(project)`, `setProject(project)`.
-- `render({sceneId, tileSize?, padding?, camera?, scale?})` and
-  `renderVisual({visual, tick?, direction?, moving?, size, scale?})` return
-  `{width, height, pixels}` with **straight** alpha for `ImageData` (farm-ffi returns
-  premultiplied pixels to .NET).
-- `renderJson({type: "editorSnapshot", project, sceneId, …})` returns the decorated snapshot as
-  JSON text; `renderJson({type: "rasterize", snapshot, scale})` returns PNG bytes.
-
 ## Functions
 
 - `hashState(state)`: the state hash (16 hex digits) of a `GameState` given as JSON text or an
-  object, so `hashState(x.stateJson()) === x.hash()` for a `Player` or a `Session`. Since v9 the
+  object, so `hashState(player.stateJson()) === player.hash()`. Since v9 the
   state hash is xxh3-64 over the state's canonical binary encoding (docs/NUMERICS.md), not a hash
   of its JSON text.
-- `hashText(text)`: the v8 text hash (FNV-1a over UTF-16, two 32-bit lanes). It no longer
-  matches any state hash (`hashText(stateJson()) !== hash()`); it stays for tools that compare
-  v8-era text hashes.
 - `sfxCues()`, `sfxSamples(cue, sampleRate)`, `musicSamples(name, sampleRate)` (the built-in
   music and ambience loops a frame's `info.music` names), `version()`, `lastPanic()`.
   `start()` installs the panic hook; `init` calls it.
@@ -197,7 +163,7 @@ Edit Mode's map and the art studio's previews; mirror `fe_preview_*` and `fe_ren
 Failures throw a JavaScript `Error` named `FarmError` with a `kind`:
 
 - `"invalid"`: bad input or a refused request (a frame without a size, malformed JSON, a save
-  of another game, a render request with a zero tile size or an image over 16 Mpx). The object
+  of another game, a frame over 16 Mpx). The object
   stays usable.
 - `"poisoned"`: the engine failed during a frame ("The game stopped: …"), or an earlier call
   did. The object refuses every later call; drop it (the editor ends the playtest).
@@ -215,5 +181,4 @@ of an object" error. Load a fresh module instance to continue.
 Running out of memory aborts the same way but without running the panic hook. Each engine call
 marks itself as running and clears the mark when it returns, so the next call after such a trap
 finds the mark and throws `"poisoned"` too (`lastPanic()` stays `undefined`). Treat any
-`WebAssembly.RuntimeError` as the end of the module instance. Frames and render requests are
-capped at 16 Mpx on the web (64 Mpx natively) to keep allocations well inside a module's memory.
+`WebAssembly.RuntimeError` as the end of the module instance. Frames are capped at 16 Mpx on the web (64 Mpx natively) to keep allocations well inside a module's memory.

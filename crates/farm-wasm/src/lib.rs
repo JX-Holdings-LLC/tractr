@@ -5,10 +5,8 @@
 //! bindings over `farm-host`, so a web page speaks the same JSON as .NET and gets the same
 //! pixels, sounds and hashes.
 //!
-//! - [`Player`](player::WasmPlayer): the graphical player (Play Mode, web demo exports);
-//! - [`Session`](session::WasmSession): a headless game;
-//! - [`Preview`](preview::WasmPreview) and [`render_json`]: Edit Mode's map and art previews;
-//! - [`hash_state`], [`hash_text`], [`sfx_cues`], [`sfx_samples`], [`music_samples`], [`version`],
+//! - [`Player`](player::WasmPlayer): the graphical player (web demo exports);
+//! - [`hash_state`], [`sfx_cues`], [`sfx_samples`], [`music_samples`], [`version`],
 //!   [`last_panic`].
 //!
 //! The JavaScript API is documented in `crates/farm-wasm/README.md`.
@@ -29,11 +27,9 @@
 #![forbid(unsafe_code)]
 
 pub mod player;
-pub mod preview;
-pub mod session;
 pub mod storage;
 
-use js_sys::{Array, Float32Array, Object, Reflect, Uint8Array, Uint8ClampedArray};
+use js_sys::{Array, Float32Array, Object, Reflect, Uint8Array};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use wasm_bindgen::prelude::*;
@@ -130,21 +126,12 @@ export interface StorageDocument {
   settings: string | null;
   slots: { [slot: string]: string };
 }
-
-/** An RGBA image with straight alpha, for `new ImageData(pixels, width, height)`. */
-export interface RgbaImage {
-  width: number;
-  height: number;
-  pixels: Uint8ClampedArray<ArrayBuffer>;
-}
 "#;
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(typescript_type = "FrameResult")]
     pub type FrameResult;
-    #[wasm_bindgen(typescript_type = "RgbaImage")]
-    pub type RgbaImage;
 }
 
 /// Installs the panic hook (runs when the module is initialized).
@@ -172,18 +159,8 @@ pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
 }
 
-/// The v8 text hash: FNV-1a over the UTF-16 code units of `text`, as two 32-bit lanes (16 hex
-/// characters). Since v9 it is **not** the state hash: `hash()` is xxh3-64 over the canonical
-/// binary encoding of the state (docs/NUMERICS.md), so `hashText(stateJson())` never equals
-/// `hash()`; [`hash_state`] is the function for that. Kept for tools that compare v8 text hashes.
-#[wasm_bindgen(js_name = hashText)]
-pub fn hash_text(text: &str) -> Result<String, JsValue> {
-    let _call = enter()?;
-    Ok(farm_sim::hash_text(text))
-}
-
 /// The state hash of a `GameState` given as JSON (text such as `stateJson()`, or an object):
-/// `hashState(player.stateJson()) === player.hash()`, and likewise for a `Session`.
+/// `hashState(player.stateJson()) === player.hash()`.
 #[wasm_bindgen(js_name = hashState)]
 pub fn hash_state(#[wasm_bindgen(unchecked_param_type = "string | object")] state: JsValue) -> Result<String, JsValue> {
     let state = json_arg(&state)?;
@@ -191,22 +168,6 @@ pub fn hash_state(#[wasm_bindgen(unchecked_param_type = "string | object")] stat
     let state: farm_sim::schema::GameState =
         serde_json::from_str(&state).map_err(|e| js_error("invalid", &format!("state JSON: {e}")))?;
     Ok(farm_sim::hash_state(&state))
-}
-
-/// Runs a stateless render request (the same JSON as `fe_render_json`):
-/// `{"type":"editorSnapshot","project":{…},"sceneId":"…","tileSize":28,"padding":12}` answers
-/// the decorated Edit Mode snapshot as a JSON string; `{"type":"rasterize","snapshot":{…},
-/// "scale":1}` answers PNG bytes.
-#[wasm_bindgen(js_name = renderJson, unchecked_return_type = "string | Uint8Array<ArrayBuffer>")]
-pub fn render_json(
-    #[wasm_bindgen(unchecked_param_type = "string | object")] request: JsValue,
-) -> Result<JsValue, JsValue> {
-    let request = json_arg(&request)?;
-    let _call = enter()?;
-    match farm_host::catch(|| farm_host::render::render_json(request.as_bytes())).map_err(host_error)? {
-        farm_host::render::RenderOutput::Json(text) => Ok(JsValue::from_str(&text)),
-        farm_host::render::RenderOutput::Png(bytes) => Ok(Uint8Array::from(&bytes[..]).into()),
-    }
 }
 
 /// The names of the synthesized sound effects frames may ask for.
@@ -310,16 +271,6 @@ pub(crate) fn bytes_arg(value: &JsValue) -> Result<Vec<u8>, JsValue> {
         return Err(js_error("invalid", "Expected a Uint8Array, an ArrayBuffer, a string or an object."));
     }
     json_arg(value).map(String::into_bytes)
-}
-
-/// `{width, height, pixels}` with straight alpha.
-pub(crate) fn rgba_image(mut image: farm_host::Rgba) -> RgbaImage {
-    image.unpremultiply();
-    let object = Object::new();
-    set(&object, "width", image.width.into());
-    set(&object, "height", image.height.into());
-    set(&object, "pixels", Uint8ClampedArray::from(&image.data[..]).into());
-    object.unchecked_into()
 }
 
 pub(crate) fn set(object: &Object, key: &str, value: JsValue) {

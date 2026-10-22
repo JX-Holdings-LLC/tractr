@@ -348,6 +348,8 @@ projects to carry forward, so the compatibility code is gone:
   outcomes (`fixtures/golden/v8`, `v8_outcomes`); every golden is recorded
   from Rust. The RNG and stable-JSON vectors stay as fixed vectors
   (`fixtures/golden/vectors`).
+- [x] `farm-wasm` is the web demo's player only (0.5.1): `Session`,
+  `Preview`, `renderJson` and `hashText` are removed.
 
 ## Parity with the web editor
 

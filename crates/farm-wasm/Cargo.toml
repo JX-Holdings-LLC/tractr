@@ -1,6 +1,6 @@
 [package]
 name = "farm-wasm"
-description = "wasm-bindgen API over the game player, headless sessions and previews for the web version (mirrors farm-ffi)"
+description = "wasm-bindgen API over the game player for the web demo export (mirrors farm-ffi's player)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

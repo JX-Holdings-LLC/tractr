@@ -250,10 +250,10 @@ what an exported game contains.
 
 ### WebAssembly (`farm-wasm`)
 
-- `wasm-bindgen` API that mirrors `farm-ffi`: `Player`, `Session`, `Preview`
-  and `renderJson`, over the same host protocol (`farm-host`, shared with
-  `farm-ffi`). The web editor's Play Mode uses it; the web demo export target
-  will too. Plugins run inside the module (QuickJS in wasmi, like the
+- `wasm-bindgen` API over `farm-ffi`'s player: `Player`, `hashState` and the
+  sound and music samples, over the same host protocol (`farm-host`, shared
+  with `farm-ffi`). The web demo export target uses it; headless sessions and
+  Edit Mode previews are `farm-ffi` only. Plugins run inside the module (QuickJS in wasmi, like the
   desktop), on the calling thread; a page that wants them off the main thread
   runs the whole player in a Worker. See `crates/farm-wasm/README.md`.
 

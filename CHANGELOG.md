@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.1
+
+- **For contributors:** `farm-wasm` is now just the web demo's player. It
+  keeps `Player`, `hashState`, the sound and music samples, `version` and
+  `lastPanic`; `Session`, `Preview`, `renderJson` and `hashText`, which only
+  the web editor used, are removed. Headless sessions and Edit Mode previews
+  stay in `farm-ffi` for the desktop editor. The wasm smoke test no longer
+  replays the goldens (they still run natively in `cargo test`). No changes
+  to the app or to games.
+
 ## 0.5.0
 
 - **Tractr and the web version are separate projects now.** Tractr reads and
