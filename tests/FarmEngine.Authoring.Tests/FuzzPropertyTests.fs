@@ -90,7 +90,7 @@ let ``non-finite numbers are written as null`` () =
 // ── Cartridge reader ───────────────────────────────────────────────────────
 
 let private cartridges =
-    [ for name in [ "starter-farm"; "project-v8" ] ->
+    [ for name in [ "starter-farm"; "fixture-project" ] ->
           IO.File.ReadAllBytes(IO.Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", name + ".cart")) ]
 
 /// A sample cartridge with a few bytes changed, inserted or cut.

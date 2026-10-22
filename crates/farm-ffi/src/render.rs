@@ -69,7 +69,7 @@ impl std::fmt::Debug for FePreview {
     }
 }
 
-/// Creates a preview for a (migrated) project. On failure `error` holds the message.
+/// Creates a preview for a project. On failure `error` holds the message.
 ///
 /// # Safety
 /// `project_json` must point to `len` readable bytes; `out` and `error` must be valid pointers.

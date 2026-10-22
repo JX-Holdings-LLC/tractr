@@ -40,16 +40,7 @@ let private jsonSources () : (string * (unit -> Json)) list =
       for path in files "Golden/replays" "*.json" do
           if Path.GetFileName path <> "index.json" then
               yield "replays/" + Path.GetFileName path, projectKey path
-      for path in files "Golden/migrations" "project-v*.json" -> "migrations/" + Path.GetFileName path, (fun () -> Json.get "input" (readFile path))
-      for path in files "Golden/migrations" "errors.json" do
-          match readFile path with
-          | JArray cases ->
-              for case in cases do
-                  let name = Json.toJsString (Json.get "name" case)
-                  yield "migrations/errors/" + name, (fun () -> Json.get "input" case)
-          | _ -> ()
-      for path in files "Migrated" "project-*.json" -> "migrated/" + Path.GetFileName path, (fun () -> readFile path)
-      for path in files "Fixtures" "project-v*.json" -> "fixtures/" + Path.GetFileName path, (fun () -> readFile path)
+      yield "fixtures/fixture-project.json", (fun () -> readFile (Path.Combine(baseDir, "Fixtures", "fixture-project.json")))
       yield "fixtures/packs-project.json", (fun () -> readFile (Path.Combine(baseDir, "Fixtures", "packs-project.json"))) ]
 
 /// Sample, template and default projects built in code, by name.
@@ -65,10 +56,10 @@ let private decode (decoder: Path -> Json -> 'T) (json: Json) : 'T option =
     | Ok value -> Some value
     | Error _ -> None
 
-/// The migrated form (raw migration), whatever its validity.
-let private migrated (raw: Json) : Json option =
-    match (Migrations.migrateProjectRaw raw).Data with
-    | Some(JObject _ as json) -> Some json
+/// The JSON when it is an object, whatever its validity.
+let private asObject (raw: Json) : Json option =
+    match raw with
+    | JObject _ -> Some raw
     | _ -> None
 
 let private editorOnlyKeys =
@@ -97,14 +88,14 @@ let private brokenCase (name: string) = BrokenProjects.cases |> List.find (fun c
 /// Loading reports the checks' findings (capped at 20) and refuses exactly when they find any;
 /// the checks never throw.
 let private assertLoadMatchesChecks (label: string) (raw: Json) =
-    let result = ProjectLoad.migrateProject raw
-    match migrated raw |> Option.bind (decode SchemaJson.decodeGameProject) with
+    let result = ProjectLoad.loadProject raw
+    match asObject raw |> Option.bind (decode SchemaJson.decodeGameProject) with
     | Some project ->
         let errors = SchemaChecks.validateProject project
         Assert.Equal<string list>(List.truncate 20 errors, if result.Ok then [] else result.Errors |> List.truncate 20)
         Assert.Equal(errors.IsEmpty, result.Ok)
     | None -> Assert.False(result.Ok, label + ": an unreadable project loaded")
-    let game = ProjectLoad.migrateExportedGame raw
+    let game = ProjectLoad.loadExportedGame raw
     Assert.True(game.Ok || not game.Errors.IsEmpty, label + ": exported game refused without an error")
 
 [<Theory>]
@@ -117,7 +108,7 @@ let ``golden and fixture projects load and check without throwing`` (name: strin
         Assert.True((attempt (fun () -> SchemaChecks.validateProject project, SchemaChecks.lintProject project)) |> Result.isOk)
         checkedForms <- checkedForms + 1
     | None -> ()
-    match migrated raw with
+    match asObject raw with
     | Some json ->
         assertLoadMatchesChecks name raw
         for form, game in exportedForms json do
@@ -125,19 +116,7 @@ let ``golden and fixture projects load and check without throwing`` (name: strin
             | Ok _ -> checkedForms <- checkedForms + 1
             | Error message -> failwithf "%s (%s): %s" name form message
     | None -> ()
-    // Every source but the malformed migration inputs yields a typed project.
-    if not (name.StartsWith("migrations/errors/", StringComparison.Ordinal)) then
-        Assert.True(checkedForms > 0, name + ": nothing checked")
-
-/// The migrated exported-game goldens (`exported-*.stable.json`) are valid exported games.
-[<Fact>]
-let ``the migrated exported-game goldens are valid`` () =
-    let paths = files "Migrated" "exported-*.stable.json"
-    Assert.NotEmpty paths
-    for path in paths do
-        match decode SchemaJson.decodeExportedGame (readFile path) with
-        | Some game -> Assert.Empty(SchemaChecks.validateExportedGame game)
-        | None -> failwithf "%s does not parse as an exported game" path
+    Assert.True(checkedForms > 0, name + ": nothing checked")
 
 [<Theory>]
 [<MemberData(nameof codeSourceNames)>]
@@ -168,15 +147,11 @@ let private lintLines (project: GameProject) : string list =
     | Ok lints -> [ for l in lints -> sprintf "%s|%s|%s|%s" (severityName l.Severity) l.Category l.Message (defaultArg l.Subject "") ]
     | Error message -> [ "throws|" + message ]
 
-/// Findings per project: every golden and fixture as is and migrated, and every code-built sample.
+/// Findings per project: every golden and fixture, and every code-built sample.
 let private contentLintFindings () : (string * string list) list =
     [ for name, load in jsonSources () do
-          let raw = load ()
-          match decode SchemaJson.decodeGameProject raw with
-          | Some project -> yield name + " (as is)", lintLines project
-          | None -> ()
-          match migrated raw |> Option.bind (decode SchemaJson.decodeGameProject) with
-          | Some project -> yield name + " (migrated)", lintLines project
+          match decode SchemaJson.decodeGameProject (load ()) with
+          | Some project -> yield name, lintLines project
           | None -> ()
       for name, build in codeSources () -> name, lintLines (build ()) ]
 
@@ -210,10 +185,11 @@ let ``every broken project reaches the check it was written for`` (name: string)
     | Error issue ->
         // The typed parse refuses it; so does loading, with the same issue.
         Assert.True(case.Expect |> List.exists (function BrokenProjects.Decode _ -> true | _ -> false), sprintf "%s does not parse: %s" name issue)
-        Assert.False (ProjectLoad.migrateProject raw).Ok
+        Assert.False (ProjectLoad.loadProject raw).Ok
     | Ok project ->
         Assert.True(attempt (fun () -> SchemaChecks.lintProject project) |> Result.isOk)
-        if case.Typed project = project then
+        // Loading refuses another schema version before the checks run.
+        if case.Typed project = project && project.SchemaVersion = ProjectSchema.CurrentProjectSchemaVersion then
             assertLoadMatchesChecks name raw
         for form, game in exportedForms raw do
             Assert.True(attempt (fun () -> SchemaChecks.validateExportedGame game) |> Result.isOk, sprintf "%s (%s) throws" name form)
@@ -238,7 +214,7 @@ let ``every broken project reaches the check it was written for`` (name: string)
 [<Fact>]
 let ``the combined broken project hits the 20-error cap`` () =
     let case = brokenCase "everything at once"
-    let result = ProjectLoad.migrateProject (BrokenProjects.json case |> Net.JsonInterop.ofNode)
+    let result = ProjectLoad.loadProject (BrokenProjects.json case |> Net.JsonInterop.ofNode)
     Assert.False result.Ok
     Assert.True((result.Errors.Length = 20), String.concat "\n" result.Errors)
     Assert.True(SchemaChecks.validateProject (BrokenProjects.project case) |> List.length > 20)

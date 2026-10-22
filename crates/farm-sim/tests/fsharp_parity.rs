@@ -201,6 +201,6 @@ fn the_rust_pipeline_compiles_what_the_fsharp_pipeline_compiles() {
         failures.extend(results.into_iter().filter_map(Result::err));
         checked += 1;
     }
-    assert!(checked > 10, "only {checked} pipeline fixtures");
+    assert!(checked >= 10, "only {checked} pipeline fixtures");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

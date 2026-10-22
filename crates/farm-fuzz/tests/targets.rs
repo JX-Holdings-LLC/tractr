@@ -84,7 +84,7 @@ fn apply(seed: &[u8], edits: &[Edit]) -> Vec<u8> {
 /// Cases per target: the cheap parsers get more.
 fn cases(target: Target) -> u32 {
     match target {
-        Target::SaveMigration | Target::Image | Target::PluginMutations | Target::RenderRequest => 96,
+        Target::SaveState | Target::Image | Target::PluginMutations | Target::RenderRequest => 96,
         Target::Commands | Target::Save | Target::Session | Target::Preview => 48,
         Target::Cartridge | Target::Project => 24,
     }
@@ -122,7 +122,7 @@ macro_rules! target_tests {
 target_tests! {
     cartridge => Target::Cartridge,
     save => Target::Save,
-    save_migration => Target::SaveMigration,
+    save_state => Target::SaveState,
     image => Target::Image,
     project => Target::Project,
     commands => Target::Commands,

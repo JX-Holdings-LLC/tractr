@@ -257,7 +257,7 @@ impl std::fmt::Debug for HostPreview {
 }
 
 impl HostPreview {
-    /// A preview of a (migrated) project's JSON.
+    /// A preview of a project's JSON.
     pub fn new(project_json: &[u8]) -> Result<Self, String> {
         let project = parse_project(project_json)?;
         let mut preview = Self {

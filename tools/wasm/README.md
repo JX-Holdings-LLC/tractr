@@ -1,8 +1,8 @@
 # farm-wasm build and tests
 
 Builds [`crates/farm-wasm`](../../crates/farm-wasm/README.md), the game
-player for web pages, and tests it in Node. The web editor's Play Mode and the
-web demo export both use this build.
+player for web pages, and tests it in Node. The web demo export uses this
+build.
 
 ```sh
 tools/wasm/build.sh             # wasm-bindgen --target web output in tools/wasm/dist (not checked in)

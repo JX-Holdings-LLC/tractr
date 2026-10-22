@@ -3,7 +3,7 @@
 #
 #   tools/release/smoke-export.sh TARGET TEMPLATES OUT.json
 #
-# Exports fixtures/projects/project-v8.json for TARGET (windows-x64, linux-x64) with farmc,
+# Exports fixtures/projects/fixture-project.json for TARGET (windows-x64, linux-x64) with farmc,
 # taking the template from TEMPLATES/TARGET (farmc --templates), checks that the exported
 # cartridge is the golden one, runs the exported game headless through the twenty-tick
 # replay, and compares its report with the template's own run on the golden cartridge. The
@@ -31,11 +31,11 @@ work="$root/target/smoke-export-$target"
 rm -rf "$work"
 mkdir -p "$work"
 trap 'rm -rf "$work"' EXIT
-cart="$root/fixtures/golden/cartridges/project-v8.cart"
+cart="$root/fixtures/golden/cartridges/fixture-project.cart"
 replay="$root/fixtures/golden/cartridges/twenty-ticks.json"
 
 dotnet run --project "$root/src/FarmEngine.Cli" -c Release --no-build -- \
-  export "$root/fixtures/projects/project-v8.json" --target "$target" --templates "$templates" --out "$work/export"
+  export "$root/fixtures/projects/fixture-project.json" --target "$target" --templates "$templates" --out "$work/export"
 game="$(find "$work/export/$target" -mindepth 1 -maxdepth 1 -type d -print -quit)"
 name="$(basename "$game")"
 ls -l "$game" "$game/licenses"

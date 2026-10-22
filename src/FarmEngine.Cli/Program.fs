@@ -71,13 +71,13 @@ let rec parseArguments (args: string list) (acc: Arguments) : Result<Arguments, 
     | option :: _ when isOption option -> Error(sprintf "Unknown option %s." option)
     | positional :: rest -> parseArguments rest { acc with Positional = positional :: acc.Positional }
 
-/// The migrated project, or the migration errors.
+/// The loaded project, or why it could not be loaded.
 let private load (projectPath: string) : Result<GameProject, string list> =
-    let migrated = ProjectMigrations.migrateProjectText (File.ReadAllText projectPath)
-    if not migrated.Ok then Error(List.ofSeq migrated.Errors)
+    let loaded = ProjectJson.loadProjectText (File.ReadAllText projectPath)
+    if not loaded.Ok then Error(List.ofSeq loaded.Errors)
     else
-        match migrated.Data with
-        | None -> Error [ "Migration succeeded without project data." ]
+        match loaded.Data with
+        | None -> Error [ "The project loaded without project data." ]
         | Some project -> Ok project
 
 let private export (args: Arguments) (out: TextWriter) (err: TextWriter) : int =

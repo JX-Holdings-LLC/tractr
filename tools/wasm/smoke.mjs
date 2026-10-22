@@ -3,7 +3,7 @@
 //
 //   node tools/wasm/smoke.mjs [dist folder]    # default tools/wasm/dist
 //
-// - a Player renders frames of fixtures/projects/project-v8.json and takes input (keys and the
+// - a Player renders frames of fixtures/projects/fixture-project.json and takes input (keys and the
 //   touch controls' actions);
 // - a standalone Player autosaves into its in-memory storage, and a new Player continues from
 //   the exported storage with the same state hash; a stored document with bad settings changes
@@ -99,8 +99,8 @@ const press = (player, key) => {
   for (let i = 0; i < 2; i++) frame(player, [], [1280, 800], false);
 };
 
-await test("a player renders project-v8.json and takes input", () => {
-  const project = readFileSync(fixture("projects", "project-v8.json"), "utf8");
+await test("a player renders fixture-project.json and takes input", () => {
+  const project = readFileSync(fixture("projects", "fixture-project.json"), "utf8");
   const player = new farm.Player(project, { seed: "wasm-smoke" });
   const first = frame(player);
   assert.equal(first.width, 320);
@@ -168,7 +168,7 @@ await test("a player renders project-v8.json and takes input", () => {
 });
 
 await test("a cartridge player has no project to write back", () => {
-  const cart = readFileSync(fixture("golden", "cartridges", "project-v8.cart"));
+  const cart = readFileSync(fixture("golden", "cartridges", "fixture-project.cart"));
   const player = new farm.Player(new Uint8Array(cart));
   assert.equal(frame(player).pixels.length, 320 * 200 * 4);
   assert.throws(() => player.syncedProject(), /not started from an editor project/);
@@ -319,7 +319,7 @@ for (const name of replays) {
 }
 
 await test("sessions save, load and run cartridges", () => {
-  const cart = readFileSync(fixture("golden", "cartridges", "project-v8.cart"));
+  const cart = readFileSync(fixture("golden", "cartridges", "fixture-project.cart"));
   const replay = json("golden", "cartridges", "twenty-ticks.json");
   const session = new farm.Session(cart);
   const before = session.hash();
@@ -329,7 +329,7 @@ await test("sessions save, load and run cartridges", () => {
   assert.match(session.hash(), /^[0-9a-f]{16}$/);
   assert.throws(() => session.projectJson(), { kind: "invalid" });
   const report = JSON.parse(session.loadSave(save));
-  assert.equal(report.migrated, false);
+  assert.deepEqual(report, { quarantined: [], restored: [], warnings: [] });
   assert.equal(session.hash(), before);
   assert.throws(() => session.loadSave(save.replace('"gameId":"', '"gameId":"other-')), /different game/);
   session.free();

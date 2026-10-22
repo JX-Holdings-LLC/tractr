@@ -530,7 +530,7 @@ internal sealed class UnsavedChangesWindow : ProjectDialogWindow
     }
 }
 
-/// <summary>Shows load/migration errors.</summary>
+/// <summary>Shows load errors.</summary>
 internal sealed class ErrorWindow : ProjectDialogWindow
 {
     public ErrorWindow(string title, IReadOnlyList<string> errors)

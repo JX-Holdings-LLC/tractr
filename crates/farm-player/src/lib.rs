@@ -125,7 +125,7 @@ pub fn run_cartridge(bytes: &[u8], replay: &ReplayFile, load_save: Option<&[u8]>
 mod tests {
     use super::*;
 
-    const CART: &[u8] = include_bytes!("../../../fixtures/golden/cartridges/project-v8.cart");
+    const CART: &[u8] = include_bytes!("../../../fixtures/golden/cartridges/fixture-project.cart");
 
     #[test]
     fn replay_and_save_are_deterministic() {

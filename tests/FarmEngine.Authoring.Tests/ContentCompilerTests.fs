@@ -33,32 +33,6 @@ let ``all built in content definitions match TypeScript`` () =
     check "fish" (Encode.list SchemaJson.encodeFishTable (Builtin.fishTables ()))
     check "shop" (SchemaJson.encodeShopDefinition (Builtin.shop ()))
 
-let contentGoldens : obj[] seq =
-    Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Golden", "content"), "*.json")
-    |> Seq.map (fun path -> [| box path |])
-
-[<Theory; MemberData(nameof contentGoldens)>]
-let ``F sharp content matches TypeScript stable JSON and hash`` (path: string) =
-    let root = readJson [ path ]
-    let project = projectOf (Json.get "project" root)
-    let before = stableOf SchemaJson.encodeGameProject project
-    let content = SchemaJson.encodeGameContent (ContentCompiler.compile project)
-    Assert.Equal(Json.asString (Json.get "stable" root), Some(Json.stableStringify content))
-    Assert.Equal(Json.asString (Json.get "contentHash" root), Some(hashJson content))
-    Assert.Equal(before, stableOf SchemaJson.encodeGameProject project)
-
-let replayProjects : obj[] seq =
-    Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Golden", "replays"), "*.json")
-    |> Seq.filter (fun path -> Path.GetFileName path <> "index.json")
-    |> Seq.map (fun path -> [| box path |])
-
-/// Every replay records the hash of the content the TypeScript engine assembled for its project.
-[<Theory; MemberData(nameof replayProjects)>]
-let ``F sharp content matches the TypeScript content hash of every replay project`` (path: string) =
-    let root = readJson [ path ]
-    let project = projectOf (Json.get "project" root)
-    Assert.Equal(Json.asString (Json.get "contentHash" root), Some(hashJson (SchemaJson.encodeGameContent (ContentCompiler.compile project))))
-
 [<Fact>]
 let ``compiler falls back to the defaults for missing or unloadable settings`` () =
     let project = blank ()

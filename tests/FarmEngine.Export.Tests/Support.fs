@@ -26,9 +26,9 @@ type TempDir() =
             with :? IOException ->
                 ()
 
-/// The v8 fixture project (the one fixtures/golden/cartridges/project-v8.cart is compiled from).
-let v8Project () : GameProject =
-    let result = ProjectMigrations.migrateProjectText (File.ReadAllText(fixture "project-v8.json"))
+/// The fixture project (the one fixtures/golden/cartridges/fixture-project.cart is compiled from).
+let fixtureProject () : GameProject =
+    let result = ProjectJson.loadProjectText (File.ReadAllText(fixture "fixture-project.json"))
     Assert.True(result.Ok, String.Join("\n", result.Errors))
     result.Data.Value
 

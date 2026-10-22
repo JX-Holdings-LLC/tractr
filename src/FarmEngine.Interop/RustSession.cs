@@ -26,7 +26,7 @@ public sealed unsafe class RustSession : IDisposable
     public bool IsPoisoned => _native.IsPoisoned;
 
     /// <summary>
-    /// Creates a session from a (migrated) project (<c>createGameState</c>, then optionally
+    /// Creates a session from a project (<c>createGameState</c>, then optionally
     /// <c>autoStartQuests</c>).
     /// </summary>
     public static RustSession Create(GameProject project, string? seed = null, bool autoStartQuests = false)
@@ -159,7 +159,7 @@ public sealed unsafe class RustSession : IDisposable
 
     /// <summary>
     /// Replaces the live state with <paramref name="stateJson"/> as it is (creator tools): unlike
-    /// <see cref="LoadSave"/> nothing is migrated or quarantined. A state Rust cannot read throws
+    /// <see cref="LoadSave"/> nothing is quarantined. A state Rust cannot read throws
     /// <see cref="FarmFfiException"/> and leaves the state as it was.
     /// </summary>
     public void SetState(string stateJson)
@@ -181,9 +181,9 @@ public sealed unsafe class RustSession : IDisposable
     }
 
     /// <summary>
-    /// Replaces the state with a save file (or a bare web <c>GameState</c>). Old saves are
-    /// migrated and items the game no longer has are quarantined. A save from another game, or
-    /// one that fails validation, throws <see cref="FarmFfiException"/> and leaves the state as
+    /// Replaces the state with a save file (or a bare web <c>GameState</c>). Items the game no
+    /// longer has are quarantined. A save from another game or an older save version, or one
+    /// that fails validation, throws <see cref="FarmFfiException"/> and leaves the state as
     /// it was.
     /// </summary>
     public SaveLoadReport LoadSave(string save)
@@ -200,11 +200,7 @@ public sealed unsafe class RustSession : IDisposable
 /// <param name="Warnings">Things the player should know (a newer game version wrote the save, items set aside).</param>
 /// <param name="Quarantined">Ids of items the game no longer has, moved to quarantine.</param>
 /// <param name="Restored">Ids of quarantined items that came back.</param>
-/// <param name="FromVersion">The save version before migration.</param>
-/// <param name="Migrated">The save went through save migrations.</param>
 public sealed record SaveLoadReport(
     IReadOnlyList<string> Warnings,
     IReadOnlyList<string> Quarantined,
-    IReadOnlyList<string> Restored,
-    double FromVersion,
-    bool Migrated);
+    IReadOnlyList<string> Restored);

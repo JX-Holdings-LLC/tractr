@@ -601,7 +601,7 @@ mod tests {
         assert!(save.stable_json().len() > 100_000);
 
         let carts = sample_cartridges();
-        assert!(carts.iter().any(|(name, _)| name == "project-v8"));
+        assert!(carts.iter().any(|(name, _)| name == "fixture-project"));
         for (_, bytes) in &carts {
             start_cartridge(bytes);
         }

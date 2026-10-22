@@ -46,7 +46,7 @@ let ``sprite sheets apply the slicing defaults and plain assets stay static`` ()
 
 [<Fact>]
 let ``the v8 fixture round trips stably and keeps present-as-null keys`` () =
-    let json = readJson [ "Fixtures"; "project-v8.json" ]
+    let json = readJson [ "Fixtures"; "fixture-project.json" ]
     let project = projectOf json
     let first = Json.stringify (ProjectLoad.toJson project)
     let again = roundTrip project
@@ -67,7 +67,7 @@ let ``the v8 fixture round trips stably and keeps present-as-null keys`` () =
 [<Fact>]
 let ``undeclared keys survive on passthrough records`` () =
     let json =
-        match readJson [ "Fixtures"; "project-v8.json" ] with
+        match readJson [ "Fixtures"; "fixture-project.json" ] with
         | JObject members -> JObject(members @ [ "futureField", parse """{"nested":42}""" ])
         | _ -> failwith "not an object"
     let project = projectOf json

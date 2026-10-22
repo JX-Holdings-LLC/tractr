@@ -15,7 +15,7 @@ pub struct WasmPreview {
 
 #[wasm_bindgen(js_class = Preview)]
 impl WasmPreview {
-    /// A preview of a (migrated) project: JSON text, a parsed object or its UTF-8 bytes.
+    /// A preview of a project: JSON text, a parsed object or its UTF-8 bytes.
     #[wasm_bindgen(constructor)]
     pub fn new(
         #[wasm_bindgen(unchecked_param_type = "Uint8Array | string | object")] project: JsValue,

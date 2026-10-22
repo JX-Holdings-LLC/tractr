@@ -13,7 +13,7 @@ fn scratch(name: &str) -> PathBuf {
 }
 
 fn cart() -> PathBuf {
-    common::root().join("fixtures").join("golden").join("cartridges").join("project-v8.cart")
+    common::root().join("fixtures").join("golden").join("cartridges").join("fixture-project.cart")
 }
 
 #[test]

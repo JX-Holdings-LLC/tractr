@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0
+
+- **Tractr and the web version are separate projects now.** Tractr reads and
+  writes schema v9 projects and version 5 saves, and nothing older. Breaking:
+  a project file from an earlier schema (an early web or native build) is
+  refused with "Project schema version N is not supported" instead of being
+  upgraded, and so is an older save. Projects made with 0.4.0 are already
+  v9 and open as before.
+- **For contributors:** the compatibility code is gone. The F# project
+  migrations (`Migrations.fs`) became a version check in `ProjectLoad`
+  (`loadProject`, `loadProjectText`; the .NET edge is `ProjectJson`, formerly
+  `ProjectMigrations`), and the Rust save migrations became
+  `farm_cart::load_game_state`. Save reports no longer carry `fromVersion` or
+  `migrated`. The Fable build of the authoring core (`tools/fable`,
+  `WebApi.fs`, `dotnet-tools.json`), the TypeScript golden generator
+  (`tools/golden`) and the TypeScript-recorded goldens (`fixtures/golden/v8`,
+  the migration goldens, `fixtures/projects/migrated`, `project-v1`…`v7`) are
+  deleted; the golden guard moved to `tools/ci/golden-guard.sh`, the fixture
+  project is `fixtures/projects/fixture-project.json` (and its cartridge
+  `fixture-project.cart`), the fuzz target `save_migration` is `save_state`,
+  and the RNG and stable-JSON vectors live in `fixtures/golden/vectors`. Every
+  golden replay, content golden and state hash is unchanged.
+
 ## 0.4.0
 
 - **Farming RPG Maker is now Tractr, all the way down.** The app, its windows,

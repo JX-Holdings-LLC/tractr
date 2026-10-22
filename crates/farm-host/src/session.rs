@@ -30,7 +30,7 @@ impl std::fmt::Debug for HostSession {
 }
 
 impl HostSession {
-    /// A session from migrated project JSON or a verified `FGCT` cartridge. `seed` `None` (or
+    /// A session from project JSON or a verified `FGCT` cartridge. `seed` `None` (or
     /// empty) uses the project's own `id:gameStartTime` seed, like the TS engine.
     /// `auto_start_quests` does what hosts do at game start.
     pub fn new(game: &[u8], seed: Option<&str>, auto_start_quests: bool) -> Result<Self, String> {
@@ -105,8 +105,8 @@ impl HostSession {
         view_json::to_json(&self.ctx.drain_hook_events())
     }
 
-    /// Replaces the live state with a `GameState` as JSON, taken as it is (nothing is migrated
-    /// or quarantined; only tile grids that don't match their scene's size are fixed). Invalid
+    /// Replaces the live state with a `GameState` as JSON, taken as it is (nothing is
+    /// quarantined; only tile grids that don't match their scene's size are fixed). Invalid
     /// JSON leaves the state untouched.
     pub fn set_state(&mut self, state_json: &[u8]) -> Result<(), String> {
         let mut state: GameState = serde_json::from_slice(state_json).map_err(|e| format!("state JSON: {e}"))?;
@@ -128,10 +128,9 @@ impl HostSession {
         save_file::write_save(&self.state, &self.target)
     }
 
-    /// Loads a JSON save file (or a bare web `GameState`), replacing the state. Old saves are
-    /// migrated and items the content no longer has are quarantined. Returns `{"warnings",
-    /// "quarantined", "restored", "fromVersion", "migrated"}`; a refused save leaves the state
-    /// untouched and the error lists the reasons.
+    /// Loads a JSON save file (or a bare web `GameState`), replacing the state. Items the content
+    /// no longer has are quarantined. Returns `{"warnings", "quarantined", "restored"}`; a refused
+    /// save leaves the state untouched and the error lists the reasons.
     pub fn load_save(&mut self, save: &[u8]) -> Result<String, String> {
         let text = std::str::from_utf8(save).map_err(|e| format!("save file is not UTF-8: {e}"))?;
         let loaded = save_file::load_save(text, &self.target, &self.ctx.content);
@@ -143,8 +142,6 @@ impl HostSession {
             "warnings": loaded.warnings,
             "quarantined": loaded.quarantined,
             "restored": loaded.restored,
-            "fromVersion": loaded.from_version,
-            "migrated": loaded.migrated,
         });
         Ok(stable_json::stringify_value(&report))
     }

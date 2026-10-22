@@ -1,5 +1,5 @@
 //! `farm-fuzz`: fuzz entry points for the places where input from outside reaches the engine
-//! (#116): cartridges, saves and their migrations, images, project JSON, host requests (render,
+//! (#116): cartridges, saves, save states, images, project JSON, host requests (render,
 //! preview, session) and plugin output, plus random play on new games.
 //!
 //! Every [`Target`] takes arbitrary bytes and must neither panic nor hang, and states the engine
@@ -32,8 +32,8 @@ pub enum Target {
     /// Save file bytes (binary `FGSV` or JSON) for the starter farm: `read_save_preview`,
     /// `load_save_bytes`; a loaded save saves and loads back unchanged and plays on.
     Save,
-    /// Save state JSON of any version: `migrate_game_state_json`.
-    SaveMigration,
+    /// Save state JSON: `load_game_state_json`.
+    SaveState,
     /// Image bytes: `farm_render::decode_image`.
     Image,
     /// Project JSON, a `0xFF` byte, then play: the project's content and new game, then the
@@ -58,7 +58,7 @@ impl Target {
     pub const ALL: [Target; 10] = [
         Self::Cartridge,
         Self::Save,
-        Self::SaveMigration,
+        Self::SaveState,
         Self::Image,
         Self::Project,
         Self::Commands,
@@ -73,7 +73,7 @@ impl Target {
         match self {
             Self::Cartridge => "cartridge",
             Self::Save => "save",
-            Self::SaveMigration => "save_migration",
+            Self::SaveState => "save_state",
             Self::Image => "image",
             Self::Project => "project",
             Self::Commands => "commands",
@@ -90,7 +90,7 @@ impl Target {
         match self {
             Self::Cartridge => cartridge(data),
             Self::Save => save(data),
-            Self::SaveMigration => save_migration(data),
+            Self::SaveState => save_state(data),
             Self::Image => image(data),
             Self::Project => project(data),
             Self::Commands => commands(data),
@@ -116,7 +116,7 @@ impl Target {
                 ));
                 seeds
             }
-            Self::SaveMigration => fixtures("golden/saves", "json"),
+            Self::SaveState => fixtures("golden/saves", "json"),
             Self::Image => {
                 let mut seeds = fixtures("render", "png");
                 seeds.truncate(3);
@@ -269,9 +269,9 @@ fn save(data: &[u8]) {
     engine::apply_command(&ctx, &mut game, &Command::Sleep);
 }
 
-fn save_migration(data: &[u8]) {
+fn save_state(data: &[u8]) {
     let Ok(text) = std::str::from_utf8(data) else { return };
-    let result = farm_cart::migrate_game_state_json(text);
+    let result = farm_cart::load_game_state_json(text);
     if let Some(state) = result.data.filter(|_| result.ok) {
         let _ = farm_cart::save::validate_game_state(&state);
     }

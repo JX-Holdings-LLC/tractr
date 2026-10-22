@@ -1,13 +1,10 @@
 //! The golden replays.
 //!
-//! `fixtures/golden/v8/replays` holds the replays the TypeScript reference engine recorded
-//! (project, seed and input log, with its hashes, effects and states). Since v9 Rust is the
-//! reference (docs/NUMERICS.md "Goldens"): `fixtures/golden/replays` holds the same inputs with
-//! the hashes, effects and states this engine produces, recorded with
-//! `FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_replays` and reviewed as a diff.
-//! Every replay must reproduce its recorded hash after every step, byte for byte. (The v8
-//! replays themselves are still played by `v8_outcomes`, which checks that v9 plays the same
-//! game as v8.)
+//! `fixtures/golden/replays` holds replays (project, seed and input log) with the hashes,
+//! effects and states this engine produces, recorded with
+//! `FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_replays` and reviewed as a diff
+//! (docs/NUMERICS.md "Goldens"). Every replay must reproduce its recorded hash after every step,
+//! byte for byte.
 //!
 //! All replays run in one test so a change shows every divergence at once: a replay that
 //! panics is reported with the panic location and message, and the run continues.
@@ -151,14 +148,12 @@ fn first_difference(recorded: &Value, actual: &Value) -> Option<String> {
 }
 
 fn check(name: &str) -> Result<(), String> {
-    let source = golden(&format!("v8/replays/{name}.json"));
-    let actual = play(&source)?;
-    let path = golden_dir(&format!("replays/{name}.json"));
+    let recorded = golden(&format!("replays/{name}.json"));
+    let actual = play(&recorded)?;
     if recording() {
         let text = serde_json::to_string(&actual).map_err(|e| e.to_string())? + "\n";
-        return RECORDER.write(&path, text.as_bytes());
+        return RECORDER.write(&golden_dir(&format!("replays/{name}.json")), text.as_bytes());
     }
-    let recorded = golden(&format!("replays/{name}.json"));
     match first_difference(&recorded, &actual) {
         Some(difference) => Err(difference),
         None => Ok(()),
@@ -175,11 +170,8 @@ fn take_last_panic() -> Option<String> {
 
 #[test]
 fn replays_match_the_recorded_goldens() {
-    let names = fixture_names("v8/replays");
+    let names = fixture_names("replays");
     assert!(!names.is_empty(), "no replay fixtures found");
-    if !recording() {
-        assert_eq!(fixture_names("replays"), names, "every v8 replay has a recorded v9 golden");
-    }
 
     let previous_hook = panic::take_hook();
     panic::set_hook(Box::new(|info| {

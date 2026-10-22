@@ -39,7 +39,6 @@ fn a_save_round_trips_unchanged_on_the_same_cartridge() {
     assert_eq!(loaded.warnings, Vec::<String>::new());
     assert_eq!(stable_stringify(loaded.state.as_ref().unwrap()), stable_stringify(&state));
     assert_eq!(loaded.header.expect("header").game_id, project.id);
-    assert!(!loaded.migrated);
 }
 
 #[test]
@@ -195,16 +194,15 @@ fn bare_web_saves_load_and_reconcile() {
 }
 
 #[test]
-fn old_web_saves_are_migrated_on_load() {
+fn saves_of_an_older_version_are_refused() {
     let path: PathBuf =
-        [env!("CARGO_MANIFEST_DIR"), "..", "..", "fixtures", "golden", "saves", "save-v1.json"].iter().collect();
+        [env!("CARGO_MANIFEST_DIR"), "..", "..", "fixtures", "golden", "saves", "save-v4.json"].iter().collect();
     let fixture: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let project = starter_project();
     let (content, target) = build(&project);
     let loaded = load_save(&fixture["input"].to_string(), &target, &content);
-    assert!(loaded.ok, "{:?}", loaded.errors);
-    assert!(loaded.migrated);
-    assert_eq!(loaded.from_version, 1.0);
+    assert!(!loaded.ok);
+    assert!(loaded.errors[0].contains("Save version 4 is not supported"), "{:?}", loaded.errors);
 }
 
 #[test]

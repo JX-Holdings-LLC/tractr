@@ -67,8 +67,7 @@ fn entry(weather_id: &str, weight: u32) -> WeatherTableEntry {
 }
 
 /// The weather config projects get when they have none (TS `defaultWeatherConfig()` in
-/// migrations.ts; C# `MigrationsSchema.DefaultWeatherConfig`). Lives here because content
-/// assembly needs it while project migrations move to F#.
+/// migrations.ts; F# `MigrationsSchema.DefaultWeatherConfig`). Content assembly uses it.
 pub fn default_weather_config() -> WeatherConfig {
     let mut table = IndexMap::new();
     table.insert("spring".to_owned(), vec![entry("sun", 6), entry("rain", 3), entry("storm", 1)]);

@@ -42,7 +42,7 @@ jobs:
       # CI checks goldens; it never re-records them (docs/NUMERICS.md "Goldens").
       - name: No record or bless switches
         shell: bash
-        run: tools/golden/ci-guard.sh switches
+        run: tools/ci/golden-guard.sh switches
 
       # rust-toolchain.toml pins the version, components and targets.
       - name: Rust toolchain
@@ -82,7 +82,7 @@ jobs:
 
       - name: The tests left fixtures/ unchanged
         shell: bash
-        run: tools/golden/ci-guard.sh fixtures
+        run: tools/ci/golden-guard.sh fixtures
 
       # The benchmark budgets (docs/LANGUAGES.md "Tests"), checked on medians with a 3× margin
       # for shared runners. `cargo bench -p farm-bench` has the full criterion statistics.
@@ -218,7 +218,7 @@ jobs:
           persist-credentials: false
 
       - name: No record or bless switches
-        run: tools/golden/ci-guard.sh switches
+        run: tools/ci/golden-guard.sh switches
 
       # Exactly the SDK global.json names (no roll-forward on the runner).
       - name: Pin the .NET SDK
@@ -274,7 +274,7 @@ jobs:
         run: dotnet test -c Release --no-build --logger trx --results-directory TestResults --collect:"XPlat Code Coverage"
 
       - name: The tests left fixtures/ unchanged
-        run: tools/golden/ci-guard.sh fixtures
+        run: tools/ci/golden-guard.sh fixtures
 
       - name: Coverage minimums
         run: python3 tools/coverage/check.py dotnet TestResults
@@ -286,17 +286,11 @@ jobs:
           tools/codegen/check.sh
           tools/release/versions.sh
 
-      # The authoring core must stay Fable-safe (docs/LANGUAGES.md "Phase 7"): compile it to
-      # JavaScript and check the result against the .NET cartridges and migration goldens.
+      # tools/editor-licenses/generate.mjs runs on Node.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           package-manager-cache: false
-
-      - name: Authoring core under Fable (JavaScript)
-        run: |
-          tools/fable/build.sh
-          node tools/fable/smoke.mjs
 
       # The editor ships tools/editor-licenses/THIRD-PARTY-dotnet.txt (its NuGet packages' notices).
       - name: Editor license notices are current
@@ -306,15 +300,15 @@ jobs:
       - name: Export a sample game and run it (linux-x64)
         run: |
           dotnet run --project src/FarmEngine.Cli -c Release --no-build -- \
-            export fixtures/projects/project-v8.json --target linux-x64 --out export-smoke
+            export fixtures/projects/fixture-project.json --target linux-x64 --out export-smoke
           game=$(find export-smoke/linux-x64 -mindepth 1 -maxdepth 1 -type d -print -quit)
           name=$(basename "$game")
           ls -l "$game" "$game/licenses"
           test -x "$game/$name"
-          cmp "$game/game.cart" fixtures/golden/cartridges/project-v8.cart
+          cmp "$game/game.cart" fixtures/golden/cartridges/fixture-project.cart
           tar -tvzf "export-smoke/$name-linux-x64.tar.gz"
           "$game/$name" --headless --replay fixtures/golden/cartridges/twenty-ticks.json | tee exported.json
-          target/release/farm-player --headless --cart fixtures/golden/cartridges/project-v8.cart \
+          target/release/farm-player --headless --cart fixtures/golden/cartridges/fixture-project.cart \
             --replay fixtures/golden/cartridges/twenty-ticks.json > reference.json
           diff exported.json reference.json
 
@@ -346,7 +340,7 @@ jobs:
 
       - name: No record or bless switches
         shell: bash
-        run: tools/golden/ci-guard.sh switches
+        run: tools/ci/golden-guard.sh switches
 
       - name: Pin the .NET SDK
         shell: pwsh
@@ -386,7 +380,7 @@ jobs:
 
       - name: The tests left fixtures/ unchanged
         shell: bash
-        run: tools/golden/ci-guard.sh fixtures
+        run: tools/ci/golden-guard.sh fixtures
 
       - name: Publish (self-contained win-x64)
         run: dotnet publish src/Tractr.App -c Release -r win-x64 --self-contained -o publish
@@ -418,11 +412,11 @@ jobs:
       - name: Export a sample game and run it (windows-x64)
         shell: pwsh
         run: |
-          dotnet run --project src/FarmEngine.Cli -c Release --no-build -- export fixtures/projects/project-v8.json --target windows-x64 --out export-smoke
+          dotnet run --project src/FarmEngine.Cli -c Release --no-build -- export fixtures/projects/fixture-project.json --target windows-x64 --out export-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $game = Get-ChildItem export-smoke/windows-x64 -Directory | Select-Object -First 1
           $exe = Join-Path $game.FullName "$($game.Name).exe"
-          $title = (Get-Content fixtures/projects/project-v8.json -Raw | ConvertFrom-Json).name
+          $title = (Get-Content fixtures/projects/fixture-project.json -Raw | ConvertFrom-Json).name
           $info = (Get-Item $exe).VersionInfo
           Write-Host "$($info.ProductName) $($info.ProductVersion) / $($info.FileDescription) / $($info.OriginalFilename)"
           if ($info.ProductName -ne $title -or $info.FileDescription -ne $title) { throw "Version info was not written: '$($info.ProductName)'" }
@@ -446,7 +440,7 @@ jobs:
           $run = Start-Process -FilePath $exe -ArgumentList '--headless', '--replay', 'fixtures/golden/cartridges/twenty-ticks.json' -NoNewWindow -Wait -PassThru -RedirectStandardOutput exported.json
           if ($run.ExitCode -ne 0) { throw "The exported game exited with $($run.ExitCode)" }
           $exported = (Get-Content exported.json -Raw).Trim()
-          $reference = & target/release/farm-player.exe --headless --cart fixtures/golden/cartridges/project-v8.cart --replay fixtures/golden/cartridges/twenty-ticks.json
+          $reference = & target/release/farm-player.exe --headless --cart fixtures/golden/cartridges/fixture-project.cart --replay fixtures/golden/cartridges/twenty-ticks.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host $exported
           if ($exported -ne "$reference".Trim()) { throw "The exported game reported $exported, the template $reference" }
@@ -502,7 +496,7 @@ jobs:
         run: |
           cargo build --release --locked -p farm-player
           ldd --version | sed -n 1p
-          target/release/farm-player --headless --cart fixtures/golden/cartridges/project-v8.cart \
+          target/release/farm-player --headless --cart fixtures/golden/cartridges/fixture-project.cart \
             --replay fixtures/golden/cartridges/twenty-ticks.json
           tools/player-templates/package.sh linux-x64 "0.0.0-ci" target/release/farm-player players
 

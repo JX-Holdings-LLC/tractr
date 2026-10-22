@@ -14,7 +14,7 @@ prerequisites:
   - name: Node
     version: "22"
     check: node --version
-    note: only for the WebAssembly and Fable smoke tests and markdownlint; there is no npm dependency tree
+    note: only for the WebAssembly smoke tests and markdownlint; there is no npm dependency tree
   - name: Linux packages
     os: linux
     install: sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb
@@ -24,14 +24,13 @@ prerequisites:
     note: text-style check and coverage minimums
 
 env:
-  # Never re-record goldens in a QA run; tools/golden/ci-guard.sh fails when one is set.
+  # Never re-record goldens in a QA run; tools/ci/golden-guard.sh fails when one is set.
   forbidden: ["FARM_RECORD_*", "*_BLESS"]
 
 levels:
   install:
     commands:
       - dotnet restore
-      - dotnet tool restore
   build:
     commands:
       - dotnet build -c Release --no-restore # also builds crates/farm-ffi and the player template
@@ -46,10 +45,10 @@ levels:
       - npx --yes markdownlint-cli2@0.23.3
   unit:
     commands:
-      - tools/golden/ci-guard.sh switches
+      - tools/ci/golden-guard.sh switches
       - cargo test --locked --workspace
       - dotnet test -c Release --no-build
-      - tools/golden/ci-guard.sh fixtures # the tests left fixtures/ unchanged
+      - tools/ci/golden-guard.sh fixtures # the tests left fixtures/ unchanged
   generated:
     commands:
       - tools/codegen/check.sh
@@ -59,16 +58,15 @@ levels:
   smoke:
     commands:
       - cargo build --locked --release -p farm-player
-      - target/release/farm-player --headless --cart fixtures/golden/cartridges/project-v8.cart --replay fixtures/golden/cartridges/twenty-ticks.json
+      - target/release/farm-player --headless --cart fixtures/golden/cartridges/fixture-project.cart --replay fixtures/golden/cartridges/twenty-ticks.json
       - tools/wasm/build.sh && node tools/wasm/smoke.mjs && node tools/wasm/game-page.mjs
-      - tools/fable/build.sh && node tools/fable/smoke.mjs
   export-smoke:
     os: linux
     after: [build, smoke]
     commands:
-      - dotnet run --project src/FarmEngine.Cli -c Release --no-build -- export fixtures/projects/project-v8.json --target linux-x64 --out export-smoke
+      - dotnet run --project src/FarmEngine.Cli -c Release --no-build -- export fixtures/projects/fixture-project.json --target linux-x64 --out export-smoke
       - bash -c 'game=$(find export-smoke/linux-x64 -mindepth 1 -maxdepth 1 -type d -print -quit); "$game/$(basename "$game")" --headless --replay fixtures/golden/cartridges/twenty-ticks.json > exported.json'
-      - bash -c 'target/release/farm-player --headless --cart fixtures/golden/cartridges/project-v8.cart --replay fixtures/golden/cartridges/twenty-ticks.json > reference.json && diff exported.json reference.json'
+      - bash -c 'target/release/farm-player --headless --cart fixtures/golden/cartridges/fixture-project.cart --replay fixtures/golden/cartridges/twenty-ticks.json > reference.json && diff exported.json reference.json'
   performance:
     os: linux
     commands:
@@ -103,7 +101,7 @@ skip:
 risky_areas:
   - Golden fixtures (fixtures/golden, fixtures/player, fixtures/render): never re-record in QA; a diff is a finding.
   - Plugin sandbox (crates/farm-plugins, docs/PLUGINS.md): budgets, permissions, hostile packs.
-  - Project, pack and save import (F# migrations, crates/farm-cart): untrusted files.
+  - Project, pack and save import (F# project loading, crates/farm-cart): untrusted files.
   - Export Game (src/FarmEngine.Export, docs/EXPORT.md): templates, archives, PE patching.
   - Update Center (src/Tractr.Updates): Velopack and GitHub Releases.
   - F#/Rust schema parity (two project pipelines, docs/LANGUAGES.md).

@@ -49,8 +49,8 @@ doc = false
 bench = false
 
 [[bin]]
-name = "save_migration"
-path = "fuzz_targets/save_migration.rs"
+name = "save_state"
+path = "fuzz_targets/save_state.rs"
 test = false
 doc = false
 bench = false

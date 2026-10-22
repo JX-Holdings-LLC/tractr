@@ -15,7 +15,7 @@ differ (`tools/codegen/check.sh`, which also checks `RecordJson.fs` and
 `RecordWith.fs` against their generators in `tools/codegen`).
 
 The F# side has no generated code: `src/FarmEngine.Authoring/FlatBuffers.fs`
-is a plain-F# builder (it also runs under Fable) that writes the same bytes as
+is a plain-F# builder that writes the same bytes as
 the official builders, and `CartridgeCompiler.fs` adds the fields in the order
 `flatc`'s `Create…` helpers do; `CartridgeReader.fs` reads cartridges back.
 Update both when `cart.fbs` changes. Only Rust reads saves. The generated Rust
@@ -54,7 +54,7 @@ The same project and editor version always give the same bytes. The
 cross-language golden is regenerated with:
 
 ```sh
-dotnet run --project src/FarmEngine.Cli -- compile fixtures/projects/project-v8.json --out fixtures/golden/cartridges/project-v8.cart
+dotnet run --project src/FarmEngine.Cli -- compile fixtures/projects/fixture-project.json --out fixtures/golden/cartridges/fixture-project.cart
 ```
 
 ## Saves

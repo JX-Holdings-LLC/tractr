@@ -321,6 +321,21 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
 - [x] **Web demo export**: Export Game's web target runs `farm-wasm`'s
   standalone player in a page for itch.io.
 
+## Separate projects (0.5.0)
+
+Tractr and the web version are separate projects now, and neither has old
+projects to carry forward, so the compatibility code is gone:
+
+- [x] The Fable build of the authoring core (`tools/fable`, `WebApi.fs`, the
+  Fable dotnet tool and its CI step).
+- [x] Project migrations (`Migrations.fs`): `ProjectLoad` reads schema v9 only
+  and refuses older versions with a message.
+- [x] Save migrations (`farm-cart::save`): only save version 5 loads.
+- [x] The TypeScript golden generator (`tools/golden`) and the v8 goldens and
+  outcomes (`fixtures/golden/v8`, `v8_outcomes`); every golden is recorded
+  from Rust. The RNG and stable-JSON vectors stay as fixed vectors
+  (`fixtures/golden/vectors`).
+
 ## Parity with the web editor
 
 After phase 7 a review listed what the web editor still did better. All of it
@@ -379,9 +394,6 @@ and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
-- **Retire the web version's TypeScript engine** once playtesting on
-  `farm-wasm` has proven itself, and move its HTML export to `farm-wasm`'s
-  standalone player (as the native editor's web demo export does).
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
 - **Player polish.** GPU effects: day/night lighting, season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws

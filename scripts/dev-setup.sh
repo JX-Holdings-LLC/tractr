@@ -7,8 +7,7 @@
 #   scripts/dev-setup.sh --check    install nothing; report what is present and what is missing
 #   scripts/dev-setup.sh --yes      do not ask before running apt-get or brew
 #
-# Everything is pinned by the repository (rust-toolchain.toml, global.json, dotnet-tools.json,
-# Cargo.lock) and downloads are checked: rustup through tools/ci/install-rust.sh (sha256), the .NET
+# Everything is pinned by the repository (rust-toolchain.toml, global.json, Cargo.lock) and downloads are checked: rustup through tools/ci/install-rust.sh (sha256), the .NET
 # SDK against the sha512 in Microsoft's release metadata. Nothing is piped into a shell. The .NET
 # SDK goes to ~/.dotnet unless a `dotnet` with the right SDK is already on PATH.
 # Windows: see scripts/dev-setup.ps1.
@@ -192,20 +191,16 @@ dotnet_() {
     }
   fi
   ok "dotnet $(cd "$root" && dotnet --version)"
-  if [[ $mode == install ]]; then
-    (cd "$root" && dotnet tool restore > /dev/null)
-  fi
-  if (cd "$root" && dotnet tool list --local 2> /dev/null | grep -q '^fable '); then ok "fable (dotnet tool)"; else miss "fable (dotnet tool restore)"; fi
 }
 
 # --- Node -----------------------------------------------------------------------------------
 
 node_() {
-  say "Node 22 (the WebAssembly and Fable smoke tests, markdownlint)"
+  say "Node 22 (the WebAssembly smoke tests, markdownlint)"
   if command -v node > /dev/null && [[ $(node --version) == v2[2-9]* ]]; then
     ok "node $(node --version)"
   else
-    echo "  optional: install Node 22 (https://nodejs.org) to run tools/wasm and tools/fable smoke tests"
+    echo "  optional: install Node 22 (https://nodejs.org) to run the tools/wasm smoke tests"
   fi
 }
 

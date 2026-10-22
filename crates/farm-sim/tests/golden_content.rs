@@ -1,11 +1,9 @@
 //! The data types, content assembly and state creation against the goldens.
 //!
-//! - `fixtures/golden/v8/{content,replays}` hold the TypeScript engine's fixtures. Their projects
-//!   are migration inputs now: each must still load, and content assembly must give what the v8
-//!   engine gave up to the v9 grids (docs/NUMERICS.md).
-//! - `fixtures/golden/content` holds the same projects with what this engine records for them
-//!   (`projectStable`, content `stable`, `contentHash`, `stateHash`), rewritten with
-//!   `FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_content`.
+//! `fixtures/golden/content` holds projects with what this engine records for them
+//! (`projectStable`, content `stable`, `contentHash`, `stateHash`), rewritten with
+//! `FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_content`. The projects of
+//! `fixtures/golden/{content,replays}` must also round-trip through the Rust types.
 //!
 //! The sharp tool is the stable-JSON comparison: when it differs, the first differing character
 //! is reported with 200 characters of context on each side.
@@ -59,7 +57,7 @@ fn same_stable(what: &str, expected: &str, actual: &str) -> Result<(), String> {
         chars[from..to].iter().collect()
     };
     Err(format!(
-        "{what}: stable JSON differs at char {at} (expected {} chars, got {}).\nTS:   …{}…\nRust: …{}…",
+        "{what}: stable JSON differs at char {at} (expected {} chars, got {}).\nexpected: …{}…\nactual:   …{}…",
         expected_chars.len(),
         actual_chars.len(),
         excerpt(&expected_chars),
@@ -82,7 +80,7 @@ fn within_grid(path: &str, expected: &Value, actual: &Value, out: &mut Vec<Strin
         (Value::Number(a), Value::Number(b)) => {
             let (a, b) = (a.as_f64().unwrap_or(f64::NAN), b.as_f64().unwrap_or(f64::NAN));
             if (a - b).abs() > 1e-3 {
-                out.push(format!("{path}: v8 {a}, now {b}"));
+                out.push(format!("{path}: written {a}, read back {b}"));
             }
         }
         (Value::Object(a), Value::Object(b)) => {
@@ -97,7 +95,7 @@ fn within_grid(path: &str, expected: &Value, actual: &Value, out: &mut Vec<Strin
             }
         }
         _ if expected == actual => {}
-        _ => out.push(format!("{path}: v8 {expected}, now {actual}")),
+        _ => out.push(format!("{path}: written {expected}, read back {actual}")),
     }
 }
 
@@ -112,31 +110,21 @@ fn same_within_grid(what: &str, expected: &Value, actual: &Value) -> Result<(), 
     }
 }
 
-fn parse_stable(text: &Value) -> Value {
-    serde_json::from_str(text.as_str().unwrap_or("null")).unwrap_or(Value::Null)
-}
-
-/// A v8 project (a TypeScript golden input) still loads: it deserializes, and writing it back
-/// changes nothing beyond moving numbers onto their grids.
-fn v8_project(name: &str, project: &Value) -> Result<GameProject, String> {
+/// A golden project deserializes, and writing it back changes nothing beyond moving numbers
+/// onto their grids.
+fn round_trips(name: &str, project: &Value) -> Result<(), String> {
     let typed: GameProject =
         serde_json::from_value(project.clone()).map_err(|e| format!("{name}: deserialize project: {e}"))?;
     let written = serde_json::to_value(&typed).map_err(|e| e.to_string())?;
-    same_within_grid(&format!("{name} project round-trip"), project, &written)?;
-    Ok(typed)
+    same_within_grid(&format!("{name} project round-trip"), project, &written)
 }
 
-fn check_v8_content(name: &str) -> Result<(), String> {
-    let fixture = golden(&format!("v8/content/{name}.json"));
-    let project = v8_project(name, &fixture["project"])?;
-    let content = state::create_content_from_project(&project);
-    let now: Value = serde_json::from_str(&stable_json::stringify(&content)).map_err(|e| e.to_string())?;
-    same_within_grid(&format!("{name} content"), &parse_stable(&fixture["stable"]), &now)
+fn check_content_project(name: &str) -> Result<(), String> {
+    round_trips(name, &golden(&format!("content/{name}.json"))["project"])
 }
 
-fn check_v8_replay_project(name: &str) -> Result<(), String> {
-    let fixture = golden(&format!("v8/replays/{name}.json"));
-    v8_project(name, &fixture["project"]).map(|_| ())
+fn check_replay_project(name: &str) -> Result<(), String> {
+    round_trips(name, &golden(&format!("replays/{name}.json"))["project"])
 }
 
 /// What this engine records for a content fixture's project.
@@ -157,7 +145,7 @@ fn record_content(name: &str, project_json: &Value) -> Result<Value, String> {
 
 fn check_content_fixture(name: &str) -> Result<(), String> {
     if RECORDER.enabled() {
-        let source = golden(&format!("v8/content/{name}.json"));
+        let source = golden(&format!("content/{name}.json"));
         let fixture = record_content(name, &source["project"])?;
         let path = golden_dir(&format!("content/{name}.json"));
         let text = serde_json::to_string(&fixture).map_err(|e| e.to_string())? + "\n";
@@ -213,18 +201,14 @@ fn check_all(folder: &str, check: fn(&str) -> Result<(), String>) {
 }
 
 #[test]
-fn every_v8_content_project_still_loads_and_assembles_the_same_content() {
-    check_all("v8/content", check_v8_content);
-}
-
-#[test]
-fn every_v8_replay_project_still_loads() {
-    check_all("v8/replays", check_v8_replay_project);
+fn every_golden_project_round_trips() {
+    check_all("content", check_content_project);
+    check_all("replays", check_replay_project);
 }
 
 #[test]
 fn content_assembly_matches_the_recorded_goldens() {
-    check_all("v8/content", check_content_fixture);
+    check_all("content", check_content_fixture);
     if RECORDER.enabled() {
         RECORDER.finish();
     }

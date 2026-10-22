@@ -2,12 +2,12 @@
 
 **Status:** phases 1–7 are done (September 2026). The Rust core passes every golden (replays,
 content, saves); the schema records, project logic, the content compiler,
-cartridges and Export Game are F#, and the authoring core compiles to
-JavaScript with Fable; the editor's Play Mode runs the Rust `farm-player` on
-F#-compiled cartridges; Edit Mode draws with `farm-render`; plugins run in
-`farm-plugins`; `farm-wasm` runs the same player in the browser, and the web
-editor uses it and the Fable-compiled core. The C# engine and the C# schema
-records are gone, and the simulation keeps every quantity as an integer
+cartridges and Export Game are F#; the editor's Play Mode runs the Rust
+`farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
+plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
+browser for web demo exports. The web version is a separate project now, and
+Tractr reads only the current project and save formats (no migrations from
+older ones, since 0.5.0). The C# engine and the C# schema records are gone, and the simulation keeps every quantity as an integer
 (schema v9, [NUMERICS.md](NUMERICS.md)). See
 [ROADMAP.md](../ROADMAP.md#phase-7-one-engine). This is the reference for
 where code goes as the native app grows; read it before you port a new part
@@ -24,7 +24,7 @@ Everything below describes what is built, except where a design is marked
 | Language | Owns | Never owns |
 |---|---|---|
 | **Rust** | Everything that runs while a game is being played: simulation, saves, state hashing, RNG, fixed timestep, input bindings, minigame kinds, in-game UI, rendering (draw lists and the GPU backend), audio playback, the plugin sandbox, the standalone player, the WebAssembly build. | Project JSON, editor state, anything a creator edits directly. |
-| **F#** | Everything about authored data: the project schema, migrations, validation and the Problems panel, content packs (merge and namespacing), default content and templates, workshop patterns, edit operations and undo/redo, the condition and outcome vocabulary and the dialogue checks, and the compiler that turns a project into a cartridge. Plus the `farmc` CLI. | Gameplay rules, rendering, OS or UI code. |
+| **F#** | Everything about authored data: the project schema, loading, validation and the Problems panel, content packs (merge and namespacing), default content and templates, workshop patterns, edit operations and undo/redo, the condition and outcome vocabulary and the dialogue checks, and the compiler that turns a project into a cartridge. Plus the `farmc` CLI. | Gameplay rules, rendering, OS or UI code. |
 | **C#** | The Avalonia app: windows, views and view models, dialogs and file pickers, the project store on disk, image import, the Update Center, and hosting the Rust player and preview. | Game rules, project rules. A view model calls F# or Rust; it doesn't decide anything itself. |
 
 The contract between F# and Rust is the **cartridge**: a compiled, validated,
@@ -60,7 +60,7 @@ led here):
   enforce it. It compiles to native code and to WebAssembly from the same
   source, which removes the two-engine problem (a TypeScript engine plus a C#
   port kept equal by golden tests).
-- **The editor is mostly data transformation.** Migrations, validation,
+- **The editor is mostly data transformation.** Loading, validation,
   pack merging and compiling content are compiler work. F# is built for that:
   discriminated unions, exhaustive pattern matching, immutable collections
   with structural sharing (cheap undo), and units of measure (`<gold>`,
@@ -74,7 +74,7 @@ led here):
 ```text
                        ┌──────────────────────────── .NET (one solution) ─────────────────────────────┐
  project.json ───────▶ │ FarmEngine.Authoring (F#)            Tractr.App (C#, Avalonia)      │
- (v9, web-compatible)  │  schema · migrations · validation      views · view models · dialogs         │
+ (v9)                  │  schema · loading · validation         views · view models · dialogs         │
                        │  packs · edits + undo · problems  ◀──── calls F# for every project change    │
                        │  compiler ──▶ cartridge bytes          hosts Rust player / preview surfaces   │
                        │                     │                  tool overlays over Rust-drawn frames  │
@@ -135,8 +135,9 @@ what an exported game contains.
 ### Saves (Rust only)
 
 - The player's machine persists saves, so **Rust owns the save format and
-  save migrations** (from `Save.cs` and `SaveMigrations.cs`). **F# owns
-  project migrations** (from `Migrations.cs`). The creator persists projects.
+  save loading** (from `Save.cs`). **F# owns project loading.** The creator
+  persists projects. Both read only their current version (save v5, project
+  v9); older ones are refused.
 - The format is FlatBuffers too (`schemas/save.fbs`): a version header, a
   slot preview the title screen reads without loading the game, and the state
   compressed with zstd (pure-Rust `ruzstd`, so it also builds for wasm). JSON
@@ -301,7 +302,7 @@ These replace `BannedSymbols.txt`. They're enforced in `farm-sim` with
 Cargo.toml                       # Rust workspace; rust-toolchain.toml pins the version
 schemas/cart.fbs, save.fbs
 crates/
-  farm-cart/       # FlatBuffers readers, cartridge + save load, save migrations
+  farm-cart/       # FlatBuffers readers, cartridge + save load
   farm-sim/        # deterministic core           ← src/FarmEngine.Core
   farm-runtime/    # timestep, input, minigames, panel model, audio cues ← src/FarmEngine.Runtime
   farm-plugins/    # PluginHost trait; QuickJS-in-wasm host run by wasmi  ← Runtime/Plugins.cs
@@ -315,7 +316,7 @@ crates/
   farm-bench/      # criterion benchmarks and the CI time budgets
 fixtures/golden/                 # shared by Rust and F# tests (moved from tests/…/Golden)
 src/
-  FarmEngine.Authoring/          # F#, Fable-safe core: schema records, edits, checks, compiler (see below)
+  FarmEngine.Authoring/          # F# core: schema records, edits, checks, compiler (see below)
   FarmEngine.Authoring.Net/      # F#, .NET-only: System.Text.Json edge, RecordJson, RecordWith (C# builders)
   FarmEngine.Export/             # F#, .NET-only: Export Game (templates, PE resources, archives)
   FarmEngine.Cli/                # F#: the farmc CLI (the balancing lab is still to come)
@@ -326,7 +327,6 @@ tests/
   FarmEngine.Authoring.Tests/    # F# (xUnit + FsCheck)
   FarmEngine.Export.Tests/       # F#
   Tractr.App.Tests/     # C#, unchanged role
-tools/fable/                     # Fable build of FarmEngine.Authoring + Node smoke test
 tools/wasm/                      # farm-wasm build + Node smoke test
 tools/codegen/                   # generators for SchemaJson.fs, RecordWith.fs and RecordJson.fs tables
 ```
@@ -341,16 +341,15 @@ without a Rust toolchain, which reports them as skipped.
 
 ### F# conventions
 
-- **Fable-safe core.** `FarmEngine.Authoring` compiles with
-  [Fable](https://fable.io) to JavaScript, and the web editor uses it for
-  migrations, validation, Problems and compiling. That means no reflection, no
+- **A pure core.** `FarmEngine.Authoring` has no reflection, no
   `System.Text.Json`, no file I/O and no .NET-only APIs (such as
-  `SortedDictionary` or `System.Security.Cryptography`) in that project. JSON
-  goes through the explicit decoders and encoders in `SchemaJson.fs` (generated
-  from `Schema.fs`) over the immutable `Json` type, and .NET-only code lives in `FarmEngine.Authoring.Net`.
-  CI builds it with `tools/fable/build.sh` and checks the JavaScript in Node
-  (`tools/fable/smoke.mjs`). `WebApi.fs` is the JavaScript entry point: JSON
-  text in and out, so callers never see F# records.
+  `SortedDictionary` or `System.Security.Cryptography`). JSON goes through the
+  explicit decoders and encoders in `SchemaJson.fs` (generated from
+  `Schema.fs`) over the immutable `Json` type, and .NET-only code lives in
+  `FarmEngine.Authoring.Net`. (The core was kept this way so it could compile
+  to JavaScript with Fable for the web version; the web version is a separate
+  project since 0.5.0, so that is no longer required, but the split still
+  keeps the core easy to test.)
 - **Schema records.** `Schema.fs` holds every project, content and save shape
   as an immutable record: `option` for optional fields, `list` for lists,
   `(string * 'T) list` for ordered maps, `Json` for free-form values, an `Extra`
@@ -366,7 +365,7 @@ without a Rust toolchain, which reports them as skipped.
   (`tools/codegen/record-json.py`, `tools/codegen/record-with.fsx`).
 - The compiler writes cartridges with a plain-F# FlatBuffers builder
   (`FlatBuffers.fs`) that produces the same bytes as the official C# builder,
-  and `CartridgeReader` reads them back; both work under Fable.
+  and `CartridgeReader` reads them back.
 - **Numbers** are `float` in authoring units, as in the project JSON
   ([NUMERICS.md](NUMERICS.md)). **Future:** units of measure on authored
   quantities (`price: float<gold>`, `x: int<tile>`); they would be erased at
@@ -425,10 +424,10 @@ below record where each part went.
 | File(s) | Goes to | Notes |
 |---|---|---|
 | `Project.cs`, `World.cs`, `Actors.cs`, `Content.cs`, `Crafting.cs`, `Economy.cs`, `Events.cs`, `Extensibility.cs`, `Fishing.cs`, `Animals.cs`, `Mining.cs`, `Nodes.cs`, `Quests.cs`, `Social.cs`, `Weather.cs`, `Graphics.cs`, `Interface.cs`, `Settings.cs`, `Primitives.cs`, `GameContent.cs` | F# `FarmEngine.Authoring/Schema.fs` + `SchemaJson.fs` | Done in phase 7. The editor and F# use these records; C# builds them with `RecordWith` and reads options through `FSharpInterop`. Rust has its own serde types and reads cartridges. |
-| `Migrations.cs` | F# `Authoring.Migrations` | Project v1→v9 (v8→v9 is the numerics grid). The TypeScript migration goldens pin v1→v8 in the F# tests. |
+| `Migrations.cs` | F# `Authoring.Migrations`, removed in 0.5.0 | Project v1→v9 (v8→v9 was the numerics grid). Since 0.5.0 `ProjectLoad` reads v9 only. |
 | `SchemaValidation.cs` | F# `Authoring.Validation` | Merged with Core `Validation.cs` into one Problems pipeline with JSON paths. |
 | `Packs.cs` (schemas) | F# `Authoring.Packs` | Manifests and permissions. |
-| `Save.cs`, `SaveMigrations.cs` | Rust `farm-cart::save` | Rust owns saves. |
+| `Save.cs`, `SaveMigrations.cs` | Rust `farm-cart::save` | Rust owns saves. The save migrations were removed in 0.5.0; only v5 saves load. |
 | `Json/Js.cs`, `Json/StableJson.cs`, `Json/JsonDefaults.cs` | Rust `farm-sim::js`, `farm-sim::hash` (compatibility phase); F# `Json.fs` (JS number formatting, stable JSON, parsing) | `Js` goes away with v9 ([NUMERICS.md](NUMERICS.md#what-goes-away)). |
 | `Generated/*` (FlatBuffers C# readers) | F# `FlatBuffers.fs` (builder) and `CartridgeReader.fs` | The C# readers were only used by tests. |
 
@@ -450,7 +449,7 @@ below record where each part went.
 Both languages can still turn a project into what a game runs on, and both are in use:
 
 - **F#** (`ContentCompiler`, `PackMerge`, `Builtin`, `CartridgeCompiler`) writes every
-  cartridge: Export Game, `farmc`, the editor's Play Mode and the web editor (through Fable).
+  cartridge: Export Game, `farmc` and the editor's Play Mode.
 - **Rust** (`farm_sim::packs`, `content_builtin`, `state::create_content_from_project`,
   `StartState::from_project`, `Presentation::from_project`, `apply_state_to_project_json`)
   serves the hosts that receive project JSON instead of a cartridge: `fe_session_new` and
@@ -473,9 +472,8 @@ is future work; these tests catch a field added on one side only.
 
 The default pack and template factories are F# `StarterContent`,
 `SampleProjects` and the C#-friendly `ProjectCatalog` API. Factories take an
-explicit timestamp; the desktop host reads its clock. Legacy tile migration is
-part of the F# migration pipeline, and movement interpolation lives in
-`farm-render`.
+explicit timestamp; the desktop host reads its clock. Movement interpolation
+lives in `farm-render`.
 
 ### `FarmEngine.Runtime` → Rust `farm-runtime` / `farm-plugins` — done, deleted
 
@@ -534,10 +532,10 @@ move from code-built views towards view models are in
 | Was (`FarmEngine.Core.Tests`) | Now |
 |---|---|
 | `Golden/GoldenParityTests.cs`, replays, rng, hash, saves | Rust integration tests in `farm-sim` / `farm-cart` reading `fixtures/golden` |
-| `Golden/migrations/*`, `Fixtures/project-v*.json`, `Fixtures/migrated/*` | F# `FarmEngine.Authoring.Tests`, fixtures in `fixtures/projects` |
-| `Schemas/*`, `JsSemanticsTests.cs` | F# `SchemaRecordTests`, `JsonTests` and `MigrationTests` (the C# `FarmEngine.Schemas.Tests` went with the records in phase 7) |
+| `Golden/migrations/*`, `Fixtures/project-v*.json`, `Fixtures/migrated/*` | F# `FarmEngine.Authoring.Tests`, until the migrations were removed in 0.5.0 |
+| `Schemas/*`, `JsSemanticsTests.cs` | F# `SchemaRecordTests`, `JsonTests` and `ProjectLoadTests` (the C# `FarmEngine.Schemas.Tests` went with the records in phase 7) |
 | `Core/*`, `Runtime/*` characterization tests | Ported to Rust tests next to each module |
-| `Content/*` | F# tests against the TypeScript goldens |
+| `Content/*` | F# tests against the content goldens |
 | `Tractr.App.Tests` | Stay C# (headless Avalonia), driving the embedded Rust player |
 
 New tests:
@@ -546,10 +544,11 @@ New tests:
   random command streams during phases 1–4 and compared hashes each step,
   until the C# core was retired.
 - **Property tests:** proptest (Rust) for "replay ⇒ same hash" and "save →
-  load ⇒ same state". FsCheck (F#) for "migrate(vN) is valid vN+1" and
-  "compile never throws on a project with no validation errors".
+  load ⇒ same state". FsCheck (F#) for "a varied project loads and passes
+  the checks" and "compile never throws on a project with no validation
+  errors".
 - **Fuzzing:** `crates/farm-fuzz` has one entry point per untrusted-input
-  boundary (cartridges, saves and their migrations, images, project JSON,
+  boundary (cartridges, saves, save states, images, project JSON,
   render, preview and session requests, plugin mutations, random play) and
   the state invariants every reachable state keeps (money ≥ 0, energy in
   range, stacks and slots within their caps, the player on a scene's grid,
@@ -614,7 +613,7 @@ Later items (native and web roadmaps):
 | Audio-file import | C# import; F# embeds in the cartridge; Rust mixes it in `farm-player::audio` (seasonal music crossfades, weather ambience layers) |
 | Zip/folder content packs with binary assets | F# pack loader + compiler. JSON packs already carry their art: "Export selection as pack" embeds the images the entries use in the pack's `assets` (as data URLs), and installing a pack adds them to the project's art (`PackExport.build`, `PackMerge.mergeAssets`). |
 | JSON Schema for mod autocomplete | F# generates it from the authoring types |
-| Property-based determinism, economy and migration tests | Done: proptest (Rust), FsCheck (F#) |
+| Property-based determinism, economy and loading tests | Done: proptest (Rust), FsCheck (F#) |
 | Balancing lab (new) | F# `FarmEngine.Lab`: run thousands of seeds through `farm-ffi` in parallel; chart gold per day per crop or strategy; flag dominant crops |
 | Code signing, macOS builds | CI (Windows and Linux are built and tested; macOS is not). winit, softbuffer, cpal and Avalonia support all three. |
 
@@ -729,12 +728,12 @@ issue before work starts.
 
 - **Player-installed mods for exported games.** Pack merging is a compile
   step in F#. For players to add mods to a shipped game, either `farm-player`
-  bundles the compiler (Fable-compiled or through a .NET sidecar), or packs are
+  bundles the compiler (through a .NET sidecar), or packs are
   precompiled into overlay cartridges that Rust layers with the same
   namespacing rules. Decide in phase 6.
-- **Fable for the web editor.** Settled: the authoring core compiles under
-  Fable 5 without a fallback, and the JavaScript reproduces the .NET
-  cartridges byte for byte.
+- **Fable for the web editor.** Settled, then retired: the authoring core
+  compiled under Fable 5 and the web editor used it until the two projects
+  separated in 0.5.0.
 - **Edit Mode rendering.** Settled: Edit Mode rasterizes the visible map
   region with the Rust CPU rasterizer into an Avalonia bitmap and draws its
   tool overlays on top in Avalonia; one rasterizer everywhere.

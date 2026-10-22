@@ -46,7 +46,7 @@ public sealed unsafe class RustPreview : IDisposable
     /// <summary>How many <see cref="SetProject"/> calls sent the whole project (tests).</summary>
     public int ProjectUpdates { get; private set; }
 
-    /// <summary>Creates a preview of a (migrated) project.</summary>
+    /// <summary>Creates a preview of a project.</summary>
     public static RustPreview Create(GameProject project)
     {
         ArgumentNullException.ThrowIfNull(project);

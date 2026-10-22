@@ -4,10 +4,10 @@ This repo is a native port of `jxburros/farm-game-engine` (the web version).
 The TypeScript engine was the **reference implementation** until schema v9:
 the same seed and command/tick log had to give a state whose stable JSON and
 `hashState` were byte-identical to the TypeScript ones, and golden replays
-generated from it (`tools/golden/`) enforced that. Since v9 the Rust engine is
-the reference, both apps run it, and the goldens are recorded from Rust; the
-TypeScript ones stay in `fixtures/golden/v8` as migration inputs
-([NUMERICS.md](NUMERICS.md)).
+generated from it enforced that. Since v9 the Rust engine is the reference
+and the goldens are recorded from Rust ([NUMERICS.md](NUMERICS.md)). The web
+version is a separate project now, and Tractr reads no older project or save
+formats.
 
 The layout and naming rules below still apply when you port more of the web
 version (one TypeScript module, one Rust module). The numbers follow
@@ -23,7 +23,7 @@ units in JSON.
 
 | TypeScript package / folder             | Native home                                   |
 |-----------------------------------------|-----------------------------------------------|
-| `packages/engine-schemas/src`           | `crates/farm-sim/src/schema` (Rust), F# records, migrations and checks in `src/FarmEngine.Authoring` (`Schema.fs`, `SchemaJson.fs`) |
+| `packages/engine-schemas/src`           | `crates/farm-sim/src/schema` (Rust), F# records, loading and checks in `src/FarmEngine.Authoring` (`Schema.fs`, `SchemaJson.fs`) |
 | `packages/engine-core/src` (+ subdirs)  | `crates/farm-sim`                             |
 | `packages/content-default/src`, `src/lib/templates.ts` | `src/FarmEngine.Authoring` (`StarterContent`, `SampleProjects`, `ProjectCatalog`) |
 | `packages/engine-runtime/src`           | `crates/farm-runtime`, plugins in `crates/farm-plugins` |

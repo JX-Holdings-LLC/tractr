@@ -24,7 +24,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
 const dist = path.resolve(process.argv[2] ?? path.join(here, "dist"));
 const template = path.join(here, "web-template");
-const cartridge = readFileSync(path.join(root, "fixtures", "golden", "cartridges", "project-v8.cart"));
+const cartridge = readFileSync(path.join(root, "fixtures", "golden", "cartridges", "fixture-project.cart"));
 
 // The page's folder: the template's script next to the built module.
 const page = mkdtempSync(path.join(tmpdir(), "farm-web-page-"));

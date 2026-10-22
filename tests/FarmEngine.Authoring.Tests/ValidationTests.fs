@@ -1,5 +1,5 @@
 /// The validator unit tests (`SchemaChecks`, `ContentLints`), first written for the C# port:
-/// constraint violations and what zod accepts, migrated fixtures validate, project validation,
+/// constraint violations and what zod accepts, the fixture project validates, project validation,
 /// pack problems and templates with zero content problems.
 module FarmEngine.Authoring.Tests.ValidationTests
 
@@ -14,7 +14,7 @@ open FarmEngine.Authoring.Tests.TestProjects
 
 let private fixture (name: string) = Path.Combine(AppContext.BaseDirectory, "Fixtures", name)
 
-let private v8Json () = JsonNode.Parse(File.ReadAllText(fixture "project-v8.json")).AsObject()
+let private fixtureJson () = JsonNode.Parse(File.ReadAllText(fixture "fixture-project.json")).AsObject()
 
 /// The typed parse of project JSON (must succeed).
 let private parse (json: JsonNode) : GameProject =
@@ -22,7 +22,7 @@ let private parse (json: JsonNode) : GameProject =
     | Ok project -> project
     | Error issue -> failwith issue
 
-let private toNode (project: GameProject) : JsonNode = ProjectMigrations.toNode project
+let private toNode (project: GameProject) : JsonNode = ProjectJson.toNode project
 
 let private startsWith (prefix: string) (entries: string list) =
     entries |> List.exists (fun e -> e.StartsWith(prefix, StringComparison.Ordinal))
@@ -30,35 +30,35 @@ let private startsWith (prefix: string) (entries: string list) =
 // ── SchemaRoundTripTests ─────────────────────────────────────────────────────
 
 [<Fact>]
-let ``the v8 fixture validates`` () =
-    Assert.Empty(SchemaChecks.validateProject (parse (v8Json ())))
+let ``the fixture project validates`` () =
+    Assert.Empty(SchemaChecks.validateProject (parse (fixtureJson ())))
 
 [<Fact>]
 let ``native export settings survive the web compatible import path`` () =
     let project = starter ()
     let settings = Defaults.newExportSettings project
     let project = project |> apply (SetExportSettings(Some settings))
-    let result = ProjectMigrations.migrateProject (toNode project)
+    let result = ProjectJson.loadProject (toNode project)
     Assert.True(result.Ok, String.concat "\n" result.Errors)
     Assert.Equal(settings.GameId, result.Data.Value.Export.Value.GameId)
     Assert.Equal(settings.ExecutableName, result.Data.Value.Export.Value.ExecutableName)
 
 [<Fact>]
 let ``F sharp compiler reproduces the checked-in cartridge and blocks errors`` () =
-    let imported = ProjectMigrations.migrateProject (v8Json ())
+    let imported = ProjectJson.loadProject (fixtureJson ())
     Assert.True imported.Ok
     let compiled = CartridgeCompiler.Compile imported.Data.Value
     // After an intended format or content change: FARM_RECORD_CARTRIDGES=1 rewrites the file.
     if Environment.GetEnvironmentVariable "FARM_RECORD_CARTRIDGES" = "1" then
-        File.WriteAllBytes(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", "project-v8.cart"), compiled)
+        File.WriteAllBytes(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", "fixture-project.cart"), compiled)
     else
-        Assert.Equal<byte>(File.ReadAllBytes(fixture "project-v8.cart"), compiled)
+        Assert.Equal<byte>(File.ReadAllBytes(fixture "fixture-project.cart"), compiled)
     let broken = { imported.Data.Value with SelectedTileType = "lava" }
     Assert.Throws<InvalidOperationException>(fun () -> CartridgeCompiler.Compile broken |> ignore) |> ignore
 
 [<Fact>]
 let ``validateProject reports constraint violations`` () =
-    let json = v8Json ()
+    let json = fixtureJson ()
     json.["mode"] <- JsonValue.Create "bogus"
     let scene = json.["scenes"].[0].DeepClone().AsObject()
     let tile = scene.["tiles"].[0].[0].DeepClone().AsObject()
@@ -91,7 +91,7 @@ let ``validateProject reports constraint violations`` () =
 /// Import parity, not lint cleanliness.
 [<Fact>]
 let ``validateProject accepts what zod accepts`` () =
-    let json = v8Json ()
+    let json = fixtureJson ()
     json.["startSceneId"] <- JsonValue.Create "scene-that-was-deleted"
     json.["items"].AsArray().Add(
         JsonNode.Parse """{"id":"","name":"Unnamed","description":"","type":"material","stackable":true,"maxStack":1,"value":0}""")
@@ -100,17 +100,14 @@ let ``validateProject accepts what zod accepts`` () =
             """[{"id":"e","name":"E","trigger":"enter","conditions":[{"type":"enterTile","x":5,"y":5,"x2":2,"y2":1},{"type":"dayRange","minDay":20,"maxDay":3},{"type":"timeOfDay","minMinute":800,"maxMinute":300}],"outcomes":[]}]"""
     let webShaped = parse json
     Assert.Empty(SchemaChecks.validateProject webShaped)
-    Assert.True((ProjectMigrations.migrateProject (toNode webShaped)).Ok)
+    Assert.True((ProjectJson.loadProject (toNode webShaped)).Ok)
     Assert.NotEmpty(SchemaChecks.lintProject webShaped)
 
-// ── MigrationTests ───────────────────────────────────────────────────────────
+// ── Loading ──────────────────────────────────────────────────────────────────
 
-let migrationFixtures () : seq<obj[]> = [ 1..8 ] |> Seq.map (fun v -> [| box (sprintf "project-v%d.json" v) |])
-
-[<Theory>]
-[<MemberData(nameof migrationFixtures)>]
-let ``migrates a fixture to the current schema version and validates`` (name: string) =
-    let result = ProjectMigrations.migrateProject (JsonNode.Parse(File.ReadAllText(fixture name)))
+[<Fact>]
+let ``the fixture project loads at the current schema version and validates`` () =
+    let result = ProjectJson.loadProject (fixtureJson ())
     Assert.Empty result.Errors
     Assert.True result.Ok
     Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, result.Data.Value.SchemaVersion)
@@ -253,7 +250,7 @@ let templateFactories () : seq<obj[]> = [ [| box "cozy" |]; [| box "quest" |] ]
 [<MemberData(nameof templateFactories)>]
 let ``template validates and has zero content problems`` (name: string) =
     let project = if name = "cozy" then ProjectCatalog.CreateCozyFarmProject(0.0) else ProjectCatalog.CreateQuestRpgProject(0.0)
-    let result = ProjectMigrations.migrateProject (toNode project)
+    let result = ProjectJson.loadProject (toNode project)
     Assert.True(result.Ok, String.Join("; ", result.Errors))
     Assert.Empty(ContentLints.validateProjectContent project)
 
@@ -261,7 +258,7 @@ let ``template validates and has zero content problems`` (name: string) =
 
 [<Fact>]
 let ``schema issues carry the path and message the string form joins`` () =
-    let project = parse (v8Json ())
+    let project = parse (fixtureJson ())
     let broken = { project with Mode = "bogus"; CurrentYear = 1.5 }
     let issues = SchemaChecks.projectIssues broken
     Assert.Equal<string list>([ "mode"; "currentYear" ], issues |> List.map (fun i -> i.Path))

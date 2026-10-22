@@ -50,7 +50,7 @@ proptest! {
         let binary = write_save_binary(&game, &fixture.target, &SavePreview::of_state(&game));
         let loaded = load_save_bytes(&binary, &fixture.target, &fixture.content);
         prop_assert!(loaded.ok, "binary save refused: {:?}", loaded.errors);
-        prop_assert!(!loaded.migrated && loaded.warnings.is_empty(), "binary save: {:?}", loaded.warnings);
+        prop_assert!(loaded.warnings.is_empty(), "binary save: {:?}", loaded.warnings);
         let from_binary = loaded.state.expect("a loaded save has a state");
         prop_assert_eq!(&hash, &hash_state(&from_binary));
         prop_assert!(from_binary == game, "the binary save changed the state");

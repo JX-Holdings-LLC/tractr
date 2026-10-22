@@ -179,27 +179,26 @@ public sealed class ProjectCommandTests
     {
         var dialogs = new FakeDialogs
         {
-            ImportFile = ("project-v1.json", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "project-v1.json"))),
+            ImportFile = ("fixture-project.json", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "fixture-project.json"))),
         };
         using var host = new GameTestHost(dialogs: dialogs);
 
         host.ViewModel.ImportProjectJsonCommand.Execute(null);
         PumpUntil(() => host.ViewModel.StatusMessage.StartsWith("Imported", StringComparison.Ordinal), "import");
-        Assert.Contains("upgraded from schema v1", host.ViewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Equal("Imported fixture-project.json as \"Current V7 Farm\".", host.ViewModel.StatusMessage);
         var imported = host.Workspace.Current!;
 
         host.ViewModel.ExportProjectJsonCommand.Execute(null);
         PumpUntil(() => dialogs.ExportedJson is not null, "export");
         Assert.EndsWith(".json", dialogs.ExportedName, StringComparison.Ordinal);
-        var reparsed = ProjectMigrations.migrateProjectText(dialogs.ExportedJson!);
+        var reparsed = ProjectJson.loadProjectText(dialogs.ExportedJson!);
         Assert.True(reparsed.Ok, string.Join("; ", reparsed.Errors));
-        Assert.False(reparsed.Migrated);
         Assert.Equal(ProjectStore.ToJson(imported), ProjectStore.ToJson(reparsed.Data!.Value));
         Assert.Contains("\n  \"scenes\": [", dialogs.ExportedJson, StringComparison.Ordinal);
     }
 
     [AvaloniaFact]
-    public void Import_ShowsMigrationErrors()
+    public void Import_ShowsLoadErrors()
     {
         var dialogs = new FakeDialogs { ImportFile = ("future.json", """{ "schemaVersion": 99, "scenes": [] }""") };
         using var host = new GameTestHost(dialogs: dialogs);

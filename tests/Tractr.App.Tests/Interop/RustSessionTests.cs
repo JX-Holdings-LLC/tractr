@@ -144,7 +144,6 @@ public sealed class RustSessionTests
         Assert.Equal(before, session.StateHash());
         Assert.Empty(report.Warnings);
         Assert.Empty(report.Quarantined);
-        Assert.False(report.Migrated);
 
         // A save from another game is refused and the state stays put.
         using var other = RustSession.Create(project.WithId("another-game"), "save");

@@ -8,10 +8,10 @@ open FarmEngine.Authoring.Tests.TestProjects
 let private same (expected: GameProject) (actual: GameProject) =
     Assert.Equal(stableOf SchemaJson.encodeGameProject expected, stableOf SchemaJson.encodeGameProject actual)
 
-// ── The sample games against the TypeScript goldens ─────────────────────────
+// ── The sample games against the golden content fixtures ────────────────────
 
-/// The golden content fixtures hold `migrateProject(clone(pinTimes(createXxx())))` recorded from
-/// the TypeScript engine (tools/golden golden.gen.test.ts `writeContentFixtures`).
+/// The golden content fixtures hold the sample projects as the web version made them (with
+/// pinned times), at the current schema version.
 let samples : obj[] seq =
     [ "starter-farm"; "cozy-garden"; "quest-rpg"; "blank" ] |> Seq.map (fun name -> [| box name |])
 
@@ -25,8 +25,8 @@ let private build (name: string) =
 
 /// Intended divergence from the web samples (#55): the Cozy Garden and Quest RPG samples have
 /// their own maps and set dressing (a garden with growing beds and hens; a village square with
-/// two more NPCs), where the TypeScript samples reuse the starter farm. Those parts are left out
-/// of the comparison; everything else still matches the TypeScript goldens.
+/// two more NPCs), where the web samples reuse the starter farm. Those parts are left out of the
+/// comparison; everything else still matches the goldens.
 let private ownDressing (name: string) =
     match name with
     | "cozy-garden" -> [ "scenes"; "animals" ]
@@ -34,24 +34,18 @@ let private ownDressing (name: string) =
     | _ -> []
 
 [<Theory; MemberData(nameof samples)>]
-let ``sample projects match TypeScript`` (name: string) =
+let ``sample projects match the golden content fixtures`` (name: string) =
     let shared (json: Json) = ownDressing name |> List.fold (fun json key -> Json.remove key json) json
-    // The golden is the v8 project; the factories make v9 ones (docs/NUMERICS.md).
-    let expected =
-        Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ])
-        |> Migrations.migrateV8ToV9
-        |> Json.set "schemaVersion" (JNumber Migrations.CurrentProjectSchemaVersion)
-        |> shared
-        |> Json.stableStringify
+    let expected = Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ]) |> shared |> Json.stableStringify
     let stable (project: GameProject) = SchemaJson.encodeGameProject project |> shared |> Json.stableStringify
     let project = build name
     // The factory output is already in the current schema shape…
     assertSameStable name expected (stable project)
-    // …and the migration pipeline leaves it as it is.
-    let migrated = ProjectLoad.migrateProject (ProjectLoad.toJson project)
-    Assert.True(migrated.Ok, String.concat "; " migrated.Errors)
-    assertSameStable (name + " (migrated)") expected (stable migrated.Data.Value)
-    Assert.Equal(stableOf SchemaJson.encodeGameProject project, stableOf SchemaJson.encodeGameProject migrated.Data.Value)
+    // …and loading leaves it as it is.
+    let loaded = ProjectLoad.loadProject (ProjectLoad.toJson project)
+    Assert.True(loaded.Ok, String.concat "; " loaded.Errors)
+    assertSameStable (name + " (loaded)") expected (stable loaded.Data.Value)
+    Assert.Equal(stableOf SchemaJson.encodeGameProject project, stableOf SchemaJson.encodeGameProject loaded.Data.Value)
 
 [<Fact>]
 let ``the samples look and play differently`` () =
