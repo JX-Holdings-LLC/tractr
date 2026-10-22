@@ -35,7 +35,7 @@ What it installs:
   pins the version).
 - A [Rust toolchain](https://rustup.rs); `rust-toolchain.toml` pins the
   version, components and targets, and rustup installs them on first use.
-- Node 22, only for the WebAssembly and Fable smoke tests and markdownlint.
+- Node 22, only for the WebAssembly smoke tests and markdownlint.
 - On Linux, the system packages the player links and its tests use:
 
   ```sh
@@ -102,7 +102,7 @@ review the diff before you commit it. The Rust recorders rewrite only the
 files that change and then fail on purpose, so a recording run never passes
 as a test run. Put re-recordings in their own commit. CI refuses to run
 with any `FARM_RECORD_*` or `*_BLESS` switch set and fails when the tests
-leave `fixtures/` changed (`tools/golden/ci-guard.sh`).
+leave `fixtures/` changed (`tools/ci/golden-guard.sh`).
 
 | Switch | Rewrites | Run |
 |---|---|---|
@@ -114,12 +114,8 @@ leave `fixtures/` changed (`tools/golden/ci-guard.sh`).
 | `FARM_RECORD_CONTENT_LINTS=1` | `fixtures/projects/content-lints.json` | `dotnet test tests/FarmEngine.Authoring.Tests --filter FullyQualifiedName~ValidationCaseTests` |
 | `FARM_EDITOR_BLESS=1` | `fixtures/editor/*.png` (editor screenshots at half size, compared with a tolerance on Linux) | `dotnet test tests/Tractr.App.Tests --filter "FullyQualifiedName~Screenshot"` |
 
-Never re-record `fixtures/golden/v8/`: those are the frozen TypeScript
-goldens and the v8 outcomes, kept as migration inputs
-([fixtures/golden/SOURCE.txt](fixtures/golden/SOURCE.txt),
-[docs/NUMERICS.md](docs/NUMERICS.md#goldens)). Do not run
-`tools/golden/generate.sh` either; it regenerates them from the TypeScript
-engine.
+`fixtures/golden/vectors/` holds fixed RNG and stable-JSON vectors that are
+never re-recorded ([fixtures/golden/SOURCE.txt](fixtures/golden/SOURCE.txt)).
 
 The editor screenshot comparison (`tests/Tractr.App.Tests/Ui/ScreenshotGoldens.cs`)
 averages 8×8 blocks of the half-size image, so anti-aliasing and font hinting
@@ -183,8 +179,7 @@ needs that tool. CI checks that each matches its generator.
 | Default icon of exported games (`default-game-icon-256.png`) | `python3 scripts/generate-game-icon.py` | the games' icon changes | — |
 | Brand pictures (`docs/media/tractr-*.png`, `plate-*.png`, `Assets/about-banner.png`) | the Vixl scripts in `docs/brand/vixl/kit` ([docs/brand/README.md](docs/brand/README.md#rebuilding-the-pictures)) | the brand or the screenshots change | — |
 
-Not checked in, built on demand: the Fable JavaScript of the authoring core
-(`tools/fable/build.sh`, checked by `node tools/fable/smoke.mjs`), the
+Not checked in, built on demand: the
 `farm-wasm` package (`tools/wasm/build.sh`, checked by
 `node tools/wasm/smoke.mjs` and `node tools/wasm/game-page.mjs`), and the
 player templates (`dotnet build`, or `tools/player-templates/package.sh` in

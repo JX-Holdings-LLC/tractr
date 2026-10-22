@@ -8,7 +8,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "22" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "scripts/dev-setup.sh --check && dotnet tool restore",
+  "postCreateCommand": "scripts/dev-setup.sh --check",
   "customizations": {
     "vscode": {
       "extensions": [

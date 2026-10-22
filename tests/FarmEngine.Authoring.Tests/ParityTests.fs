@@ -157,7 +157,7 @@ let ``F# compiles the Rust content goldens to the content Rust recorded`` () =
         [ for file in goldenContent () do
               let fixture = parse (File.ReadAllText file)
               let name = Path.GetFileNameWithoutExtension file
-              match ProjectLoad.migrateProject (Json.get "project" fixture) with
+              match ProjectLoad.loadProject (Json.get "project" fixture) with
               | { Ok = true; Data = Some project } ->
                   let rust = parse (defaultArg (Json.asString (Json.get "stable" fixture)) "null")
                   let fsharp = parse (Json.stableStringify (SchemaJson.encodeGameContent (ContentCompiler.compile project)))
@@ -170,7 +170,7 @@ let ``F# compiles the Rust content goldens to the content Rust recorded`` () =
 // ── F#-recorded pipeline output, checked by Rust ─────────────────────────────
 
 let private loadFile (parts: string list) : GameProject =
-    match ProjectLoad.migrateProjectText (File.ReadAllText(repo parts)) with
+    match ProjectLoad.loadProjectText (File.ReadAllText(repo parts)) with
     | { Ok = true; Data = Some project } -> project
     | result -> failwithf "%A: %s" parts (String.concat "; " result.Errors)
 
@@ -183,8 +183,7 @@ let private pipelineCases () : (string * GameProject) list =
     [ yield "kitchen-sink", kitchenSinkProject ()
       for id, project in templates () do
           yield "template-" + id, project
-      for version in 1..8 do
-          yield sprintf "project-v%d" version, loadFile [ "fixtures"; "projects"; sprintf "project-v%d.json" version ]
+      yield "fixture-project", loadFile [ "fixtures"; "projects"; "fixture-project.json" ]
       yield "packs-project", loadFile [ "fixtures"; "projects"; "packs-project.json" ]
       yield "starter-demo-mod", withPack (starter ()) "demo-mod.json"
       yield "starter-my-first-mod", withPack (starter ()) "my-first-mod.json"

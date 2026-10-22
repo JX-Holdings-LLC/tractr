@@ -25,7 +25,7 @@ impl std::fmt::Debug for FeSession {
     }
 }
 
-/// Creates a session from migrated project JSON or a verified `FGCT` cartridge.
+/// Creates a session from project JSON or a verified `FGCT` cartridge.
 /// `seed` may be empty (then the project's own `id:gameStartTime` seed applies, like the TS
 /// engine). `auto_start_quests` does what hosts do at game start.
 ///
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn fe_session_hook_events(session: *mut FeSession, out: *m
 }
 
 /// Replaces the live state with `state_json` (a `GameState`, as the debug drawer's creator
-/// tools edit it). Unlike [`fe_session_load_save`] nothing is migrated or quarantined: the
+/// tools edit it). Unlike [`fe_session_load_save`] nothing is quarantined: the
 /// state is taken as it is. Invalid JSON leaves the state untouched and answers
 /// `InvalidArgument` with the reason in `out`.
 ///
@@ -257,11 +257,10 @@ pub unsafe extern "C" fn fe_session_save(session: *mut FeSession, out: *mut FeBy
     unsafe { with_session(session, out, |s| Ok(s.save())) }
 }
 
-/// Loads a save file (or a bare web `GameState`) into the session, replacing its state. Old
-/// saves are migrated and items the content no longer has are quarantined. Returns
-/// `{"warnings": […], "quarantined": […], "restored": […], "fromVersion": n, "migrated": b}`; a
-/// refused save leaves the state untouched and answers `InvalidArgument` with the reasons in
-/// `out`.
+/// Loads a save file (or a bare web `GameState`) into the session, replacing its state. Items
+/// the content no longer has are quarantined. Returns
+/// `{"warnings": […], "quarantined": […], "restored": […]}`; a refused save leaves the state
+/// untouched and answers `InvalidArgument` with the reasons in `out`.
 ///
 /// # Safety
 /// `session` from [`fe_session_new`]; `save` points to `len` bytes; `out` is valid.
@@ -376,7 +375,7 @@ mod tests {
         assert_ne!(hash().1, hash_before);
         let (result, report) = call(|out| unsafe { fe_session_load_save(session, save.as_ptr(), save.len(), out) });
         assert_eq!(result, FeResult::Ok);
-        assert_eq!(report, r#"{"fromVersion":5,"migrated":false,"quarantined":[],"restored":[],"warnings":[]}"#);
+        assert_eq!(report, r#"{"quarantined":[],"restored":[],"warnings":[]}"#);
         assert_eq!(hash().1, hash_before);
 
         // A refused save keeps the state and reports why.

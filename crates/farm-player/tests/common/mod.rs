@@ -27,7 +27,7 @@ pub fn starter() -> GameProject {
 }
 
 pub fn cartridge() -> Vec<u8> {
-    std::fs::read(root().join("fixtures").join("golden").join("cartridges").join("project-v8.cart")).unwrap()
+    std::fs::read(root().join("fixtures").join("golden").join("cartridges").join("fixture-project.cart")).unwrap()
 }
 
 /// Stores a test keeps handles to.

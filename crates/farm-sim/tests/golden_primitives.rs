@@ -1,6 +1,7 @@
-//! The RNG, stable JSON and hash primitives. `fixtures/golden/v8` holds the vectors the
-//! TypeScript reference engine recorded (still valid where v9 kept the behavior);
-//! `fixtures/golden/rng.json` and `hash.json` are recorded from this engine
+//! The RNG, stable JSON and hash primitives. `fixtures/golden/vectors` holds fixed vectors
+//! (recorded once from the original TypeScript engine, never re-recorded): the RNG streams and
+//! the stable JSON text and text hash of edge-case values. `fixtures/golden/rng.json` and
+//! `hash.json` are recorded from this engine
 //! (`FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_primitives`).
 
 use farm_sim::rng::{self, Rng, RngState};
@@ -88,12 +89,12 @@ fn fnv_utf16(units: &[u16]) -> u32 {
     hash
 }
 
-/// The v8 RNG vectors (recorded from the TypeScript engine) still hold: the generator is
-/// unchanged, and v9's integer draws (`(u × n) >> 32` ranges, integer weighted picks) give the
-/// same results as v8's `nextFloat` arithmetic (docs/NUMERICS.md "Randomness").
+/// The fixed RNG vectors hold: the generator is unchanged, and the integer draws (`(u × n) >> 32`
+/// ranges, integer weighted picks) give the same results as the old `nextFloat` arithmetic
+/// (docs/NUMERICS.md "Randomness").
 #[test]
-fn rng_streams_match_the_v8_vectors() {
-    let fixture = golden("v8/rng.json");
+fn rng_streams_match_the_fixed_vectors() {
+    let fixture = golden("vectors/rng.json");
     for vector in fixture["hashStringToU32"].as_array().unwrap() {
         let input = vector["input"].as_str().unwrap();
         let expected = vector["value"].as_u64().unwrap() as u32;
@@ -215,7 +216,7 @@ fn rng_vector(seed: &Value) -> Value {
 #[test]
 fn rng_streams_match_the_recorded_vectors() {
     let seeds: Vec<Value> =
-        golden("v8/rng.json")["seeds"].as_array().unwrap().iter().map(|e| e["seed"].clone()).collect();
+        golden("vectors/rng.json")["seeds"].as_array().unwrap().iter().map(|e| e["seed"].clone()).collect();
     let actual = Value::Array(seeds.iter().map(rng_vector).collect());
     if RNG_RECORDER.enabled() {
         write_golden(&RNG_RECORDER, "rng.json", &actual);
@@ -273,11 +274,11 @@ fn decode_tagged(value: &Value) -> Value {
     }
 }
 
-/// Stable JSON (debug output, readable goldens) and the v8 text hash (`fe_hash_text`) are
-/// unchanged in v9: the TypeScript vectors still hold.
+/// Stable JSON (debug output, readable goldens) and the text hash (`fe_hash_text`) match the
+/// fixed vectors.
 #[test]
-fn stable_stringify_and_text_hash_match_the_v8_vectors() {
-    for entry in golden("v8/hash.json").as_array().unwrap() {
+fn stable_stringify_and_text_hash_match_the_fixed_vectors() {
+    for entry in golden("vectors/stable-text.json").as_array().unwrap() {
         let name = entry["name"].as_str().unwrap();
         if contains_mark(&entry["input"]) {
             // Lone surrogates cannot live in a Rust String; no engine state contains one.

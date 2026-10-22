@@ -454,7 +454,7 @@ text, icon sizes, the PE patch round trip on the fixture (and its failures),
 template version and checksum refusal, a missing template failing one target,
 and an end-to-end export for the host target whose player runs headless and
 reports the right game id, version and hash. `Tractr.App.Tests` drives
-the dialog. CI exports `project-v8.json` on Linux and Windows and runs the
+the dialog. CI exports `fixture-project.json` on Linux and Windows and runs the
 exported game against the checked-in replay.
 
 The player's own tests cover the screenshot goldens (title screen, settings,

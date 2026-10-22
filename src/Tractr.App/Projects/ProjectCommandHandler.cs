@@ -89,9 +89,7 @@ public sealed class ProjectCommandHandler : IProjectCommandHandler
             return;
         }
 
-        ShowOpened(shell, loaded.Project!, loaded.MigratedFrom is { } from
-            ? $"Opened \"{loaded.Project!.Name}\" (upgraded from schema v{from})."
-            : $"Opened \"{loaded.Project!.Name}\".");
+        ShowOpened(shell, loaded.Project!, $"Opened \"{loaded.Project!.Name}\".");
     }
 
     public async Task ImportProjectJsonAsync(IShellHost shell)
@@ -117,9 +115,7 @@ public sealed class ProjectCommandHandler : IProjectCommandHandler
         }
 
         _workspace.Open(imported.Project!);
-        ShowOpened(shell, imported.Project!, imported.MigratedFrom is { } from
-            ? $"Imported {file.FileName} as \"{imported.Project!.Name}\" (upgraded from schema v{from})."
-            : $"Imported {file.FileName} as \"{imported.Project!.Name}\".");
+        ShowOpened(shell, imported.Project!, $"Imported {file.FileName} as \"{imported.Project!.Name}\".");
     }
 
     public async Task ExportProjectJsonAsync(IShellHost shell)

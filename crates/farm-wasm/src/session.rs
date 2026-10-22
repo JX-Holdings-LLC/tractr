@@ -14,7 +14,7 @@ pub struct WasmSession {
 
 #[wasm_bindgen(js_class = Session)]
 impl WasmSession {
-    /// A session for a (migrated) project — JSON text, a parsed object or its UTF-8 bytes — or
+    /// A session for a project — JSON text, a parsed object or its UTF-8 bytes — or
     /// compiled cartridge bytes. Without a `seed` the project's own seed applies;
     /// `autoStartQuests` does what hosts do at game start.
     #[wasm_bindgen(constructor)]
@@ -116,9 +116,9 @@ impl WasmSession {
         self.run(|s| Ok(s.save()))
     }
 
-    /// Loads a JSON save (or a bare web `GameState`), migrating old saves and quarantining items
-    /// the game no longer has. Returns `{"warnings","quarantined","restored","fromVersion",
-    /// "migrated"}` as JSON; a refused save throws and keeps the state.
+    /// Loads a JSON save (or a bare web `GameState`), quarantining items the game no longer has.
+    /// Returns `{"warnings","quarantined","restored"}` as JSON; a refused save throws and keeps
+    /// the state.
     #[wasm_bindgen(js_name = loadSave)]
     pub fn load_save(
         &mut self,

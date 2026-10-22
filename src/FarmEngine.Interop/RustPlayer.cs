@@ -203,7 +203,7 @@ public sealed unsafe class RustPlayer : IDisposable
     /// <summary>Why the game stopped (null while it runs).</summary>
     public string? Fault => _native.Fault;
 
-    /// <summary>Starts a player for a (migrated) editor project.</summary>
+    /// <summary>Starts a player for a editor project.</summary>
     public static RustPlayer Create(GameProject project, RustPlayerOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(project);

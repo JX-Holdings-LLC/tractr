@@ -57,10 +57,10 @@ let hashText (text: string) : string =
 /// `hashState`: the golden hash of a JSON value's stable text.
 let hashJson (value: Json) : string = hashText (Json.stableStringify value)
 
-/// The fixed `now` of the golden content fixtures (tools/golden golden.gen.test.ts FIXED_TIME).
+/// The fixed `now` of the golden content fixtures.
 let fixedTime = 1_700_000_000_000.0
 
-/// A file shipped next to the tests (`Fixtures/`, `Golden/`, `Migrated/`).
+/// A file shipped next to the tests (`Fixtures/`, `Golden/`).
 let testFile (parts: string list) : string =
     System.IO.Path.Combine(Array.ofList (System.AppContext.BaseDirectory :: parts))
 

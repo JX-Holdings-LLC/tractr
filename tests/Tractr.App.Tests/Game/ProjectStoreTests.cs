@@ -7,7 +7,7 @@ namespace Tractr.App.Tests.Game;
 
 public sealed class ProjectStoreTests
 {
-    private static readonly string FixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "project-v1.json");
+    private static readonly string FixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "fixture-project.json");
 
     [Fact]
     public void SaveThenLoad_RoundTripsTheProject_AndIndexesIt()
@@ -22,7 +22,6 @@ public sealed class ProjectStoreTests
         Assert.True(File.Exists(Path.Combine(dir.Path, "projects", "proj-test.json")));
         var loaded = store.Load("proj-test");
         Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
-        Assert.Null(loaded.MigratedFrom);
         Assert.Equal(ProjectStore.ToJson(project), ProjectStore.ToJson(loaded.Project!));
 
         var summary = Assert.Single(store.List());
@@ -68,27 +67,27 @@ public sealed class ProjectStoreTests
         Assert.Equal(["index.json", "proj-a.json"], files.Select(Path.GetFileName).Order(StringComparer.Ordinal));
         Assert.Equal("Second", store.Load("proj-a").Project!.Name);
         Assert.Equal("Second", Assert.Single(store.List()).Name);
-        // Web-compatible JSON: camelCase, indented, parseable by the migrations.
+        // Web-compatible JSON: camelCase, indented, at the current schema version.
         var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a.json"));
         Assert.Contains("\n  \"schemaVersion\": 9", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Load_MigratesTheV1Fixture()
+    public void Load_ReadsTheFixtureProject()
     {
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.Copy(FixturePath, store.PathFor("legacy"));
+        File.Copy(FixturePath, store.PathFor("fixture"));
 
         // Files the index doesn't know are adopted (name read from the file).
         var summary = Assert.Single(store.List());
-        Assert.Equal("legacy", summary.Id);
+        Assert.Equal("fixture", summary.Id);
 
-        var loaded = store.Load("legacy");
+        var loaded = store.Load("fixture");
         Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
-        Assert.Equal(1, loaded.MigratedFrom);
-        Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, loaded.Project!.SchemaVersion);
+        Assert.Equal("fixture", loaded.Project!.Id);
+        Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, loaded.Project.SchemaVersion);
         Assert.NotEmpty(loaded.Project.Scenes);
     }
 
@@ -100,6 +99,7 @@ public sealed class ProjectStoreTests
         Directory.CreateDirectory(store.ProjectsDirectory);
         File.WriteAllText(store.PathFor("broken"), "{ not json");
         File.WriteAllText(store.PathFor("future"), """{ "schemaVersion": 999, "scenes": [] }""");
+        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 8, "scenes": [] }""");
 
         var broken = store.Load("broken");
         Assert.False(broken.Ok);
@@ -107,6 +107,9 @@ public sealed class ProjectStoreTests
         var future = store.Load("future");
         Assert.False(future.Ok);
         Assert.Contains("newer than this engine supports", future.Errors[0], StringComparison.Ordinal);
+        var old = store.Load("old");
+        Assert.False(old.Ok);
+        Assert.Contains("schema version 8 is not supported", old.Errors[0], StringComparison.Ordinal);
         Assert.False(store.Load("missing").Ok);
     }
 
@@ -118,7 +121,6 @@ public sealed class ProjectStoreTests
 
         var fromFixture = store.Import(File.ReadAllText(FixturePath));
         Assert.True(fromFixture.Ok, string.Join("; ", fromFixture.Errors));
-        Assert.Equal(1, fromFixture.MigratedFrom);
         Assert.StartsWith("proj-", fromFixture.Project!.Id, StringComparison.Ordinal);
         Assert.Equal("tiles", fromFixture.Project.Mode);
 
@@ -278,22 +280,19 @@ public sealed class ProjectStoreTests
     }
 
     [Fact]
-    public void Save_KeepsThePreviousVersion_AndTheOriginalOfAMigratedProject()
+    public void Save_KeepsThePreviousVersion()
     {
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.Copy(FixturePath, store.PathFor("legacy"));
+        File.Copy(FixturePath, store.PathFor("fixture"));
 
-        var loaded = store.Load("legacy");
-        Assert.Equal(1, loaded.MigratedFrom);
+        var loaded = store.Load("fixture");
         store.Save(loaded.Project!);
         store.Save(loaded.Project!.WithName("Renamed"));
 
-        Assert.Equal(File.ReadAllText(FixturePath), File.ReadAllText(store.MigrationBackupPath("legacy", 1)));
-        Assert.Equal(Path.Combine(store.BackupsDirectory, "legacy.v1.json"), store.MigrationBackupPath("legacy", 1));
-        Assert.Equal(loaded.Project!.Name, ProjectStore.Parse(File.ReadAllText(store.PreviousVersionPath("legacy"))).Project!.Name);
-        Assert.Equal("Renamed", store.Load("legacy").Project!.Name);
+        Assert.Equal(loaded.Project!.Name, ProjectStore.Parse(File.ReadAllText(store.PreviousVersionPath("fixture"))).Project!.Name);
+        Assert.Equal("Renamed", store.Load("fixture").Project!.Name);
         // Backups never show up as projects.
         Assert.Single(store.List());
     }

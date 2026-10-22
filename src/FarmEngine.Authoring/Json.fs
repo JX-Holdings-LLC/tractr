@@ -1,14 +1,12 @@
 namespace FarmEngine.Authoring
 
-/// An immutable JSON value: the raw, untyped data that migrations work on (the TS
-/// `Record<string, any>`). Object members keep insertion order, like a JS object built from
-/// spreads, so an F# migration and a TS migration that do the same thing produce the same member
-/// order. A missing key and a JSON `null` are both "nullish" (`??`); `Json.has` is the
+/// An immutable JSON value: raw, untyped data (the TS `Record<string, any>`). Object members
+/// keep insertion order, like a JS object built from spreads. A missing key and a JSON `null` are both "nullish" (`??`); `Json.has` is the
 /// `!== undefined` test. There is no `undefined` value: code that would store `undefined`
 /// removes the key instead, which is what `JSON.stringify` makes of it.
 ///
-/// Fable-safe (docs/LANGUAGES.md "F# conventions"): no reflection, no System.Text.Json, no I/O.
-/// Conversion from and to System.Text.Json lives in FarmEngine.Authoring.Net.
+/// No reflection, no System.Text.Json, no I/O (docs/LANGUAGES.md "F# conventions"). Conversion
+/// from and to System.Text.Json lives in FarmEngine.Authoring.Net.
 type Json =
     | JNull
     | JBool of bool
@@ -17,9 +15,8 @@ type Json =
     | JArray of Json list
     | JObject of (string * Json) list
 
-/// Thrown by the JS-semantics helpers where the JavaScript would throw a TypeError (property
-/// access on `null`, `.map` on something that is not an array). Migrations turn it into a
-/// "Migration failed: …" error, so callers never see it.
+/// Thrown by `Json.elements` where the JavaScript would throw a TypeError (iterating something
+/// that is not an array).
 exception JsTypeError of string
 
 /// JS number formatting and parsing (`String(n)`, `Number(s)`), shared by the JSON helpers.
@@ -110,10 +107,6 @@ module JsNumber =
             else
                 nan
 
-#if FABLE_COMPILER
-    /// JS `String(n)` / `` `${n}` `` (Number::toString).
-    let format (value: float) : string = string value
-#else
     /// JS `String(n)` / `` `${n}` `` (Number::toString): the shortest round-trip digits, laid out
     /// with the ECMAScript rules (plain up to 1e21, exponent below 1e-6). Mirrors C# `Js.Num`.
     let format (value: float) : string =
@@ -163,12 +156,11 @@ module JsNumber =
                     let e = n - 1
                     let fraction = if k > 1 then "." + digits.Substring 1 else ""
                     sign + digits.Substring(0, 1) + fraction + "e" + (if e >= 0 then "+" else "-") + string (abs e)
-#endif
 
     // The two roundings of the authoring core (.NET's own `Math.Round` rounds halves to even
     // and is not used for game values):
     //   `round`          JS `Math.round`, halves toward +∞: code ported from the TypeScript
-    //                    (migrations that recompute values the way the web did).
+    //                    that recomputes values the way the web did.
     //   `roundHalfAway`  halves away from zero: Rust `f64::round`, which the engine uses when it
     //                    loads a value onto its integer grid, and JS `toFixed(0)`, which the web
     //                    readouts display. For what the game will make of a value, and readouts.
@@ -192,17 +184,10 @@ module JsNumber =
             if abs (x - t) >= 0.5 then t + (if x < 0.0 then -1.0 else 1.0) else t
 
 /// JS-semantics helpers over `Json`, for code ported from TypeScript that works on raw
-/// `Record<string, any>` data (migrations). Each helper names the JS expression it stands for.
+/// `Record<string, any>` data. Each helper names the JS expression it stands for.
 [<RequireQualifiedAccess>]
 module Json =
     // ── Reading ────────────────────────────────────────────────────────────
-
-    /// `raw && typeof raw === 'object'` (arrays are objects in JS).
-    let isObjectLike (value: Json) : bool =
-        match value with
-        | JObject _
-        | JArray _ -> true
-        | _ -> false
 
     /// `value ?? …` applies: JSON null (missing keys read as `JNull` too).
     let isNullish (value: Json) : bool =
@@ -326,21 +311,8 @@ module Json =
 
     // ── Throwing reads (JS TypeErrors) ─────────────────────────────────────
 
-    /// `value.anything` on null throws a TypeError in JS; everything else reads fine.
-    let require (value: Json) : Json =
-        match value with
-        | JNull -> raise (JsTypeError "Cannot read properties of null")
-        | v -> v
-
-    /// `(value ?? []).map(f)` where `path` names the value (`$.scenes[0].tiles`) for the error
-    /// when it is not an array. `f` gets each element with its own path.
-    let mapArray (path: string) (f: string -> Json -> Json) (value: Json) : Json =
-        match value with
-        | JNull -> JArray []
-        | JArray items -> JArray(items |> List.mapi (fun i item -> f (path + "[" + string i + "]") item))
-        | _ -> raise (JsTypeError("Expected an array at '" + path + "'"))
-
-    /// `for (const x of value ?? [])`, with the same error as `mapArray`.
+    /// `for (const x of value ?? [])`; `path` names the value (`$.scenes[0].tiles`) for the
+    /// error when it is not an array.
     let elements (path: string) (value: Json) : Json list =
         match value with
         | JNull -> []
@@ -473,8 +445,8 @@ module Json =
     exception private ParseFailure of string
 
     /// The deepest nesting `parse` accepts. Project files nest about a dozen levels; the limit
-    /// keeps a hostile file from overflowing the stack (an uncatchable crash on .NET, a
-    /// `RangeError` under Fable) and keeps every recursive walk over a parsed value shallow.
+    /// keeps a hostile file from overflowing the stack (an uncatchable crash on .NET) and keeps
+    /// every recursive walk over a parsed value shallow.
     [<Literal>]
     let MaxDepth = 256
 

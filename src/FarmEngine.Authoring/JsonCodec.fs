@@ -7,7 +7,7 @@ type Path = string list
 exception DecodeError of path: string * message: string
 
 /// Readers for the schema decoders (SchemaJson.fs). Each takes the path of the value it reads and
-/// raises `DecodeError` for a value of the wrong kind. Fable-safe.
+/// raises `DecodeError` for a value of the wrong kind.
 module Decode =
     /// `scenes.0.width` from a reversed path.
     let pathText (path: Path) : string = path |> List.rev |> String.concat "."

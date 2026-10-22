@@ -5,8 +5,8 @@ result. Safe to run again: it installs only what is missing.
 
 .DESCRIPTION
 Installs with winget: the Visual Studio Build Tools with the C++ workload (Rust's MSVC linker),
-rustup, the .NET 10 SDK and Node 22. Then installs the Rust toolchain rust-toolchain.toml pins and
-restores the dotnet tools (Fable). global.json pins the .NET SDK version and rolls forward to
+rustup, the .NET 10 SDK and Node 22. Then installs the Rust toolchain rust-toolchain.toml pins.
+global.json pins the .NET SDK version and rolls forward to
 newer feature bands, so winget's .NET 10 SDK is accepted.
 
   scripts\dev-setup.ps1           install what is missing
@@ -76,12 +76,10 @@ if (-not (& $sdkOk)) { Winget 'Microsoft.DotNet.SDK.10' '.NET 10 SDK' }
 if (& $sdkOk) {
     Push-Location $root
     Ok "dotnet $(dotnet --version)"
-    if (-not $Check) { dotnet tool restore | Out-Null }
-    if ((dotnet tool list --local) -match '^fable ') { Ok 'fable (dotnet tool)' } else { Miss 'fable (dotnet tool restore)' }
     Pop-Location
 }
 
-Say 'Node 22 (the WebAssembly and Fable smoke tests, markdownlint; optional)'
+Say 'Node 22 (the WebAssembly smoke tests, markdownlint; optional)'
 if ((Has node) -and ((node --version) -match '^v2[2-9]')) { Ok "node $(node --version)" }
 elseif (-not $Check) { Winget 'OpenJS.NodeJS.LTS' 'Node 22' }
 else { Write-Host '  optional: Node 22 is not installed' }

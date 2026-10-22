@@ -210,7 +210,7 @@ pub struct HostPlayer {
 }
 
 impl HostPlayer {
-    /// A player for a (migrated) project's JSON or a compiled cartridge. `options` carries the
+    /// A player for a project's JSON or a compiled cartridge. `options` carries the
     /// mode and stores; `create` the seed and the settings the host overrides.
     pub fn new(game: &[u8], create: &PlayerCreate, mut options: PlayerOptions) -> Result<Self, String> {
         options.seed = create.seed.clone().filter(|seed| !seed.is_empty());

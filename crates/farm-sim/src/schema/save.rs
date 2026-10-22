@@ -1,5 +1,5 @@
 //! Port of `Save.cs` (packages/engine-schemas/src/save.ts: schemas, constants and pure helpers;
-//! `SAVE_MIGRATIONS` / `migrateGameState` are ported separately into `farm-cart`).
+//! loading a save is `farm_cart::load_game_state`).
 //!
 //! Save-data family (`GameState`) — a player's running game, fully serializable, versioned
 //! independently from project and content data.
@@ -323,16 +323,14 @@ impl KeptState {
     }
 }
 
-/// TS `SaveMigrationResult` (returned by the save migration pipeline).
+/// A loaded save state (`farm_cart::load_game_state`): the parsed and checked state, or why
+/// there is none.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
-pub struct SaveMigrationResult {
+pub struct SaveLoadResult {
     pub ok: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<GameState>,
-    /// The version the input declared, as read (a report, not state: `2.5` stays `2.5`).
-    pub from_version: f64,
-    pub migrated: bool,
     pub errors: Vec<String>,
 }
 

@@ -9,9 +9,8 @@ simulation keeps. Read it before you add a field to `farm-sim`.
 
 Until v8 the Rust core ran with JavaScript number semantics (`f64` everywhere,
 the `js` helpers, FNV-1a over stable JSON) so that it reproduced the
-TypeScript engine's goldens bit for bit. Now that the web version plays
-through `farm-wasm` and authors through the Fable-compiled F# core, there is
-one engine, and the constraints change:
+TypeScript engine's goldens bit for bit. Now that the Rust engine is the
+reference, the constraints change:
 
 - **Determinism across machines** (replays, saves, future lockstep play) is
   easier to guarantee with integer arithmetic than with floats, whose results
@@ -84,8 +83,8 @@ would change every seeded game.
 
 Anything a creator can type that isn't on the grid is rounded when read: a
 price of 12.5 gold becomes 13 (ties away from zero), an energy cost of
-0.0004 becomes 0. F# Problems warns about such values (see "Project
-migration" below), so they don't surprise anyone.
+0.0004 becomes 0. F# Problems warns about such values (see "Projects (F#)"
+below), so they don't surprise anyone.
 
 ## Randomness
 
@@ -120,21 +119,20 @@ reconciles its items with the content once when it loads.
 
 ## Saves
 
-`CURRENT_SAVE_VERSION` goes from 4 to 5 (saves have their own numbering). The
-v4→v5 migration is the quantization in the serde adapters, applied when the
-v4 state is read, plus the version bump. A v8-era save therefore loads,
-keeps playing, and is written back as v5 on the next save. The FlatBuffers
-`SavePreview` fields keep their `double` type (a schema field is never
-retyped); they hold whole numbers. The v3→v4 step (centering tile positions)
-still runs on the JSON numbers before the v5 read.
+`CURRENT_SAVE_VERSION` went from 4 to 5 with v9 (saves have their own
+numbering). The quantization is in the serde adapters, applied when a state
+is read. Only v5 saves load: older save versions are refused, not migrated
+(`farm_cart::load_game_state`). The FlatBuffers `SavePreview` fields keep
+their `double` type (a schema field is never retyped); they hold whole
+numbers.
 
-## Project migration (F#)
+## Projects (F#)
 
-`ProjectSchema.CurrentProjectSchemaVersion` goes from 8 to 9. The v8→v9
-project migration applies the same quantization to the values a project
-carries into play (player and NPC positions, energy, the current time of
-day, animal positions and mood), so the editor shows what the game will run.
-Content definitions (prices, chances) keep what the creator typed; the Rust
+`ProjectSchema.CurrentProjectSchemaVersion` is 9, and only v9 projects load
+(`ProjectLoad`); older versions are refused, not migrated. The values a
+project carries into play (player and NPC positions, energy, the current
+time of day, animal positions and mood) are on the engine's grid, so the
+editor shows what the game will run. Content definitions (prices, chances) keep what the creator typed; the Rust
 loader quantizes them, and Problems reports a warning (`numbers.offGrid`)
 where that changes a value in a way a player could notice (a fractional
 price or count). "Keep changes" (the hosts' synced project) writes the running
@@ -144,17 +142,16 @@ with their quantized form.
 
 ## Goldens
 
-The TypeScript goldens (`fixtures/golden/replays`, `saves`, `hash.json`,
-`rng.json`) pinned the compatibility phase. From v9, Rust is the reference:
+The TypeScript goldens pinned the compatibility phase. From v9, Rust is the
+reference:
 
-- the v8 goldens move to `fixtures/golden/v8/` and stay as **migration
-  inputs** (every v8 save and project must still load);
-- replays, content, save, RNG and hash goldens are re-recorded from Rust
-  with `FARM_RECORD_GOLDENS=1` on the test that checks them
-  (`golden_replays`, `golden_content`, `golden_primitives` in `farm-sim`,
-  `golden_saves` in `farm-cart`; see `fixtures/golden/SOURCE.txt`) and
-  reviewed as a diff; the v8 replays' inputs (project, seed, input log) are
-  the recorded replays' inputs;
+- replays, content, save, RNG and hash goldens are recorded from Rust with
+  `FARM_RECORD_GOLDENS=1` on the test that checks them (`golden_replays`,
+  `golden_content`, `golden_primitives` in `farm-sim`, `golden_saves` in
+  `farm-cart`; see `fixtures/golden/SOURCE.txt`) and reviewed as a diff; each
+  golden file holds its own inputs (project, seed, input log);
+- `fixtures/golden/vectors` keeps fixed RNG and stable-JSON vectors from the
+  TypeScript engine, which still hold and are never re-recorded;
 - recording has guardrails, because a self-recorded golden pins whatever the
   engine does, bugs included: the switches (`FARM_RECORD_GOLDENS`,
   `FARM_PLAYER_BLESS`, `FARM_RENDER_BLESS`) are on only when set to `1`; a
@@ -163,14 +160,14 @@ The TypeScript goldens (`fixtures/golden/replays`, `saves`, `hash.json`,
   engine commit it recorded on into `fixtures/golden/SOURCE.txt`; and CI
   refuses to run with any record or bless switch set and fails when the tests
   leave `fixtures/` different from the commit;
-- the comparison is a test, `farm-sim/tests/v8_outcomes.rs`: the v8 engine
-  recorded the outcomes a player can see after every step of every v8 replay
-  (money, energy, inventory, skills, quests, calendar, player tile, NPCs,
-  friendship, animals, mine, open modals, tile contents, effects) into
-  `fixtures/golden/v8/outcomes`, and v9 must reproduce them. All replays
-  agree; sub-tile player positions differ by less than 1/1000 tile (the
-  default speed of 4.5 tiles per second is 1843/8192 tile per tick). Its
-  notes are in the CHANGELOG entry for v9.
+- when v9 replaced v8, a test compared the outcomes a player can see after
+  every step of every replay (money, energy, inventory, skills, quests,
+  calendar, player tile, NPCs, friendship, animals, mine, open modals, tile
+  contents, effects) with what the v8 engine recorded. All replays agreed;
+  sub-tile player positions differed by less than 1/1000 tile (the default
+  speed of 4.5 tiles per second is 1843/8192 tile per tick). Its notes are in
+  the CHANGELOG entry for v9; the test and the v8 recordings were removed
+  in 0.5.0.
 
 ## What goes away
 

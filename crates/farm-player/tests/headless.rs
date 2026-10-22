@@ -2,7 +2,7 @@ use std::process::Command;
 
 #[test]
 fn executable_loads_the_compiled_cartridge() {
-    let cart = [env!("CARGO_MANIFEST_DIR"), "..", "..", "fixtures", "golden", "cartridges", "project-v8.cart"]
+    let cart = [env!("CARGO_MANIFEST_DIR"), "..", "..", "fixtures", "golden", "cartridges", "fixture-project.cart"]
         .iter()
         .collect::<std::path::PathBuf>();
     let output = Command::new(env!("CARGO_BIN_EXE_farm-player"))

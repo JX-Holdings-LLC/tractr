@@ -3,8 +3,7 @@
 The game for web pages: a `wasm-bindgen` API over the same player, headless sessions and
 previews the desktop editor reaches through `farm-ffi`. Both crates are thin bindings over
 `farm-host`, which holds the JSON protocol, so a page sends the same requests as .NET and gets
-the same pixels, sounds and state hashes. The web version (`jxburros/farm-game-engine`) uses it
-for Play Mode and for web demo exports.
+the same pixels, sounds and state hashes. Export Game's web demo target uses it.
 
 ## Build
 
@@ -40,8 +39,8 @@ Arguments documented as JSON take either a JavaScript value or its JSON text. JS
 (`stateJson`, `apply`, `queryJson`, …) are strings, exactly the bytes farm-ffi returns, so
 hashes can be checked (`hashState(player.stateJson()) === player.hash()`); `JSON.parse` them as
 needed. A value `JSON.stringify` cannot turn into JSON (a function, a symbol) throws a
-`FarmError` of kind `"invalid"` like malformed JSON does. Games are project JSON (text, object or UTF-8 bytes, already migrated to the current
-schema) or compiled cartridge bytes (`Uint8Array`/`ArrayBuffer`).
+`FarmError` of kind `"invalid"` like malformed JSON does. Games are project JSON (text, object or UTF-8 bytes, at the current project
+schema version) or compiled cartridge bytes (`Uint8Array`/`ArrayBuffer`).
 
 ## `Player`
 
@@ -163,7 +162,7 @@ A headless game (tools, tests, replays); mirrors `fe_session_*`.
 | `hookEvents()` | Drains the hook events since the last call (`[{hook, payload}]`). |
 | `setState(state)` | Replaces the state, taken as it is (tile grids that don't match their scene's size are fixed). |
 | `setScripted(scripted)` | `true`: commands apply wherever the player stands (scripts, the goldens). By default they apply only where a player could give them: no `descendMine` away from the mine, no `openShop` without facing the merchant, only the open dialogue's, shop's or minigame's own commands while one is open. |
-| `save()`, `loadSave(save)` | A JSON save of the state; loading migrates old saves and quarantines unknown items, and returns `{warnings, quarantined, restored, fromVersion, migrated}`. |
+| `save()`, `loadSave(save)` | A JSON save of the state; loading quarantines unknown items and returns `{warnings, quarantined, restored}`. |
 
 The smoke test replays every golden in `fixtures/golden/replays` (recorded from the Rust
 engine) through a scripted `Session` and checks each step's hash and effects.

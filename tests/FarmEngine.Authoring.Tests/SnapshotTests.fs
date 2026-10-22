@@ -1,5 +1,5 @@
 /// Behavior snapshots of the authoring core: for every golden, fixture, sample and broken
-/// project, what migration, the Problems pipeline, the content compiler and the cartridge
+/// project, what loading, the Problems pipeline, the content compiler and the cartridge
 /// compiler make of it, pinned as hashes and message lists in `fixtures/authoring/snapshots.json`.
 /// They hold the authoring core to its behavior while its data model changes underneath. After
 /// an intended change, rerun with FARM_RECORD_SNAPSHOTS=1 to rewrite the file, and review its diff.
@@ -50,11 +50,6 @@ let private sources () : (string * string) list =
       for path in files "Golden/replays" "*.json" do
           if Path.GetFileName path <> "index.json" then
               yield "replays/" + Path.GetFileName path, text (projectKey path)
-      for path in files "Golden/migrations" "project-v*.json" -> "migrations/" + Path.GetFileName path, text (readJson path).["input"]
-      for path in files "Golden/migrations" "errors.json" do
-          for case in (readJson path).AsArray() do
-              yield "migrations/errors/" + string case.["name"], text case.["input"]
-      for path in files "Migrated" "*.json" -> "migrated/" + Path.GetFileName path, File.ReadAllText path
       for path in files "Fixtures" "*.json" do
           let name = Path.GetFileName path
           if name <> "content-lints.json" && name <> "content-builtin.json" then
@@ -73,10 +68,8 @@ let private problemLine (p: Problem) = sprintf "%s|%s|%s|%s|%s" p.SeverityName p
 /// Everything the authoring core makes of one project text.
 let private snapshot (text: string) : JsonObject =
     let o = JsonObject()
-    let project = ProjectLoad.migrateProjectText text
+    let project = ProjectLoad.loadProjectText text
     o["ok"] <- JsonValue.Create project.Ok
-    o["fromVersion"] <- JsonValue.Create project.FromVersion
-    o["migrated"] <- JsonValue.Create project.Migrated
     o["errors"] <- strings project.Errors
     match project.Data with
     | None -> ()
@@ -92,7 +85,7 @@ let private snapshot (text: string) : JsonObject =
         match attempt (fun () -> CartridgeCompiler.Compile data) with
         | Ok bytes -> o["cartridge"] <- JsonValue.Create(sha bytes)
         | Error message -> o["cartridge"] <- JsonValue.Create("throws " + message)
-    let game = ProjectLoad.migrateExportedGameText text
+    let game = ProjectLoad.loadExportedGameText text
     o["gameOk"] <- JsonValue.Create game.Ok
     o["gameErrors"] <- strings game.Errors
     match game.Data with

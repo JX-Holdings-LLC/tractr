@@ -2,8 +2,8 @@ namespace FarmEngine.Authoring
 
 open System
 
-/// A FlatBuffers builder in plain F# (the authoring core compiles under Fable, so it cannot use
-/// the Google.FlatBuffers package). It follows the reference builder's layout step for step:
+/// A FlatBuffers builder in plain F# (the authoring core uses no .NET-only packages such as
+/// Google.FlatBuffers). It follows the reference builder's layout step for step:
 /// back-to-front writing, the same alignment and padding, vtable trimming and deduplication and
 /// the same `Finish` with a file identifier, so it writes byte for byte what flatc's C# code writes
 /// for the same calls. Only what `schemas/cart.fbs` needs is here: strings, byte and offset

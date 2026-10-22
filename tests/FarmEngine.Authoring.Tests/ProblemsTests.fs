@@ -617,10 +617,3 @@ let ``numeric and dotted weather-table keys get bracketed JSON paths`` () =
     for path in [ "weather.table[\"1\"]"; "weather.table[\"1\"][0].weatherId"; "weather.table[\"1\"][0].weight"; "weather.table[\"a.b\"][0].weight" ] do
         Assert.Contains(path, paths)
     Assert.Equal("scenes[0].tiles[1][2].background", Problems.jsonPath "scenes.0.tiles.1.2.background")
-
-[<Fact>]
-let ``WebApi reports failures in its result instead of throwing`` () =
-    let deep = String.replicate 5000 "[" + String.replicate 5000 "]"
-    for result in [ WebApi.problems deep; WebApi.compileContent deep; WebApi.migrateProject deep; WebApi.applyPlaytestState deep deep ] do
-        Assert.Contains("\"ok\":false", result)
-    Assert.Contains("\"ok\":false", WebApi.problems "{\"schemaVersion\": 1e400}")

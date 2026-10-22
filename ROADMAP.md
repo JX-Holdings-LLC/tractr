@@ -5,6 +5,8 @@ web version, `jxburros/farm-game-engine` (a private repository), which was the
 reference implementation until both apps moved onto one engine.
 The port is complete: phases 1–7 below are done, including phase 7, one
 engine for the web and native versions (see [Phase 7](#phase-7-one-engine)).
+Since 0.5.0 the two are separate projects
+([Separate projects](#separate-projects-050)).
 Each phase shipped as a normal release through the Update Center.
 
 What comes next is in two parts:
@@ -332,6 +334,21 @@ project. See [docs/LANGUAGES.md](docs/LANGUAGES.md#phases).
 - [x] **Web demo export**: Export Game's web target runs `farm-wasm`'s
   standalone player in a page for itch.io.
 
+## Separate projects (0.5.0)
+
+Tractr and the web version are separate projects now, and neither has old
+projects to carry forward, so the compatibility code is gone:
+
+- [x] The Fable build of the authoring core (`tools/fable`, `WebApi.fs`, the
+  Fable dotnet tool and its CI step).
+- [x] Project migrations (`Migrations.fs`): `ProjectLoad` reads schema v9 only
+  and refuses older versions with a message.
+- [x] Save migrations (`farm-cart::save`): only save version 5 loads.
+- [x] The TypeScript golden generator (`tools/golden`) and the v8 goldens and
+  outcomes (`fixtures/golden/v8`, `v8_outcomes`); every golden is recorded
+  from Rust. The RNG and stable-JSON vectors stay as fixed vectors
+  (`fixtures/golden/vectors`).
+
 ## Parity with the web editor
 
 After phase 7 a review listed what the web editor still did better. All of it
@@ -425,8 +442,9 @@ game on an alien planet would need to change.
 The milestones below are roughly in priority order. M1 comes first because
 later milestones build on data-driven terrain, tools and items. Each change to
 the content model goes through the usual path: F# records and checks, Rust
-serde types and parity tests, a schema version bump with a migration, and
-goldens.
+serde types and parity tests, a schema version bump, and goldens. (Tractr
+has no project migrations since 0.5.0; add one when a schema change has
+released projects to carry forward.)
 
 ### M1: A data-driven world vocabulary
 
@@ -540,7 +558,7 @@ Make the closed enums into content, so a game defines its own world.
   the project JSON (`CustomAsset.DataUrl`), so a game with hundreds of
   sprites makes a huge file that is slow to open and impossible to review in
   git. Move to a project folder: project JSON plus one file per asset,
-  with JSON import and export kept for the web version.
+  with single-file JSON import and export kept for sharing a project.
 - [ ] **Split project files** (scenes, NPCs, dialogue, items) so teams can
   work on a game together through version control.
 - [ ] **Bigger and richer maps**: scenes above 256×256 tiles, more than the
@@ -569,9 +587,6 @@ Make the closed enums into content, so a game defines its own world.
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
-- **Retire the web version's TypeScript engine** once playtesting on
-  `farm-wasm` has proven itself, and move its HTML export to `farm-wasm`'s
-  standalone player (as the native editor's web demo export does).
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
 - **Player polish.** GPU effects: day/night lighting, season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws

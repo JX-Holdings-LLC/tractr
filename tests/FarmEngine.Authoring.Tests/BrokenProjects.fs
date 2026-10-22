@@ -380,7 +380,7 @@ let private malformedCases =
 /// Every case, and one with all of the checkable ones at once (past the 20-error cap).
 let cases : Case list =
     let single = parseCases @ lintCases @ contentCases
-    // Without the fractional schemaVersion, which the migrations refuse before any check runs,
+    // Without the fractional schemaVersion, which loading refuses before any check runs,
     // and the nulls, which the typed parse refuses before any check runs.
     let isDecode = function Decode _ -> true | _ -> false
     let combinable =
@@ -400,7 +400,7 @@ let cases : Case list =
     single @ malformedCases @ [ combined ]
 
 /// The starter farm as JSON, fresh on each call.
-let starterJson () : JsonObject = (ProjectMigrations.toNode (TestProjects.starter ())).AsObject()
+let starterJson () : JsonObject = (ProjectJson.toNode (TestProjects.starter ())).AsObject()
 
 /// A case's JSON (the starter with its edits).
 let json (case: Case) : JsonObject =

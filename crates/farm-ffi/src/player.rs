@@ -54,7 +54,7 @@ impl std::fmt::Debug for FePlayer {
     }
 }
 
-/// Creates an embedded player for a (migrated) project's JSON or a compiled cartridge.
+/// Creates an embedded player for a project's JSON or a compiled cartridge.
 /// `options` is `{"seed"?, "reducedMotion"?, "uiScale"?, "audio"?, "locale"?}` (may be empty); with
 /// `audio` the frames' sounds play on the default output device. On failure `error`
 /// holds the message.
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn a_cartridge_player_has_no_project_to_write_back() {
-        let cart = include_bytes!("../../../fixtures/golden/cartridges/project-v8.cart");
+        let cart = include_bytes!("../../../fixtures/golden/cartridges/fixture-project.cart");
         let player = new_player(cart, "");
         frame(player, r#"{"dt":0,"width":64,"height":64}"#);
         let (result, message) = call(|out| unsafe { fe_player_synced_project(player, out) });

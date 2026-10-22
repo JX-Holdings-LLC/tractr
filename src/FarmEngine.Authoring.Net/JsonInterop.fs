@@ -4,7 +4,7 @@ open System.Text.Json
 open System.Text.Json.Nodes
 open FarmEngine.Authoring
 
-/// Conversion between System.Text.Json and the Fable-safe `Json` DOM of FarmEngine.Authoring.
+/// Conversion between System.Text.Json and the `Json` DOM of FarmEngine.Authoring.
 /// Object members keep their order both ways.
 module JsonInterop =
 

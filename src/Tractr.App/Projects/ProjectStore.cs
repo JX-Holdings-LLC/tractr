@@ -14,8 +14,8 @@ public readonly record struct FileStamp(DateTime LastWriteUtc, long Length);
 /// <summary>A row of the project list (web <c>ProjectIndexEntry</c> + file size).</summary>
 public sealed record ProjectSummary(string Id, string Name, DateTimeOffset UpdatedAt, long SizeBytes);
 
-/// <summary>Outcome of loading/importing a project: the migrated project or user-facing errors.</summary>
-public sealed record ProjectLoadResult(GameProject? Project, IReadOnlyList<string> Errors, double? MigratedFrom = null)
+/// <summary>Outcome of loading/importing a project: the project or user-facing errors.</summary>
+public sealed record ProjectLoadResult(GameProject? Project, IReadOnlyList<string> Errors)
 {
     public bool Ok => Project is not null && Errors.Count == 0;
 
@@ -27,8 +27,8 @@ public sealed record ProjectLoadResult(GameProject? Project, IReadOnlyList<strin
 /// one web-compatible project JSON per project in <c>&lt;root&gt;/projects/&lt;id&gt;.json</c>
 /// plus <c>index.json</c> (id, name, updated time). Every write is atomic and flushed to disk
 /// (<see cref="AtomicFile"/>) and keeps the previous version in <c>backups/</c>; every load goes
-/// through the F# project migrations (<see cref="ProjectMigrations"/>), and the first save after
-/// a migration first copies the original file to <c>backups/&lt;id&gt;.v&lt;from&gt;.json</c>.
+/// through the F# project loader (<see cref="ProjectJson"/>), which reads the current schema
+/// version only.
 /// </summary>
 /// <remarks>
 /// The FILE is the source of truth for a project's id: <see cref="Load"/> hands back the project
@@ -49,9 +49,6 @@ public sealed class ProjectStore
     private readonly TimeProvider _time;
     private readonly Lock _gate = new();
 
-    /// <summary>Loaded projects that were migrated, by id: the schema version their file still has.</summary>
-    private readonly Dictionary<string, double> _migratedFiles = new(StringComparer.Ordinal);
-
     public ProjectStore(string rootDirectory, TimeProvider? time = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
@@ -65,7 +62,7 @@ public sealed class ProjectStore
 
     public string IndexPath => Path.Combine(ProjectsDirectory, IndexFileName);
 
-    /// <summary>Previous versions of project files and pre-migration originals.</summary>
+    /// <summary>Previous versions of project files.</summary>
     public string BackupsDirectory => Path.Combine(ProjectsDirectory, "backups");
 
     /// <summary>File that holds project <paramref name="id"/> (<see cref="SafeFileName"/>).</summary>
@@ -73,10 +70,6 @@ public sealed class ProjectStore
 
     /// <summary>The version of project <paramref name="id"/> before its last save.</summary>
     public string PreviousVersionPath(string id) => Path.Combine(BackupsDirectory, SafeFileName(id) + ".previous.json");
-
-    /// <summary>The file of project <paramref name="id"/> as it was before migrating from schema <paramref name="fromVersion"/>.</summary>
-    public string MigrationBackupPath(string id, double fromVersion) =>
-        Path.Combine(BackupsDirectory, $"{SafeFileName(id)}.v{fromVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)}.json");
 
     public bool Exists(string id) => File.Exists(PathFor(id));
 
@@ -120,7 +113,7 @@ public sealed class ProjectStore
     }
 
     /// <summary>
-    /// Loads and migrates project <paramref name="id"/>, under that id whatever the file's JSON
+    /// Loads project <paramref name="id"/>, under that id whatever the file's JSON
     /// says (see the remarks on <see cref="ProjectStore"/>). Never throws.
     /// </summary>
     public ProjectLoadResult Load(string id)
@@ -141,21 +134,12 @@ public sealed class ProjectStore
             loaded = loaded with { Project = project.WithId(id) };
         }
 
-        if (loaded.Ok && loaded.MigratedFrom is { } from)
-        {
-            lock (_gate)
-            {
-                _migratedFiles[id] = from;
-            }
-        }
-
         return loaded;
     }
 
     /// <summary>
     /// Writes the project file (atomically, keeping the previous version in
-    /// <see cref="BackupsDirectory"/>) and refreshes its index entry. The first save of a
-    /// migrated project first keeps the original file (<see cref="MigrationBackupPath"/>).
+    /// <see cref="BackupsDirectory"/>) and refreshes its index entry.
     /// </summary>
     public void Save(GameProject project)
     {
@@ -163,22 +147,7 @@ public sealed class ProjectStore
         ArgumentException.ThrowIfNullOrWhiteSpace(project.Id);
         lock (_gate)
         {
-            var path = PathFor(project.Id);
-            if (_migratedFiles.TryGetValue(project.Id, out var from))
-            {
-                // Never overwrite a file from an older schema without a copy: a lossy migration
-                // can then still be undone by hand.
-                var backup = MigrationBackupPath(project.Id, from);
-                if (File.Exists(path) && !File.Exists(backup))
-                {
-                    Directory.CreateDirectory(BackupsDirectory);
-                    File.Copy(path, backup);
-                }
-
-                _migratedFiles.Remove(project.Id);
-            }
-
-            AtomicFile.WriteAllText(path, ToJson(project), PreviousVersionPath(project.Id));
+            AtomicFile.WriteAllText(PathFor(project.Id), ToJson(project), PreviousVersionPath(project.Id));
             var index = ReadIndex();
             var entry = new IndexEntry { Id = project.Id, Name = DisplayName(project), UpdatedAt = _time.GetUtcNow().ToUnixTimeMilliseconds() };
             var projects = index.Projects.Where(p => p.Id != project.Id).Append(entry).ToList();
@@ -281,18 +250,18 @@ public sealed class ProjectStore
     /// <summary>Web-compatible project JSON (indented, camelCase, like the web export).</summary>
     public static string ToJson(GameProject project) => ProjectLoad.toText(project);
 
-    /// <summary>Parses + migrates stored project JSON. Never throws.</summary>
+    /// <summary>Parses and validates stored project JSON. Never throws.</summary>
     public static ProjectLoadResult Parse(string json)
     {
-        var result = ProjectMigrations.migrateProjectText(json);
+        var result = ProjectJson.loadProjectText(json);
         return result.Ok && result.Data.OrNull() is { } data
-            ? new ProjectLoadResult(data, [], result.Migrated ? result.FromVersion : null)
+            ? new ProjectLoadResult(data, [])
             : ProjectLoadResult.Fail(result.Errors.Length > 0 ? [.. result.Errors] : ["Invalid project data"]);
     }
 
     /// <summary>
     /// Imports project/exported-game JSON as a NEW project (web <c>importProjectFromData</c>):
-    /// full project files migrate as projects; exported games are layered over a blank
+    /// full project files load as projects; exported games are layered over a blank
     /// project. Editor-only state starts fresh. The caller saves the result.
     /// </summary>
     public ProjectLoadResult Import(string json)
@@ -312,17 +281,15 @@ public sealed class ProjectStore
             return ProjectLoadResult.Fail("The file does not contain a project (expected a JSON object).");
         }
 
-        var asProject = ProjectMigrations.migrateProject(node);
+        var asProject = ProjectJson.loadProject(node);
         GameProject project;
-        double? migratedFrom;
         if (asProject.Ok && asProject.Data.OrNull() is { } loaded)
         {
             project = loaded;
-            migratedFrom = asProject.Migrated ? asProject.FromVersion : null;
         }
         else
         {
-            var exported = ProjectMigrations.migrateExportedGame(node);
+            var exported = ProjectJson.loadExportedGame(node);
             if (!exported.Ok || exported.Data.OrNull() is not { } game)
             {
                 var errors = asProject.Errors.Length > 0 ? asProject.Errors : exported.Errors;
@@ -338,19 +305,18 @@ public sealed class ProjectStore
             }
 
             merged["schemaVersion"] = ProjectSchema.CurrentProjectSchemaVersion;
-            var reparsed = ProjectMigrations.migrateProject(merged);
+            var reparsed = ProjectJson.loadProject(merged);
             if (!reparsed.Ok || reparsed.Data.OrNull() is not { } imported)
             {
                 return ProjectLoadResult.Fail(reparsed.Errors.Length > 0 ? [.. reparsed.Errors] : ["Invalid project data"]);
             }
 
             project = imported;
-            migratedFrom = exported.Migrated ? exported.FromVersion : null;
         }
 
         var name = string.IsNullOrWhiteSpace(project.Name) ? "Imported Game" : project.Name.Trim();
         project = project.WithId(NewId()).WithName(name).WithMode("tiles").WithSelectedTileType("grass").WithSelectedNpcId(null).WithSelectedItemId(null).WithEventFlags(FSharpList<Tuple<string, FarmEngine.Authoring.Json>>.Empty);
-        return new ProjectLoadResult(project, [], migratedFrom);
+        return new ProjectLoadResult(project, []);
     }
 
     private static string DisplayName(GameProject project) => string.IsNullOrWhiteSpace(project.Name) ? "Untitled Game" : project.Name;

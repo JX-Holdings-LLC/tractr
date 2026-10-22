@@ -306,14 +306,12 @@ mod tests {
     use super::*;
     use farm_sim::schema::GameProject;
 
-    const CART: &[u8] = include_bytes!("../../../fixtures/golden/cartridges/project-v8.cart");
-    /// The golden cartridge is compiled from the v8 fixture project; the migration golden holds
-    /// the same project migrated (by the TypeScript reference, which the F# migrations match).
-    const MIGRATION: &str = include_str!("../../../fixtures/golden/migrations/project-v8.json");
+    const CART: &[u8] = include_bytes!("../../../fixtures/golden/cartridges/fixture-project.cart");
+    /// The golden cartridge is compiled from the fixture project.
+    const PROJECT: &str = include_str!("../../../fixtures/projects/fixture-project.json");
 
     fn project() -> GameProject {
-        let golden: serde_json::Value = serde_json::from_str(MIGRATION).unwrap();
-        serde_json::from_value(golden["result"]["data"].clone()).unwrap()
+        serde_json::from_str(PROJECT).unwrap()
     }
 
     /// The F# compiler and the Rust project path agree on content, the new-game inputs and

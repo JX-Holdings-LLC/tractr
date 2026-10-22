@@ -2364,8 +2364,6 @@
   },
   "result": {
     "ok": false,
-    "fromVersion": 6.0,
-    "migrated": false,
     "errors": [
       "Save version 6 is newer than this engine supports (5). Update the engine."
     ]

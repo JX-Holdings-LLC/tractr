@@ -52,7 +52,7 @@ pub struct WasmPlayer {
 
 #[wasm_bindgen(js_class = Player)]
 impl WasmPlayer {
-    /// A player for a (migrated) project — JSON text, a parsed object or its UTF-8 bytes — or
+    /// A player for a project — JSON text, a parsed object or its UTF-8 bytes — or
     /// compiled cartridge bytes. `options`: {@link PlayerOptions} (object or JSON text).
     #[wasm_bindgen(constructor)]
     pub fn new(

@@ -183,7 +183,7 @@ public sealed class ProjectWorkspace
             var loaded = Store.Load(id);
             if (loaded.Ok)
             {
-                Open(loaded.Project!, save: loaded.MigratedFrom is not null);
+                Open(loaded.Project!, save: false);
                 return errors;
             }
 
@@ -242,7 +242,7 @@ public sealed class ProjectWorkspace
         var loaded = Store.Load(id);
         if (loaded.Ok)
         {
-            Open(loaded.Project!, save: loaded.MigratedFrom is not null);
+            Open(loaded.Project!, save: false);
         }
 
         return loaded;

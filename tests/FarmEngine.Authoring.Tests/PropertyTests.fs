@@ -192,11 +192,11 @@ let ``removing entities leaves no dangling references`` () =
         if dangling.IsEmpty then true
         else failwithf "after %A:\n%s" edits (describe dangling))
 
-// ── Migrations ─────────────────────────────────────────────────────────────
+// ── Loading ────────────────────────────────────────────────────────────────
 
-/// A change to a fixture project (`fixtures/projects/project-vN.json`) that keeps it a valid
-/// project of its own version.
-type MigrationVariation =
+/// A change to the fixture project (`fixtures/projects/fixture-project.json`) that keeps it a
+/// valid project.
+type ProjectVariation =
     | Rename of string
     | Money of int
     /// The scene becomes `width`×`height`, its tiles repeating the fixture's; the player stands
@@ -204,23 +204,21 @@ type MigrationVariation =
     | Regrid of width: int * height: int * x: int * y: int
     | Face of string
     | WallClock of int64
-    /// Schema v3+: the calendar date.
+    /// The calendar date.
     | Calendar of day: int * season: string
-    /// Schema v4+: the time of day and year.
+    /// The time of day and year.
     | DayTime of minutes: int * year: int
-    /// Schema v6+: an inventory slot of the project's item `index`.
+    /// An inventory slot of the project's item `index`.
     | Carry of index: int * quantity: int
     | DropSelection
-    /// A key no version defines (projects keep unknown keys).
+    /// A key the schema does not define (projects keep unknown keys).
     | Extra of string * int
     /// Reorders the members of the project and its player.
     | Shuffle of seed: int
 
-let private fixtureText =
-    let texts = [| for v in 1..8 -> System.IO.File.ReadAllText(testFile [ "Fixtures"; sprintf "project-v%d.json" v ]) |]
-    fun (version: int) -> texts[version - 1]
+let private fixtureText = System.IO.File.ReadAllText(testFile [ "Fixtures"; "fixture-project.json" ])
 
-let private migrationVariation : Gen<MigrationVariation> =
+let private projectVariation : Gen<ProjectVariation> =
     let text = Gen.elements [ "Farm"; "Ferme d'été"; "Hof ☀"; "  spaced  "; "x"; "农场" ]
     Gen.oneof
         [ Gen.map Rename text
@@ -242,7 +240,7 @@ let private reorder (seed: int) (o: JsonObject) =
     for (k, v) in members |> List.sortBy (fun _ -> random.Next()) do
         o[k] <- v
 
-let private vary (version: int) (project: JsonObject) (variation: MigrationVariation) =
+let private vary (project: JsonObject) (variation: ProjectVariation) =
     let player = (project["player"] |> nonNull).AsObject()
     let scene = ((project["scenes"] |> nonNull).[0] |> nonNull).AsObject()
     match variation with
@@ -267,14 +265,14 @@ let private vary (version: int) (project: JsonObject) (variation: MigrationVaria
     | Face direction -> player["direction"] <- JsonValue.Create direction
     | WallClock ms ->
         project["currentTime"] <- JsonValue.Create ms
-        if version >= 3 then project["gameStartTime"] <- JsonValue.Create ms
-    | Calendar(day, season) when version >= 3 ->
+        project["gameStartTime"] <- JsonValue.Create ms
+    | Calendar(day, season) ->
         project["currentDay"] <- JsonValue.Create day
         project["currentSeason"] <- JsonValue.Create season
-    | DayTime(minutes, year) when version >= 4 ->
+    | DayTime(minutes, year) ->
         project["currentTimeMinutes"] <- JsonValue.Create minutes
         project["currentYear"] <- JsonValue.Create year
-    | Carry(index, quantity) when version >= 6 ->
+    | Carry(index, quantity) ->
         let items = (project["items"] |> nonNull).AsArray()
         let slot = JsonObject()
         slot["item"] <- (items[index % items.Count] |> nonNull).DeepClone()
@@ -287,32 +285,25 @@ let private vary (version: int) (project: JsonObject) (variation: MigrationVaria
     | Shuffle seed ->
         reorder seed project
         reorder (seed + 1) player
-    | Calendar _ | DayTime _ | Carry _ -> ()
 
-let private variedFixture (version: int) (variations: MigrationVariation list) : string =
-    let project = (JsonNode.Parse(fixtureText version) |> nonNull).AsObject()
+let private variedFixture (variations: ProjectVariation list) : string =
+    let project = (JsonNode.Parse fixtureText |> nonNull).AsObject()
     for variation in variations do
-        vary version project variation
+        vary project variation
     project.ToJsonString()
 
 [<Property(MaxTest = 150)>]
-let ``migrating a vN project gives a project that passes the schema checks of the current version`` () =
-    let cases = Gen.zip (Gen.choose (1, 8)) (Gen.listOf migrationVariation)
-    Prop.forAll (Arb.fromGen cases) (fun (version, variations) ->
-        let result = ProjectMigrations.migrateProjectText (variedFixture version variations)
-        if not result.Ok then failwithf "v%d did not migrate: %A" version (List.ofSeq result.Errors)
+let ``a varied project loads and passes the schema checks`` () =
+    Prop.forAll (Arb.fromGen (Gen.listOf projectVariation)) (fun variations ->
+        let result = ProjectJson.loadProjectText (variedFixture variations)
+        if not result.Ok then failwithf "did not load: %A" (List.ofSeq result.Errors)
         let project = result.Data.Value
         let issues = SchemaChecks.projectIssues project
-        if not issues.IsEmpty then failwithf "v%d migrated with schema issues: %A" version issues
-        // Migrating the result again changes nothing: it is a current project.
+        if not issues.IsEmpty then failwithf "loaded with schema issues: %A" issues
+        // Loading the result again changes nothing.
         let stable = stableOf SchemaJson.encodeGameProject project
-        let again = ProjectMigrations.migrateProjectText stable
-        project.SchemaVersion = ProjectSchema.CurrentProjectSchemaVersion
-        && result.FromVersion = float version
-        && result.Migrated = (version < 9)
-        && again.Ok
-        && not again.Migrated
-        && stableOf SchemaJson.encodeGameProject again.Data.Value = stable)
+        let again = ProjectJson.loadProjectText stable
+        again.Ok && stableOf SchemaJson.encodeGameProject again.Data.Value = stable)
 
 // ── Compiling ──────────────────────────────────────────────────────────────
 

@@ -19,7 +19,6 @@
     "**/node_modules/**",
     "**/bin/**",
     "**/obj/**",
-    "tools/fable/dist/**",
     "tools/wasm/dist/**",
     ".claude/**"
   ]

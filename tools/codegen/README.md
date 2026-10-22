@@ -42,8 +42,7 @@ records in case order and the union), from:
 - a union whose cases each carry one record is a zod discriminated union on
   `type`, with the tag from the union's `Type` member;
 - three attributes for what the types do not say (defined at the top of
-  `Schema.fs`; the generator reads them, nothing reads them at run time, and
-  Fable compiles them like any class):
+  `Schema.fs`; the generator reads them and nothing reads them at run time):
   - `[<JsonKey "selectedNPCId">]`: the JSON key, when it is not the field name
     in camelCase;
   - `[<JsonNull>]`: an `option` zod declares `.nullable()`, written as `null`

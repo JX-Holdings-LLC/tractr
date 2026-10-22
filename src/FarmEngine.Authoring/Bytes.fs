@@ -2,8 +2,8 @@ namespace FarmEngine.Authoring
 
 open System
 
-/// Byte helpers the cartridge compiler needs, in plain F# so the authoring core compiles under
-/// Fable (no System.Security.Cryptography there): UTF-8, base64, hex and SHA-256.
+/// Byte helpers the cartridge compiler needs, in plain F# (the authoring core uses no .NET-only
+/// APIs such as System.Security.Cryptography): UTF-8, base64, hex and SHA-256.
 module Bytes =
     /// UTF-8 bytes of a string (lone surrogates become U+FFFD, like .NET and `TextEncoder`).
     let utf8 (text: string) : byte[] =

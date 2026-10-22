@@ -53,11 +53,11 @@ let ``an exported host game runs headless and reports the game's identity and ha
                   TemplatesFolder = Some templates
                   CreateArchives = true
                   EditorVersion = None }
-                (v8Project ())
+                (fixtureProject ())
         Assert.True(report.Ok, Exporter.format report)
         let result = report.Targets.Head
         // The exported cartridge is the checked-in golden one: same project, same compiler.
-        let golden = fixture (Path.Combine("cartridges", "project-v8.cart"))
+        let golden = fixture (Path.Combine("cartridges", "fixture-project.cart"))
         Assert.Equal<byte[]>(File.ReadAllBytes golden, File.ReadAllBytes(Path.Combine(result.Folder, "game.cart")))
         let replay = fixture (Path.Combine("cartridges", "twenty-ticks.json"))
         // The exported game finds game.cart beside itself.

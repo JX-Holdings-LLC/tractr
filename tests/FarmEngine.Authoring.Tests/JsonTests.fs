@@ -1,4 +1,4 @@
-/// The JS-semantics helpers of the Fable-safe `Json` DOM and its System.Text.Json conversion.
+/// The JS-semantics helpers of the `Json` DOM and its System.Text.Json conversion.
 module FarmEngine.Authoring.Tests.JsonTests
 
 open System.Text.Json.Nodes
@@ -112,16 +112,15 @@ let ``spread, set, withDefault and remove keep JS member order`` () =
     Assert.Equal(JNull, Json.index 5 (JArray [ JNumber 1.0 ]))
 
 [<Fact>]
-let ``JS TypeErrors carry the C# messages`` () =
+let ``elements raises a JS TypeError for a non-array`` () =
     let error (f: unit -> 'T) =
         try
             f () |> ignore
             failwith "expected a JsTypeError"
         with JsTypeError message ->
             message
-    Assert.Equal("Cannot read properties of null", error (fun () -> Json.require JNull))
-    Assert.Equal("Expected an array at '$.scenes'", error (fun () -> Json.mapArray "$.scenes" (fun _ v -> v) (JString "x")))
-    Assert.Equal(JArray [], Json.mapArray "$.scenes" (fun _ v -> v) JNull)
+    Assert.Equal("Expected an array at '$.scenes'", error (fun () -> Json.elements "$.scenes" (JString "x")))
+    Assert.Empty(Json.elements "$.scenes" JNull)
 
 [<Fact>]
 let ``stringify orders index keys first and escapes like JSON.stringify`` () =
@@ -168,11 +167,9 @@ let ``deep nesting is an error, not a stack overflow`` () =
     Assert.False((Json.parse ("[" + ok + "]") |> Result.isOk))
     // Every loader reports it.
     let deep = "{\"schemaVersion\":9,\"a\":" + String.replicate 10_000 "[" + String.replicate 10_000 "]" + "}"
-    let migrated = ProjectLoad.migrateProjectText deep
-    Assert.False migrated.Ok
-    Assert.Contains("Too deeply nested", String.concat "\n" migrated.Errors)
-    Assert.Contains("Too deeply nested", WebApi.problems deep)
-    Assert.Contains("\"ok\":false", WebApi.migrateProject deep)
+    let loaded = ProjectLoad.loadProjectText deep
+    Assert.False loaded.Ok
+    Assert.Contains("Too deeply nested", String.concat "\n" loaded.Errors)
 
 [<Fact>]
 let ``many comments in a row do not recurse`` () =
@@ -192,11 +189,11 @@ let ``numbers beyond the double range are refused when they load`` () =
     Assert.Equal(Error "x: Number must be finite", Decode.run (fun path json -> Decode.int32 ("x" :: path) json) (JNumber -infinity))
 
 [<Fact>]
-let ``JsonInterop refuses what Json cannot hold and migrateProject reports it`` () =
+let ``JsonInterop refuses what Json cannot hold and loadProject reports it`` () =
     let node = JsonNode.Parse """{"schemaVersion":9,"player":{"money":1e400}}"""
     Assert.Throws<System.FormatException>(fun () -> JsonInterop.ofNode node |> ignore) |> ignore
     Assert.True((JsonInterop.tryOfNode node |> Result.isError))
-    let result = ProjectMigrations.migrateProject node
+    let result = ProjectJson.loadProject node
     Assert.False result.Ok
     Assert.Contains("Number out of range", String.concat "\n" result.Errors)
     // A non-finite number never reaches System.Text.Json's writer.
@@ -225,7 +222,7 @@ let ``1e400 in a required or an optional field is a load error, not a later null
     let optional = text.Replace("{\n  \"schemaVersion\"", "{\n  \"mineDeepestFloor\": 1e999,\n  \"schemaVersion\"")
     Assert.NotEqual<string>(text, optional)
     for broken in [ required; optional ] do
-        let result = ProjectLoad.migrateProjectText broken
+        let result = ProjectLoad.loadProjectText broken
         Assert.False result.Ok
         Assert.Contains("Number out of range", String.concat "\n" result.Errors)
     // The same value in Json built in code fails the typed parse.
@@ -233,7 +230,7 @@ let ``1e400 in a required or an optional field is a load error, not a later null
     | Ok(JObject members) ->
         let player = members |> List.find (fun (key, _) -> key = "player") |> snd
         let raw = JObject(Json.setMember "player" (Json.set "money" (JNumber infinity) player) members)
-        let result = ProjectLoad.migrateProject raw
+        let result = ProjectLoad.loadProject raw
         Assert.False result.Ok
         Assert.Equal<string list>([ "player.money: Number must be finite" ], result.Errors)
     | other -> failwithf "%A" other

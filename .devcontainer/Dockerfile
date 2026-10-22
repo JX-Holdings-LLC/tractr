@@ -4,7 +4,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 ARG USERNAME=vscode
-COPY rust-toolchain.toml global.json dotnet-tools.json Cargo.lock /tmp/repo/
+COPY rust-toolchain.toml global.json Cargo.lock /tmp/repo/
 COPY scripts/dev-setup.sh /tmp/repo/scripts/
 COPY tools/ci/install-rust.sh /tmp/repo/tools/ci/
 

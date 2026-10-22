@@ -28,7 +28,7 @@
 //! A bare `GameState` (what the web version writes) also loads: it has no header, so it is
 //! treated as coming from unknown content.
 
-use crate::save::migrate_game_state_owned;
+use crate::save::load_game_state_owned;
 use farm_cart_schema::farm_engine::save as fb_save;
 use farm_cart_schema::farm_engine::save::save_file_buffer_has_identifier;
 use farm_cart_schema::flatbuffers::FlatBufferBuilder;
@@ -149,10 +149,6 @@ pub struct LoadedSave {
     pub quarantined: Vec<String>,
     /// Ids of quarantined items that came back because the content has them again.
     pub restored: Vec<String>,
-    /// `meta.saveVersion` the state was written with (before migration).
-    pub from_version: f64,
-    /// The state went through save migrations.
-    pub migrated: bool,
 }
 
 /// Loads a JSON save file (or a bare web `GameState`) for the running game `target` with
@@ -205,15 +201,13 @@ fn load_parts(header: Option<SaveHeader>, state_raw: Value, target: &SaveTarget,
         }
     }
 
-    let migration = migrate_game_state_owned(state_raw);
-    let Some(mut state) = migration.data.filter(|_| migration.ok) else {
-        let error_messages: Vec<Message> = migration.errors.into_iter().map(damaged).collect();
+    let loaded = load_game_state_owned(state_raw);
+    let Some(mut state) = loaded.data.filter(|_| loaded.ok) else {
+        let error_messages: Vec<Message> = loaded.errors.into_iter().map(damaged).collect();
         return LoadedSave {
             header,
             errors: error_messages.iter().map(Message::english).collect(),
             error_messages,
-            from_version: migration.from_version,
-            migrated: migration.migrated,
             ..LoadedSave::default()
         };
     };
@@ -237,7 +231,7 @@ fn load_parts(header: Option<SaveHeader>, state_raw: Value, target: &SaveTarget,
     if !same_content {
         add_missing_npcs(&mut state, content);
     }
-    // Older saves have no day of season, and season lengths may have changed (#23).
+    // Season lengths may have changed since the save was written (#23).
     game_time::reconcile_clock(&content.settings.calendar, &mut state.clock);
     // An all-zero random state draws 0 forever: every chance roll succeeds (#140).
     if state.rng.is_degenerate() {
@@ -260,8 +254,6 @@ fn load_parts(header: Option<SaveHeader>, state_raw: Value, target: &SaveTarget,
         warning_messages: warnings,
         quarantined,
         restored,
-        from_version: migration.from_version,
-        migrated: migration.migrated,
     }
 }
 
