@@ -1,6 +1,6 @@
 # Creator guide: build a farm game without code
 
-This guide walks through Farming RPG Maker on the desktop: start a project, build
+This guide walks through Tractr on the desktop: start a project, build
 the world in **Edit Mode**, playtest in **Play Mode**, and export a game that
 anyone can play. Everything happens in the editor; you never need to write
 code. The editor shows this guide under **Help → Creator Guide** (F1).

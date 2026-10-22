@@ -1,0 +1,51 @@
+[
+ {
+  "type": "shape",
+  "shape": "ribbon",
+  "name": "ribbon",
+  "x": 40,
+  "y": 40,
+  "width": 1120,
+  "height": 220,
+  "fill": "#b5332a"
+ },
+ {
+  "type": "text",
+  "name": "wordmark",
+  "text": "TRACTR",
+  "size": 146,
+  "color": "#f2e5c6",
+  "font": "alfa-slab-one-400",
+  "tracking": 8,
+  "within": "ribbon"
+ },
+ {
+  "type": "layer-style",
+  "target": "wordmark",
+  "name": "drop-shadow",
+  "settings": {
+   "dx": 6,
+   "dy": 6,
+   "blur": 0,
+   "opacity": 1,
+   "color": "#6e1d17"
+  }
+ },
+ {
+  "type": "text",
+  "name": "tagline",
+  "text": "Grow your own worlds!",
+  "x": 0,
+  "y": 280,
+  "size": 80,
+  "color": "#3a2a1e",
+  "font": "lobster-400"
+ },
+ {
+  "type": "constrain",
+  "target": "tagline",
+  "constraints": {
+   "center-x": "canvas.center-x"
+  }
+ }
+]

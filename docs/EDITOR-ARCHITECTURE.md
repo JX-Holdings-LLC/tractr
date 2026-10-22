@@ -46,6 +46,8 @@ Use these instead of writing another copy:
 | Keep a panel's rows in step with a view model's draft rows | `Game/DraftRows` (rows keep their controls when others move or go) |
 | A temp-folder `ProjectWorkspace` for view model tests | `tests/FarmingRpgMaker.App.Tests/ViewModels/TestWorkspace` |
 | Common controls (buttons, rows, icons, modal cards, accessible names) | `Game/Ui` |
+| Colours, fonts and surfaces | the role brushes and font resources in `App.axaml` and the classes in `Game/GameStyles.axaml` ([brand/APP-UI.md](brand/APP-UI.md)); never a hex value in a view |
+| A label drawn in capitals (kickers, headings) | `Controls/KickerText` (`Ui.Text` makes one for the `h2`, `h3`, `section` and `category` classes) |
 | Reflection over the schema records for generated forms | `Game/ContentFormSchema` (no controls); layout pieces in `Game/ContentFormLayout` |
 
 Error messages name what the creator sees (the field's label, which is also

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping with Farming RPG Maker. This page collects what you need
+Thanks for helping with Tractr. This page collects what you need
 to build, test and change the repository: the prerequisites, the checks CI
 runs, and how to regenerate every checked-in file that a tool produces.
 
@@ -8,7 +8,10 @@ The architecture is in [docs/LANGUAGES.md](docs/LANGUAGES.md) (Rust / F# / C#
 split), [docs/NUMERICS.md](docs/NUMERICS.md) (integer numerics and
 goldens) and [docs/EDITOR-ARCHITECTURE.md](docs/EDITOR-ARCHITECTURE.md) (the
 editor's views and shared helpers); [ROADMAP.md](ROADMAP.md) has what is
-planned.
+planned. The editor's look (warm paper, flat inks, a red tractor) is the
+Seed Catalog brand: read [docs/brand/APP-UI.md](docs/brand/APP-UI.md) before
+you add or restyle a view. It applies to the editor only, never to the games
+it makes.
 
 ## Prerequisites
 
@@ -176,6 +179,9 @@ needs that tool. CI checks that each matches its generator.
 | Built-in art (`assets/builtin-art/`) | `python3 tools/art/build_art.py` (Blender 4.5 as a module, Pillow, numpy; [tools/art](tools/art/README.md)) | the art changes | — |
 | PE test fixture (`tests/FarmEngine.Export.Tests/Fixtures/pe/player-fixture.exe`) | `tests/FarmEngine.Export.Tests/Fixtures/pe/build.sh` (mingw-w64) | the template's placeholder resources change | — |
 | Editor screenshots (`docs/media/*.png`) | `FRM_SCREENSHOT_DIR="$PWD/docs/media" dotnet test tests/FarmingRpgMaker.App.Tests --filter "FullyQualifiedName~Screenshot"`, then keep only the images the docs use | the editor's look changes | — |
+| App icon, header logo, paper grain (`src/FarmingRpgMaker.App/Assets/`) | `python3 scripts/generate-app-icon.py` (Pillow; cuts them from `docs/brand/logo`) | the logo changes | — |
+| Default icon of exported games (`default-game-icon-256.png`) | `python3 scripts/generate-game-icon.py` | the games' icon changes | — |
+| Brand pictures (`docs/media/tractr-*.png`, `plate-*.png`, `Assets/about-banner.png`) | the Vixl scripts in `docs/brand/vixl/kit` ([docs/brand/README.md](docs/brand/README.md#rebuilding-the-pictures)) | the brand or the screenshots change | — |
 
 Not checked in, built on demand: the Fable JavaScript of the authoring core
 (`tools/fable/build.sh`, checked by `node tools/fable/smoke.mjs`), the

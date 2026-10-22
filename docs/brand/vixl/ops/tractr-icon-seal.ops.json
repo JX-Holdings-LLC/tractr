@@ -1,0 +1,57 @@
+[
+ {
+  "type": "shape",
+  "shape": "seal",
+  "name": "seal",
+  "x": 24,
+  "y": 24,
+  "width": 976,
+  "height": 976,
+  "fill": "#4f6b3a",
+  "count": 24,
+  "inner_radius": 0.88
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "seal-ring",
+  "x": 120,
+  "y": 120,
+  "width": 784,
+  "height": 784,
+  "fill": "transparent",
+  "stroke": "#f2e5c6",
+  "stroke_width": 14
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "seal-core",
+  "x": 150,
+  "y": 150,
+  "width": 724,
+  "height": 724,
+  "fill": "#e3a83a"
+ },
+ {
+  "type": "text",
+  "name": "seal-t",
+  "text": "T",
+  "size": 560,
+  "color": "#b5332a",
+  "font": "alfa-slab-one-400",
+  "within": "seal-core"
+ },
+ {
+  "type": "layer-style",
+  "target": "seal-t",
+  "name": "drop-shadow",
+  "settings": {
+   "dx": 14,
+   "dy": 14,
+   "blur": 0,
+   "opacity": 1,
+   "color": "#6e1d17"
+  }
+ }
+]

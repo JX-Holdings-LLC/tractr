@@ -182,7 +182,7 @@ generates it (`tools/player-licenses/generate.sh`, checked in; CI fails when
 it is stale). Every template ships it and export copies it. The script appends
 what cargo-about can't see: the embedded fonts, the plugin sandbox's QuickJS,
 rquickjs-sys and wasi-libc (`tools/player-licenses/plugin-guest`), and the
-player's own license. The engine in an exported game is Farming RPG Maker's
+player's own license. The engine in an exported game is Tractr's
 code under the MIT License, so a game may be sold or given away under any
 terms as long as that file ships with it; the game's content (its project,
 art, text and sounds) belongs to its creator.
@@ -274,7 +274,7 @@ Manager shows the description), `FileVersion`/`ProductVersion` (the version
 string, and its leading numbers in the fixed info), `CompanyName` and
 `LegalCopyright` (the company, else the author), `InternalName`,
 `OriginalFilename` and a "Made with Farming RPG Maker" comment. The icon is the
-export `icon` asset scaled into a square, or the editor's icon when none is set.
+export `icon` asset scaled into a square, or the default wheat-and-field icon when none is set.
 
 The tests patch `tests/FarmEngine.Export.Tests/Fixtures/pe/player-fixture.exe`,
 a 56 KB program built by mingw's gcc and windres with the same layout and

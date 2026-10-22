@@ -1,0 +1,73 @@
+[
+ {
+  "type": "shape",
+  "shape": "rounded-rectangle",
+  "name": "tile",
+  "x": 0,
+  "y": 0,
+  "width": 1024,
+  "height": 1024,
+  "radius": 220,
+  "fill": "#f2e5c6"
+ },
+ {
+  "type": "look",
+  "target": "tile",
+  "look": "paper"
+ },
+ {
+  "type": "shape",
+  "shape": "seal",
+  "name": "seal",
+  "x": 112,
+  "y": 112,
+  "width": 800,
+  "height": 800,
+  "fill": "#4f6b3a",
+  "count": 24,
+  "inner_radius": 0.88
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "seal-ring",
+  "x": 190,
+  "y": 190,
+  "width": 644,
+  "height": 644,
+  "fill": "transparent",
+  "stroke": "#f2e5c6",
+  "stroke_width": 12
+ },
+ {
+  "type": "shape",
+  "shape": "ellipse",
+  "name": "seal-core",
+  "x": 215,
+  "y": 215,
+  "width": 594,
+  "height": 594,
+  "fill": "#e3a83a"
+ },
+ {
+  "type": "text",
+  "name": "seal-t",
+  "text": "T",
+  "size": 460,
+  "color": "#b5332a",
+  "font": "alfa-slab-one-400",
+  "within": "seal-core"
+ },
+ {
+  "type": "layer-style",
+  "target": "seal-t",
+  "name": "drop-shadow",
+  "settings": {
+   "dx": 12,
+   "dy": 12,
+   "blur": 0,
+   "opacity": 1,
+   "color": "#6e1d17"
+  }
+ }
+]

@@ -1,4 +1,4 @@
-# Releasing Farming RPG Maker
+# Releasing Tractr
 
 Windows releases are built by GitHub Actions, packaged with
 [Velopack](https://velopack.io) and published as GitHub Releases of
@@ -304,7 +304,7 @@ error, no crash).
 dotnet publish src/FarmingRpgMaker.App -c Release -r win-x64 --self-contained -p:Version=0.1.0 -o publish
 dotnet tool install -g vpk --version 1.2.158
 vpk "[win]" pack --packId FarmingRpgMaker --packVersion 0.1.0 --packDir publish \
-  --runtime win-x64 --mainExe FarmingRpgMaker.exe --packTitle "Farming RPG Maker" \
+  --runtime win-x64 --mainExe FarmingRpgMaker.exe --packTitle "Tractr" \
   --icon src/FarmingRpgMaker.App/Assets/app.ico --outputDir Releases
 ```
 

@@ -1,0 +1,82 @@
+[
+ {
+  "type": "swatch",
+  "name": "field-green",
+  "color": "#4f6b3a"
+ },
+ {
+  "type": "swatch",
+  "name": "sprout",
+  "color": "#7d9440"
+ },
+ {
+  "type": "swatch",
+  "name": "mustard",
+  "color": "#e3a83a"
+ },
+ {
+  "type": "swatch",
+  "name": "sun",
+  "color": "#f0c35e"
+ },
+ {
+  "type": "swatch",
+  "name": "wheat",
+  "color": "#c58f2c"
+ },
+ {
+  "type": "swatch",
+  "name": "stalk",
+  "color": "#a8772a"
+ },
+ {
+  "type": "swatch",
+  "name": "shadow-red",
+  "color": "#6e1d17"
+ },
+ {
+  "type": "swatch",
+  "name": "hub-red",
+  "color": "#8f2a22"
+ },
+ {
+  "type": "swatch",
+  "name": "furrow",
+  "color": "#3d5530"
+ },
+ {
+  "type": "swatch",
+  "name": "soil",
+  "color": "#9b6b42"
+ },
+ {
+  "type": "swatch",
+  "name": "pond",
+  "color": "#7fa6a6"
+ },
+ {
+  "type": "swatch",
+  "name": "tire",
+  "color": "#2a1f18"
+ },
+ {
+  "type": "swatch",
+  "name": "kraft",
+  "color": "#c9b48a"
+ },
+ {
+  "type": "swatch",
+  "name": "sand",
+  "color": "#e9dab6"
+ },
+ {
+  "type": "swatch",
+  "name": "straw",
+  "color": "#eadcb8"
+ },
+ {
+  "type": "swatch",
+  "name": "lamp",
+  "color": "#fff4d6"
+ }
+]
