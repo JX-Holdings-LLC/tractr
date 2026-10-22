@@ -195,7 +195,7 @@ the release).
 - Keep commits focused, with a short imperative subject and a body that says
   why.
 - Bump the version in every pull request (`node .toolkit/src/release.mjs
-  bump --app tractr`) and describe the change in the new
+  bump --app farming-rpg-maker`) and describe the change in the new
   `## X.Y.Z` section of [CHANGELOG.md](CHANGELOG.md); it becomes the release
   notes.
 - Versions, tags and the release workflow are in

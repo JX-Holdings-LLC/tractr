@@ -47,7 +47,7 @@ never dispatch are simply skipped; the next release's notes include theirs.
 
 1. In every pull request, bump the version: with the toolkit pinned in
    `.release/README.md` checked out at `.toolkit`, run
-   `node .toolkit/src/release.mjs bump --app tractr` (a patch;
+   `node .toolkit/src/release.mjs bump --app farming-rpg-maker` (a patch;
    `--kind minor` or `--version 0.4.0-beta.1` for others). It sets
    `release.json`, `version` in the root `Cargo.toml` and the default
    `<Version>` in `Directory.Build.props`, and adds a `## X.Y.Z` section at

@@ -9,8 +9,8 @@
   settings live in `%APPDATA%\Tractr` (`~/.config/Tractr`), so projects made
   with an earlier version must be brought in with **File → Import Project
   JSON** from a backup; the data folder variable is `TRACTR_DATA_DIR` and the
-  Update Center demo switch `TRACTR_FAKE_UPDATES`; the release app id is
-  `tractr`, so earlier installs do not update into this one (install it fresh);
+  Update Center demo switch `TRACTR_FAKE_UPDATES`; the Velopack package id is
+  `Tractr`, so earlier installs do not update into this one (install it fresh);
   the C# projects, namespaces and the assembly are `Tractr.*`; and games can
   show "Made with Tractr" (it was "Made with Farming RPG Maker").
 - **A new look for the editor: the Seed Catalog.** Warm paper, a few flat
