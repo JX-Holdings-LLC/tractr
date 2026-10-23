@@ -22,7 +22,7 @@ public sealed class AboutViewModel(string version, IUrlLauncher launcher, string
         $"{RuntimeInformation.FrameworkDescription} · Avalonia {typeof(Avalonia.Application).Assembly.GetName().Version?.ToString(3)} · {RuntimeInformation.OSDescription}";
 
     public string LicenseText =>
-        "Free software under the MIT License. Third-party notices are in the licenses folder next to the app.";
+        "Source-available under the Business Source License 1.1. Free until a game you make earns US$1,000,000. Third-party notices are in the licenses folder next to the app.";
 
     public RelayCommand OpenRepositoryCommand { get; } = new(() => launcher.Open(UpdateSource.RepositoryUrl));
 

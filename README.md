@@ -2,8 +2,8 @@
 
 # Tractr: the farm game engine
 
-*Grow your own worlds!* Tractr is a free, open-source maker for 2D farming
-games. Lay out the fields, plant the crops, write the neighbours and their
+*Grow your own worlds!* Tractr is a free-to-start maker for 2D farming
+games, with public source. Lay out the fields, plant the crops, write the neighbours and their
 quests, then ship it to Windows, Linux and the web, all without writing code.
 It is a native desktop app: the game engine, renderer, in-game UI and player
 are Rust; project edits, validation, the content compiler and Export Game are
@@ -294,15 +294,20 @@ Installed apps find the release in their Update Center. See
 
 ## License
 
-Tractr is free software under the [MIT License](LICENSE). The app
-ships the notices of the software it includes in its `licenses` folder
+Tractr is source-available under the
+[Business Source License 1.1](LICENSE) from JX Holdings, LLC. It is free to
+use, and free to ship in games you sell, until a game you make with it earns
+US$1,000,000; that game then needs a commercial license, and your other games
+do not. Each version becomes MIT four years after it is published. See
+[LICENSING.md](LICENSING.md) for plain-words answers about plugins, forks and
+older releases. The app ships the notices of the software it includes in its `licenses` folder
 (`THIRD-PARTY-dotnet.txt` for the .NET packages, the runtime, icons and
 fonts; `THIRD-PARTY-rust.txt` for the engine library), and **Help → About
 Tractr**
 links to the license. Every exported game carries
-`licenses/THIRD-PARTY.txt`, which ends with the engine's MIT license: the
-player is free to ship in games you sell, and your project's content stays
-yours (see [docs/EXPORT.md](docs/EXPORT.md)).
+`licenses/THIRD-PARTY.txt`, which ends with the engine's license: the
+player ships in your games, whoever plays them, and your project's content
+stays yours (see [docs/EXPORT.md](docs/EXPORT.md)).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build, test and regenerate
 the checked-in files, and [SECURITY.md](SECURITY.md) for reporting

@@ -197,5 +197,15 @@ the release).
   [docs/RELEASING.md](docs/RELEASING.md).
 - Report security problems privately ([SECURITY.md](SECURITY.md)).
 
-By contributing you agree that your contribution is licensed under the
-[MIT License](LICENSE).
+## License of contributions
+
+Tractr is under the [Business Source License 1.1](LICENSE), and the plugin
+guest (`crates/farm-plugin-guest`, `tools/plugin-guest/meter`) is under the
+[MIT License](LICENSE-MIT). By opening a pull request you confirm that you
+wrote your contribution or have the right to submit it. You keep your
+copyright, and you grant JX Holdings, LLC a perpetual, worldwide,
+non-exclusive, royalty-free, irrevocable license to use, copy, modify,
+distribute and sublicense your contribution as part of Tractr under those
+licenses or any other, including commercial licenses and the license a
+version changes to after its Change Date. [LICENSING.md](LICENSING.md)
+explains the terms in plain words.

@@ -17,6 +17,7 @@ are doing.
 ## Working on Tractr
 
 - [Contributing](../CONTRIBUTING.md): build, test, and regenerate the checked-in files.
+- [Licensing](../LICENSING.md): what is free, what a game earning US$1,000,000 needs, and the rules for plugins and forks.
 - [Editor architecture](EDITOR-ARCHITECTURE.md): how the C# app's views fit together.
 - [Languages](LANGUAGES.md): why the engine is Rust, the authoring core F# and the editor C#.
 - [Native numerics](NUMERICS.md): integer arithmetic and the goldens.

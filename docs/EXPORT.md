@@ -181,10 +181,11 @@ generates it (`tools/player-licenses/generate.sh`, checked in; CI fails when
 it is stale). Every template ships it and export copies it. The script appends
 what cargo-about can't see: the embedded fonts, the plugin sandbox's QuickJS,
 rquickjs-sys and wasi-libc (`tools/player-licenses/plugin-guest`), and the
-player's own license. The engine in an exported game is Tractr's
-code under the MIT License, so a game may be sold or given away under any
-terms as long as that file ships with it; the game's content (its project,
-art, text and sounds) belongs to its creator.
+player's own licenses. The engine in an exported game is Tractr's
+code under the Business Source License 1.1 ([LICENSING.md](../LICENSING.md)). Players
+need no license to run the game, and the creator may sell or give it away under any
+terms as long as that file ships with it, up to the per-game revenue limit
+in the license; the game's content (its project, art, text and sounds) belongs to its creator.
 
 The `.desktop` file starts the game from the folder it sits in
 (`Exec=sh -c "exec \\"\\$(dirname \\"\\$0\\")/WillowCreek\\"" %k`), which works in

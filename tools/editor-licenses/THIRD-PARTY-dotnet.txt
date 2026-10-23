@@ -1,7 +1,7 @@
 Third-party software in the Tractr editor
 ====================================================
 
-Tractr is free software under the MIT License (LICENSE in the
+Tractr is source-available under the Business Source License 1.1 (LICENSE in the
 source repository). The editor is a .NET application built on the open-source
 NuGet packages listed below; their licenses follow. It also includes the .NET
 runtime, icons from Material Design Icons, the Inter typeface and the Alfa Slab One,
