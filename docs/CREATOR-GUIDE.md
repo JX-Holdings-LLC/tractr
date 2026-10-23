@@ -128,6 +128,13 @@ to:
   off or lacks the permission), as it does about settings a built-in kind
   doesn't read or numbers outside their range.
 
+- **Terrains**, **Tools**, **Item kinds**, **Crop qualities** and **Crop
+  mutations**: the vocabulary of your game's world (see
+  [Your game's world](#your-games-world) below). The built-in ones are listed
+  and can be customized like crops.
+- **Cutscenes**: scenes that play out over time (see
+  [Cutscenes](#cutscenes) below).
+
 Every nested field also has an **Edit as JSON** box, for pasting or bulk
 changes.
 
@@ -137,6 +144,104 @@ haven't saved stay as typed when you switch tabs or undo something elsewhere;
 choosing another entry asks whether to save them first, and they are saved
 before another project opens or the editor closes. A number outside its range
 is reported by name instead of being changed for you.
+
+### Your game's world
+
+A game doesn't have to be a farm on Earth. The ground, the tools, the kinds of
+item, the crop quality tiers and the sky are all content, so a game on an
+alien planet can have regolith instead of grass, a plasma cutter instead of an
+axe, and twin suns instead of one. A new project starts with the classic
+vocabulary; change any of it in the Content tab.
+
+- **Terrains** are what a tile can be. Each one is painted on a layer (ground,
+  path or object) and has its rules: whether the player can **walk** on it,
+  whether crops can be **planted** on it (soil), whether it counts as **water**
+  for crops that need water nearby, whether the fishing rod works on it,
+  whether it **blocks light**, the **energy** a player loses stepping onto it
+  (lava, acid), and whether it keeps the weather off like a greenhouse floor.
+  Its **transforms** say which tool action turns it into what: the built-in
+  grass and floor become soil when tilled. A transform can name one tool, or
+  apply to every tool with that action. The map's palette lists your
+  terrains with their colour (or their art, when you give them some).
+- **Tools** have an **action**: water, till, harvest, fish, break, transform
+  (apply a terrain's transform: a plasma cutter turning rock walls into
+  floor), place (put down a terrain: a terraformer laying water) or plant (a
+  seed drone sowing the seeds you hold). Every tool still strikes the
+  gathering node it faces. A tool has its **key** in play, its energy cost
+  (15% less per tier above the first), the **area** it covers at each tier (a
+  row across the player's facing, and rows ahead) and the skill its node
+  breaks train. An item is a tool when its kind is equippable and its
+  **tool type** names the tool.
+- **Item kinds** (the item's **type**) say what items of the kind do: planted
+  (seeds), fertilize, equipped as a tool, **eaten** for energy (the item's own
+  energy, or the kind's), placed, given as gifts, sold to shops.
+- **Crop qualities** are the tiers a harvest comes out at, ranked in list
+  order: each has its price, yield and mutation-chance multipliers, its stars
+  and colour. Fertilized soil plants at the second tier, and every three
+  farming levels raise a harvest one tier. **Crop mutations** are rare
+  harvests that yield more; each takes its **share** of a crop's mutation
+  chance, checked in list order (shares above a total of 1 never happen).
+- **Growth requirements** (a crop's **Requirements**): the terrains it can be
+  planted on, the scene tags it needs (`greenhouse`, `cave`), fertilizers it
+  must be planted with, light or dark, a temperature range, and neighbours (a
+  number of crops of a type, of a terrain, or of water within a radius). A
+  crop whose light, temperature or neighbours aren't right on a night doesn't
+  grow that night. Scenes have **dark**, **temperature** and **tags**;
+  seasons have a temperature too (a scene's own wins). A place with no
+  temperature suits every crop.
+- **The sky**: in **Settings**, the day/night tint is a list of keyframes
+  (a minute of the day and a colour the scene is multiplied by), with a
+  foliage tint, for the whole game and per season; a scene can have its own.
+  **Minutes per day** sets the length of a day (1440 is 24 hours): the clock,
+  time-of-day conditions, machines and the tint follow it. Weather types pick
+  an **overlay**: the built-in rain and snow, or your own (rain streaks, snow
+  flakes, drifting dust, or just a tint) with its colour, density, speed and
+  screen tint. Acid rain is a green rain overlay with a tint.
+- **Words**: in **Settings**, how money is written (`{0} credits`), what
+  energy is called (`Oxygen`) and the skills' names, with translations per
+  language. The game's HUD, shops, inventory and quest log use them.
+
+Problems lists a tile, item, node type or event that names a terrain, tool,
+kind or tier the game doesn't have, a tool whose key moves the player or
+opens a menu, and requirements that name what doesn't exist.
+
+### Sound and music
+
+Import sound effects and music as **OGG** or **WAV** files in the Art tab
+(as **Sound** or **Music** assets); they ship inside the exported game. The
+`playSound` outcome plays a sound asset (or a built-in sound by name). Music
+can be set per **scene**, **season**, **weather** (outdoors) and **festival**,
+and the `playMusic` outcome (or a cutscene's music step) plays a music asset
+until the player changes scene. What plays, first match wins: the music an
+event or cutscene chose, today's festival, the weather, the scene, the
+season. With none of those, the built-in music plays as before.
+
+### Cutscenes
+
+A cutscene is a list of steps that run one after another, over time. Start
+one from an event, an action or a dialogue option with the `startCutscene`
+outcome. While it plays the player watches: movement and other commands wait
+until it ends, and the clock follows the **pause in modals** setting.
+
+- **say**: a line, by an NPC, the player or a narrator; the player advances it.
+- **choice**: a question with answers, each going to a step **label**.
+- **jump**: goes to a label, when its conditions hold (flags, items,
+  friendship, the same conditions events use).
+- **move**: walks the player or an NPC to a tile (waiting for them to arrive,
+  unless told not to); **face** turns them; **emote** shows a bubble over them
+  (`exclaim`, `question`, `heart`, `music`, `anger`, `sweat`, `sleep`,
+  `idea`).
+- **wait**: pauses for some seconds.
+- **camera**: pans to a tile or follows a character; a camera step with
+  neither returns to the player. **fade**: fades the screen out to a colour,
+  or back in.
+- **music** changes the music; **sound** plays a sound.
+- **outcomes** runs outcomes (give items, set flags, start quests).
+- **end** stops the cutscene.
+
+A skippable cutscene ends when the player presses Escape: the outcomes steps
+it skips still run, music steps apply, and moved characters arrive where they
+were going.
 
 ### Problems
 

@@ -413,8 +413,8 @@ and gamepad support ([docs/PLAYER.md](docs/PLAYER.md)).
   and reports the error). The editor offers the enabled packs' kinds, Problems
   knows them, and cartridges carry each plugin's granted kinds. No guest
   change: the API is a JavaScript prelude over `api.on`
-  ([docs/PLUGINS.md](docs/PLUGINS.md#minigames)). Pointer input and sounds
-  for pack minigames are not there yet.
+  ([docs/PLUGINS.md](docs/PLUGINS.md#minigames)). Since 0.7.0 pack
+  minigames get pointer input and can play sounds (M2).
 
 ## Done since the port
 
@@ -454,8 +454,9 @@ Harvest Moon or Story of Seasons, though, and the basic vocabulary of the
 world (terrain, tools, item kinds) is fixed in code. That vocabulary is what a
 game on an alien planet would need to change.
 
-The milestones below are roughly in priority order. M1 comes first because
-later milestones build on data-driven terrain, tools and items. Each change to
+The milestones below are roughly in priority order. M1 came first because
+later milestones build on data-driven terrain, tools and items; M1 and M2 are
+done (0.7.0). Each change to
 the content model goes through the usual path: F# records and checks, Rust
 serde types and parity tests, a schema version bump, and goldens. (Tractr
 has no project migrations since 0.5.0; add one when a schema change has
@@ -463,49 +464,55 @@ released projects to carry forward.)
 
 ### M1: A data-driven world vocabulary
 
-Make the closed enums into content, so a game defines its own world.
+Done in 0.7.0: the closed enums are content, so a game defines its own world
+([Creator Guide](docs/CREATOR-GUIDE.md#your-games-world)). A new project starts
+with the classic vocabulary as built-in definitions, which reproduce the old
+rules exactly (every recorded replay keeps its states and effects).
 
-- [ ] **Terrain types.** Tile types are a fixed set of seven (`TileTypes`:
-  grass, soil, water, path, wall, door, floor), enforced by `SchemaChecks.fs`.
-  Replace them with terrain definitions that carry their rules: walkable,
-  tillable, water source, fishable, blocks light, hazard, indoor, and which
-  tool turns it into what. The current seven become the base pack's terrain.
-- [ ] **Tool types.** The six tools (`ToolTypes`) have their behaviour in code
-  (`farm-sim/src/content_builtin.rs`: the hoe tills grass or path, the axe and
-  pickaxe act on walls). Make tools data: what they target, what they do
-  (till, water, harvest, break, place, transform terrain), area per tier,
-  energy cost, and their key. Then a game can have a plasma cutter, a
-  terraformer or a seed drone.
-- [ ] **Item categories.** The eight item types (`ItemTypes`) become open
-  categories with optional behaviours (edible with energy or health
-  restored, plantable, placeable, giftable, sellable, equippable).
-- [ ] **Crop qualities and mutations.** Quality tiers (normal, silver, gold,
-  iridium) and mutations (giant, golden, ancient) become definitions with
-  names, price multipliers and visuals.
-- [ ] **Growth requirements.** Crops can need more than water and a season:
-  terrain or soil type, light, temperature or another per-scene condition,
-  fertilizer kinds, and neighbouring crops or terrain.
-- [ ] **Atmosphere.** Make the day/night tint curve (`farm-render/src/atmosphere.rs`)
-  and the weather overlays (only `rain` and `snow` today) data per game, per
-  season and per scene. Let games choose the length of a day (today it's
-  always 1440 minutes): twin suns, endless nights, acid rain.
-- [ ] **Words of the game**: the currency name, the energy name and the skill
-  names are set per game, in every language.
+- [x] **Terrain types.** `TerrainDefinition`: the layer it is painted on, its
+  colour and art, walkable, plantable (soil), water source, fishable, blocks
+  light, hazard energy, sheltered from the weather, and transforms (which tool
+  action, or which tool, turns it into what). The seven tile types are the
+  built-in terrains; Problems reports tiles of a terrain the game lacks.
+- [x] **Tool types.** `ToolDefinition`: an action (water, till, harvest, fish,
+  break, transform, place, plant), its play-mode key, energy cost, the area per
+  tier (width across the facing, rows ahead), the skill its node breaks train
+  and the terrain it places. The six tools are the built-in ones.
+- [x] **Item categories.** `ItemCategoryDefinition`: plantable, fertilizer,
+  equippable (a tool), edible (energy, or the item's own), placeable,
+  giftable, sellable. The engine and the game's screens ask the category, not
+  the type name.
+- [x] **Crop qualities and mutations.** `CropQualityDefinition` (price, yield
+  and mutation-chance multipliers, stars, colour; ranked in list order) and
+  `CropMutationDefinition` (yield multiplier, share of the mutation chance,
+  colour).
+- [x] **Growth requirements.** A crop's `requirements`: terrains, scene tags
+  and fertilizers checked when it is planted; light or dark, a temperature
+  range (scene, else season) and neighbouring crops, terrain or water checked
+  each night, holding growth back when not met.
+- [x] **Atmosphere.** The day/night tint keyframes and the foliage tint per
+  game, season and scene; weather overlays as definitions (rain, snow, dust or
+  a tint, with colour, density, speed and tint); the length of a day
+  (`time.dayMinutes`).
+- [x] **Words of the game**: how money is written, what energy and the skills
+  are called, in every language (`settings.words`).
 
 ### M2: Sound and cutscenes
 
-- [ ] **Custom audio.** Import sound effects and music (OGG, WAV) as project
-  assets, ship them in the cartridge, and let `playSound`, scenes, seasons,
-  weather, festivals and events pick music. Today `playSound` takes a name
-  the host plays, and sounds are not project content (`References.fs`).
-  The built-in synthesized music stays as the default.
-- [ ] **Cutscenes.** A sequence of steps that run over time: move NPCs and
-  the player, face directions, emotes, wait, camera pan, fade, music change,
-  dialogue, choices that branch the sequence. This is what heart events,
-  festivals and story beats are built from. Events today run their outcomes
-  at once.
-- [ ] **Sound and pointer input for pack minigames** (from
-  [Content packs](#content-packs)).
+Done in 0.7.0.
+
+- [x] **Custom audio.** Sound and music assets (OGG, WAV) in the project and
+  the cartridge. `playSound` plays a sound asset (or a built-in sound by
+  name); music is chosen by the `playMusic` outcome or a cutscene, then
+  today's festival, the weather (outdoors), the scene, the season, else the
+  built-in synthesized music.
+- [x] **Cutscenes.** Steps that run over time: say, choice (branching to step
+  labels), jump (with conditions), move, face, emote, wait, camera, fade,
+  music, sound, outcomes, end; started by the `startCutscene` outcome,
+  skippable by the player.
+- [x] **Sound and pointer input for pack minigames**: `update` gets
+  `input.pointer` (mouse or touch over the minigame, in canvas units) and may
+  answer `sounds` to play (docs/PLUGINS.md#minigames).
 
 ### M3: Event logic for creators who don't write code
 
