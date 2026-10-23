@@ -14,7 +14,7 @@ every exported game, and the editor ships it as `licenses/THIRD-PARTY-rust.txt`
 2. it appends what cargo-about can't see: the Inter and Atkinson Hyperlegible
    fonts (`assets/fonts`), the plugin sandbox guest that `farm-plugins` embeds
    (quickjs-ng, rquickjs-sys, wasi-libc with musl and cloudlibc; texts in
-   `plugin-guest/`), and the player's own MIT license (`LICENSE`).
+   `plugin-guest/`), and the player's own licenses (`LICENSE`, and `LICENSE-MIT` for the plugin guest).
 
 ```sh
 cargo install cargo-about --locked --features cli   # CI uses 0.9.2

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.1
+
+- **New license: the Business Source License 1.1.** Tractr is now licensed by
+  JX Holdings, LLC and is free to use and ship until a game made with it earns
+  US$1,000,000 (the limit is per game, and a commercial license is a flat fee
+  per game). Players need no license to run an exported game, plugins and
+  packs are their authors' own works, and every version becomes MIT four years
+  after it is published. The plugin sandbox guest stays MIT. Releases
+  published before 2026-10-23 stay under the MIT License. See
+  [LICENSING.md](LICENSING.md).
+
 ## 0.6.0
 
 - **Projects are schema version 1.** Breaking: the version numbering starts

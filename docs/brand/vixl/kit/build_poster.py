@@ -29,7 +29,7 @@ ops+=[
  text("sub2","Plant crops · Raise critters · Ship to every platform",0,1222,26,INK,"courier-prime-400"), center_x("sub2"),
  {"type":"shape","shape":"seal","name":"seal","x":800,"y":250,"width":210,"height":210,"fill":GREEN,"count":24,"inner_radius":0.88,"rotation":12},
  ell("seal-in",822,272,166,166,"transparent",stroke=PAPER,stroke_width=3,rotation=12),
- {"type":"text","name":"seal-t","text":"FREE &\nOPEN\nSOURCE","size":30,"color":PAPER,"font":"oswald-700","align":"center","line_height":1.0,"within":"seal","rotation":12,"tracking":2},
+ {"type":"text","name":"seal-t","text":"NO\nCODE\nNEEDED","size":30,"color":PAPER,"font":"oswald-700","align":"center","line_height":1.0,"within":"seal","rotation":12,"tracking":2},
  {"type":"look","target":"paper","look":"paper"},
 ]
 # scenery bleeds off the edge on purpose and sits behind the type

@@ -41,7 +41,7 @@ def seal_badge(x, y, d, tilt=12, size=22):
     return [{"type": "shape", "shape": "seal", "name": "seal", "x": x, "y": y, "width": d, "height": d, "fill": GREEN,
              "count": 24, "inner_radius": 0.88, "rotation": tilt},
             ell("seal-in", x + d * 0.1, y + d * 0.1, d * 0.8, d * 0.8, "transparent", stroke=PAPER, stroke_width=3, rotation=tilt),
-            {"type": "text", "name": "seal-t", "text": "FREE &\nOPEN\nSOURCE", "size": size, "color": PAPER, "font": "oswald-700",
+            {"type": "text", "name": "seal-t", "text": "NO\nCODE\nNEEDED", "size": size, "color": PAPER, "font": "oswald-700",
              "align": "center", "line_height": 1.0, "within": "seal", "rotation": tilt, "tracking": 2}]
 
 
@@ -65,7 +65,7 @@ def hero(w=1280, h=640):
             text("script", "Grow your own worlds!", 72, 270, 60, INK, "lobster-400"),
             text("sub", "THE FARM GAME ENGINE", 72, 372, 30, INK, "oswald-700", tracking=8),
             text("desc", "Plant crops · Raise critters\nShip to every platform", 72, 432, 19, INK, "courier-prime-400", line_height=1.5),
-            text("small", "Free and open source. Windows, Linux and the web.", 72, 520, 16, MUTED, "courier-prime-400")]
+            text("small", "Made for cozy farm games. Windows, Linux and the web.", 72, 520, 16, MUTED, "courier-prime-400")]
     ops += seal_badge(1076, 58, 140)
     ops += [{"type": "look", "target": "paper", "look": "paper"}]
     ops += [{"type": "layer-intent", "targets": ["rays", "hill", "hill2"] + [f"row{i}" for i in range(6)], "allow_crop": True},

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates THIRD-PARTY.txt: the license notices for the Rust crates in farm-player, the fonts
-# and the plugin sandbox guest it embeds, and farm-player's own MIT license.
+# and the plugin sandbox guest it embeds, and farm-player's own licenses.
 # Every player template ships this file, and Export Game copies it to
 # licenses/THIRD-PARTY.txt in each exported game (docs/EXPORT.md). The editor ships it too, as
 # licenses/THIRD-PARTY-rust.txt: farm-ffi is built from crates inside farm-player's graph.
@@ -65,13 +65,18 @@ guest_notice() {
   guest_notice "BSD 2-Clause \"Simplified\" License (BSD-2-Clause)" "cloudlibc, through wasi-libc" cloudlibc.txt
 } >> "$generated"
 
-# The player itself: Tractr's own crates (the workspace license, ../../LICENSE).
+# The player itself: Tractr's own crates (the workspace license, ../../LICENSE; the plugin guest is MIT, ../../LICENSE-MIT).
 {
   printf '\n%s\n' "--------------------------------------------------------------------------------"
-  printf '%s\n\n' "MIT License (MIT)"
+  printf '%s\n\n' "Business Source License 1.1 (BUSL-1.1)"
   printf '%s\n' "Used by:"
   printf '%s\n\n' "- farm-player and the Tractr engine crates"
   cat "$root/LICENSE"
+  printf '\n%s\n' "--------------------------------------------------------------------------------"
+  printf '%s\n\n' "MIT License (MIT)"
+  printf '%s\n' "Used by:"
+  printf '%s\n\n' "- the plugin sandbox guest (farm-plugin-guest and its metering), compiled into farm-plugins"
+  cat "$root/LICENSE-MIT"
 } >> "$generated"
 
 # Stable line endings and no trailing spaces, whatever the crates packaged.

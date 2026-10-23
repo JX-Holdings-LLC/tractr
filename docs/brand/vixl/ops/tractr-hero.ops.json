@@ -684,7 +684,7 @@
  {
   "type": "text",
   "name": "small",
-  "text": "Free and open source. Windows, Linux and the web.",
+  "text": "Made for cozy farm games. Windows, Linux and the web.",
   "x": 72,
   "y": 520,
   "size": 16,
@@ -720,7 +720,7 @@
  {
   "type": "text",
   "name": "seal-t",
-  "text": "FREE &\nOPEN\nSOURCE",
+  "text": "NO\nCODE\nNEEDED",
   "size": 22,
   "color": "#f2e5c6",
   "font": "oswald-700",
