@@ -53,7 +53,7 @@ let ``F sharp compiler reproduces the checked-in cartridge and blocks errors`` (
         File.WriteAllBytes(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", "fixture-project.cart"), compiled)
     else
         Assert.Equal<byte>(File.ReadAllBytes(fixture "fixture-project.cart"), compiled)
-    let broken = { imported.Data.Value with SelectedTileType = "lava" }
+    let broken = { imported.Data.Value with Mode = "bogus" }
     Assert.Throws<InvalidOperationException>(fun () -> CartridgeCompiler.Compile broken |> ignore) |> ignore
 
 [<Fact>]

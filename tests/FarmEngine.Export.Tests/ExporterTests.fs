@@ -146,7 +146,7 @@ let ``archives hold the folder with the execute bit on the Linux binary`` () =
 [<Fact>]
 let ``Problems errors block export and nothing is written`` () =
     use dir = new TempDir()
-    let broken = { willowCreek () with SelectedTileType = "lava" }
+    let broken = { willowCreek () with Mode = "bogus" }
     let report = export broken (fakeTemplates (dir.Sub "templates") "1.0.0-test") (dir.Sub "out") both
     Assert.True(report.Blocked)
     Assert.False(report.Ok)

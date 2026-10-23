@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn fsharp_compiled_cartridge_matches_the_project() {
         let cart = read_cartridge(CART).expect("F# cartridge parses in Rust");
-        assert_eq!(cart.project_schema_version, 1);
+        assert_eq!(cart.project_schema_version, farm_sim::schema::CURRENT_PROJECT_SCHEMA_VERSION);
         assert_eq!(cart.info.game_id, "local.project-1");
         assert_eq!(cart.info.title, "Fixture Farm");
         let loaded = load_cartridge(CART).unwrap();
