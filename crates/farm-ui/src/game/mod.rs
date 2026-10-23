@@ -7,6 +7,7 @@
 //! `farm_sim::overlay`) and returns [`GameAction`]s; every gameplay action is an engine command.
 
 mod crafting;
+mod cutscene;
 mod dialogue;
 mod hud;
 mod inventory;
@@ -61,6 +62,8 @@ pub enum GameAction {
     OpenMenu,
     /// Input for the running minigame.
     Minigame(MinigameInput),
+    /// The pointer over a pack minigame's canvas (`PlaySession::minigame_pointer`).
+    MinigamePointer(farm_runtime::canvas::CanvasPointer),
     /// Hold this seed or fertilizer for planting, or put it away when it is held.
     Hold(String),
 }
@@ -164,6 +167,8 @@ impl GameUi {
             Some(Panel::Crafting) => crafting::draw(ui, view, &mut actions),
             None => {}
         }
+        // Under the dialogue, shop or minigame a cutscene step opened.
+        cutscene::draw(ui, view, &mut actions);
         shop::draw(ui, view, &mut self.shop_tab, &mut actions);
         dialogue::draw(ui, view, images, &mut actions);
         minigame::draw(ui, view, images, &mut actions);

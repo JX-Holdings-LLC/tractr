@@ -243,8 +243,7 @@ fn layer_transform(ctx: &EngineContext, tool: &ToolDefinition, tile: &Tile) -> O
     ];
     layers.into_iter().find_map(|(layer, id)| {
         let terrain = ctx.terrain(id?)?;
-        let transform =
-            terrain.transforms.iter().find(|transform| transform_matches(transform, tool, &tool.action))?;
+        let transform = terrain.transforms.iter().find(|transform| transform_matches(transform, tool, &tool.action))?;
         // A background can't be removed, only changed.
         (layer != tile_layers::BACKGROUND || !transform.into.is_empty()).then(|| (layer, transform.into.clone()))
     })
@@ -811,9 +810,8 @@ fn plant_seed(
 
     // What the crop needs where it is planted (M1): its terrains and scene tags.
     if let Some(needs) = definition.requirements.as_ref() {
-        let on_terrain = scene.tile(x, y).is_some_and(|tile| {
-            needs.terrains.is_empty() || needs.terrains.iter().any(|terrain| *terrain == tile.background)
-        });
+        let on_terrain =
+            scene.tile(x, y).is_some_and(|tile| needs.terrains.is_empty() || needs.terrains.contains(&tile.background));
         if !on_terrain || !needs.scene_tags.iter().all(|tag| scene.has_tag(tag)) {
             return vec![Effect::say(message_levels::ERROR, messages::CANT_PLANT_HERE.with(&[&definition.name]))];
         }
@@ -828,9 +826,11 @@ fn plant_seed(
             (true, Some(chosen)) => allowed_fertilizer(definition, chosen),
             (true, None) => false,
             // Plain interact picks an allowed one below.
-            (false, _) => state.player.inventory.iter().any(|slot| {
-                is_fertilizer(ctx, &slot.item) && allowed_fertilizer(definition, &slot.item.id)
-            }),
+            (false, _) => state
+                .player
+                .inventory
+                .iter()
+                .any(|slot| is_fertilizer(ctx, &slot.item) && allowed_fertilizer(definition, &slot.item.id)),
         };
         if !fits {
             let names: Vec<String> = needs.fertilizers.iter().map(|id| item_name(ctx, id)).collect();
@@ -842,14 +842,10 @@ fn plant_seed(
     }
 
     if let Some(multi_tile) = &definition.multi_tile {
-        let can_place = crops::can_place_multi_tile_crop(
-            &scene.tiles,
-            x,
-            y,
-            multi_tile.width,
-            multi_tile.height,
-            &|terrain| ctx.plantable(terrain),
-        );
+        let can_place =
+            crops::can_place_multi_tile_crop(&scene.tiles, x, y, multi_tile.width, multi_tile.height, &|terrain| {
+                ctx.plantable(terrain)
+            });
         if !can_place {
             return vec![Effect::say(message_levels::ERROR, &messages::NO_SPACE_FOR_CROP)];
         }
@@ -891,13 +887,8 @@ fn choose_seed<'a>(ctx: &EngineContext, state: &'a GameState, choice: PlantChoic
             vec![Effect::say(message_levels::INFO, messages::NO_SEED_TO_PLANT.with(&[&item_name(ctx, seed_item_id)]))]
         });
     }
-    let seeds: Vec<&Item> = state
-        .player
-        .inventory
-        .iter()
-        .filter(|slot| is_seed(ctx, &slot.item))
-        .map(|slot| &slot.item)
-        .collect();
+    let seeds: Vec<&Item> =
+        state.player.inventory.iter().filter(|slot| is_seed(ctx, &slot.item)).map(|slot| &slot.item).collect();
     let grows_now = |item: &&&Item| {
         let definition = item.crop_type.as_deref().and_then(|crop| ctx.content.crops.get(crop));
         definition.is_some_and(|definition| crops::can_grow_in_season(Some(definition), &state.clock.season))

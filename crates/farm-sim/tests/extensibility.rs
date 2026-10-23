@@ -824,6 +824,31 @@ fn world_outcomes_warp_dialogue_npcs_and_transitions() {
 }
 
 #[test]
+fn play_music_lasts_until_a_warp_leaves_the_scene() {
+    let (ctx, mut state) = bare(GameContent::default());
+    let play = |id: &str| EventOutcome { sound_id: Some(id.to_owned()), ..outcome("playMusic") };
+    let warp = |scene: &str| EventOutcome {
+        scene_id: Some(scene.to_owned()),
+        x: Some(1),
+        y: Some(1),
+        ..outcome("warpPlayer")
+    };
+    let effects = events::apply_outcomes(&ctx, &mut state, &[play("song")], 0);
+    assert_eq!((state.music.as_deref(), effects), (Some("song"), vec![]));
+    // A warp inside the scene keeps the music.
+    events::apply_outcomes(&ctx, &mut state, &[warp("scene-a")], 0);
+    assert_eq!(state.music.as_deref(), Some("song"));
+    // Music chosen in the same outcome list as a warp elsewhere plays in the new scene.
+    events::apply_outcomes(&ctx, &mut state, &[warp("scene-b"), play("arrival")], 0);
+    assert_eq!((state.player.scene_id.as_str(), state.music.as_deref()), ("scene-b", Some("arrival")));
+    events::apply_outcomes(&ctx, &mut state, &[warp("scene-a")], 0);
+    assert_eq!(state.music, None);
+    // An empty id goes back to the music the place picks.
+    events::apply_outcomes(&ctx, &mut state, &[play("song"), play("")], 0);
+    assert_eq!(state.music, None);
+}
+
+#[test]
 fn events_fire_once_in_content_order_and_later_events_see_earlier_flags() {
     use farm_sim::schema::GameEvent;
     let first = GameEvent {

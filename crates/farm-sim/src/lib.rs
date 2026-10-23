@@ -21,6 +21,7 @@ pub mod commands;
 pub mod content_builtin;
 pub mod content_index;
 pub mod crafting;
+pub mod cutscenes;
 pub mod dialogue_system;
 pub mod economy;
 pub mod effects;

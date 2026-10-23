@@ -408,6 +408,8 @@ fn settle_tile_entry(
             let target_name = state.world.scenes[target_index].name.clone();
             let (landed, landing_effects) = land_player(ctx, state, &to_scene_id, to_x, to_y);
             changed_scene = true;
+            // Music an event chose (M2) ends with the scene.
+            state.music = None;
             effects.push(Effect::SceneChanged { scene_id: to_scene_id, x: landed.x, y: landed.y });
             effects.push(Effect::say("success", messages::ENTERED.with(&[&target_name])));
             effects.extend(landing_effects);

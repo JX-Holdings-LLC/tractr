@@ -20,6 +20,7 @@
 //! poisoned and refuses further frames.
 
 use crate::audio::SoundRequest;
+use crate::audio_assets::AudioAssets;
 use crate::input::{FrameInput, GameKey, InputEvent, InputRouter};
 use crate::render::{world_view, FrameRenderer, WorldView};
 use crate::saves::{
@@ -303,6 +304,8 @@ pub struct Player {
     planned: Planned,
     /// The title screen's backdrop: the start of the game and its art (built once).
     title_state: Option<(GameState, GraphicsSource)>,
+    /// The game's own sounds and music, decoded when it loaded (M2).
+    audio: AudioAssets,
     sounds: Vec<SoundRequest>,
     requests: Vec<PlayerRequest>,
     poisoned: Option<String>,
@@ -408,6 +411,7 @@ impl Player {
         ui.set_reduced_motion(settings.accessibility.reduced_motion);
         ui.set_readable_font(settings.accessibility.readable_font);
         ui.set_lang(Lang::resolve(&settings.language, options.system_locale.as_deref(), &def.content.settings.locale));
+        let audio = AudioAssets::load(&def.presentation.custom_assets, &assets);
         let mut player = Self {
             mode: options.mode,
             def,
@@ -427,6 +431,7 @@ impl Player {
             clock: options.clock,
             router: InputRouter::new(),
             host_view: HostView::default(),
+            audio,
             renderer: FrameRenderer::new(Arc::new(assets)),
             ui_list: DrawList::new(),
             world: None,
@@ -564,12 +569,24 @@ impl Player {
 
     /// The music and ambience for now: the game's (day or night music, birds, crickets or rain;
     /// see `farm_runtime::music::cue_for`), or day music without ambience on the title screens.
+    /// The music asset the game picks (`farm_runtime::music::chosen_music`) plays instead of the
+    /// built-in music when it decoded.
     pub fn music_cue(&self) -> MusicCue {
         let gain = self.settings.audio.music_gain();
         match self.game.as_ref() {
-            Some(game) => music::cue_for(&self.def.content, game.session.state(), gain),
+            Some(game) => {
+                let state = game.session.state();
+                let asset = music::chosen_music(&self.def.content, state).and_then(|id| self.audio.music(id));
+                music::cue_for(&self.def.content, state, gain).with_asset(asset.cloned())
+            }
             None => MusicCue::new(Some(music::MUSIC_DAY), None, gain),
         }
+    }
+
+    /// The game's own sounds and music, decoded (hosts that fetch samples by id; the assets
+    /// that did not decode).
+    pub fn audio_assets(&self) -> &AudioAssets {
+        &self.audio
     }
 
     fn run(
@@ -750,7 +767,9 @@ impl Player {
                 }
                 SessionEvent::Sound { cue } => {
                     if gain > 0.0 {
-                        self.sounds.push(SoundRequest { cue, gain });
+                        // The game's sound asset of that id (M2), else the built-in cue.
+                        let clip = self.audio.sound(&cue).cloned();
+                        self.sounds.push(SoundRequest { cue, gain, clip });
                     }
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
@@ -772,7 +791,8 @@ impl Player {
     fn ui_sound(&mut self) {
         let gain = self.settings.audio.effects_gain();
         if gain > 0.0 {
-            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6 });
+            let clip = self.audio.sound("ui").cloned();
+            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6, clip });
         }
     }
 
@@ -1048,6 +1068,12 @@ impl Player {
                     game.session.minigame_input(input);
                 }
                 self.drain_session_events();
+            }
+            // The pack minigame's next frame reads it.
+            GameAction::MinigamePointer(pointer) => {
+                if let Some(game) = self.game.as_mut() {
+                    game.session.minigame_pointer(pointer);
+                }
             }
             GameAction::Hold(item_id) => {
                 self.ui_sound();

@@ -88,7 +88,10 @@ mod tests {
     fn get_tool_from_item_returns_the_definition_or_null() {
         let content = crate::schema::GameContent::default();
         for tool_type in ALL_TOOL_TYPES {
-            assert_eq!(get_tool_from_item(&content, &make_tool(tool_type, None, None)).map(|tool| tool.id.as_str()), Some(tool_type));
+            assert_eq!(
+                get_tool_from_item(&content, &make_tool(tool_type, None, None)).map(|tool| tool.id.as_str()),
+                Some(tool_type)
+            );
         }
         assert_eq!(get_tool_from_item(&content, &make_item("crop", None, None, None)), None);
         assert_eq!(get_tool_from_item(&content, &make_item("tool", Some("laser"), None, None)), None);

@@ -8,7 +8,8 @@
 //! A pack-defined kind brings its own frame (`MinigameView::canvas`, validated by
 //! `farm_runtime::canvas`): its rectangles, text and item sprites are scaled from canvas units
 //! into the window and clipped to it, colors by name follow the theme, and its input comes from
-//! the game keys, so only Give up is a button.
+//! the game keys and the pointer over the frame (reported in canvas units as
+//! [`GameAction::MinigamePointer`]), so only Give up is a button.
 
 use super::{draw_item_art, GameAction, GameView};
 use crate::format::capitalize;
@@ -17,11 +18,11 @@ use crate::icons::Icon;
 use crate::input::InputDevice;
 use crate::layout::{Align, RectExt};
 use crate::theme::fade;
-use crate::ui::{Ui, WidgetId};
+use crate::ui::{HitKind, Ui, WidgetId};
 use crate::widgets::{Button, ButtonKind, ModalSpec};
 use farm_render::{Color, DrawCmd, FontId, ImageStore, Rect, TextAlign};
 use farm_runtime::canvas::{
-    CanvasAlign, CanvasColor, CanvasCommand, MinigameCanvas, ThemeColor, CANVAS_HEIGHT, CANVAS_WIDTH,
+    CanvasAlign, CanvasColor, CanvasCommand, CanvasPointer, MinigameCanvas, ThemeColor, CANVAS_HEIGHT, CANVAS_WIDTH,
 };
 use farm_runtime::host::MinigameInput;
 use farm_sim::Command;
@@ -52,7 +53,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     let lang = ui.lang();
     let mut y = modal.top;
     if let Some(canvas) = &game.canvas {
-        y = draw_canvas(ui, view, images, canvas, area, y);
+        y = draw_canvas(ui, view, images, canvas, area, y, actions);
         let hint = ui.tr("minigame.packKeys");
         let colors = ui.theme().colors;
         ui.label(
@@ -213,7 +214,8 @@ fn canvas_color(ui: &Ui, color: CanvasColor) -> Color {
 }
 
 /// Draws a pack minigame's frame at `top`, as wide as `area` (at most twice the canvas size),
-/// clipped to the canvas; returns the y below it.
+/// clipped to the canvas; returns the y below it. The pointer over the frame, or held after
+/// going down on it, is reported in canvas units; a press anywhere else is not.
 fn draw_canvas(
     ui: &mut Ui,
     view: &GameView<'_>,
@@ -221,10 +223,19 @@ fn draw_canvas(
     canvas: &MinigameCanvas,
     area: Rect,
     top: f32,
+    actions: &mut Vec<GameAction>,
 ) -> f32 {
     let scale = (area.width / CANVAS_WIDTH).min(2.0);
     let frame =
         Rect::new(area.x + (area.width - CANVAS_WIDTH * scale) / 2.0, top, CANVAS_WIDTH * scale, CANVAS_HEIGHT * scale);
+    let pointer = ui.interact(WidgetId::new("minigame-canvas"), frame, HitKind::Button, false);
+    if let Some((x, y)) = ui.pointer() {
+        if pointer.hovered || pointer.active || pointer.pressed || pointer.released {
+            let (x, y) = ((x - frame.x) / scale, (y - frame.y) / scale);
+            let pointer = CanvasPointer::at(x, y, pointer.active, pointer.pressed, pointer.released);
+            actions.push(GameAction::MinigamePointer(pointer));
+        }
+    }
     let at = |x: f32, y: f32, w: f32, h: f32| Rect::new(frame.x + x * scale, frame.y + y * scale, w * scale, h * scale);
     let track = ui.theme().colors.track;
     ui.list_mut().fill_round_rect(frame, 6.0, track);

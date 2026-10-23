@@ -21,8 +21,8 @@ use crate::effects::Effect;
 use crate::hooks::{HookBus, HookEvent, WeatherRollHookPayload};
 use crate::schema::{
     ActionDef, AnimalSpeciesDefinition, CropMutationDefinition, CropQualityDefinition, Dialogue, GameContent, Item,
-    ItemCategoryDefinition, MachineTypeDefinition, MinigameDef, NodeTypeDefinition, Npc, Quest, RecipeDefinition, Scene,
-    ShopDefinition, TerrainDefinition, ToolDefinition,
+    ItemCategoryDefinition, MachineTypeDefinition, MinigameDef, NodeTypeDefinition, Npc, Quest, RecipeDefinition,
+    Scene, ShopDefinition, TerrainDefinition, ToolDefinition,
 };
 use crate::vocabulary;
 use std::cell::RefCell;

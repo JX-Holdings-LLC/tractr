@@ -282,6 +282,41 @@ await test("pack plugins run in the player", () => {
   player.free();
 });
 
+await test("a game's own music comes decoded from the module", () => {
+  const project = JSON.parse(readFileSync(fixture("projects", "fixture-project.json"), "utf8"));
+  // A tenth of a second of a mono 16-bit WAV file at 22050 Hz.
+  const rate = 22050;
+  const frames = 2205;
+  const wav = Buffer.alloc(44 + frames * 2);
+  wav.write("RIFF", 0);
+  wav.writeUInt32LE(36 + frames * 2, 4);
+  wav.write("WAVEfmt ", 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(rate, 24);
+  wav.writeUInt32LE(rate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write("data", 36);
+  wav.writeUInt32LE(frames * 2, 40);
+  for (let i = 0; i < frames; i++) wav.writeInt16LE(Math.round(Math.sin(i / 10) * 8000), 44 + i * 2);
+  const dataUrl = "data:audio/wav;base64," + wav.toString("base64");
+  project.customAssets = [{ id: "theme", name: "Theme", type: "music", dataUrl }];
+  project.scenes[0].music = "theme";
+  const player = new farm.Player(project, { seed: "wasm-audio" });
+  const music = frame(player).info.music;
+  // The scene's music asset plays instead of the built-in music, which stays the fallback.
+  assert.equal(music.asset, "theme", JSON.stringify(music));
+  assert.ok(["day", "night"].includes(music.music));
+  const clip = player.audioClip("theme");
+  assert.equal(clip.sampleRate, rate);
+  assert.equal(clip.channels, 1);
+  assert.ok(clip.samples instanceof Float32Array && clip.samples.length === frames);
+  assert.equal(player.audioClip("no-such-asset"), undefined);
+  player.free();
+});
+
 await test("hashes and sounds", () => {
   const project = json("golden", "content", "starter-farm.json").project;
   const player = new farm.Player(project, { seed: "wasm-hash" });

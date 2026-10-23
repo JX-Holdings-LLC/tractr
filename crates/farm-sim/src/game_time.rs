@@ -20,8 +20,8 @@ use crate::messages;
 use crate::quests;
 use crate::rng::Rng;
 use crate::schema::{
-    classic_calendar_seasons, soil_states, CalendarConfig, CalendarFestival, CalendarSeason, ClockState,
-    Crop, CropDefinition, GameContent, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
+    classic_calendar_seasons, soil_states, CalendarConfig, CalendarFestival, CalendarSeason, ClockState, Crop,
+    CropDefinition, GameContent, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
 };
 use crate::units;
 use crate::weather;
@@ -269,6 +269,7 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     state.dialogue = None;
     state.shop = None;
     state.minigame = None;
+    crate::cutscenes::stop(state);
     state.shop_purchases_today = IndexMap::new();
 
     // Animals: age, mood, product rolls (M4c). Machines finish overnight jobs automatically

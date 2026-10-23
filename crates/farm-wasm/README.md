@@ -68,13 +68,14 @@ function tick(dt: number, events: InputEvent[]) {
 | Member | Mirrors | |
 |---|---|---|
 | `new Player(game, options?)` | `fe_player_new` | `mode: "embedded"` (default; Play Mode: straight into the game, no title screen or save slots) or `"standalone"` (web demo: title screen, save slots, autosave each morning). `reducedMotion`/`uiScale` override the stored settings. `storage`: see below. |
-| `frame(request, reuse?)` | `fe_player_frame` | `request` is `{dt, events, width, height, render?, density?, touchControls?, insetBottom?}`: `density` is frame pixels per CSS pixel (the interface is laid out in CSS pixels, so pass `devicePixelRatio` times any downscale), `touchControls` says the page shows on-screen controls (prompts then name no keys and the key hint row is left out), `insetBottom` is how many frame pixels at the bottom they cover (the HUD's bottom row, panels and the dialogue box stay above). Returns `{width, height, pixels, info, storageChanged}`: `pixels` is a `width × height × 4` `Uint8ClampedArray` for `ImageData` (frames are opaque, so their premultiplied RGBA is also straight RGBA), `null` with `render: false`; `info` is `{sounds: [{cue, gain}], requests, screen, modal}`. Pass the previous `pixels` as `reuse` to draw into it instead of allocating. |
+| `frame(request, reuse?)` | `fe_player_frame` | `request` is `{dt, events, width, height, render?, density?, touchControls?, insetBottom?}`: `density` is frame pixels per CSS pixel (the interface is laid out in CSS pixels, so pass `devicePixelRatio` times any downscale), `touchControls` says the page shows on-screen controls (prompts then name no keys and the key hint row is left out), `insetBottom` is how many frame pixels at the bottom they cover (the HUD's bottom row, panels and the dialogue box stay above). Returns `{width, height, pixels, info, storageChanged}`: `pixels` is a `width × height × 4` `Uint8ClampedArray` for `ImageData` (frames are opaque, so their premultiplied RGBA is also straight RGBA), `null` with `render: false`; `info` is `{sounds: [{cue, gain, asset?}], requests, screen, modal, music}` ([Sound](#sound)). Pass the previous `pixels` as `reuse` to draw into it instead of allocating. |
 | `debug(action)` | `fe_player_debug` | Debug-drawer actions: `{type: "addMoney", amount}`, `fullEnergy`, `addMinutes`, `setSeason`, `giveFirst`, `teleport`, `setFlag`, `skipDay`. |
 | `commands(commands)` | `fe_player_commands` | Engine commands, as if the player did them. |
 | `stateJson()`, `hash()` | `fe_player_state_json`, `fe_player_hash` | The live state (stable JSON) and its hash. |
 | `syncedProject()` | `fe_player_synced_project` | "Keep changes": the project with the live state written back (throws for a cartridge). |
 | `queryJson(query)` | `fe_player_query_json` | `{type: "summary"}`, `{type: "widgetRect", path}`, `{type: "toasts"}`, `{type: "pluginErrors"}`. |
 | `gameInfo()` | | `{gameId, title, version, author, company, credits}`. |
+| `audioClip(id)` | | The game's own sound or music asset, decoded: `{sampleRate, channels, samples}` ([Sound](#sound)); `undefined` when there is none. |
 | `exportStorage()`, `importStorage(doc)` | | Saves and settings, below. |
 | `free()` | `fe_player_free` | Releases the player (or rely on `FinalizationRegistry`, or `using`). |
 
@@ -141,6 +142,25 @@ function play(cue: string, gain: number) {
 
 `sfxCues()` lists the cue names (to warm the cache).
 
+A game may bring its own sounds and music (Ogg Vorbis or WAV assets). A sound with
+`asset: true` is one: its samples are `player.audioClip(cue)`, decoded when the game loaded, at
+the file's own rate and interleaved when stereo. Make the buffer at that rate (WebAudio
+resamples it) and cache it per id:
+
+```ts
+const clip = player.audioClip(cue);
+const frames = clip.samples.length / clip.channels;
+const buffer = audio.createBuffer(clip.channels, frames, clip.sampleRate);
+for (let channel = 0; channel < clip.channels; channel++) {
+  buffer.copyToChannel(clip.samples.filter((_, i) => i % clip.channels === channel), channel);
+}
+```
+
+`info.music` names the loops to play: `music` and `ambience` (built-in,
+`musicSamples(name, sampleRate)`) with their gains. When `asset` is set, loop
+`player.audioClip(asset)` at `musicGain` instead of `music`; `music` is the built-in fallback
+for a page that cannot play it.
+
 ### Plugins
 
 Pack plugins run inside the module, exactly as on the desktop: `farm-plugins` runs the QuickJS
@@ -155,7 +175,8 @@ they are deterministic and synchronous with the frame. Their errors are in
   state hash is xxh3-64 over the state's canonical binary encoding (docs/NUMERICS.md), not a hash
   of its JSON text.
 - `sfxCues()`, `sfxSamples(cue, sampleRate)`, `musicSamples(name, sampleRate)` (the built-in
-  music and ambience loops a frame's `info.music` names), `version()`, `lastPanic()`.
+  music and ambience loops a frame's `info.music` names; a game's own audio is
+  `Player.audioClip`), `version()`, `lastPanic()`.
   `start()` installs the panic hook; `init` calls it.
 
 ## Errors and panics

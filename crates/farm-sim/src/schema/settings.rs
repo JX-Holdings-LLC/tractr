@@ -225,7 +225,11 @@ pub struct AtmosphereSettings {
 impl AtmosphereSettings {
     /// The look of `season` in `scene`: each part from the first of the scene's look, the
     /// season's, then the game's that has it (`None` where none does: the built-in look).
-    pub fn resolve(settings: Option<&AtmosphereSettings>, season: &str, scene: Option<&AtmosphereLook>) -> AtmosphereLook {
+    pub fn resolve(
+        settings: Option<&AtmosphereSettings>,
+        season: &str,
+        scene: Option<&AtmosphereLook>,
+    ) -> AtmosphereLook {
         let mut layers: Vec<&AtmosphereLook> = Vec::new();
         layers.extend(scene);
         if let Some(settings) = settings {
@@ -233,7 +237,11 @@ impl AtmosphereSettings {
             layers.push(&settings.all_seasons);
         }
         AtmosphereLook {
-            daylight: layers.iter().find(|look| !look.daylight.is_empty()).map(|look| look.daylight.clone()).unwrap_or_default(),
+            daylight: layers
+                .iter()
+                .find(|look| !look.daylight.is_empty())
+                .map(|look| look.daylight.clone())
+                .unwrap_or_default(),
             foliage_tint: layers.iter().find_map(|look| look.foliage_tint.clone()),
         }
     }

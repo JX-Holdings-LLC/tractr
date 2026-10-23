@@ -73,11 +73,9 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         start_scene_id: project.start_scene_id.clone(),
         terrains: over_builtins(content_builtin::terrains(), project.terrains.as_deref(), |d| &d.id),
         tools: over_builtins(content_builtin::tools(), project.tools.as_deref(), |d| &d.id),
-        item_categories: over_builtins(
-            content_builtin::item_categories(),
-            project.item_categories.as_deref(),
-            |d| &d.id,
-        ),
+        item_categories: over_builtins(content_builtin::item_categories(), project.item_categories.as_deref(), |d| {
+            &d.id
+        }),
         crop_qualities: over_builtins(content_builtin::crop_qualities(), project.crop_qualities.as_deref(), |d| &d.id),
         crop_mutations: over_builtins(content_builtin::crop_mutations(), project.crop_mutations.as_deref(), |d| &d.id),
         cutscenes: project.cutscenes.clone().unwrap_or_default(),
@@ -546,7 +544,13 @@ mod tests {
         assert!(!is_valid_settings(&settings));
 
         let mut settings = ProjectSettings::default();
-        settings.calendar.seasons.push(CalendarSeason { id: "mud".to_owned(), name: "Mud".to_owned(), days: 0, temperature: None, music: None });
+        settings.calendar.seasons.push(CalendarSeason {
+            id: "mud".to_owned(),
+            name: "Mud".to_owned(),
+            days: 0,
+            temperature: None,
+            music: None,
+        });
         assert!(!is_valid_settings(&settings));
 
         let settings = ProjectSettings { max_energy: i32::MAX, ..ProjectSettings::default() };

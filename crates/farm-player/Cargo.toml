@@ -34,6 +34,9 @@ farm-gpu = { path = "../farm-gpu", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 toml = { version = "1", default-features = false, features = ["parse", "display", "serde"] }
+# A game's own sounds and music (M2): Ogg Vorbis and WAV, decoded once when the game loads.
+lewton = "0.10"
+hound = "3.5"
 winit = { version = "0.30", optional = true }
 softbuffer = { version = "0.4", optional = true }
 gilrs = { version = "0.11", optional = true }

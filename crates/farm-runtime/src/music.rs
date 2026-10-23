@@ -11,10 +11,17 @@
 //! the start, so it repeats without a click. Rendering is deterministic (fixed seeds, no OS
 //! randomness) and only shapes sound: nothing here reaches the simulation. [`MusicCue`] is what a
 //! player wants playing now; [`cue_for`] picks it from the game state.
+//!
+//! A game may bring its own music (M2): [`chosen_music`] names the music asset the moment
+//! calls for, and a cue carries it ([`MusicCue::with_asset`]) for the host to loop instead of
+//! the built-in music. The built-in music stays the default, and the ambience plays either way.
 
+use crate::audio::Clip;
+use farm_sim::game_time;
 use farm_sim::schema::{GameContent, GameState};
 use farm_sim::units;
 use std::f64::consts::TAU;
+use std::sync::Arc;
 
 pub const MUSIC_DAY: &str = "day";
 pub const MUSIC_NIGHT: &str = "night";
@@ -28,12 +35,23 @@ pub const AMBIENCE_LOOPS: &[&str] = &[AMBIENCE_BIRDS, AMBIENCE_CRICKETS, AMBIENC
 
 /// What should be playing: a music loop and an ambience loop (`None` for silence), with their
 /// gains (volumes applied, 0..=1). Hosts fade between cues.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MusicCue {
     pub music: Option<&'static str>,
     pub music_gain: f32,
+    /// The game's own music (M2), looped at `music_gain` instead of `music`; a host that cannot
+    /// play it plays `music`.
+    pub asset: Option<MusicAsset>,
     pub ambience: Option<&'static str>,
     pub ambience_gain: f32,
+}
+
+/// A decoded music asset: its id (hosts that fetch the samples themselves ask for it by id)
+/// and its samples.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MusicAsset {
+    pub id: Arc<str>,
+    pub clip: Clip,
 }
 
 /// Ambience plays a little under the music.
@@ -47,8 +65,44 @@ impl MusicCue {
         if gain <= 0.0 {
             return Self::default();
         }
-        Self { music, music_gain: gain, ambience, ambience_gain: gain * AMBIENCE_LEVEL }
+        Self { music, music_gain: gain, asset: None, ambience, ambience_gain: gain * AMBIENCE_LEVEL }
     }
+
+    /// This cue with `asset` playing instead of the built-in music (none while the music is
+    /// silent).
+    pub fn with_asset(mut self, asset: Option<MusicAsset>) -> Self {
+        self.asset = asset.filter(|_| self.music_gain > 0.0);
+        self
+    }
+}
+
+/// A music asset id, `None` when absent or empty.
+fn music_id(id: &Option<String>) -> Option<&str> {
+    id.as_deref().filter(|id| !id.is_empty())
+}
+
+/// The music asset the game picks for this moment (M2), by precedence: the music an event or
+/// cutscene chose (`state.music`, until the player changes scene), today's festival, the
+/// weather's (outdoors only), the scene's, then the season's. `None`: the built-in day and night
+/// music. Only names the asset; the player falls back to the built-in music when it has no
+/// such music asset or could not decode it.
+pub fn chosen_music<'a>(content: &'a GameContent, state: &'a GameState) -> Option<&'a str> {
+    let calendar = &content.settings.calendar;
+    let scene = state.world.scenes.iter().find(|scene| scene.id == state.player.scene_id);
+    let indoor = scene.is_some_and(|scene| scene.is_indoor());
+    let weather = || {
+        content
+            .weather
+            .types
+            .iter()
+            .find(|weather| weather.id == state.clock.weather_id)
+            .and_then(|w| music_id(&w.music))
+    };
+    music_id(&state.music)
+        .or_else(|| game_time::festival_today(calendar, &state.clock).and_then(|festival| music_id(&festival.music)))
+        .or_else(|| if indoor { None } else { weather() })
+        .or_else(|| scene.and_then(|scene| music_id(&scene.music)))
+        .or_else(|| music_id(&game_time::clock_date(calendar, &state.clock).season.music))
 }
 
 /// The loops for a moment of play: night music and crickets from 19:00 to 6:00, else day music
@@ -465,5 +519,73 @@ mod tests {
         assert_eq!(MusicCue::new(Some(MUSIC_DAY), None, f32::NAN), MusicCue::default());
         let cue = MusicCue::new(Some(MUSIC_DAY), Some(AMBIENCE_BIRDS), 0.5);
         assert_eq!((cue.music_gain, cue.ambience_gain), (0.5, 0.4));
+    }
+
+    #[test]
+    fn cues_carry_a_music_asset_unless_silent() {
+        let clip = Clip { sample_rate: 8000, channels: 1, samples: Arc::from(vec![0.0f32; 8]) };
+        let asset = MusicAsset { id: Arc::from("song"), clip };
+        let cue = MusicCue::new(Some(MUSIC_DAY), Some(AMBIENCE_BIRDS), 0.5).with_asset(Some(asset.clone()));
+        assert_eq!(cue.asset.as_ref(), Some(&asset));
+        assert_eq!(
+            (cue.music, cue.ambience),
+            (Some(MUSIC_DAY), Some(AMBIENCE_BIRDS)),
+            "the fallback and ambience stay"
+        );
+        assert_eq!(MusicCue::new(Some(MUSIC_DAY), None, 0.0).with_asset(Some(asset)), MusicCue::default());
+        // Clips compare by identity: equal samples in another buffer are another clip.
+        let other = Clip { sample_rate: 8000, channels: 1, samples: Arc::from(vec![0.0f32; 8]) };
+        assert_ne!(cue.asset.unwrap().clip, other);
+    }
+
+    #[test]
+    fn chosen_music_follows_event_festival_weather_scene_then_season() {
+        use farm_sim::schema::{CalendarFestival, Scene, WeatherTypeDefinition};
+        let mut content = GameContent::default();
+        let mut state = GameState::default();
+        state.player.scene_id = "farm".to_owned();
+        state.world.scenes = vec![
+            Scene { id: "farm".to_owned(), ..Scene::default() },
+            Scene { id: "house".to_owned(), indoor: Some(true), ..Scene::default() },
+        ];
+        let season = content.settings.calendar.seasons[1].id.clone();
+        state.clock.season = season.clone();
+        state.clock.day_of_season = 3;
+        state.clock.weather_id = "storm".to_owned();
+        // Nothing chosen: the built-in music.
+        assert_eq!(chosen_music(&content, &state), None);
+
+        content.settings.calendar.seasons[1].music = Some("summer".to_owned());
+        assert_eq!(chosen_music(&content, &state), Some("summer"));
+        state.world.scenes[0].music = Some("farm".to_owned());
+        assert_eq!(chosen_music(&content, &state), Some("farm"));
+        content.weather.types = vec![WeatherTypeDefinition {
+            id: "storm".to_owned(),
+            music: Some("thunder".to_owned()),
+            ..Default::default()
+        }];
+        assert_eq!(chosen_music(&content, &state), Some("thunder"));
+        // Indoors the weather's music stays outside; the scene's (none here) and the season's play.
+        state.player.scene_id = "house".to_owned();
+        assert_eq!(chosen_music(&content, &state), Some("summer"));
+        state.player.scene_id = "farm".to_owned();
+        content.settings.calendar.festivals = vec![CalendarFestival {
+            id: "fair".to_owned(),
+            season_id: season.clone(),
+            day: 3,
+            music: Some("fair".to_owned()),
+            ..CalendarFestival::default()
+        }];
+        assert_eq!(chosen_music(&content, &state), Some("fair"));
+        state.player.scene_id = "house".to_owned();
+        assert_eq!(chosen_music(&content, &state), Some("fair"), "festival music plays indoors too");
+        state.clock.day_of_season = 4;
+        assert_eq!(chosen_music(&content, &state), Some("summer"));
+        state.music = Some("event".to_owned());
+        assert_eq!(chosen_music(&content, &state), Some("event"));
+        // Empty ids count as unset.
+        state.music = Some(String::new());
+        state.world.scenes[1].music = Some(String::new());
+        assert_eq!(chosen_music(&content, &state), Some("summer"));
     }
 }

@@ -279,6 +279,7 @@ catalog! {
     UNKNOWN_ACTION = "msg.unknownAction" => "Unknown action '{0}'";
     UNKNOWN_MINIGAME = "msg.unknownMinigame" => "Unknown minigame '{0}'";
     NOTHING_TO_PLAY = "msg.nothingToPlay" => "Nothing to play here.";
+    CUTSCENE_LOOP = "msg.cutsceneLoop" => "Cutscene '{0}' stopped: its steps loop without waiting.";
     PLUGIN_ERROR = "msg.pluginError" => "Plugin {0}: {1}";
     PLUGIN_UNKNOWN_ITEM = "msg.pluginUnknownItem" => "unknown item '{0}'";
     PLUGIN_UNKNOWN_WEATHER = "msg.pluginUnknownWeather" => "unknown weather '{0}'";

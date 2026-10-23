@@ -165,6 +165,7 @@ const ES: &[(&str, &str)] = &[
     ("msg.unknownAction", "Acci\u{f3}n desconocida \u{ab}{0}\u{bb}"),
     ("msg.unknownMinigame", "Minijuego desconocido \u{ab}{0}\u{bb}"),
     ("msg.nothingToPlay", "Aqu\u{ed} no hay nada a qu\u{e9} jugar."),
+    ("msg.cutsceneLoop", "La escena \u{ab}{0}\u{bb} se detuvo: sus pasos se repiten sin esperar."),
     ("msg.pluginError", "Plugin {0}: {1}"),
     ("msg.pluginUnknownItem", "objeto desconocido \u{ab}{0}\u{bb}"),
     ("msg.pluginUnknownWeather", "tiempo desconocido \u{ab}{0}\u{bb}"),

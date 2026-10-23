@@ -393,3 +393,40 @@ fn interact_presses_carry_the_held_seed() {
     assert_eq!(crop.quality, "normal");
     assert_eq!(fertilizer(&session), before, "no fertilizer unless held");
 }
+
+#[test]
+fn a_cutscene_holds_the_player_and_interact_moves_it_on() {
+    let mut project = starter();
+    project.cutscenes = Some(vec![serde_json::from_value(serde_json::json!({
+        "id": "intro",
+        "steps": [
+            {"type": "say", "text": "Hi"},
+            {"type": "outcomes", "outcomes": [{"type": "setFlag", "flagName": "intro-done"}]},
+        ],
+    }))
+    .unwrap()]);
+    project.actions = vec![farm_sim::schema::ActionDef {
+        id: "play-intro".into(),
+        name: "Intro".into(),
+        outcomes: vec![farm_sim::schema::EventOutcome {
+            cutscene_id: Some("intro".into()),
+            ..farm_sim::schema::EventOutcome::of(farm_sim::schema::OutcomeKind::StartCutscene)
+        }],
+        ..farm_sim::schema::ActionDef::default()
+    }];
+    let mut session = session_for(&project);
+    session.run_command(&Command::PerformAction { action_id: "play-intro".into() });
+    assert!(session.engine_modal_open());
+    assert_eq!(session.cutscene_view().and_then(|view| view.line).map(|line| line.text).as_deref(), Some("Hi"));
+
+    let start = session.state().player.x;
+    session.key_down("d");
+    frames(&mut session, 10);
+    assert_eq!((session.state().player.x, session.state().player.move_intent.dx), (start, 0));
+    session.key_up("d");
+    session.key_down("e");
+    session.update(FRAME, false);
+    assert!(session.state().cutscene.is_none());
+    assert_eq!(session.state().flags.get("intro-done"), Some(&serde_json::Value::Bool(true)));
+    assert!(!session.engine_modal_open());
+}

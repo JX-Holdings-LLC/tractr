@@ -148,6 +148,37 @@ impl MinigameCanvas {
     }
 }
 
+/// The pointer (mouse or touch) over a pack minigame's canvas in one frame: what an `update` gets
+/// as `input.pointer`. The game UI reports it while the pointer is over the canvas, or held after
+/// going down on it; a press anywhere else never reaches the minigame.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
+pub struct CanvasPointer {
+    /// Position in canvas units (the space `draw` uses), within the canvas: a drag that leaves
+    /// it stays on its edge.
+    pub x: f32,
+    pub y: f32,
+    /// The primary button (or the finger) is down.
+    pub down: bool,
+    /// It went down on the canvas this frame.
+    pub pressed: bool,
+    /// It went up this frame after going down on the canvas (anywhere).
+    pub released: bool,
+}
+
+impl CanvasPointer {
+    /// A pointer at `(x, y)` in canvas units, clamped into the canvas (non-finite counts as 0).
+    pub fn at(x: f32, y: f32, down: bool, pressed: bool, released: bool) -> Self {
+        let clamp = |value: f32, max: f32| if value.is_finite() { value.clamp(0.0, max) } else { 0.0 };
+        Self { x: clamp(x, CANVAS_WIDTH), y: clamp(y, CANVAS_HEIGHT), down, pressed, released }
+    }
+
+    /// Two reports before one frame of the minigame as one: the later position and held state,
+    /// the presses and releases of both.
+    pub fn then(self, later: Self) -> Self {
+        Self { pressed: self.pressed || later.pressed, released: self.released || later.released, ..later }
+    }
+}
+
 fn number(object: &Map<String, Value>, key: &str, at: &str) -> Result<Option<f32>, String> {
     match object.get(key) {
         None | Some(Value::Null) => Ok(None),
@@ -437,5 +468,20 @@ mod tests {
         let canvas = MinigameCanvas { pack_id: "glow".into(), commands: Vec::new() };
         assert_eq!(canvas.sprite_candidates("lantern").collect::<Vec<_>>(), ["glow:lantern", "lantern"]);
         assert_eq!(canvas.sprite_candidates("base:seed").collect::<Vec<_>>(), ["base:seed"]);
+    }
+
+    #[test]
+    fn pointers_stay_on_the_canvas_and_merge_their_edges() {
+        let inside = CanvasPointer::at(12.5, 30.0, true, true, false);
+        assert_eq!((inside.x, inside.y), (12.5, 30.0));
+        let dragged = CanvasPointer::at(-20.0, 999.0, true, false, false);
+        assert_eq!((dragged.x, dragged.y), (0.0, CANVAS_HEIGHT));
+        assert_eq!(CanvasPointer::at(f32::NAN, f32::INFINITY, false, false, false).x, 0.0);
+        let up = CanvasPointer::at(50.0, 60.0, false, false, true);
+        assert_eq!(inside.then(up), CanvasPointer { x: 50.0, y: 60.0, down: false, pressed: true, released: true });
+        assert_eq!(
+            serde_json::to_value(inside).unwrap(),
+            json!({ "x": 12.5, "y": 30.0, "down": true, "pressed": true, "released": false })
+        );
     }
 }

@@ -70,7 +70,7 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
 // ─── Growth and harvest math (port of the rest of Farming/Crops.cs) ─────────────────────────
 
 use crate::rng::RandomSource;
-use crate::schema::{crop_qualities, CropMutationDefinition, CropQualityDefinition, Crop, GameContent, Tile};
+use crate::schema::{crop_qualities, Crop, CropMutationDefinition, CropQualityDefinition, GameContent, Tile};
 use crate::units;
 
 /// Test-only: the engine no longer calls it; the tests pin the reference behaviour.
@@ -257,10 +257,10 @@ pub fn harvest_quality(tiers: &[CropQualityDefinition], planted_quality: &str, f
 /// The quality a crop is planted at: the first tier, or the second (silver) on fertilized soil.
 pub fn planted_quality(tiers: &[CropQualityDefinition], fertilized: bool) -> &str {
     let index = usize::from(fertilized);
-    tiers.get(index).or_else(|| tiers.first()).map_or(
-        if fertilized { crop_qualities::SILVER } else { crop_qualities::NORMAL },
-        |tier| tier.id.as_str(),
-    )
+    tiers
+        .get(index)
+        .or_else(|| tiers.first())
+        .map_or(if fertilized { crop_qualities::SILVER } else { crop_qualities::NORMAL }, |tier| tier.id.as_str())
 }
 
 /// Day-based planting (M2+): crops start unwatered — water them or they won't grow.
@@ -642,7 +642,10 @@ mod characterization_tests {
     fn unknown_crop_type_mutation_returns_null_without_consuming_a_random_roll() {
         let mut rng = PinnedRandom::new(0.0);
         let mutations = content_builtin::crop_mutations();
-        assert_eq!(roll_mutation(get_crop_definition("nope", &[]).as_ref(), tier("iridium").as_ref(), &mutations, &mut rng), None);
+        assert_eq!(
+            roll_mutation(get_crop_definition("nope", &[]).as_ref(), tier("iridium").as_ref(), &mutations, &mut rng),
+            None
+        );
         assert_eq!(rng.draws, 0);
     }
 
@@ -685,7 +688,10 @@ mod characterization_tests {
     fn unknown_crop_type_yield_returns_1_without_consuming_a_random_roll() {
         let mut rng = PinnedRandom::new(0.9999);
         let (quality, ancient) = (tier("iridium"), mutation(Some("ancient")));
-        assert_eq!(roll_yield(get_crop_definition("nope", &[]).as_ref(), quality.as_ref(), ancient.as_ref(), &mut rng), 1);
+        assert_eq!(
+            roll_yield(get_crop_definition("nope", &[]).as_ref(), quality.as_ref(), ancient.as_ref(), &mut rng),
+            1
+        );
         assert_eq!(rng.draws, 0);
     }
 

@@ -100,25 +100,28 @@ pub fn strike_node(
 }
 
 /// Why the tool cannot strike a node of `definition` (the wrong tool, or too low a tier).
-fn tool_refusal(ctx: &EngineContext, definition: &NodeTypeDefinition, tool_type: &str, tool_tier: i32) -> Option<Effect> {
+fn tool_refusal(
+    ctx: &EngineContext,
+    definition: &NodeTypeDefinition,
+    tool_type: &str,
+    tool_tier: i32,
+) -> Option<Effect> {
     if definition.required_tool != tool_type {
         return Some(Effect::say(
             message_levels::INFO,
-            messages::NODE_NEEDS_TOOL
-                .with_args(vec![
-                    messages::Arg::text(&definition.name),
-                    messages::tool_noun_in(ctx, &definition.required_tool),
-                ]),
+            messages::NODE_NEEDS_TOOL.with_args(vec![
+                messages::Arg::text(&definition.name),
+                messages::tool_noun_in(ctx, &definition.required_tool),
+            ]),
         ));
     }
     if tool_tier < definition.required_tool_tier {
         return Some(Effect::say(
             message_levels::INFO,
-            messages::TOOL_TOO_WEAK
-                .with_args(vec![
-                    messages::tool_noun_in(ctx, tool_type),
-                    messages::Arg::text(definition.name.to_lowercase()),
-                ]),
+            messages::TOOL_TOO_WEAK.with_args(vec![
+                messages::tool_noun_in(ctx, tool_type),
+                messages::Arg::text(definition.name.to_lowercase()),
+            ]),
         ));
     }
     None

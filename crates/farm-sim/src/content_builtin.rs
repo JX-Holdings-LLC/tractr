@@ -93,7 +93,10 @@ pub fn terrains() -> Vec<TerrainDefinition> {
         vec![TerrainTransform { action: tool_actions::TILL.to_owned(), tool: None, into: tile_types::SOIL.to_owned() }]
     };
     vec![
-        TerrainDefinition { transforms: tilled(), ..terrain(tile_types::GRASS, "Grass", tile_layers::BACKGROUND, "#5b9a4a") },
+        TerrainDefinition {
+            transforms: tilled(),
+            ..terrain(tile_types::GRASS, "Grass", tile_layers::BACKGROUND, "#5b9a4a")
+        },
         TerrainDefinition { plantable: true, ..terrain(tile_types::SOIL, "Soil", tile_layers::BACKGROUND, "#7a6545") },
         TerrainDefinition {
             water_source: true,
@@ -107,13 +110,17 @@ pub fn terrains() -> Vec<TerrainDefinition> {
             ..terrain(tile_types::WALL, "Wall", tile_layers::OBJECT, "#5e5a68")
         },
         terrain(tile_types::DOOR, "Door", tile_layers::OBJECT, "#8a6a3f"),
-        TerrainDefinition { transforms: tilled(), ..terrain(tile_types::FLOOR, "Floor", tile_layers::BACKGROUND, "#b5a48d") },
+        TerrainDefinition {
+            transforms: tilled(),
+            ..terrain(tile_types::FLOOR, "Floor", tile_layers::BACKGROUND, "#b5a48d")
+        },
     ]
 }
 
 /// The built-in tools: id, name, description, action, key, energy cost (points), whether the
 /// area widens at tier 2, skill.
-type ToolRow = (&'static str, &'static str, &'static str, &'static str, Option<&'static str>, i32, bool, Option<&'static str>);
+type ToolRow =
+    (&'static str, &'static str, &'static str, &'static str, Option<&'static str>, i32, bool, Option<&'static str>);
 
 const TOOLS: [ToolRow; 6] = [
     (
@@ -189,8 +196,8 @@ pub fn item_categories() -> Vec<ItemCategoryDefinition> {
 /// The built-in crop quality tiers (M1), ranked: id, name, price, yield and mutation-chance
 /// multipliers (thousandths), stars, colour.
 pub fn crop_qualities() -> Vec<CropQualityDefinition> {
-    let quality = |id: &str, name: &str, price: u32, yields: u32, mutation: u32, stars: u32, color: &str| {
-        CropQualityDefinition {
+    let quality =
+        |id: &str, name: &str, price: u32, yields: u32, mutation: u32, stars: u32, color: &str| CropQualityDefinition {
             id: id.to_owned(),
             name: name.to_owned(),
             price_multiplier: price,
@@ -199,8 +206,7 @@ pub fn crop_qualities() -> Vec<CropQualityDefinition> {
             stars,
             color: color.to_owned(),
             ..CropQualityDefinition::default()
-        }
-    };
+        };
     vec![
         quality(crop_qualities::NORMAL, "Normal", 1000, 1000, 1000, 0, "#9a9a9a"),
         quality(crop_qualities::SILVER, "Silver", 1250, 1100, 1200, 1, "#c0c8d0"),

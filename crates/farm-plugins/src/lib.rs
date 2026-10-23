@@ -25,8 +25,9 @@
 //!   queue the results and hand them back as commands before the next tick.
 //! - [`PackMinigame`] ([`WasmPluginHost::start_minigame`]): a session of a minigame kind a pack
 //!   plugin defines with `api.minigame(name, { start, update, draw })`, one frame at a time,
-//!   with its own instance and per-frame fuel; its frames are [`farm_runtime::canvas`] draw
-//!   lists.
+//!   with its own instance and per-frame fuel; its input is the game keys and the pointer over
+//!   its canvas ([`MinigameControls`]), its frames are [`farm_runtime::canvas`] draw lists, and
+//!   it can ask for sounds by id ([`PackMinigame::sounds`]).
 //!
 //! # Example
 //!

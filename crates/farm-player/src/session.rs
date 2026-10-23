@@ -14,10 +14,13 @@
 //! - Minigames are hosted here: the UI forwards presses and choices, and a finished minigame
 //!   enters the command log exactly once as `resolveMinigame`. A kind a pack plugin defines runs
 //!   in the plugin sandbox ([`SessionPlugins::start_minigame`]), one `update` and `draw` per
-//!   frame with the routed game input; one that fails (a limit, a throw, a malformed answer)
+//!   frame with the routed game input and the pointer over its canvas
+//!   ([`PlaySession::minigame_pointer`]); the sounds it asks for become [`SessionEvent::Sound`]s
+//!   like a `playSound` outcome's. One that fails (a limit, a throw, a malformed answer)
 //!   resolves with score 0 and reports the error like any plugin error.
 
 use farm_plugins::{MinigameControls, MinigameFrame, PackMinigame, PluginError};
+use farm_runtime::canvas::CanvasPointer;
 use farm_runtime::host::{HostedMinigame, MinigameInput, MinigameView};
 use farm_runtime::input::{self, InputManager, Modifiers, MoveVector};
 use farm_runtime::timestep::FixedTimestep;
@@ -233,6 +236,8 @@ pub struct PlaySession {
     recent: std::collections::VecDeque<String>,
     /// What the player holds for planting (seed, fertilizer); see [`Self::set_planting`].
     planting: Option<(Option<String>, Option<String>)>,
+    /// The pointer over a pack minigame's canvas, for its next frame.
+    pointer: Option<CanvasPointer>,
 }
 
 /// Commands kept for crash reports.
@@ -275,6 +280,7 @@ impl PlaySession {
             cosmetic: 0x9E37_79B9_7F4A_7C15,
             recent: std::collections::VecDeque::new(),
             planting: None,
+            pointer: None,
         }
     }
 
@@ -369,9 +375,14 @@ impl PlaySession {
         scenes.iter().find(|scene| scene.id == self.state.player.scene_id).or_else(|| scenes.first())
     }
 
-    /// True while an engine-owned modal (dialogue, shop, minigame) is open.
+    /// True while an engine-owned modal (dialogue, shop, minigame, cutscene) is open.
     pub fn engine_modal_open(&self) -> bool {
-        self.state.dialogue.is_some() || self.state.shop.is_some() || self.state.minigame.is_some()
+        farm_sim::engine::modal_open(&self.state)
+    }
+
+    /// What the running cutscene shows (`None` without one): its line, camera, fade and emotes.
+    pub fn cutscene_view(&self) -> Option<farm_sim::cutscenes::CutsceneView> {
+        farm_sim::cutscenes::view(&self.ctx.content, &self.state)
     }
 
     /// Events since the last call, in order.
@@ -485,6 +496,7 @@ impl PlaySession {
     /// Clears held keys and the sent intent (focus loss, opening a menu, leaving play).
     pub fn release_input(&mut self) {
         self.input.clear();
+        self.pointer = None;
         if self.last_intent != MoveVector::default() {
             self.last_intent = MoveVector::default();
             self.run_command(&Command::SetMoveIntent { dx: 0, dy: 0 });
@@ -533,6 +545,19 @@ impl PlaySession {
             mounted.view = view;
         }
         self.report_minigame();
+    }
+
+    /// The pointer over a pack minigame's canvas (the game UI reports it each frame it is there):
+    /// the minigame's next frame gets it as `input.pointer`, then it is gone until reported
+    /// again. Reports before one frame merge (the last position, every press and release).
+    /// Nothing happens without a running pack minigame.
+    pub fn minigame_pointer(&mut self, pointer: CanvasPointer) {
+        let running = self.minigame.as_ref().is_some_and(|mounted| {
+            !mounted.reported && !mounted.view.is_done && matches!(mounted.game, MinigameHost::Pack { .. })
+        });
+        if running {
+            self.pointer = Some(self.pointer.map_or(pointer, |earlier| earlier.then(pointer)));
+        }
     }
 
     /// Creator debug tooling: bypasses the command pipeline on purpose. Never used by gameplay.
@@ -612,6 +637,7 @@ impl PlaySession {
         self.minigame = None;
         self.timestep.reset();
         self.input.clear();
+        self.pointer = None;
         let intent = &self.state.player.move_intent;
         if intent.dx != 0 || intent.dy != 0 {
             // A save written mid-walk carries a held intent; the keys aren't held any more.
@@ -731,8 +757,8 @@ impl PlaySession {
     }
 
     /// This frame's game input as a pack minigame reads it; `was_held` is whether interact was
-    /// held in the previous frame.
-    fn minigame_controls(&self, was_held: bool) -> MinigameControls {
+    /// held in the previous frame, `pointer` what the UI reported over its canvas.
+    fn minigame_controls(&self, was_held: bool, pointer: Option<CanvasPointer>) -> MinigameControls {
         let keys = |names: [&str; 2]| names.iter().any(|key| self.input.pressed(key));
         let action = self.action_held();
         // A tap that went down and up within one frame still counts as a press and a release.
@@ -745,6 +771,7 @@ impl PlaySession {
             action,
             action_pressed: tapped || (action && !was_held),
             action_released: (was_held || tapped) && !action,
+            pointer,
         }
     }
 
@@ -757,11 +784,13 @@ impl PlaySession {
     }
 
     fn update_minigame(&mut self, delta: f64) {
+        let pointer = self.pointer.take();
         let controls = match self.minigame.as_ref().map(|mounted| &mounted.game) {
-            Some(MinigameHost::Pack { action, .. }) => self.minigame_controls(*action),
+            Some(MinigameHost::Pack { action, .. }) => self.minigame_controls(*action, pointer),
             _ => MinigameControls::default(),
         };
         let mut failure = None;
+        let mut sounds = Vec::new();
         if let Some(mounted) = self.minigame.as_mut() {
             if !mounted.reported && !mounted.view.is_done {
                 match &mut mounted.game {
@@ -779,6 +808,7 @@ impl PlaySession {
                                     MinigameFrame::Finished { score } => Some(score),
                                 };
                                 mounted.view = pack_view(game.kind(), Some(game.canvas().clone()), score);
+                                sounds.extend_from_slice(game.sounds());
                             }
                             Err(error) => {
                                 // Ends as failed; the last frame stays up until the engine closes it.
@@ -793,6 +823,8 @@ impl PlaySession {
                 }
             }
         }
+        // Played exactly like a `playSound` outcome's sound.
+        self.events.extend(sounds.into_iter().map(|cue| SessionEvent::Sound { cue }));
         if let Some(error) = failure {
             self.report_plugin_error(error);
         }

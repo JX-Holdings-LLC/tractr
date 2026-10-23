@@ -6,9 +6,12 @@
 //!   from the plugin's hook handlers or from earlier sessions, so a session's frames depend only
 //!   on its start (config, seed) and its inputs.
 //! - **The host keeps the state.** `start(config, info)` answers the first state, `update(state,
-//!   input, dt)` answers `{ state, done }`, and `draw(state)` answers the draw list for the state
-//!   just answered. The state is plain JSON, at most [`MinigameLimits::max_state_bytes`] long,
-//!   and goes into the sandbox and back once per frame (one guest call runs `update` and `draw`).
+//!   input, dt)` answers `{ state, done, sounds }`, and `draw(state)` answers the draw list for the
+//!   state just answered. `input` is the game keys and the pointer over the canvas
+//!   ([`MinigameControls`]); `sounds` are sound ids the host plays like a `playSound` outcome's
+//!   ([`PackMinigame::sounds`]). The state is plain JSON, at most
+//!   [`MinigameLimits::max_state_bytes`] long, and goes into the sandbox and back once per frame
+//!   (one guest call runs `update` and `draw`).
 //! - **Strict limits.** A start (compiling the plugin, `start` and the first `draw`) has
 //!   [`MinigameLimits::start_fuel`]; each frame (`update` and `draw`) has
 //!   [`MinigameLimits::fuel_per_frame`]. Draw lists are checked by
@@ -22,7 +25,7 @@
 
 use crate::sandbox::{self, status, GuestFault, GuestInstance, Sandbox, MAX_RESULT_BYTES};
 use crate::{PluginError, PluginErrorKind, PluginSpec};
-use farm_runtime::canvas::{parse_canvas, CanvasLimits, MinigameCanvas, CANVAS_HEIGHT, CANVAS_WIDTH};
+use farm_runtime::canvas::{parse_canvas, CanvasLimits, CanvasPointer, MinigameCanvas, CANVAS_HEIGHT, CANVAS_WIDTH};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 use std::fmt;
@@ -72,6 +75,9 @@ pub struct MinigameLimits {
     /// Longest state, as JSON text, in bytes. The default is 16 KiB: passing a state into the
     /// sandbox and back costs about 260 fuel per byte, so a full state takes about 4 million.
     pub max_state_bytes: usize,
+    /// Most sounds one `update` may ask for. The default, 8, is half the voices the player mixes
+    /// at once.
+    pub max_sounds_per_frame: usize,
     /// Bounds on each draw list.
     pub canvas: CanvasLimits,
 }
@@ -82,14 +88,15 @@ impl Default for MinigameLimits {
             start_fuel: 200_000_000,
             fuel_per_frame: 10_000_000,
             max_state_bytes: 16 * 1024,
+            max_sounds_per_frame: 8,
             canvas: CanvasLimits::default(),
         }
     }
 }
 
 /// The player's input in one frame, from the game's input bindings (keyboard, gamepad and the
-/// touch controls, after rebinding): what an `update` gets as `input`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
+/// touch controls, after rebinding) and the pointer: what an `update` gets as `input`.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MinigameControls {
     /// Up held (W, arrow up, the left stick and D-pad).
@@ -106,6 +113,9 @@ pub struct MinigameControls {
     pub action_pressed: bool,
     /// Interact went up this frame.
     pub action_released: bool,
+    /// The mouse or a finger over the canvas, in canvas units (`null` when it is elsewhere and
+    /// not held after going down on the canvas).
+    pub pointer: Option<CanvasPointer>,
 }
 
 /// Where a session is after a frame.
@@ -133,6 +143,7 @@ pub struct PackMinigame {
     finished: Option<f64>,
     failure: Option<PluginError>,
     last_fuel_used: u64,
+    sounds: Vec<String>,
 }
 
 impl fmt::Debug for PackMinigame {
@@ -187,6 +198,7 @@ impl PackMinigame {
             finished: None,
             failure: None,
             last_fuel_used: 0,
+            sounds: Vec::new(),
         };
         let fuel = session.limits.start_fuel;
         let mut instance =
@@ -253,11 +265,18 @@ impl PackMinigame {
         self.last_fuel_used
     }
 
+    /// The sound ids the last frame's `update` asked for, in order (empty after a frame that
+    /// failed or did not run). The host plays each as it plays a `playSound` outcome's sound.
+    pub fn sounds(&self) -> &[String] {
+        &self.sounds
+    }
+
     /// One frame: `update(state, input, dt)`, then `draw` of the new state, within
     /// [`MinigameLimits::fuel_per_frame`]. `dt` is the frame time in seconds (non-finite or
     /// negative counts as 0, longer than [`MAX_FRAME_SECONDS`] as that). After the session
     /// finished, frames change nothing; after it failed, they return the same error.
     pub fn frame(&mut self, input: &MinigameControls, dt: f64) -> Result<MinigameFrame, PluginError> {
+        self.sounds.clear();
         if let Some(failure) = &self.failure {
             return Err(failure.clone());
         }
@@ -267,21 +286,27 @@ impl PackMinigame {
         let dt = if dt.is_finite() { dt.clamp(0.0, MAX_FRAME_SECONDS) } else { 0.0 };
         let payload = json!({ "op": "frame", "state": self.state, "input": input, "dt": dt });
         let (answer, draw) = self.call(&payload, Phase::Frame)?;
-        let done = self.apply_update(answer)?;
+        let (done, sounds) = self.apply_update(answer)?;
         self.set_canvas(&draw)?;
         self.finished = done;
+        self.sounds = sounds;
         Ok(done.map_or(MinigameFrame::Running, |score| MinigameFrame::Finished { score }))
     }
 
-    /// `{ state?, done? }`: the new state (kept when absent) and the score when done.
-    fn apply_update(&mut self, answer: Value) -> Result<Option<f64>, PluginError> {
+    /// `{ state?, done?, sounds? }`: the new state (kept when absent), the score when done and the
+    /// sounds to play.
+    fn apply_update(&mut self, answer: Value) -> Result<(Option<f64>, Vec<String>), PluginError> {
         let Value::Object(mut answer) = answer else {
             return Err(self.fail("update must return an object { state, done }"));
         };
-        if let Some(key) = answer.keys().find(|key| !matches!(key.as_str(), "state" | "done")) {
+        if let Some(key) = answer.keys().find(|key| !matches!(key.as_str(), "state" | "done" | "sounds")) {
             let key = crate::clip(key, 40);
-            return Err(self.fail(&format!("update returned unknown key \"{key}\" (only state and done)")));
+            return Err(self.fail(&format!("update returned unknown key \"{key}\" (only state, done and sounds)")));
         }
+        let sounds = match answer.remove("sounds") {
+            None | Some(Value::Null) => Vec::new(),
+            Some(sounds) => self.sounds_of(sounds)?,
+        };
         let done = match answer.remove("done") {
             None | Some(Value::Null) => None,
             Some(Value::Object(done)) => Some(self.score_of(&done)?),
@@ -290,7 +315,32 @@ impl PackMinigame {
         if let Some(state) = answer.remove("state") {
             self.set_state(state, "update")?;
         }
-        Ok(done)
+        Ok((done, sounds))
+    }
+
+    /// `sounds`: a list of sound ids (non-empty strings of at most [`crate::MAX_ID_LENGTH`]
+    /// characters), at most [`MinigameLimits::max_sounds_per_frame`] of them.
+    fn sounds_of(&mut self, sounds: Value) -> Result<Vec<String>, PluginError> {
+        let Value::Array(sounds) = sounds else {
+            return Err(self.fail("update's sounds must be a list of sound ids"));
+        };
+        let max = self.limits.max_sounds_per_frame;
+        if sounds.len() > max {
+            let count = sounds.len();
+            return Err(self.fail(&format!("update returned {count} sounds; at most {max} are allowed")));
+        }
+        let mut ids = Vec::with_capacity(sounds.len());
+        for (index, sound) in sounds.into_iter().enumerate() {
+            match sound {
+                Value::String(id) if !id.is_empty() && id.chars().count() <= crate::MAX_ID_LENGTH => ids.push(id),
+                Value::String(id) if !id.is_empty() => {
+                    let max = crate::MAX_ID_LENGTH;
+                    return Err(self.fail(&format!("sound {index}: at most {max} characters")));
+                }
+                _ => return Err(self.fail(&format!("sound {index} must be a sound id"))),
+            }
+        }
+        Ok(ids)
     }
 
     fn score_of(&mut self, done: &Map<String, Value>) -> Result<f64, PluginError> {

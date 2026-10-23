@@ -100,20 +100,25 @@ struct FrameInfo<'a> {
     /// An in-game panel (inventory, quests, crafting) or an engine modal is open.
     modal: bool,
     /// The music and ambience loops to play now (`musicSamples(name, rate)`), with their gains.
-    music: MusicInfo,
+    music: MusicInfo<'a>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 struct SoundInfo<'a> {
     cue: &'a str,
     gain: f32,
+    /// `cue` is the game's sound asset (its samples come from the player), not a preset.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    asset: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct MusicInfo {
+struct MusicInfo<'a> {
     music: Option<&'static str>,
     music_gain: f32,
+    /// The game's music asset to loop instead of `music`, by id.
+    asset: Option<&'a str>,
     ambience: Option<&'static str>,
     ambience_gain: f32,
 }
@@ -135,18 +140,24 @@ pub struct FrameOutcome {
 }
 
 impl FrameOutcome {
-    /// `{"sounds":[{"cue","gain"}],"requests":[…],"screen":"playing","modal":false,
-    /// "music":{"music":"day","musicGain":0.5,"ambience":"birds","ambienceGain":0.4}}`.
+    /// `{"sounds":[{"cue","gain","asset"?}],"requests":[…],"screen":"playing","modal":false,
+    /// "music":{"music":"day","musicGain":0.5,"asset":null,"ambience":"birds","ambienceGain":0.4}}`.
+    /// A sound with `"asset":true` and the music `asset` are the game's own (M2), by id.
     pub fn info_json(&self) -> String {
-        let cue = self.music;
+        let cue = &self.music;
         view_json::to_json(&FrameInfo {
-            sounds: self.sounds.iter().map(|sound| SoundInfo { cue: &sound.cue, gain: sound.gain }).collect(),
+            sounds: self
+                .sounds
+                .iter()
+                .map(|sound| SoundInfo { cue: &sound.cue, gain: sound.gain, asset: sound.clip.is_some() })
+                .collect(),
             requests: &self.requests,
             screen: self.screen,
             modal: self.modal,
             music: MusicInfo {
                 music: cue.music,
                 music_gain: cue.music_gain,
+                asset: cue.asset.as_ref().map(|asset| &*asset.id),
                 ambience: cue.ambience,
                 ambience_gain: cue.ambience_gain,
             },

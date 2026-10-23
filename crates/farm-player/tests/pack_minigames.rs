@@ -1,7 +1,10 @@
 //! Pack-defined minigames in a running game (docs/PLUGINS.md "Minigames"): the session starts
 //! the plugin's kind, feeds it the game keys every frame, shows its frame, and resolves it once,
 //! through the same `resolveMinigame` path as the built-in kinds; a failing plugin ends it as
-//! failed (score 0) with a plugin error.
+//! failed (score 0) with a plugin error. The pointer over its canvas reaches it, and the sounds
+//! it asks for play like a `playSound` outcome's.
+
+mod common;
 
 use farm_player::session::{PlaySession, SessionEvent};
 use farm_sim::schema::{ContentPack, GameProject, MinigameDef, MinigameResultTier, PackInstallation, PackPlugin};
@@ -216,4 +219,131 @@ fn a_finished_pack_minigame_resolves_once_with_its_score() {
     let view = session.minigame_view().unwrap();
     assert!(view.canvas.is_none());
     assert_eq!(view.kind, "fallback");
+}
+
+/// Shows what `update` last saw of the pointer and counts presses; asks for `pop` on a press,
+/// and wins with `harvest` on the third release.
+const POINTER: &str = "api.minigame('game', { start: () => ({ last: null, presses: 0, releases: 0 }), \
+    update: (s, input) => { var p = input.pointer; \
+      s.last = p && [Math.round(p.x), Math.round(p.y), p.down, p.pressed, p.released]; \
+      if (p && p.pressed) s.presses++; if (p && p.released) s.releases++; \
+      return s.releases >= 3 ? { state: s, sounds: ['harvest'], done: { score: 1 } } \
+        : { state: s, sounds: p && p.pressed ? ['pop'] : [] }; }, \
+    draw: s => [{ type: 'text', x: 0, y: 20, text: JSON.stringify(s) }] });";
+
+fn sounds(events: &[SessionEvent]) -> Vec<&str> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            SessionEvent::Sound { cue } => Some(cue.as_str()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The text the pointer game draws: its state.
+fn shown(view: Option<&farm_runtime::host::MinigameView>) -> serde_json::Value {
+    let canvas = view.and_then(|view| view.canvas.as_ref()).expect("the pack minigame is up");
+    match canvas.commands.first() {
+        Some(farm_runtime::canvas::CanvasCommand::Text { text, .. }) => serde_json::from_str(text).unwrap(),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn the_session_feeds_the_pointer_to_the_next_frame_and_plays_the_sounds_it_asks_for() {
+    use farm_runtime::canvas::CanvasPointer;
+    let project = broken_project(POINTER);
+    let mut session = session_with(&project);
+    // No pack minigame yet: a pointer goes nowhere.
+    session.minigame_pointer(CanvasPointer::at(1.0, 2.0, true, true, false));
+    open(&mut session);
+    session.drain_events();
+    session.update(FRAME, false);
+    assert_eq!(shown(session.minigame_view())["last"], serde_json::Value::Null);
+    session.minigame_pointer(CanvasPointer::at(120.0, 80.0, true, true, false));
+    session.update(FRAME, false);
+    assert_eq!(shown(session.minigame_view())["last"], serde_json::json!([120, 80, true, true, false]));
+    assert_eq!(sounds(&session.drain_events()), ["pop"]);
+    // One frame only: the next one has no pointer unless the UI reports it again.
+    session.update(FRAME, false);
+    assert_eq!(shown(session.minigame_view())["last"], serde_json::Value::Null);
+    assert!(sounds(&session.drain_events()).is_empty());
+    // Two reports before a frame keep the last position and both edges (a quick tap).
+    session.minigame_pointer(CanvasPointer::at(10.0, 10.0, true, true, false));
+    session.minigame_pointer(CanvasPointer::at(30.0, 40.0, false, false, true));
+    session.update(FRAME, false);
+    assert_eq!(shown(session.minigame_view())["last"], serde_json::json!([30, 40, false, true, true]));
+    // Releasing input (focus loss, a menu) drops a pending pointer.
+    session.minigame_pointer(CanvasPointer::at(10.0, 10.0, false, false, true));
+    session.release_input();
+    session.update(FRAME, false);
+    assert_eq!(shown(session.minigame_view())["releases"], 1);
+    session.drain_events();
+    // Two more taps win: a press sound, then the winning frame's own sound as it resolves.
+    for _ in 0..2 {
+        session.minigame_pointer(CanvasPointer::at(10.0, 10.0, false, true, true));
+        session.update(FRAME, false);
+    }
+    assert!(session.state().minigame.is_none());
+    let events = session.drain_events();
+    assert_eq!(sounds(&events), ["pop", "harvest"]);
+    assert!(toasts(&events).contains(&"won tier".to_owned()), "{events:?}");
+    assert!(session.plugin_errors().is_empty(), "{:?}", session.plugin_errors());
+}
+
+#[test]
+fn clicks_and_taps_on_the_minigame_window_reach_the_pack_minigame() {
+    use farm_player::InputEvent;
+    let stores = common::Stores::new();
+    let mut player = common::new_game_of(&stores, &broken_project(POINTER));
+    let open = farm_sim::schema::PluginMutation::StartMinigame { minigame_id: "broken:game".into() };
+    player.run_command(&Command::PluginMutation { plugin_id: "test".into(), mutation: open }).unwrap();
+    common::idle(&mut player, 3);
+    let state = |player: &farm_player::Player| shown(player.session().and_then(|session| session.minigame_view()));
+    let step = |player: &mut farm_player::Player, events: &[InputEvent]| -> Vec<String> {
+        let output = player.step(common::FRAME, events, common::SIZE.0, common::SIZE.1).unwrap();
+        output.sounds.into_iter().map(|sound| sound.cue).collect()
+    };
+    let canvas = player.widget_rect(farm_ui::WidgetId::new("minigame-canvas")).expect("the canvas is drawn");
+    let (x, y) = (canvas.x + canvas.width / 2.0, canvas.y + canvas.height / 2.0);
+
+    // A click outside the window is not routed (the backdrop takes it).
+    let (ox, oy) = (4.0, 4.0);
+    let down = InputEvent::PointerDown { x: ox, y: oy, button: Default::default() };
+    step(&mut player, &[InputEvent::PointerMove { x: ox, y: oy }, down]);
+    step(&mut player, &[InputEvent::PointerUp { x: ox, y: oy, button: Default::default() }]);
+    step(&mut player, &[]);
+    assert_eq!(state(&player)["presses"], 0);
+    assert_eq!(state(&player)["last"], serde_json::Value::Null);
+
+    // A click on the canvas: the minigame's next frame sees the press at the canvas center.
+    let down = InputEvent::PointerDown { x, y, button: Default::default() };
+    let mut cues = step(&mut player, &[InputEvent::PointerMove { x, y }, down]);
+    cues.extend(step(&mut player, &[]));
+    assert_eq!(state(&player)["last"], serde_json::json!([200, 120, true, true, false]));
+    assert!(cues.iter().any(|cue| cue == "pop"), "{cues:?}");
+    step(&mut player, &[InputEvent::PointerUp { x, y, button: Default::default() }]);
+    step(&mut player, &[]);
+    assert_eq!(state(&player)["last"], serde_json::json!([200, 120, false, false, true]));
+    assert_eq!((state(&player)["presses"].clone(), state(&player)["releases"].clone()), (1.into(), 1.into()));
+    // Hovering with the mouse up reports the position.
+    step(&mut player, &[InputEvent::PointerMove { x: canvas.x + canvas.width / 4.0, y }]);
+    step(&mut player, &[]);
+    assert_eq!(state(&player)["last"], serde_json::json!([100, 120, false, false, false]));
+
+    // Two taps within one frame each (a touch screen) finish it with the winning sound.
+    let mut cues = Vec::new();
+    for _ in 0..2 {
+        let tap = [
+            InputEvent::PointerMove { x, y },
+            InputEvent::PointerDown { x, y, button: Default::default() },
+            InputEvent::PointerUp { x, y, button: Default::default() },
+        ];
+        cues.extend(step(&mut player, &tap));
+        cues.extend(step(&mut player, &[]));
+    }
+    assert!(player.state().unwrap().minigame.is_none(), "won");
+    assert!(cues.iter().any(|cue| cue == "harvest"), "{cues:?}");
+    assert!(player.plugin_errors().is_empty(), "{:?}", player.plugin_errors());
 }

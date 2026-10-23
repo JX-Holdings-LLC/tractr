@@ -8,7 +8,7 @@ use farm_plugins::{
     plugin_specs_from_packs, MinigameControls, MinigameFrame, MinigameLimits, PackMinigame, PluginError,
     PluginErrorKind, PluginHost, PluginHostOptions, WasmPluginHost,
 };
-use farm_runtime::canvas::{CanvasCommand, CANVAS_WIDTH};
+use farm_runtime::canvas::{CanvasCommand, CanvasPointer, CANVAS_WIDTH};
 use farm_sim::schema::{ContentPack, PackManifest, PackPermissions, PackPlugin};
 use serde_json::{json, Value};
 
@@ -255,7 +255,7 @@ fn throws_and_malformed_answers_end_the_session() {
     let cases = [
         ("s => 3", "update must return an object { state, done }"),
         ("s => undefined", "update must return an object { state, done }"),
-        ("s => ({ state: s, score: 1 })", "update returned unknown key \"score\" (only state and done)"),
+        ("s => ({ state: s, score: 1 })", "update returned unknown key \"score\" (only state, done and sounds)"),
         ("s => ({ done: { score: 2 } })", "done.score must be a number from 0 to 1"),
         ("s => ({ done: true })", "update's done must be an object { score } or { success }"),
         ("s => ({ done: {} })", "done must have a score from 0 to 1 or success true/false"),
@@ -318,6 +318,84 @@ fn starts_that_cannot_work_say_why() {
         "{:?}",
         host.init_errors()
     );
+}
+
+/// Keeps what `update` saw of the pointer, and asks for a sound per press: `pop` on the canvas's
+/// left half, `ui` on its right half.
+const POINTER: &str = r#"
+api.minigame('dodge', {
+  start: () => ({ seen: [] }),
+  update: (s, input) => {
+    var p = input.pointer;
+    s.seen.push(p === null ? null : [p.x, p.y, p.down, p.pressed, p.released]);
+    return { state: s, sounds: p && p.pressed ? [p.x < 200 ? 'pop' : 'ui'] : [] };
+  },
+  draw: s => [],
+});
+"#;
+
+#[test]
+fn update_gets_the_pointer_and_answers_sounds() {
+    let host = arcade(POINTER);
+    let mut game = start(&host, json!({})).unwrap();
+    assert!(game.sounds().is_empty());
+    let pointer = |x: f32, down: bool, pressed: bool, released: bool| MinigameControls {
+        pointer: Some(CanvasPointer::at(x, 120.0, down, pressed, released)),
+        ..MinigameControls::default()
+    };
+    game.frame(&MinigameControls::default(), 0.016).unwrap();
+    assert!(game.sounds().is_empty());
+    game.frame(&pointer(50.5, true, true, false), 0.016).unwrap();
+    assert_eq!(game.sounds(), ["pop"]);
+    game.frame(&pointer(80.0, true, false, false), 0.016).unwrap();
+    assert!(game.sounds().is_empty(), "sounds are per frame");
+    game.frame(&pointer(300.0, false, true, true), 0.016).unwrap();
+    assert_eq!(game.sounds(), ["ui"]);
+    assert_eq!(
+        game.state()["seen"],
+        json!([null, [50.5, 120, true, true, false], [80, 120, true, false, false], [300, 120, false, true, true]])
+    );
+
+    // Up to eight sounds a frame, played in order; the frame that finishes plays its own.
+    let host = arcade(&source_with(
+        "s => ({ done: { score: 1 }, sounds: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'harvest'] })",
+        "s => []",
+    ));
+    let mut game = start(&host, json!({})).unwrap();
+    assert_eq!(game.frame(&MinigameControls::default(), 0.016), Ok(MinigameFrame::Finished { score: 1.0 }));
+    assert_eq!(game.sounds(), ["a", "b", "c", "d", "e", "f", "g", "harvest"]);
+    game.frame(&MinigameControls::default(), 0.016).unwrap();
+    assert!(game.sounds().is_empty(), "a finished session plays nothing more");
+    // `sounds: null` is no sounds.
+    let host = arcade(&source_with("s => ({ sounds: null })", "s => []"));
+    let mut game = start(&host, json!({})).unwrap();
+    assert_eq!(game.frame(&MinigameControls::default(), 0.016), Ok(MinigameFrame::Running));
+    assert!(game.sounds().is_empty());
+}
+
+#[test]
+fn sounds_beyond_the_limits_end_the_session() {
+    let long = "x".repeat(257);
+    let cases = [
+        ("s => ({ sounds: 'pop' })", "update's sounds must be a list of sound ids".to_owned()),
+        ("s => ({ sounds: [1] })", "sound 0 must be a sound id".to_owned()),
+        ("s => ({ sounds: ['pop', ''] })", "sound 1 must be a sound id".to_owned()),
+        (&*format!("s => ({{ sounds: ['{long}'] }})"), "sound 0: at most 256 characters".to_owned()),
+        ("s => ({ sounds: Array(9).fill('pop') })", "update returned 9 sounds; at most 8 are allowed".to_owned()),
+    ];
+    for (update, expected) in cases {
+        let (game, error) = failed_frame(update, "s => []");
+        assert_eq!(error.kind, PluginErrorKind::Threw);
+        assert_eq!(error.message, format!("minigame arcade:dodge failed: {expected}"), "{update}");
+        assert!(game.sounds().is_empty());
+    }
+    // The cap is a limit like the others.
+    let options = PluginHostOptions {
+        minigame: MinigameLimits { max_sounds_per_frame: 1, ..MinigameLimits::default() },
+        ..PluginHostOptions::default()
+    };
+    let (_, error) = failed_frame_with(options, "s => ({ sounds: ['a', 'b'] })", "s => []");
+    assert_eq!(error.message, "minigame arcade:dodge failed: update returned 2 sounds; at most 1 are allowed");
 }
 
 /// Every frame's state and draw list of a 120-frame session of the example pack, with input

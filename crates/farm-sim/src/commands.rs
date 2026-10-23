@@ -99,6 +99,18 @@ pub enum Command {
     },
     #[serde(rename = "cancelMinigame")]
     CancelMinigame,
+    /// Past the cutscene line shown (a `say` step, or a `choice` without answers), M2.
+    #[serde(rename = "advanceCutscene")]
+    AdvanceCutscene,
+    /// Answer the cutscene's question with option `index` (in the step's order).
+    #[serde(rename = "chooseCutsceneOption")]
+    ChooseCutsceneOption {
+        #[serde(with = "crate::units::index")]
+        index: i32,
+    },
+    /// Skip the rest of a skippable cutscene (`crate::cutscenes` says what still happens).
+    #[serde(rename = "skipCutscene")]
+    SkipCutscene,
     /// A validated mutation returned by a sandboxed plugin hook (M5).
     #[serde(rename = "pluginMutation")]
     PluginMutation { plugin_id: String, mutation: PluginMutation },
@@ -133,6 +145,9 @@ impl Command {
             Self::StartMinigame { .. } => "startMinigame",
             Self::ResolveMinigame { .. } => "resolveMinigame",
             Self::CancelMinigame => "cancelMinigame",
+            Self::AdvanceCutscene => "advanceCutscene",
+            Self::ChooseCutsceneOption { .. } => "chooseCutsceneOption",
+            Self::SkipCutscene => "skipCutscene",
             Self::PluginMutation { .. } => "pluginMutation",
         }
     }
@@ -182,5 +197,15 @@ mod tests {
             serde_json::to_value(&sell).unwrap(),
             json!({"type": "sellItem", "itemId": "crop-wheat", "quantity": 2})
         );
+
+        for (command, shape) in [
+            (Command::AdvanceCutscene, json!({"type": "advanceCutscene"})),
+            (Command::ChooseCutsceneOption { index: 1 }, json!({"type": "chooseCutsceneOption", "index": 1})),
+            (Command::SkipCutscene, json!({"type": "skipCutscene"})),
+        ] {
+            assert_eq!(serde_json::to_value(&command).unwrap(), shape);
+            assert_eq!(serde_json::from_value::<Command>(shape.clone()).unwrap(), command);
+            assert_eq!(Some(command.type_name()), shape["type"].as_str());
+        }
     }
 }

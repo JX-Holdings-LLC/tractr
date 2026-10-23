@@ -9,8 +9,8 @@ use crate::farming::farming_actions;
 use crate::hooks::{ActionHookPayload, HookEvent, RelationshipChangeHookPayload};
 use crate::messages;
 use crate::schema::{
-    event_fired_flag, CutsceneState, DialogueState, EventCondition, EventOutcome, GameEvent, GameState, MinigameSession,
-    NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
+    event_fired_flag, CutsceneState, DialogueState, EventCondition, EventOutcome, GameEvent, GameState,
+    MinigameSession, NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
 };
 use crate::text;
 use crate::units;
@@ -130,14 +130,12 @@ pub fn condition_met(
             }
             true
         }
-        EventCondition::TimeOfDay { min_minute, max_minute } => {
-            time_of_day_matches_in(
-                ctx.content.settings.time.minutes_per_day(),
-                state.clock.time_minutes,
-                *min_minute,
-                *max_minute,
-            )
-        }
+        EventCondition::TimeOfDay { min_minute, max_minute } => time_of_day_matches_in(
+            ctx.content.settings.time.minutes_per_day(),
+            state.clock.time_minutes,
+            *min_minute,
+            *max_minute,
+        ),
         EventCondition::QuestStatus { quest_id, status } => {
             state.quests.get(quest_id).map_or(QUEST_STATUS_NOT_STARTED, |progress| progress.status.as_str()) == status
         }
@@ -242,7 +240,8 @@ fn apply_outcome(
             // M2: the cutscene runner plays it from the next tick; one at a time.
             let Some(cutscene_id) = non_empty(outcome.cutscene_id.as_deref()) else { return vec![] };
             if state.cutscene.is_none() && ctx.content.cutscenes.iter().any(|cutscene| cutscene.id == cutscene_id) {
-                state.cutscene = Some(CutsceneState { cutscene_id: cutscene_id.to_owned(), ..CutsceneState::default() });
+                state.cutscene =
+                    Some(CutsceneState { cutscene_id: cutscene_id.to_owned(), ..CutsceneState::default() });
             }
             vec![]
         }
@@ -376,6 +375,10 @@ fn outcome_warp_player(ctx: &EngineContext, state: &mut GameState, outcome: &Eve
     // A scene of an enabled content pack joins the world on first visit.
     if world_movement::ensure_scene(ctx, state, scene_id).is_none() {
         return vec![];
+    }
+    // Music an event chose (M2) ends when the player leaves the scene.
+    if state.player.scene_id != scene_id {
+        state.music = None;
     }
     // Warp targets are authored as tile coordinates; land on the center, or on the nearest
     // walkable tile when the target is outside the scene or blocked.

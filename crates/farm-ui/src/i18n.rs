@@ -173,6 +173,10 @@ const EN: &[(&str, &str)] = &[
     ("common.close", "Close"),
     // Dialogue.
     ("dialogue.goodbye", "Goodbye"),
+    // Cutscenes.
+    ("cutscene.next", "Next"),
+    ("cutscene.skip", "Skip"),
+    ("cutscene.you", "You"),
     // Inventory.
     ("inventory.title", "Inventory"),
     ("inventory.slotsUsed", "{0} / {1} slots used"),
@@ -417,6 +421,9 @@ const ES: &[(&str, &str)] = &[
     ("common.cancel", "Cancelar"),
     ("common.close", "Cerrar"),
     ("dialogue.goodbye", "Adi\u{f3}s"),
+    ("cutscene.next", "Siguiente"),
+    ("cutscene.skip", "Saltar"),
+    ("cutscene.you", "T\u{fa}"),
     ("inventory.title", "Inventario"),
     ("inventory.slotsUsed", "{0} / {1} espacios ocupados"),
     ("inventory.empty", "Tu inventario est\u{e1} vac\u{ed}o"),

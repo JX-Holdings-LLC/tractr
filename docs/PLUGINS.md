@@ -105,10 +105,11 @@ ignored and the Problems panel warns about them.
 A pack can bring its own minigame kinds. A plugin defines one with
 `api.minigame(name, { start, update, draw })`; the game runs it while a
 minigame of that kind is open, one `update` and one `draw` per frame, and
-draws what `draw` answers inside the minigame window. When `update` says the
-game is done, its score resolves the minigame exactly like a built-in kind's:
-the def's result tiers give the rewards, and only the score enters the command
-log, so replays need no plugins.
+draws what `draw` answers inside the minigame window. `update` reads the
+game keys and the mouse or touch over the window, and can ask for sounds.
+When `update` says the game is done, its score resolves the minigame exactly
+like a built-in kind's: the def's result tiers give the rewards, and only the
+score enters the command log, so replays need no plugins.
 
 ```json
 {
@@ -153,14 +154,45 @@ a new one:
 | Function | Gets | Answers |
 |---|---|---|
 | `start(config, info)` | The def's `config`; `info` is `{ width: 400, height: 240, seed }`. | The first state (any JSON). Optional: without it the state starts as `null`. |
-| `update(state, input, dt)` | The state, the player's input this frame, the frame time in seconds (at most 0.25). | `{ state, done }`: the new state (the old one stays when `state` is left out), and `done: { score }` (0 to 1) or `done: { success }` (`true` scores 1, `false` 0) to finish. |
+| `update(state, input, dt)` | The state, the player's input this frame, the frame time in seconds (at most 0.25). | `{ state, done, sounds }`: the new state (the old one stays when `state` is left out); `done: { score }` (0 to 1) or `done: { success }` (`true` scores 1, `false` 0) to finish; `sounds`, a list of sound ids to play this frame. |
 | `draw(state)` | The state `update` just answered. | The frame: a list of draw commands. |
 
-`input` is `{ up, down, left, right, action, actionPressed, actionReleased }`,
-all `true` or `false`, from the game's input bindings after rebinding: the
-move keys, arrows, left stick and D-pad, and Interact (E, Space, Enter,
-gamepad A, the touch controls' A) as the action. Escape and the window's
-Give up button cancel the minigame as usual.
+`input` is `{ up, down, left, right, action, actionPressed, actionReleased,
+pointer }`. The first seven are `true` or `false`, from the game's input
+bindings after rebinding: the move keys, arrows, left stick and D-pad, and
+Interact (E, Space, Enter, gamepad A, the touch controls' A) as the action.
+Escape and the window's Give up button cancel the minigame as usual.
+
+`pointer` is the mouse or a finger over the minigame's canvas:
+`{ x, y, down, pressed, released }`, with `x` and `y` in the same
+coordinates `draw` uses (0–400, 0–240), `down` while the button or finger is
+down, and `pressed` / `released` when it went down or up this frame. A tap
+within one frame is both. It is `null` while the pointer is elsewhere (and
+on a gamepad or keyboard). A press outside the canvas never reaches the
+minigame. One that went down on it is reported until it is let go, wherever
+it moves: off the canvas, it stays on the canvas's edge. The game reports the pointer once per frame, so
+`update` sees it one frame after the window drew under it.
+
+```js
+api.minigame('pop-the-lantern', {
+  start: () => ({ x: 200, y: 120, popped: 0 }),
+  update: (s, input) => {
+    var p = input.pointer;
+    if (p && p.pressed && Math.abs(p.x - s.x) < 20 && Math.abs(p.y - s.y) < 20) {
+      s.popped++;
+      return s.popped >= 5 ? { state: s, done: { success: true }, sounds: ['quest'] } : { state: s, sounds: ['coin'] };
+    }
+    return { state: s };
+  },
+  draw: s => [{ type: 'rect', x: s.x - 20, y: s.y - 20, w: 40, h: 40, radius: 20, color: 'accent' }],
+});
+```
+
+**Sounds** in `sounds` play exactly like a `playSound` outcome's sound id
+(the built-in cues `ui`, `coin`, `harvest`, `quest`, `success`, `error`, …,
+and any other id `playSound` can play), at the player's sound-effect
+volume. They are cosmetic, like the frames: they need no mutation permission
+and never enter the command log. An id the game does not know plays nothing.
 
 **Draw commands** use minigame coordinates: the canvas is 400 × 240, origin
 top left, `y` down, scaled into the window and clipped to it.
@@ -219,6 +251,7 @@ build). They never depend on the machine.
 | Draw commands per frame | 256 | The minigame fails. |
 | Text per draw command / per frame | 200 / 4000 characters | The minigame fails. |
 | Minigame answer (`update` and `draw` together) | 1 MiB | The minigame fails. |
+| Sounds per `update` | 8, each id at most 256 characters | The minigame fails. |
 
 A handler that throws gives no mutations and is not a strike, but the fuel it
 burned counts toward its per-second budget. After a strike the plugin is
@@ -232,8 +265,8 @@ twice the fuel its first start used.
 - `Date.now()` is always 0, and `Math.random()` gives the same sequence in
   every plugin and every run.
 - A minigame session depends only on its start and its input: the same
-  config, seed and input give the same states, frames and score on every
-  machine (its `Math.random()` starts the same way in every session; use
+  config, seed and input (keys and pointer) give the same states, frames,
+  sounds and score on every machine (its `Math.random()` starts the same way in every session; use
   `info.seed` for variety). The seed comes from the game's cosmetic
   randomness, and only the score enters the command log.
 - Passing the state into the sandbox and back costs about 260 fuel per byte
