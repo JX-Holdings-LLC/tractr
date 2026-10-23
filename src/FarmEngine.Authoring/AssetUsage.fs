@@ -50,7 +50,7 @@ module AssetUsage =
 
     /// Assets nothing in the game refers to. An asset counts as used when any value in the
     /// project outside the asset list names its id (visual bindings, frames, pack content, the
-    /// export icon), when it is the tile art for a
+    /// export icon), when it is a sound or music asset, when it is the tile art for a
     /// tile type the project mentions, or when a used asset's animation frames draw from it.
     /// The editor's brush selection does not count. A coincidental match only keeps an asset
     /// (and hides its warning); a used asset is never left out.
@@ -63,6 +63,10 @@ module AssetUsage =
         strings values json
         let refersTo (asset: CustomAsset) =
             values.Contains asset.Id
+            // Sounds and music always ship: plugins and pack minigames play them by id from
+            // their code, which the project's JSON does not show (M2).
+            || asset.Type = CustomAssetTypes.Sound
+            || asset.Type = CustomAssetTypes.Music
             || (asset.Type = CustomAssetTypes.Tile
                 && (match asset.TileType with
                     | None -> false
