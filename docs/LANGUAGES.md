@@ -6,7 +6,7 @@ cartridges and Export Game are F#; the editor's Play Mode runs the Rust
 `farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
 plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
 browser for web demo exports. Tractr reads only the current project and save
-formats (project schema version 1, save v5). The C# engine and the C# schema records
+formats (project schema version 2, save v5). The C# engine and the C# schema records
 are gone, and the simulation keeps every quantity as an integer
 ([NUMERICS.md](NUMERICS.md)). See [ROADMAP.md](../ROADMAP.md). This is the
 reference for where code goes as the app grows; read it before you add a new
@@ -132,7 +132,7 @@ what an exported game contains.
 - The player's machine persists saves, so **Rust owns the save format and
   save loading** (from `Save.cs`). **F# owns project loading.** The creator
   persists projects. Both read only their current version (save v5, project
-  version 1); others are refused.
+  version 2); others are refused.
 - The format is FlatBuffers too (`schemas/save.fbs`): a version header, a
   slot preview the title screen reads without loading the game, and the state
   compressed with zstd (pure-Rust `ruzstd`, so it also builds for wasm). JSON

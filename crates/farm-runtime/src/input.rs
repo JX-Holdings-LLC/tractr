@@ -456,11 +456,6 @@ pub mod bindings {
     /// Keys that interact (talk, harvest, open, …).
     pub const INTERACT_KEYS: &[&str] = &["e", " ", "enter"];
 
-    /// The built-in tools' hotkeys → `useTool` tool type, in firing order. A game's tools carry
-    /// their own keys (`ToolDefinition::key`, M1); these are the built-in ones' ([`tool_keys`]).
-    pub const TOOL_KEYS: &[(&str, &str)] =
-        &[("q", "watering-can"), ("t", "hoe"), ("r", "axe"), ("f", "pickaxe"), ("c", "scythe")];
-
     /// The game's tool hotkeys (lower case) → tool id, in the tools' order.
     pub fn tool_keys(content: &GameContent) -> Vec<(String, &str)> {
         farm_sim::vocabulary::tools(content)

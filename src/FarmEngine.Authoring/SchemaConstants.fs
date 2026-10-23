@@ -606,9 +606,8 @@ module SettingsSchema =
 
 [<RequireQualifiedAccess>]
 module ProjectSchema =
-    /// The project schema version: bump it when the persisted shape changes, so older engines
-    /// refuse files of the new shape with a message. Version 1 (0.5–0.6) still loads: version 2
-    /// only added optional content (M1, M2), so `ProjectLoad` reads a version 1 file as it is.
+    /// The project schema version. Only this version loads (there are no migrations): bump it
+    /// when the persisted shape changes, so files of another shape are refused with a message.
     [<Literal>]
     let CurrentProjectSchemaVersion = 2.0
 

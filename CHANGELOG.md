@@ -42,9 +42,9 @@ cutscenes). See the [Creator Guide](docs/CREATOR-GUIDE.md#your-games-world).
   answers and can skip a skippable cutscene.
 - **Pack minigames** get pointer input (`input.pointer`) and can play sounds
   (`sounds` in the `update` answer); see [docs/PLUGINS.md](docs/PLUGINS.md#minigames).
-- **Projects are schema version 2.** Version 1 projects open as they are; a
-  0.6 editor refuses a version 2 project instead of dropping what it doesn't
-  know. Saves stay version 5 and load as before.
+- **Projects are schema version 2.** Breaking: only version 2 loads; version 1
+  projects (0.5–0.6) are refused with "Project schema version 1 is not
+  supported". Saves stay version 5.
 - **For contributors:** `farm_sim::vocabulary` and the `EngineContext`
   lookups (`terrain`, `tool`, `item_category`, `crop_qualities`, …) replace
   the fixed tables; `content_builtin::{tool_definitions, quality_multipliers,
