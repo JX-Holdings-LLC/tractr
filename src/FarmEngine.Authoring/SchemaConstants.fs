@@ -455,13 +455,8 @@ module SettingsSchema =
 module ProjectSchema =
     /// The project schema version. Only this version loads (there are no migrations): bump it
     /// when the persisted shape changes, so files of another shape are refused with a message.
-    ///
-    /// v9 — the native numerics grid (docs/NUMERICS.md); v10 — the fields kept only for older
-    /// files are gone (crop `growthTime`/`regrowthTime`/`plantedAt`, the `customImage`,
-    /// `playerCustomImage` and crop `customAsset` image fields, the `unlockScene` outcome, the
-    /// player's `pixelX`/`pixelY`/`targetX`/`targetY` and the project's `currentTime`).
     [<Literal>]
-    let CurrentProjectSchemaVersion = 10.0
+    let CurrentProjectSchemaVersion = 1.0
 
 [<RequireQualifiedAccess>]
 module GameContentSchema =

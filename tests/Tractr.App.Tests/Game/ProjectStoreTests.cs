@@ -69,7 +69,7 @@ public sealed class ProjectStoreTests
         Assert.Equal("Second", Assert.Single(store.List()).Name);
         // Project JSON: camelCase, indented, at the current schema version.
         var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a.json"));
-        Assert.Contains("\n  \"schemaVersion\": 10", text, StringComparison.Ordinal);
+        Assert.Contains("\n  \"schemaVersion\": 1", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class ProjectStoreTests
         Directory.CreateDirectory(store.ProjectsDirectory);
         File.WriteAllText(store.PathFor("broken"), "{ not json");
         File.WriteAllText(store.PathFor("future"), """{ "schemaVersion": 999, "scenes": [] }""");
-        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 9, "scenes": [] }""");
+        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 0, "scenes": [] }""");
 
         var broken = store.Load("broken");
         Assert.False(broken.Ok);
@@ -109,7 +109,7 @@ public sealed class ProjectStoreTests
         Assert.Contains("newer than this engine supports", future.Errors[0], StringComparison.Ordinal);
         var old = store.Load("old");
         Assert.False(old.Ok);
-        Assert.Contains("schema version 9 is not supported", old.Errors[0], StringComparison.Ordinal);
+        Assert.Contains("schema version 0 is not supported", old.Errors[0], StringComparison.Ordinal);
         Assert.False(store.Load("missing").Ok);
     }
 

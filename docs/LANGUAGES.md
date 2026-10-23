@@ -6,7 +6,7 @@ cartridges and Export Game are F#; the editor's Play Mode runs the Rust
 `farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
 plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
 browser for web demo exports. Tractr reads only the current project and save
-formats (project schema v10, save v5). The C# engine and the C# schema records
+formats (project schema version 1, save v5). The C# engine and the C# schema records
 are gone, and the simulation keeps every quantity as an integer
 ([NUMERICS.md](NUMERICS.md)). See [ROADMAP.md](../ROADMAP.md). This is the
 reference for where code goes as the app grows; read it before you add a new
@@ -132,7 +132,7 @@ what an exported game contains.
 - The player's machine persists saves, so **Rust owns the save format and
   save loading** (from `Save.cs`). **F# owns project loading.** The creator
   persists projects. Both read only their current version (save v5, project
-  v10); others are refused.
+  version 1); others are refused.
 - The format is FlatBuffers too (`schemas/save.fbs`): a version header, a
   slot preview the title screen reads without loading the game, and the state
   compressed with zstd (pure-Rust `ruzstd`, so it also builds for wasm). JSON
@@ -418,7 +418,7 @@ below record where each part went.
 | File(s) | Goes to | Notes |
 |---|---|---|
 | `Project.cs`, `World.cs`, `Actors.cs`, `Content.cs`, `Crafting.cs`, `Economy.cs`, `Events.cs`, `Extensibility.cs`, `Fishing.cs`, `Animals.cs`, `Mining.cs`, `Nodes.cs`, `Quests.cs`, `Social.cs`, `Weather.cs`, `Graphics.cs`, `Interface.cs`, `Settings.cs`, `Primitives.cs`, `GameContent.cs` | F# `FarmEngine.Authoring/Schema.fs` + `SchemaJson.fs` | Done in phase 7. The editor and F# use these records; C# builds them with `RecordWith` and reads options through `FSharpInterop`. Rust has its own serde types and reads cartridges. |
-| `Migrations.cs` | F# `Authoring.Migrations`, removed in 0.5.0 | Project v1→v9 (v8→v9 was the numerics grid). Since 0.5.0 `ProjectLoad` reads the current version only (v10 since 0.6.0). |
+| `Migrations.cs` | F# `Authoring.Migrations`, removed in 0.5.0 | Project v1→v9 (v8→v9 was the numerics grid). Since 0.5.0 `ProjectLoad` reads the current version only (reset to version 1 in 0.6.0). |
 | `SchemaValidation.cs` | F# `Authoring.Validation` | Merged with Core `Validation.cs` into one Problems pipeline with JSON paths. |
 | `Packs.cs` (schemas) | F# `Authoring.Packs` | Manifests and permissions. |
 | `Save.cs`, `SaveMigrations.cs` | Rust `farm-cart::save` | Rust owns saves. The save migrations were removed in 0.5.0; only v5 saves load. |

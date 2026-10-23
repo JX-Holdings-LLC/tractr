@@ -39,7 +39,7 @@ Edit Mode includes map painting and scene tools (by mouse or keyboard, with
 screen-reader support), content forms with nested editors, reference pickers,
 profit readouts and thumbnails, project and export settings, Problems, mods,
 an art and animation studio (raster and SVG), creator patterns and interface
-panels. Tractr reads and writes its own project JSON (schema v10) and does not
+panels. Tractr reads and writes its own project JSON (schema version 1) and does not
 import other formats. Tractr began as a port of a web version, which is now a
 separate project. See [ROADMAP.md](ROADMAP.md).
 
@@ -170,7 +170,7 @@ and **File → Import Project JSON** reads one back.
 
 **A project doesn't open.** The editor says why. A project saved by a newer
 version of the editor (its schema version is newer than this engine supports)
-needs that version: update first. Tractr reads schema v10 only; files in other
+needs that version: update first. Tractr reads schema version 1 only; files in other
 formats are refused, not upgraded. When a
 current project fails to open, keep a copy of the file and open an issue with
 it attached.

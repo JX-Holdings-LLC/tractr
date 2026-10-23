@@ -35,11 +35,11 @@ let ``a project of the current schema version loads`` () =
 let ``other schema versions are refused`` () =
     let errors (text: string) = (ProjectJson.loadProjectText text).Errors
     Assert.Equal<string list>(
-        [ "Project schema version 9 is not supported (this engine reads version " + current + ")." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 9)))
+        [ "Project schema version 0 is not supported (this engine reads version " + current + ")." ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 0)))
     Assert.Equal<string list>(
-        [ "Project schema version 11 is newer than this engine supports (" + current + "). Update the engine." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 11)))
+        [ "Project schema version 2 is newer than this engine supports (" + current + "). Update the engine." ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 2)))
     Assert.Equal<string list>(
         [ "Project data has no schemaVersion (this engine reads version " + current + ")." ],
         errors (patched (fun o -> o.Remove "schemaVersion" |> ignore)))

@@ -1,6 +1,6 @@
 # Native numerics
 
-**Status:** implemented since schema v9 (now project schema v10, save version
+**Status:** implemented (project schema version 1, save version
 5; phase 7's last step, [LANGUAGES.md](LANGUAGES.md#phases)).
 This file is the reference for the unit and integer type of every quantity the
 simulation keeps. Read it before you add a field to `farm-sim`.
@@ -121,7 +121,7 @@ numbers.
 
 ## Projects (F#)
 
-`ProjectSchema.CurrentProjectSchemaVersion` is 10, and only v10 projects load
+`ProjectSchema.CurrentProjectSchemaVersion` is 1, and only version 1 projects load
 (`ProjectLoad`); other versions are refused. The values a
 project carries into play (player and NPC positions, energy, the current
 time of day, animal positions and mood) are on the engine's grid, so the

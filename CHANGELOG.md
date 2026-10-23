@@ -2,9 +2,11 @@
 
 ## 0.6.0
 
-- **Projects are schema v10.** Breaking: the fields Tractr kept only so older
-  project files would load are gone, and a v9 file is refused with "Project
-  schema version 9 is not supported". Nothing else about a project changes:
+- **Projects are schema version 1.** Breaking: the version numbering starts
+  over (nothing was ever saved at a later version), the fields Tractr kept
+  only so older project files would load are gone, and a file of any other
+  version is refused with "Project schema version N is not supported".
+  Nothing else about a project changes:
   - crops: the millisecond `growthTime`, `regrowthTime` and `plantedAt` (crops
     grow by `growthDays` and `regrowthDays`; an absent or 0 value counts as one
     day);

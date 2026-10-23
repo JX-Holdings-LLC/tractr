@@ -4,7 +4,7 @@
 //! It does no I/O, spawns no threads and never reads a clock. Same seed + same command log ⇒
 //! the same state, byte for byte, on every platform (WebAssembly included).
 //!
-//! **Native numerics** (schema v9, docs/NUMERICS.md): every quantity is an integer in a fixed
+//! **Native numerics** (docs/NUMERICS.md): every quantity is an integer in a fixed
 //! unit ([`units`]); game logic never does float arithmetic (`clippy::float_arithmetic` is
 //! denied outside [`units`], which converts authoring numbers at the JSON boundary). The state
 //! hash is xxh3-64 over a canonical binary encoding ([`hash`]). Rust is the reference

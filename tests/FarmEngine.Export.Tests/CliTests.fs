@@ -68,7 +68,7 @@ let ``a bad path or a refused project exits 1 with the message, never a stack tr
         Assert.DoesNotContain("   at ", err)
         Assert.True(err.Trim().Length > 0)
     let broken = temp.Sub "broken.json"
-    File.WriteAllText(broken, "{ \"schemaVersion\": 10, ")
+    File.WriteAllText(broken, "{ \"schemaVersion\": 1, ")
     let code, _, err = farmc [ "compile"; broken; "--out"; temp.Sub "x.cart" ]
     Assert.Equal(1, code)
     Assert.Contains("not valid JSON", err)

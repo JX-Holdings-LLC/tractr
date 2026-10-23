@@ -353,10 +353,11 @@ projects to carry forward, so the compatibility code is gone:
   (`fixtures/golden/vectors`).
 - [x] `farm-wasm` is the web demo's player only (0.6.0): `Session`,
   `Preview`, `renderJson` and `hashText` are removed.
-- [x] Project schema v10 (0.6.0): the fields kept only for older files are
-  gone (crop millisecond growth times and `plantedAt`, the `customImage`,
+- [x] Project schema version 1 (0.6.0): the fields kept only for older files
+  are gone (crop millisecond growth times and `plantedAt`, the `customImage`,
   `playerCustomImage` and crop `customAsset` image fields, the `unlockScene`
-  outcome, the player's pixel and target fields, `currentTime`).
+  outcome, the player's pixel and target fields, `currentTime`), and the
+  version numbering starts over at 1.
 - [x] Web interchange (0.6.0): Import Project JSON reads whole projects only
   (no web "exported game" files), JSON saves need their header (no bare
   `GameState`), the old text hash (`fe_hash_text`) and cartridge format 2's

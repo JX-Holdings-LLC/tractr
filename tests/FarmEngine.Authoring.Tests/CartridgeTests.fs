@@ -24,7 +24,7 @@ let private png = "data:image/png;base64,iVBORw0KGgo="
 let ``a cartridge carries start presentation and content without the project`` () =
     let cart = read (CartridgeCompiler.Compile(starter ()))
     Assert.Equal(3u, cart.CartFormat)
-    Assert.Equal(10u, cart.ProjectSchemaVersion)
+    Assert.Equal(1u, cart.ProjectSchemaVersion)
     Assert.True(CartridgeReader.hasIdentifier (CartridgeCompiler.Compile(starter ())))
     let start = parse cart.StartJson
     Assert.Equal(Some (starter ()).Id, Json.asString (Json.get "id" start))
