@@ -65,6 +65,10 @@ type Edit =
     | RenameScene of sceneId: string * name: string
     /// Whether the scene keeps the weather out (rain, storms): greenhouses, interiors.
     | SetSceneIndoor of sceneId: string * indoor: bool
+    /// The scene's surroundings (M1, M2): no daylight (`dark`), its own temperature (`None`: the
+    /// season's), the tags crops can require, the music asset that plays in it and its own
+    /// day/night and foliage tints. Empty values are stored as absent keys.
+    | SetSceneEnvironment of sceneId: string * dark: bool * temperature: float option * tags: string list * music: string option * atmosphere: AtmosphereLook option
     /// SceneManager `applyResize`: the overlap keeps its tiles, new tiles are grass.
     | ResizeScene of sceneId: string * width: int * height: int
     /// SceneManager `duplicateScene`: a deep copy with a new id, "(Copy)" name and no NPC list.

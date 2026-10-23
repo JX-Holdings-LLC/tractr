@@ -336,6 +336,10 @@ module Defaults =
     let duplicateMinigame (project: GameProject) (minigame: MinigameDef) : MinigameDef =
         { minigame with Id = slugId (sprintf "%s copy" minigame.Name) (allIds project) "minigame"; Name = sprintf "%s (copy)" minigame.Name }
 
+    /// A copy of a cutscene (M2): "(copy)" with a fresh slug id.
+    let duplicateCutscene (project: GameProject) (cutscene: Cutscene) : Cutscene =
+        { cutscene with Id = slugId (sprintf "%s copy" cutscene.Name) (allIds project) "cutscene"; Name = sprintf "%s (copy)" cutscene.Name }
+
     /// MinigameEditor `addTier`.
     let newResultTier () : MinigameResultTier = { MinScore = 0.0; Outcomes = [] }
 

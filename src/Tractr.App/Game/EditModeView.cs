@@ -26,18 +26,6 @@ public sealed partial class EditModeView : UserControl
     /// <summary>Edit-mode tile size (web GameView: 28 outside play).</summary>
     public const double TileSize = 28;
 
-    /// <summary>Palette chip colors per tile type (the renderer's fallback colors).</summary>
-    private static readonly IReadOnlyDictionary<string, string> TileSwatches = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["grass"] = "#5b9a4a",
-        ["soil"] = "#7a6545",
-        ["water"] = "#3075b0",
-        ["path"] = "#b5a48d",
-        ["wall"] = "#5e5a68",
-        ["door"] = "#8a6a3f",
-        ["floor"] = "#b5a48d",
-    };
-
     public const string PortingNotice = "Tip: click the map (or Tab to it), then use the arrow keys and Enter or Space to edit from the keyboard. Letter keys pick tools (B brush, R rectangle, G fill, E erase…).";
 
     private readonly ProjectWorkspace _workspace;
@@ -63,6 +51,8 @@ public sealed partial class EditModeView : UserControl
     private readonly TextBlock _zoomText = new() { Name = "ZoomText", VerticalAlignment = VerticalAlignment.Center, MinWidth = 44, TextAlignment = TextAlignment.Center };
     private readonly StackPanel _info = new() { Spacing = 12 };
     private readonly WrapPanel _palette = new() { Name = "TilePalette" };
+    /// <summary>The terrains the palette shows, to rebuild it only when they change (not per painted tile).</summary>
+    private string? _paletteKey;
     private readonly Button _undo;
     private readonly Button _redo;
     /// <summary>The map tools panel; it shows on the Map tab only.</summary>
@@ -253,8 +243,6 @@ public sealed partial class EditModeView : UserControl
     /// </summary>
     private Grid BuildSidePanel()
     {
-        BuildPalette();
-
         var notice = Ui.Wrapped(PortingNotice, "small");
         notice.Name = "EditorNotice";
         var noticeBox = new Border { Child = Ui.HStack(8, Ui.Icon("IconInfo", 16), notice) }.WithClasses("notice");
@@ -394,7 +382,8 @@ public sealed partial class EditModeView : UserControl
         _fillScene.IsEnabled = value is not null;
         if (value is not null)
         {
-            _selectedLayer = Edits.LayerFor(value);
+            // The terrain's own layer (a game can paint its own terrains on any layer).
+            _selectedLayer = _workspace.Current is { } project ? Edits.LayerIn(project, value) : Edits.LayerFor(value);
             SyncLayerSelector();
             Tool = MapTool.Brush;
         }
@@ -673,6 +662,7 @@ public sealed partial class EditModeView : UserControl
         _sceneId = scene?.Id;
         RefreshSceneSelector(project);
         RefreshInfo(project);
+        RefreshPalette(project);
         RefreshEditorPanels(project, scene);
         if (scene is null)
         {
@@ -816,38 +806,59 @@ public sealed partial class EditModeView : UserControl
         }
     }
 
-    private void BuildPalette()
+    /// <summary>
+    /// The tile brushes: Inspect, then the game's terrains (built-in and its own, F#
+    /// <see cref="ContentReadouts.Terrains"/>), each with its colour and art as the game draws
+    /// them. Rebuilt only when the terrains change.
+    /// </summary>
+    private void RefreshPalette(GameProject project)
     {
-        void Swatch(string? type, string label)
+        var terrains = ContentReadouts.Terrains(project);
+        string ArtKey(VisualRef? visual) =>
+            visual is null ? "" : $"{visual}\u001e{project.CustomAssets.FirstOrDefault(asset => asset.Id == visual.AssetId)?.DataUrl.GetHashCode()}";
+        var key = string.Join('\u001f', terrains.Select(terrain => $"{terrain.Id}\u001e{terrain.Name}\u001e{terrain.Color}\u001e{terrain.Layer}\u001e{ArtKey(terrain.Visual.OrNull())}"));
+        if (key == _paletteKey) return;
+        _paletteKey = key;
+        foreach (var image in _palette.GetLogicalDescendants().OfType<Image>()) VisualPreview.Release(image);
+        _palette.Children.Clear();
+        using var art = terrains.Any(terrain => terrain.Visual.OrNull() is not null) ? new VisualPreview() : null;
+        void Swatch(TerrainDefinition? terrain)
         {
+            var label = terrain is null ? "Inspect" : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
             var chip = new Border
             {
                 Width = 18,
                 Height = 18,
                 CornerRadius = new CornerRadius(4),
                 BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.Parse("#40000000")),
-                Background = type is null ? Brushes.Transparent : new SolidColorBrush(Color.Parse(TileSwatches[type])),
+                BorderBrush = (IBrush?)Application.Current?.FindResource("FarmBorderBrush") ?? Brushes.Gray,
+                ClipToBounds = true,
+                // The terrain's own colour: the game's look, not the editor's.
+                Background = terrain is not null && Color.TryParse(terrain.Color, out var color) ? new SolidColorBrush(color) : Brushes.Transparent,
             };
-            if (type is null)
+            if (terrain is null)
             {
                 chip.Child = Ui.Icon("IconInfo", 14);
                 chip.BorderThickness = default;
             }
+            else if (terrain.Visual.OrNull() is { } visual && art?.Render(project, visual, 0, 16) is { } image)
+            {
+                image.Stretch = Stretch.Uniform;
+                chip.Child = image;
+            }
 
-            var toggle = new ToggleButton { Tag = type, Content = Ui.HStack(6, chip, Ui.Text(label, "small")), Margin = new Thickness(0, 0, 6, 6), Name = $"Brush_{type ?? "inspect"}" };
+            var toggle = new ToggleButton { Tag = terrain?.Id, Content = Ui.HStack(6, chip, Ui.Text(label, "small")), Margin = new Thickness(0, 0, 6, 6), Name = $"Brush_{terrain?.Id ?? "inspect"}" };
             toggle.Classes.Add("swatch");
-            AutomationProperties.SetName(toggle, type is null ? "Inspect (no brush)" : $"Brush: {label}");
-            toggle.IsChecked = type is null;
-            toggle.Click += (_, _) => Brush = type;
+            AutomationProperties.SetName(toggle, terrain is null ? "Inspect (no brush)" : $"Brush: {label}");
+            if (terrain is not null) ToolTip.SetTip(toggle, ContentReadouts.TerrainListNote(terrain, !project.Terrains.OrEmpty().Any(own => own.Id == terrain.Id)));
+            toggle.IsChecked = Equals(terrain?.Id, _brush);
+            var id = terrain?.Id;
+            toggle.Click += (_, _) => Brush = id;
             _palette.Children.Add(toggle);
         }
 
-        Swatch(null, "Inspect");
-        foreach (var type in TileTypes.All)
-        {
-            Swatch(type, Ui.Capitalize(type));
-        }
+        Swatch(null);
+        foreach (var terrain in terrains) Swatch(terrain);
     }
 
     private void OnCanvasPointerMoved(object? sender, PointerEventArgs e)

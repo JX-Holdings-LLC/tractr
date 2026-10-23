@@ -250,12 +250,13 @@ module Readouts =
 
     // ---- Form layout ----
 
-    /// Tabs a content form groups its fields into (web CropEditor's Basic / Growth / Asset);
-    /// empty for a record shown as one form. Properties not listed go on the last tab.
+    /// Tabs a content form groups its fields into (web CropEditor's Basic / Growth / Asset, and
+    /// the growth requirements of M1); empty for a record shown as one form. Properties not listed go on the last tab.
     let formTabs (recordType: string) : FormTab list =
         match recordType with
         | "CustomCropDefinition" ->
             [ { Title = "Basic"; Properties = [ "Id"; "Name"; "SeedCost"; "BaseHarvestValue"; "Seasons"; "YieldMin"; "YieldMax" ] }
               { Title = "Growth"; Properties = [ "GrowthDays"; "Stages"; "CanRegrow"; "RegrowthDays"; "MutationChance"; "MultiTile" ] }
+              { Title = "Requirements"; Properties = [ "Requirements" ] }
               { Title = "Asset"; Properties = [ "Visual" ] } ]
         | _ -> []

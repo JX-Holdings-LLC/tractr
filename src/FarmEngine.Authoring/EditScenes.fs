@@ -152,6 +152,20 @@ module internal EditScenes =
         let value = if indoor then Some true else None
         Proj.mapScene sceneId (fun scene -> if scene.Indoor = value then scene else { scene with Indoor = value }) project
 
+    /// The scene's surroundings (M1, M2), stored the way the schema leaves them out when unused:
+    /// `dark` only when true, tags trimmed without blanks or repeats, no empty music id, and no
+    /// atmosphere look without keyframes or a foliage tint.
+    let setSceneEnvironment (sceneId: string) (dark: bool) (temperature: float option) (tags: string list) (music: string option)
+                            (atmosphere: AtmosphereLook option) (project: GameProject) =
+        let tags = tags |> List.map (fun tag -> tag.Trim()) |> List.filter (fun tag -> tag.Length > 0) |> List.distinct
+        let music = music |> Option.map (fun id -> id.Trim()) |> Option.filter (fun id -> id.Length > 0)
+        let atmosphere = atmosphere |> Option.filter (fun look -> not look.Daylight.IsEmpty || look.FoliageTint.IsSome)
+        let dark = if dark then Some true else None
+        let tags = if tags.IsEmpty then None else Some tags
+        Proj.mapScene sceneId (fun scene ->
+            if scene.Dark = dark && scene.Temperature = temperature && scene.Tags = tags && scene.Music = music && scene.Atmosphere = atmosphere then scene
+            else { scene with Dark = dark; Temperature = temperature; Tags = tags; Music = music; Atmosphere = atmosphere }) project
+
     /// The largest scene side (the game cuts bigger scenes when it loads them).
     [<Literal>]
     let MaxSceneSize = 256

@@ -267,10 +267,14 @@ internal sealed class ContentForm : IContentDraft
         var name = "ContentField_" + path;
         var type = Unwrap(property.PropertyType);
         var nullable = IsNullable(property);
-        var field = ContentForms.Field(owner.Name, property.Name, label, _project);
+        // A record with a type picks some fields' meaning by it (a cutscene step's sound or music).
+        var field = owner.GetProperty("Type")?.PropertyType == typeof(string)
+            ? ContentForms.Field(owner.Name, property.Name, label, _project, StringOf(target["type"]) ?? "")
+            : ContentForms.Field(owner.Name, property.Name, label, _project);
         if (field is { Kind: "reference" or "referenceList" }) label = TrimId(label);
 
-        if (property.Name == "Id" && type == typeof(string))
+        // A record's own id is shown, not edited; an optional "Id" names something else (a neighbour's crop).
+        if (property.Name == "Id" && property.PropertyType == typeof(string))
         {
             panel.Children.Add(Label(label));
             panel.Children.Add(Accessible(new TextBox { Name = name, Text = StringOf(target[key]) ?? "", IsReadOnly = true }, label));
