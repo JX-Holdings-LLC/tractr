@@ -59,9 +59,9 @@ let ``schema errors get JSON paths and targets`` () =
     Assert.Equal("scenes[0].tiles[1][2].background", Problems.jsonPath "scenes.0.tiles.1.2.background")
     Assert.Equal("settings.time.dayStartMinute", Problems.jsonPath "settings.time.dayStartMinute")
     let project = starter ()
-    let broken = { project with SelectedTileType = "lava" }
-    let problem = has "schema.selectedTileType" broken
-    Assert.Equal("selectedTileType", problem.Path)
+    let broken = { project with Mode = "bogus" }
+    let problem = has "schema.mode" broken
+    Assert.Equal("mode", problem.Path)
     Assert.Equal("settings", problem.TargetKind)
     Assert.True(Problems.blocksExport (Problems.collect broken))
 

@@ -22,6 +22,8 @@ type Expect =
     | NoContent of string
     /// The typed parse refuses the project with this issue (`path: message`).
     | Decode of string
+    /// Problems (`Problems.collect`) reports a problem with this code at this path.
+    | Problem of code: string * path: string
 
 type Case =
     { Name: string
@@ -100,7 +102,6 @@ let private parseCases =
     [ case "schemaVersion not an integer" [ Parse "schemaVersion: Expected integer, received 8.5" ] [ set "schemaVersion" "8.5" ]
       nullCase "mode missing" "mode: Expected string, received null" [ set "mode" "null" ]
       case "mode unknown" [ Parse "mode: Invalid enum value. Expected 'tiles' | 'npcs' | 'items' | 'events' | 'play' | 'quests', received 'bogus'" ] [ set "mode" "\"bogus\"" ]
-      case "selectedTileType unknown" [ Parse "selectedTileType: Invalid enum value." ] [ set "selectedTileType" "\"lava\"" ]
       case "currentYear not an integer" [ Parse "currentYear: Expected integer, received 1.5" ] [ set "currentYear" "1.5" ]
       case "scene width not an integer" [ Parse "scenes.0.width: Expected integer, received 16.5" ] [ set "scenes.0.width" "16.5" ]
       case "scene width zero" [ Parse "scenes.0.width: Number must be greater than 0" ] [ set "scenes.0.width" "0" ]
@@ -108,20 +109,20 @@ let private parseCases =
       case "scene height fractional" [ Parse "scenes.0.height: Expected integer, received 1.5" ] [ set "scenes.0.height" "1.5" ]
       nullCase "null tile row" "scenes.0.tiles.3: Expected array, received null" [ set "scenes.0.tiles.3" "null" ]
       nullCase "null tile" "scenes.0.tiles.2.5: Expected object, received null" [ set "scenes.0.tiles.2.5" "null" ]
-      case "tile type unknown" [ Parse "scenes.0.tiles.1.1.type: Invalid enum value." ] [ set "scenes.0.tiles.1.1.type" "\"lava\"" ]
+      case "tile type unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][1]") ] [ set "scenes.0.tiles.1.1.type" "\"lava\"" ]
       nullCase "tile type missing" "scenes.0.tiles.1.1.type: Expected string, received null" [ set "scenes.0.tiles.1.1.type" "null" ]
-      case "tile background unknown" [ Parse "scenes.0.tiles.1.2.background: Invalid enum value." ] [ set "scenes.0.tiles.1.2.background" "\"lava\"" ]
+      case "tile background unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][2]") ] [ set "scenes.0.tiles.1.2.background" "\"lava\"" ]
       nullCase "tile background missing" "scenes.0.tiles.1.2.background: Expected string, received null" [ set "scenes.0.tiles.1.2.background" "null" ]
-      case "tile overlay unknown" [ Parse "scenes.0.tiles.1.3.overlay: Invalid enum value." ] [ set "scenes.0.tiles.1.3.overlay" "\"lava\"" ]
-      case "tile object unknown" [ Parse "scenes.0.tiles.1.4.object: Invalid enum value." ] [ set "scenes.0.tiles.1.4.object" "\"lava\"" ]
+      case "tile overlay unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][3]") ] [ set "scenes.0.tiles.1.3.overlay" "\"lava\"" ]
+      case "tile object unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][4]") ] [ set "scenes.0.tiles.1.4.object" "\"lava\"" ]
       case "tile soilState unknown" [ Parse "scenes.0.tiles.1.5.soilState: Invalid enum value. Expected 'dry' | 'watered' | 'fertilized' | 'tilled', received 'mud'" ] [ set "scenes.0.tiles.1.5.soilState" "\"mud\"" ]
       case "crop quality and mutation unknown"
-          [ Parse "scenes.0.tiles.2.2.crop.quality: Invalid enum value."; Parse "scenes.0.tiles.2.2.crop.mutation: Invalid enum value." ]
+          [ Problem("scene.unknownQuality", "scenes[0].tiles[2][2]"); Problem("scene.unknownMutation", "scenes[0].tiles[2][2]") ]
           [ set "scenes.0.tiles.2.2.crop" (crop "wheat" "legendary" "weird") ]
       nullCase "crop quality missing" "scenes.0.tiles.2.2.crop.quality: Expected string, received null" [ set "scenes.0.tiles.2.2.crop" (crop "wheat" "normal" ""); set "scenes.0.tiles.2.2.crop.quality" "null" ]
       case "player direction unknown" [ Parse "player.direction: Invalid enum value. Expected 'up' | 'down' | 'left' | 'right', received 'north'" ] [ set "player.direction" "\"north\"" ]
-      case "item type unknown" [ Parse "items.0.type: Invalid enum value." ] [ set "items.0.type" "\"weapon\"" ]
-      case "item toolType unknown" [ Parse "items.0.toolType: Invalid enum value." ] [ set "items.0.toolType" "\"laser\"" ]
+      case "item type unknown" [ Problem("item.unknownCategory", "items[0].type") ] [ set "items.0.type" "\"weapon\"" ]
+      case "item toolType unknown" [ Problem("item.unknownTool", "items[0].toolType") ] [ set "items.0.toolType" "\"laser\"" ]
       case "item toolTier zero" [ Parse "items.0.toolTier: Number must be greater than 0" ] [ set "items.0.toolTier" "0" ]
       case "item toolTier fractional" [ Parse "items.1.toolTier: Expected integer, received 1.5" ] [ set "items.1.toolTier" "1.5" ]
       case "npc movePattern unknown" [ Parse "npcs.0.movePattern: Invalid enum value." ] [ set "npcs.0.movePattern" "\"fly\"" ]
@@ -151,7 +152,7 @@ let private parseCases =
             Parse "events.0.outcomes.1.radius: Expected integer, received 2.5"
             Parse "events.0.outcomes.2.radius: Number must be between 0 and 10" ]
           [ addEvent "" """{"type":"waterArea","radius":11},{"type":"waterArea","radius":2.5},{"type":"waterArea","radius":-1}""" ]
-      case "changeTile newTileType unknown" [ Parse "events.0.outcomes.0.newTileType: Invalid enum value." ]
+      case "changeTile newTileType unknown" [ Problem("outcome.unknownTerrain", "events[0].outcomes[0].newTileType") ]
           [ addEvent "" """{"type":"changeTile","tileX":1,"tileY":1,"newTileType":"lava"}""" ]
       { case "outcome amount not finite"
             [ Parse "events.0.outcomes.1.amount: Number must be finite"; Parse "events.0.outcomes.2.amount: Number must be finite" ]
@@ -178,7 +179,7 @@ let private parseCases =
             Parse "nodeTypes.0.respawnDays: Number must be greater than 0" ]
           [ set "nodeTypes.0.health" "0"; set "nodeTypes.0.requiredToolTier" "1.5"; set "nodeTypes.0.respawnDays" "0" ]
       case "node type health fractional" [ Parse "nodeTypes.1.health: Expected integer, received 2.5" ] [ set "nodeTypes.1.health" "2.5" ]
-      case "node type requiredTool" [ Parse "nodeTypes.0.requiredTool: Invalid enum value." ] [ set "nodeTypes.0.requiredTool" "\"spoon\"" ]
+      case "node type requiredTool" [ Problem("nodeType.unknownTool", "nodeTypes[0].requiredTool") ] [ set "nodeTypes.0.requiredTool" "\"spoon\"" ]
       nullCase "node type requiredTool missing" "nodeTypes.1.requiredTool: Expected string, received null" [ set "nodeTypes.1.requiredTool" "null" ]
       case "recipe numbers"
           [ Parse "recipes.0.processingMinutes: Number must be greater than or equal to 0"

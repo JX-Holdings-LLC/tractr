@@ -36,7 +36,8 @@ module internal ChecksVocabulary =
     /// Tiles naming a terrain, crop quality or mutation the game lacks: one problem per scene
     /// and missing id, at its first tile.
     let private tiles (context: Context) (sink: Sink) =
-        for scene in context.Project.Scenes do
+        context.Project.Scenes
+        |> List.iteri (fun s scene ->
             let reported = HashSet<string>()
             scene.Tiles
             |> List.iteri (fun y row ->
@@ -46,7 +47,7 @@ module internal ChecksVocabulary =
                         if reported.Add(code + "\u0000" + id) then
                             sink.Error(
                                 code,
-                                sprintf "scenes[%s].tiles[%d][%d]" scene.Id y x,
+                                sprintf "scenes[%d].tiles[%d][%d]" s y x,
                                 sprintf "Scene \"%s\" has tiles of missing %s \"%s\" (first at %d,%d)" scene.Name what id x y,
                                 Some(NavigationTarget.Scene(scene.Id, x, y)))
                     let terrain (id: string) = if id.Length > 0 && not (context.TerrainIds.Contains id) then report "scene.unknownTerrain" "terrain" id
@@ -62,7 +63,7 @@ module internal ChecksVocabulary =
                         | Some mutation when mutation.Length > 0 && not (context.MutationIds.Contains mutation) ->
                             report "scene.unknownMutation" "crop mutation" mutation
                         | _ -> ()
-                    | None -> ()))
+                    | None -> ())))
 
     let private items (context: Context) (sink: Sink) =
         let p = context.Project
