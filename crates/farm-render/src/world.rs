@@ -20,7 +20,7 @@ use crate::css_color::{self, Color};
 use crate::draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
 use crate::images::{ImageId, ImageStore};
 use crate::num::{cs_clamp, cs_compare, cs_max, cs_min, round_half_even, to_byte, to_int};
-use crate::snapshot::{SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot};
+use crate::snapshot::{SnapshotEmote, SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot};
 use std::sync::Arc;
 
 const BACKGROUND_TINT: Color = Color::rgba(0x1a, 0x1a, 0x2e, 0x10);
@@ -46,6 +46,24 @@ pub fn build_world_into(
     images.begin_frame();
     let mut builder = Builder::new(list, snapshot, art, images);
     builder.world();
+}
+
+/// The glyph and colour of a cutscene emote (`farm_sim::schema::emotes::ALL`); a symbol the
+/// font lacks falls back to plain text, an unknown emote to an ellipsis.
+fn emote_glyph(emote: &str) -> (&'static str, &'static str) {
+    let (glyph, fallback, color) = match emote {
+        "exclaim" => ("!", "!", "#d64545"),
+        "question" => ("?", "?", "#3b6fd6"),
+        "heart" => ("\u{2665}", "<3", "#e0457b"),
+        "music" => ("\u{266a}", "~", "#7a4fd6"),
+        "anger" => ("\u{203c}", "!!", "#b02020"),
+        "sweat" => ("\u{2026}", "...", "#3f9fd0"),
+        "sleep" => ("Zz", "Zz", "#5a6b8c"),
+        "idea" => ("\u{2605}", "*", "#e0a400"),
+        _ => ("\u{2026}", "...", "#555555"),
+    };
+    let glyph = if crate::text::font(FontId::Bold).covers(glyph) { glyph } else { fallback };
+    (glyph, color)
 }
 
 /// Trees and weeds take the seasonal foliage tint; rocks and ores don't.
@@ -328,8 +346,9 @@ impl<'a, 'l> Builder<'a, 'l> {
             y += 1;
         }
         for npc in &snapshot.npcs {
-            let px = entity_pixel_origin(npc.x, padding, pitch);
-            let py = entity_pixel_origin(npc.y, padding, pitch);
+            // A cutscene walks NPCs between tiles (pixel override); otherwise they stand on one.
+            let px = npc.pixel_x.unwrap_or_else(|| entity_pixel_origin(npc.x, padding, pitch));
+            let py = npc.pixel_y.unwrap_or_else(|| entity_pixel_origin(npc.y, padding, pitch));
             let seq = drawables.len();
             drawables.push(Drawable {
                 sort_y: py + ts,
@@ -423,6 +442,18 @@ impl<'a, 'l> Builder<'a, 'l> {
             if let Some(overlay) = overlay {
                 let (origin_x, origin_y) = camera.map_or((0.0, 0.0), |camera| (camera.x, camera.y));
                 self.weather(overlay, tick, origin_x, origin_y, view_width, view_height, world_rect);
+            }
+        }
+
+        // Cutscene emotes (M2), above the atmosphere like the pops: a bubble over the head.
+        if let Some(emotes) = &snapshot.emotes {
+            for emote in emotes {
+                let (cx, top) = if emote.player {
+                    (player_x + (ts / 2.0), player_y)
+                } else {
+                    (padding + (emote.x * pitch), padding + ((emote.y - 0.5) * pitch))
+                };
+                self.emote_bubble(emote, cx, top);
             }
         }
 
@@ -684,6 +715,46 @@ impl<'a, 'l> Builder<'a, 'l> {
             radius: 2.0,
             color: parse(canvas2d::NPC_BORDER_COLOR),
             width: 1.0,
+        });
+    }
+
+    /// A cutscene emote: a rounded bubble with the emote's glyph, centred on `cx` above a
+    /// character whose tile starts at `top` (built-in characters stand half a tile taller). It
+    /// pops in over the first eighth of its time and fades over the last.
+    fn emote_bubble(&mut self, emote: &SnapshotEmote, cx: f64, top: f64) {
+        let ts = self.ts;
+        let progress = cs_clamp(emote.progress, 0.0, 1.0);
+        let scale = 0.6 + (0.4 * cs_min(1.0, progress * 8.0));
+        let opacity = cs_min(1.0, (1.0 - progress) * 8.0);
+        let (glyph, color) = emote_glyph(&emote.emote);
+        let size = (ts * 0.62).floor() * scale;
+        let bottom = top - (ts * 0.55);
+        let bubble = rect(cx - (size / 2.0), bottom - size, size, size);
+        let radius = (size * 0.3) as f32;
+        self.push(DrawCmd::FillCircle {
+            cx: cx as f32,
+            cy: (bottom + (ts * 0.04)) as f32,
+            radius: (ts * 0.06 * scale) as f32,
+            color: parse("#ffffff").with_opacity(opacity),
+        });
+        self.push(DrawCmd::FillRoundRect { rect: bubble, radius, color: parse("#ffffff").with_opacity(opacity) });
+        self.push(DrawCmd::StrokeRoundRect {
+            rect: bubble,
+            radius,
+            color: parse("#00000070").with_opacity(opacity),
+            width: 1.0,
+        });
+        let text_size = (size * 0.7) as f32;
+        self.push(DrawCmd::Text {
+            text: glyph.to_owned(),
+            x: cx as f32,
+            // Baseline: the glyph's cap height centred in the bubble.
+            y: ((bottom - (size / 2.0)) + (f64::from(text_size) * 0.36)) as f32,
+            font: FontId::Bold,
+            size: text_size,
+            color: parse(color).with_opacity(opacity),
+            stroke: None,
+            align: TextAlign::Center,
         });
     }
 

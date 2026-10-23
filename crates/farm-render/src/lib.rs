@@ -50,8 +50,9 @@ pub use images::{Image, ImageError, ImageId, ImageStore};
 pub use raster::{encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
 pub use shell::{editor_snapshot, shell_snapshot, SnapshotOptions};
 pub use snapshot::{
-    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEntity, SnapshotItem, SnapshotMachine, SnapshotNode,
-    SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem, SnapshotMachine,
+    SnapshotNode, SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow,
+    WorldSnapshot,
 };
 #[cfg(feature = "raster")]
 pub use tiny_skia;

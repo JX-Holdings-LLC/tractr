@@ -813,7 +813,14 @@ impl Player {
         let scene = session.current_scene()?;
         let (ix, iy) = session.interpolated_player();
         let (px, py) = (PADDING + (ix - 0.5) * TILE_SIZE, PADDING + (iy - 0.5) * TILE_SIZE);
-        let target = (px + TILE_SIZE / 2.0, py + TILE_SIZE / 2.0);
+        // A cutscene's camera (M2) looks where it pans; otherwise the camera follows the player.
+        let target = match session.cutscene_view().and_then(|view| view.camera) {
+            Some(camera) => (
+                PADDING + units::position_to_tiles(camera.x) * TILE_SIZE,
+                PADDING + units::position_to_tiles(camera.y) * TILE_SIZE,
+            ),
+            None => (px + TILE_SIZE / 2.0, py + TILE_SIZE / 2.0),
+        };
         let world = session.world_size();
         let options = SnapshotOptions {
             tile_size: TILE_SIZE,
@@ -841,7 +848,8 @@ impl Player {
             }
         }
         game.graphics.refresh_live_state(content, state);
-        let moving = state.player.move_intent.dx != 0 || state.player.move_intent.dy != 0;
+        // Walking on its own or in a cutscene (`shell_snapshot` knows both).
+        let moving = snapshot.player.moving;
         apply_graphics(&mut snapshot, &game.graphics, scene, state.clock.tick as f64, moving);
         Some((snapshot, world, target))
     }

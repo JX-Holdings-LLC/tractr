@@ -7,9 +7,10 @@
 use crate::builtin_art::BuiltinArt;
 use crate::num::to_int;
 use crate::snapshot::{
-    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEntity, SnapshotItem, SnapshotMachine, SnapshotNode,
-    SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem, SnapshotMachine,
+    SnapshotNode, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
 };
+use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
 use farm_sim::schema::{
     directions, soil_states, tile_types, AtmosphereSettings, GameContent, GameProject, GameState, Scene,
@@ -218,6 +219,9 @@ pub fn shell_snapshot(
     options: &SnapshotOptions,
 ) -> WorldSnapshot {
     let tiles = build_tiles(scene, content, |_, _| false, options.tile_window);
+    // A cutscene (M2) turns and walks characters and shows emotes over them.
+    let cutscene = (scene.id == state.player.scene_id).then(|| cutscenes::view(content, state)).flatten();
+    let directed = |actor: &str| cutscene_actor(cutscene.as_ref(), actor);
 
     let mut npcs = Vec::new();
     for npc in &content.npcs {
@@ -229,14 +233,23 @@ pub fn shell_snapshot(
         let (x, y) = (tiles_of(x), tiles_of(y));
         // A scheduled or patrolling NPC with path steps left is walking toward the next step.
         let next = live.and_then(|live| live.path.as_ref()).and_then(|path| path.first());
+        let (direction, moving) = directed(&npc.id).unwrap_or_else(|| {
+            let direction =
+                next.map_or(directions::DOWN, |next| direction_toward(x, y, f64::from(next.x), f64::from(next.y)));
+            (direction.to_owned(), next.is_some())
+        });
+        // NPCs stand on whole tiles, except while a cutscene walks them: a fractional position
+        // is their tile corner, not a centre (`entity_pixel_origin` reads it as one).
+        let between_tiles = x.fract() != 0.0 || y.fract() != 0.0;
+        let pixel = |coord: f64| between_tiles.then_some(options.padding + (coord * options.tile_size));
         npcs.push(SnapshotEntity {
             x,
             y,
             appearance: Some(npc.appearance.clone()),
-            direction: next
-                .map_or(directions::DOWN, |next| direction_toward(x, y, f64::from(next.x), f64::from(next.y)))
-                .to_owned(),
-            moving: next.is_some(),
+            direction,
+            moving,
+            pixel_x: pixel(x),
+            pixel_y: pixel(y),
             ..SnapshotEntity::default()
         });
     }
@@ -278,12 +291,32 @@ pub fn shell_snapshot(
             direction: state.player.direction.clone(),
             pixel_x: options.pixel_x,
             pixel_y: options.pixel_y,
-            moving: state.player.move_intent.dx != 0 || state.player.move_intent.dy != 0,
+            moving: state.player.move_intent.dx != 0
+                || state.player.move_intent.dy != 0
+                || directed(cutscenes::PLAYER).is_some_and(|(_, moving)| moving),
             ..SnapshotEntity::default()
         },
         pops: None,
+        emotes: cutscene.as_ref().filter(|view| !view.emotes.is_empty()).map(|view| {
+            view.emotes
+                .iter()
+                .map(|emote| SnapshotEmote {
+                    x: tiles_of(emote.x),
+                    y: tiles_of(emote.y),
+                    player: emote.actor == cutscenes::PLAYER,
+                    emote: emote.emote.clone(),
+                    progress: f64::from(emote.progress) / f64::from(units::MILLI_ONE),
+                })
+                .collect()
+        }),
         tile_window: options.tile_window,
     }
+}
+
+/// The direction and walk of an actor the running cutscene turns or walks.
+fn cutscene_actor(view: Option<&CutsceneView>, actor: &str) -> Option<(String, bool)> {
+    let actor = view?.actors.iter().find(|known| known.actor == actor)?;
+    Some((actor.direction.clone(), actor.moving))
 }
 
 /// Port of `ShellSnapshot.BuildEditorSnapshot`: the authored `scene` of `project` with 1px grid
@@ -348,6 +381,7 @@ pub fn editor_snapshot(
             ..SnapshotEntity::default()
         },
         pops: None,
+        emotes: None,
         tile_window: None,
     }
 }

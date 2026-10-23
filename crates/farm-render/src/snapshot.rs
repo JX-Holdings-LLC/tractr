@@ -180,7 +180,8 @@ pub struct SnapshotEntity {
     pub direction: String,
     /// True while walking (drives the walk cycle; idle frame otherwise).
     pub moving: bool,
-    /// Player only: pixel-space override for interpolated movement (play mode).
+    /// Pixel-space override of the drawn top-left corner: the player's interpolated movement
+    /// (play mode), an NPC a cutscene walks between tiles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pixel_x: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,6 +220,21 @@ pub struct SnapshotPop {
     pub color: Option<String>,
     /// 0 (just spawned) → 1 (expired); drives rise and fade.
     pub age: f64,
+}
+
+/// An emote over a character in a cutscene (M2): a bubble with the emote's glyph.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotEmote {
+    /// The character's centre, in tiles.
+    pub x: f64,
+    pub y: f64,
+    /// Over the player: the bubble follows the player as drawn ([`SnapshotEntity::pixel_x`]).
+    pub player: bool,
+    /// One of `farm_sim::schema::emotes::ALL`.
+    pub emote: String,
+    /// 0 (just shown) → 1 (gone); drives the pop-in and the fade-out.
+    pub progress: f64,
 }
 
 /// Camera viewport in world-pixel space. When present the renderer translates the world by
@@ -346,6 +362,9 @@ pub struct WorldSnapshot {
     /// Transient overlay effects; omitted under reduced motion.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pops: Option<Vec<SnapshotPop>>,
+    /// Cutscene emotes over characters (M2); `None` outside cutscenes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emotes: Option<Vec<SnapshotEmote>>,
     /// The tiles actually built, when the snapshot holds only part of the scene
     /// ([`crate::SnapshotOptions::tile_window`]); `None`: every tile. Never serialized.
     #[serde(skip)]
@@ -370,6 +389,7 @@ impl Default for WorldSnapshot {
             npcs: Vec::new(),
             player: SnapshotEntity::default(),
             pops: None,
+            emotes: None,
             tile_window: None,
         }
     }
