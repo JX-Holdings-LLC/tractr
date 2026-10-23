@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.7.0
+
+Roadmap milestones M1 (a data-driven world vocabulary) and M2 (sound and
+cutscenes). See the [Creator Guide](docs/CREATOR-GUIDE.md#your-games-world).
+
+- **Your game's world is content.** Terrains, tools, item kinds, crop quality
+  tiers and crop mutations are definitions a game can add to or replace, in
+  new Content categories. The classic seven tile types, six tools, eight item
+  types, four tiers and three mutations are the built-in definitions and play
+  exactly as before.
+  - **Terrains** carry their rules: the layer they paint on, colour and art,
+    walkable, plantable, water source, fishable, blocks light, hazard energy,
+    sheltered from the weather, and which tool action turns them into what.
+  - **Tools** have an action (water, till, harvest, fish, break, transform,
+    place, plant), a play-mode key, an energy cost, an area per tier and the
+    skill they train.
+  - **Item kinds** say what their items do: plant, fertilize, equip as a
+    tool, be eaten for energy (new: eating), be placed, gifted or sold.
+  - **Crop qualities and mutations** have their own price, yield and chance
+    multipliers, stars and colours.
+  - **Growth requirements**: crops can need terrains, scene tags,
+    fertilizers, light or dark, a temperature range (scenes and seasons have
+    temperatures) and neighbouring crops, terrain or water.
+  - **Atmosphere**: the day/night tint and foliage tint per game, season and
+    scene; weather overlays as definitions (rain, snow, dust or a tint); the
+    length of a day.
+  - **Words**: the game's money format, energy word and skill names, per
+    language, in the HUD, shops, inventory and quests.
+  - Problems reports anything that names a terrain, tool, kind or tier the
+    game doesn't have, tool keys that clash with movement or menus, and
+    requirements that can't be met.
+- **Custom sound and music.** Import OGG and WAV files as sound or music
+  assets; they ship in the exported game. `playSound` plays a sound asset;
+  music is chosen by the new `playMusic` outcome or a cutscene, then the
+  day's festival, the weather, the scene and the season, else the built-in
+  music plays. The web demo plays them too.
+- **Cutscenes.** A new content type: steps that run over time (say, choice,
+  jump, move, face, emote, wait, camera, fade, music, sound, outcomes, end),
+  started by the `startCutscene` outcome. The player advances lines, picks
+  answers and can skip a skippable cutscene.
+- **Pack minigames** get pointer input (`input.pointer`) and can play sounds
+  (`sounds` in the `update` answer); see [docs/PLUGINS.md](docs/PLUGINS.md#minigames).
+- **Projects are schema version 2.** Version 1 projects open as they are; a
+  0.6 editor refuses a version 2 project instead of dropping what it doesn't
+  know. Saves stay version 5 and load as before.
+- **For contributors:** `farm_sim::vocabulary` and the `EngineContext`
+  lookups (`terrain`, `tool`, `item_category`, `crop_qualities`, …) replace
+  the fixed tables; `content_builtin::{tool_definitions, quality_multipliers,
+  mutation_multipliers}` and `crops::calculate_harvest_value` are gone.
+  New crates in the player: lewton, ogg and hound. Goldens, parity fixtures,
+  cartridges and snapshots are re-recorded: replays keep their effects and
+  states, and every state hash moves (two new optional state fields).
+
 ## 0.6.1
 
 - **New license: the Business Source License 1.1.** Tractr is now licensed by
