@@ -4,6 +4,7 @@
 //! packs.
 
 use super::graphics::{AnimationClip, VisualRef};
+use super::vocabulary::GrowthRequirements;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -53,6 +54,9 @@ pub struct CropDefinition {
     /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub harvest_item_id: Option<String>,
+    /// What it needs beyond water and its seasons (M1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requirements: Option<GrowthRequirements>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -94,6 +98,9 @@ pub struct CustomCropDefinition {
     /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub harvest_item_id: Option<String>,
+    /// What it needs beyond water and its seasons (M1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub requirements: Option<GrowthRequirements>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -106,7 +113,7 @@ pub struct Item {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visual: Option<VisualRef>,
     pub description: String,
-    /// One of [`super::item_types`].
+    /// An item category id (the built-in ones are [`super::item_types`]).
     pub r#type: String,
     pub stackable: bool,
     #[serde(with = "crate::units::count")]
@@ -133,6 +140,9 @@ pub struct Item {
     /// Consume one of the item on a successful use.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub consume_on_use: Option<bool>,
+    /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::energy::opt")]
+    pub energy: Option<i32>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

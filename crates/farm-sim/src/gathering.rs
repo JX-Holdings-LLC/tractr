@@ -7,7 +7,7 @@ use crate::engine_types::{Effects, EngineContext};
 use crate::hooks::{GatherDrop, HookEvent, ResourceGatherHookPayload};
 use crate::messages;
 use crate::rng::Rng;
-use crate::schema::{tool_types, GameState, NodeTypeDefinition, Tile, TileNode};
+use crate::schema::{GameState, NodeTypeDefinition, Tile, TileNode};
 use crate::{inventory, mines, quests, skills};
 
 /// TS `NodeStrikeOutcome` minus the state (updated in place).
@@ -60,7 +60,7 @@ pub fn strike_node(
         return NodeStrikeOutcome::default();
     };
 
-    if let Some(refused) = tool_refusal(definition, tool_type, tool_tier) {
+    if let Some(refused) = tool_refusal(ctx, definition, tool_type, tool_tier) {
         return NodeStrikeOutcome { effects: vec![refused], struck: false };
     }
 
@@ -87,8 +87,9 @@ pub fn strike_node(
     }
 
     if remaining <= 0 {
-        // Skill XP (M4g): axes/scythes train foraging, pickaxes train mining.
-        let skill = if tool_type == tool_types::PICKAXE { "mining" } else { "foraging" };
+        // Skill XP (M4g): each tool trains its skill (the pickaxe mining), foraging by default.
+        let skill = ctx.tool(tool_type).and_then(|tool| tool.skill.clone()).unwrap_or_else(|| "foraging".to_owned());
+        let skill = skill.as_str();
         effects.extend(skills::grant_xp(ctx, state, skill, 5));
 
         // Mine floors: breaking a rock can reveal the ladder down (M4f).
@@ -99,19 +100,25 @@ pub fn strike_node(
 }
 
 /// Why the tool cannot strike a node of `definition` (the wrong tool, or too low a tier).
-fn tool_refusal(definition: &NodeTypeDefinition, tool_type: &str, tool_tier: i32) -> Option<Effect> {
+fn tool_refusal(ctx: &EngineContext, definition: &NodeTypeDefinition, tool_type: &str, tool_tier: i32) -> Option<Effect> {
     if definition.required_tool != tool_type {
         return Some(Effect::say(
             message_levels::INFO,
             messages::NODE_NEEDS_TOOL
-                .with_args(vec![messages::Arg::text(&definition.name), messages::tool_noun(&definition.required_tool)]),
+                .with_args(vec![
+                    messages::Arg::text(&definition.name),
+                    messages::tool_noun_in(ctx, &definition.required_tool),
+                ]),
         ));
     }
     if tool_tier < definition.required_tool_tier {
         return Some(Effect::say(
             message_levels::INFO,
             messages::TOOL_TOO_WEAK
-                .with_args(vec![messages::tool_noun(tool_type), messages::Arg::text(definition.name.to_lowercase())]),
+                .with_args(vec![
+                    messages::tool_noun_in(ctx, tool_type),
+                    messages::Arg::text(definition.name.to_lowercase()),
+                ]),
         ));
     }
     None

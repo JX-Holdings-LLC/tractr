@@ -95,8 +95,12 @@ pub fn handle_give_gift(ctx: &EngineContext, state: &mut GameState, item_id: &st
         return Vec::new();
     };
 
-    if !state.player.inventory.iter().any(|s| s.item.id == item_id) {
+    let Some(held) = state.player.inventory.iter().find(|s| s.item.id == item_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::DONT_HAVE_ITEM)];
+    };
+    // Some kinds of item (M1; tools in the built-in ones) are not gifts.
+    if ctx.item_category(&held.item.r#type).is_some_and(|category| !category.giftable) {
+        return vec![Effect::say(message_levels::INFO, messages::CANT_GIFT.with(&[&held.item.name]))];
     }
 
     let social = state.social.get(&npc_def.id).cloned().unwrap_or(NpcSocialState {

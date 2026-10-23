@@ -30,7 +30,10 @@ pub fn calendar_view(content: &farm_sim::GameContent, state: &GameState) -> Cale
         season_name: season.map(|s| s.name.clone()),
         season_days: date.season.days,
         day_of_season: date.day_of_season,
-        time_text: farm_sim::game_time::format_time_of_day(state.clock.time_minutes),
+        time_text: farm_sim::game_time::format_time_of_day_in(
+            content.settings.time.minutes_per_day(),
+            state.clock.time_minutes,
+        ),
         seasons: farm_sim::game_time::calendar_seasons(calendar),
     }
 }

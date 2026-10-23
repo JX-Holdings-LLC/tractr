@@ -5,31 +5,14 @@
 //! `tests/fsharp_parity.rs` and the F# `ParityTests` (docs/LANGUAGES.md "Two project pipelines").
 
 use crate::schema::{
-    AnimalSpeciesDefinition, CropDefinition, CropMultiTile, FishTable, FishTableEntry, Item, MachineTypeDefinition,
-    MineBand, MineRockWeight, NodeDrop, NodeTypeDefinition, RecipeDefinition, RecipeIngredient, RecipeSkillRequirement,
-    RecipeUnlock, ShopDefinition, ShopStockEntry,
+    crop_mutations, crop_qualities, item_types, tile_layers, tile_types, tool_actions, tool_types,
+    AnimalSpeciesDefinition, CropDefinition, CropMultiTile, CropMutationDefinition, CropQualityDefinition, FishTable,
+    FishTableEntry, Item, ItemCategoryDefinition, MachineTypeDefinition, MineBand, MineRockWeight, NodeDrop,
+    NodeTypeDefinition, RecipeDefinition, RecipeIngredient, RecipeSkillRequirement, RecipeUnlock, ShopDefinition,
+    ShopStockEntry, TerrainDefinition, TerrainTransform, ToolArea, ToolDefinition,
 };
 use crate::units;
 use indexmap::IndexMap;
-use serde::{Deserialize, Serialize};
-
-/// TS `ToolDefinition` (content-builtin.ts).
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ToolDefinition {
-    /// One of [`crate::schema::tool_types`].
-    pub r#type: String,
-    pub name: String,
-    pub description: String,
-    /// 'till' | 'water' | 'harvest' | 'chop' | 'mine' | 'fish'.
-    pub action: String,
-    /// Tile types ([`crate::schema::tile_types`]).
-    pub valid_targets: Vec<String>,
-    #[serde(with = "crate::units::energy")]
-    pub energy_cost: i32,
-    #[serde(with = "crate::units::int")]
-    pub power_level: i32,
-}
 
 fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
@@ -91,87 +74,157 @@ pub fn crop_definitions() -> IndexMap<String, CropDefinition> {
     definitions.into_iter().map(|definition| (definition.id.clone(), definition)).collect()
 }
 
-/// Harvest value multipliers in thousandths, by [`crate::schema::crop_qualities`].
-const QUALITY_MULTIPLIERS: [(&str, u32); 4] = [("normal", 1000), ("silver", 1250), ("gold", 1500), ("iridium", 2000)];
-
-/// Harvest value multipliers in thousandths, by mutation ('none' | 'giant' | 'golden' |
-/// 'ancient').
-const MUTATION_MULTIPLIERS: [(&str, u32); 4] = [("none", 1000), ("giant", 2500), ("golden", 3000), ("ancient", 4000)];
-
-/// Keyed by [`crate::schema::crop_qualities`].
-/// Harvest value multipliers in thousandths.
-pub fn quality_multipliers() -> IndexMap<String, u32> {
-    QUALITY_MULTIPLIERS.into_iter().map(|(key, value)| (key.to_owned(), value)).collect()
-}
-
-/// The harvest value multiplier (thousandths) of a crop quality; `None` for an unknown one.
-/// The engine's lookup: [`quality_multipliers`] without building the map.
-pub fn quality_multiplier(quality: &str) -> Option<u32> {
-    QUALITY_MULTIPLIERS.into_iter().find(|(key, _)| *key == quality).map(|(_, value)| value)
-}
-
-/// Keyed by 'none' | 'giant' | 'golden' | 'ancient'.
-/// Harvest value multipliers in thousandths.
-pub fn mutation_multipliers() -> IndexMap<String, u32> {
-    MUTATION_MULTIPLIERS.into_iter().map(|(key, value)| (key.to_owned(), value)).collect()
-}
-
-/// The harvest value multiplier (thousandths) of a mutation; `None` for an unknown one.
-pub fn mutation_multiplier(mutation: &str) -> Option<u32> {
-    MUTATION_MULTIPLIERS.into_iter().find(|(key, _)| *key == mutation).map(|(_, value)| value)
-}
-
 pub const DAYS_PER_SEASON: u32 = 28;
 pub const SEASON_ORDER: &[&str] = &["spring", "summer", "fall", "winter"];
 
-fn tool_definition(
-    r#type: &str,
-    name: &str,
-    description: &str,
-    action: &str,
-    valid_targets: &[&str],
-    energy_cost: i32,
-    power_level: i32,
-) -> ToolDefinition {
-    ToolDefinition {
-        r#type: r#type.to_owned(),
+fn terrain(id: &str, name: &str, layer: &str, color: &str) -> TerrainDefinition {
+    TerrainDefinition {
+        id: id.to_owned(),
         name: name.to_owned(),
-        description: description.to_owned(),
-        action: action.to_owned(),
-        valid_targets: strings(valid_targets),
-        energy_cost: units::points(energy_cost),
-        power_level,
+        layer: layer.to_owned(),
+        color: color.to_owned(),
+        ..TerrainDefinition::default()
     }
 }
 
-/// The built-in tools: type, name, description, action, valid targets, energy cost (points),
-/// power level.
-type ToolRow = (&'static str, &'static str, &'static str, &'static str, &'static [&'static str], i32, i32);
+/// The built-in terrains (M1): the seven tile types of a game without its own.
+pub fn terrains() -> Vec<TerrainDefinition> {
+    let tilled = || {
+        vec![TerrainTransform { action: tool_actions::TILL.to_owned(), tool: None, into: tile_types::SOIL.to_owned() }]
+    };
+    vec![
+        TerrainDefinition { transforms: tilled(), ..terrain(tile_types::GRASS, "Grass", tile_layers::BACKGROUND, "#5b9a4a") },
+        TerrainDefinition { plantable: true, ..terrain(tile_types::SOIL, "Soil", tile_layers::BACKGROUND, "#7a6545") },
+        TerrainDefinition {
+            water_source: true,
+            fishable: true,
+            ..terrain(tile_types::WATER, "Water", tile_layers::BACKGROUND, "#3075b0")
+        },
+        terrain(tile_types::PATH, "Path", tile_layers::OVERLAY, "#b5a48d"),
+        TerrainDefinition {
+            walkable: false,
+            blocks_light: true,
+            ..terrain(tile_types::WALL, "Wall", tile_layers::OBJECT, "#5e5a68")
+        },
+        terrain(tile_types::DOOR, "Door", tile_layers::OBJECT, "#8a6a3f"),
+        TerrainDefinition { transforms: tilled(), ..terrain(tile_types::FLOOR, "Floor", tile_layers::BACKGROUND, "#b5a48d") },
+    ]
+}
+
+/// The built-in tools: id, name, description, action, key, energy cost (points), whether the
+/// area widens at tier 2, skill.
+type ToolRow = (&'static str, &'static str, &'static str, &'static str, Option<&'static str>, i32, bool, Option<&'static str>);
 
 const TOOLS: [ToolRow; 6] = [
-    ("watering-can", "Watering Can", "Water crops to help them grow faster", "water", &["soil"], 2, 1),
-    ("hoe", "Hoe", "Till grass into farmable soil", "till", &["grass", "path"], 4, 1),
-    ("axe", "Axe", "Chop down trees and wooden obstacles", "chop", &["wall"], 6, 1),
-    ("pickaxe", "Pickaxe", "Break rocks and mine for ore", "mine", &["wall"], 8, 1),
-    ("scythe", "Scythe", "Harvest crops in a large area", "harvest", &["soil"], 5, 2),
-    ("fishing-rod", "Fishing Rod", "Catch fish from water tiles", "fish", &["water"], 3, 1),
+    (
+        tool_types::WATERING_CAN,
+        "Watering Can",
+        "Water crops to help them grow faster",
+        tool_actions::WATER,
+        Some("q"),
+        2,
+        true,
+        None,
+    ),
+    (tool_types::HOE, "Hoe", "Till grass into farmable soil", tool_actions::TILL, Some("t"), 4, true, None),
+    (tool_types::AXE, "Axe", "Chop down trees and wooden obstacles", tool_actions::BREAK, Some("r"), 6, false, None),
+    (
+        tool_types::PICKAXE,
+        "Pickaxe",
+        "Break rocks and mine for ore",
+        tool_actions::BREAK,
+        Some("f"),
+        8,
+        false,
+        Some("mining"),
+    ),
+    (tool_types::SCYTHE, "Scythe", "Harvest crops in a large area", tool_actions::HARVEST, Some("c"), 5, false, None),
+    (tool_types::FISHING_ROD, "Fishing Rod", "Catch fish from water tiles", tool_actions::FISH, None, 3, false, None),
 ];
 
-fn tool_from_row(
-    (r#type, name, description, action, valid_targets, energy_cost, power_level): ToolRow,
-) -> ToolDefinition {
-    tool_definition(r#type, name, description, action, valid_targets, energy_cost, power_level)
+fn tool_from_row((id, name, description, action, key, energy_cost, widens, skill): ToolRow) -> ToolDefinition {
+    let mut area = vec![ToolArea::default()];
+    if widens {
+        area.push(ToolArea { width: 3, length: 1 });
+    }
+    ToolDefinition {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        description: description.to_owned(),
+        action: action.to_owned(),
+        key: key.map(str::to_owned),
+        energy_cost: units::points(energy_cost),
+        area,
+        skill: skill.map(str::to_owned),
+        place_terrain: None,
+        extra: serde_json::Map::new(),
+    }
 }
 
-/// Keyed by [`crate::schema::tool_types`].
-pub fn tool_definitions() -> IndexMap<String, ToolDefinition> {
-    TOOLS.into_iter().map(|row| (row.0.to_owned(), tool_from_row(row))).collect()
+/// The built-in tools (M1): the six of a game without its own. Tier 2 waters and tills a row of
+/// three.
+pub fn tools() -> Vec<ToolDefinition> {
+    TOOLS.into_iter().map(tool_from_row).collect()
 }
 
-/// The built-in definition of one tool type (`None` for an unknown type): an entry of
-/// [`tool_definitions`] without building the others.
-pub fn tool_definition_of(tool_type: &str) -> Option<ToolDefinition> {
-    TOOLS.into_iter().find(|row| row.0 == tool_type).map(tool_from_row)
+/// The built-in item categories (M1): the eight item types of a game without its own.
+pub fn item_categories() -> Vec<ItemCategoryDefinition> {
+    let category = |id: &str, name: &str| ItemCategoryDefinition {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        ..ItemCategoryDefinition::default()
+    };
+    vec![
+        ItemCategoryDefinition { plantable: true, ..category(item_types::SEED, "Seed") },
+        ItemCategoryDefinition { equippable: true, giftable: false, ..category(item_types::TOOL, "Tool") },
+        category(item_types::CROP, "Crop"),
+        category(item_types::GIFT, "Gift"),
+        ItemCategoryDefinition { sellable: false, ..category(item_types::QUEST, "Quest item") },
+        ItemCategoryDefinition { fertilizer: true, ..category(item_types::FERTILIZER, "Fertilizer") },
+        category(item_types::MATERIAL, "Material"),
+        category(item_types::FISH, "Fish"),
+    ]
+}
+
+/// The built-in crop quality tiers (M1), ranked: id, name, price, yield and mutation-chance
+/// multipliers (thousandths), stars, colour.
+pub fn crop_qualities() -> Vec<CropQualityDefinition> {
+    let quality = |id: &str, name: &str, price: u32, yields: u32, mutation: u32, stars: u32, color: &str| {
+        CropQualityDefinition {
+            id: id.to_owned(),
+            name: name.to_owned(),
+            price_multiplier: price,
+            yield_multiplier: yields,
+            mutation_multiplier: mutation,
+            stars,
+            color: color.to_owned(),
+            ..CropQualityDefinition::default()
+        }
+    };
+    vec![
+        quality(crop_qualities::NORMAL, "Normal", 1000, 1000, 1000, 0, "#9a9a9a"),
+        quality(crop_qualities::SILVER, "Silver", 1250, 1100, 1200, 1, "#c0c8d0"),
+        quality(crop_qualities::GOLD, "Gold", 1500, 1300, 1500, 2, "#e8b830"),
+        quality(crop_qualities::IRIDIUM, "Iridium", 2000, 1500, 2000, 3, "#a050d0"),
+    ]
+}
+
+/// The built-in crop mutations (M1), in roll order (the rarest first): id, name, yield
+/// multiplier and share of the mutation chance (thousandths), colour.
+pub fn crop_mutations() -> Vec<CropMutationDefinition> {
+    let mutation = |id: &str, name: &str, yields: u32, share: u32, color: &str| CropMutationDefinition {
+        id: id.to_owned(),
+        name: name.to_owned(),
+        yield_multiplier: yields,
+        share,
+        color: color.to_owned(),
+        ..CropMutationDefinition::default()
+    };
+    vec![
+        mutation(crop_mutations::ANCIENT, "Ancient", 3000, 100, "#7a5ab0"),
+        mutation(crop_mutations::GOLDEN, "Golden", 2500, 200, "#e8b830"),
+        mutation(crop_mutations::GIANT, "Giant", 2000, 700, "#5b9a4a"),
+    ]
 }
 
 fn tool(id: &str, name: &str, description: &str, value: i64, tool_type: &str) -> Item {

@@ -4,6 +4,7 @@ use super::content::{Crop, Item};
 use super::crafting::TileMachine;
 use super::graphics::VisualRef;
 use super::nodes::TileNode;
+use super::settings::AtmosphereLook;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -106,6 +107,18 @@ pub struct Scene {
     // `Option` with a tag byte.
     #[serde(skip_serializing_if = "Option::is_none", serialize_with = "plain_bool")]
     pub generated: Option<bool>,
+    /// No daylight reaches its crops (caves), for crops that need light or dark (M1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dark: Option<bool>,
+    /// How warm it is, for crops with a temperature range (M1); absent: the season's.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub temperature: Option<i32>,
+    /// Free-form tags crops can require.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    /// Its own day/night and foliage tints (M1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub atmosphere: Option<AtmosphereLook>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -151,5 +164,15 @@ impl Scene {
     /// Is the scene sheltered from the weather ([`Scene::indoor`])?
     pub fn is_indoor(&self) -> bool {
         self.indoor == Some(true)
+    }
+
+    /// Does no daylight reach the scene ([`Scene::dark`])?
+    pub fn is_dark(&self) -> bool {
+        self.dark == Some(true)
+    }
+
+    /// Whether the scene carries `tag` ([`Scene::tags`]).
+    pub fn has_tag(&self, tag: &str) -> bool {
+        self.tags.as_deref().is_some_and(|tags| tags.iter().any(|t| t == tag))
     }
 }

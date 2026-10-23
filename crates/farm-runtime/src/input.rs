@@ -456,9 +456,21 @@ pub mod bindings {
     /// Keys that interact (talk, harvest, open, …).
     pub const INTERACT_KEYS: &[&str] = &["e", " ", "enter"];
 
-    /// Tool hotkeys → `useTool` tool type, in firing order.
+    /// The built-in tools' hotkeys → `useTool` tool type, in firing order. A game's tools carry
+    /// their own keys (`ToolDefinition::key`, M1); these are the built-in ones' ([`tool_keys`]).
     pub const TOOL_KEYS: &[(&str, &str)] =
         &[("q", "watering-can"), ("t", "hoe"), ("r", "axe"), ("f", "pickaxe"), ("c", "scythe")];
+
+    /// The game's tool hotkeys (lower case) → tool id, in the tools' order.
+    pub fn tool_keys(content: &GameContent) -> Vec<(String, &str)> {
+        farm_sim::vocabulary::tools(content)
+            .iter()
+            .filter_map(|tool| {
+                let key = tool.key.as_deref()?.trim().to_lowercase();
+                (!key.is_empty()).then_some((key, tool.id.as_str()))
+            })
+            .collect()
+    }
 
     pub const SLEEP_KEY: &str = "z";
     pub const INVENTORY_KEY: &str = "i";
@@ -525,9 +537,9 @@ pub mod bindings {
         if INTERACT_KEYS.iter().any(|key| input.just_pressed(key)) {
             commands.push(Command::Interact);
         }
-        for (key, tool) in TOOL_KEYS {
-            if input.just_pressed(key) {
-                commands.push(Command::UseTool { tool: (*tool).to_owned() });
+        for (key, tool) in tool_keys(content) {
+            if input.just_pressed(&key) {
+                commands.push(Command::UseTool { tool: tool.to_owned() });
             }
         }
         if input.just_pressed(SLEEP_KEY) {

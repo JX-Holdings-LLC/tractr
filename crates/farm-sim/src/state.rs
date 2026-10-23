@@ -18,6 +18,19 @@ use crate::world::{tiles, world_movement};
 use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 
+/// `builtins` with the project's definitions over them: one with a built-in's id takes its place,
+/// the others follow in project order (F# `ContentCompiler.overBuiltins`).
+pub fn over_builtins<T: Clone>(builtins: Vec<T>, own: Option<&[T]>, id: impl Fn(&T) -> &str) -> Vec<T> {
+    let mut merged = builtins;
+    for definition in own.unwrap_or_default() {
+        match merged.iter().position(|existing| id(existing) == id(definition)) {
+            Some(index) => merged[index] = definition.clone(),
+            None => merged.push(definition.clone()),
+        }
+    }
+    merged
+}
+
 /// Content derived from the project's own fields (built-in fallbacks + authored content) — before
 /// packs layer on top.
 pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
@@ -58,6 +71,15 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         minigames: project.minigames.clone(),
         scenes: project.scenes.clone(),
         start_scene_id: project.start_scene_id.clone(),
+        terrains: over_builtins(content_builtin::terrains(), project.terrains.as_deref(), |d| &d.id),
+        tools: over_builtins(content_builtin::tools(), project.tools.as_deref(), |d| &d.id),
+        item_categories: over_builtins(
+            content_builtin::item_categories(),
+            project.item_categories.as_deref(),
+            |d| &d.id,
+        ),
+        crop_qualities: over_builtins(content_builtin::crop_qualities(), project.crop_qualities.as_deref(), |d| &d.id),
+        crop_mutations: over_builtins(content_builtin::crop_mutations(), project.crop_mutations.as_deref(), |d| &d.id),
     }
 }
 
@@ -521,7 +543,7 @@ mod tests {
         assert!(!is_valid_settings(&settings));
 
         let mut settings = ProjectSettings::default();
-        settings.calendar.seasons.push(CalendarSeason { id: "mud".to_owned(), name: "Mud".to_owned(), days: 0 });
+        settings.calendar.seasons.push(CalendarSeason { id: "mud".to_owned(), name: "Mud".to_owned(), days: 0, temperature: None });
         assert!(!is_valid_settings(&settings));
 
         let settings = ProjectSettings { max_energy: i32::MAX, ..ProjectSettings::default() };

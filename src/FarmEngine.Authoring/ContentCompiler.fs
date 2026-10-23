@@ -27,6 +27,35 @@ module ContentCompiler =
             else
                 crops @ [ crop.Id, definition ])
 
+    /// `builtins` with the project's definitions over them: one with a built-in's id takes its
+    /// place, the others follow in project order (Rust `state::over_builtins`).
+    let overBuiltins (idOf: 'T -> string) (builtins: 'T list) (own: 'T list option) : 'T list =
+        (builtins, Option.defaultValue [] own)
+        ||> List.fold (fun merged definition ->
+            let id = idOf definition
+            if merged |> List.exists (fun existing -> idOf existing = id) then
+                merged |> List.map (fun existing -> if idOf existing = id then definition else existing)
+            else
+                merged @ [ definition ])
+
+    /// The game's terrains: the built-in ones with the project's over them.
+    let terrains (project: GameProject) = overBuiltins (fun (t: TerrainDefinition) -> t.Id) (Builtin.terrains ()) project.Terrains
+
+    /// The game's tools: the built-in ones with the project's over them.
+    let tools (project: GameProject) = overBuiltins (fun (t: ToolDefinition) -> t.Id) (Builtin.tools ()) project.Tools
+
+    /// The game's item categories: the built-in ones with the project's over them.
+    let itemCategories (project: GameProject) =
+        overBuiltins (fun (c: ItemCategoryDefinition) -> c.Id) (Builtin.itemCategories ()) project.ItemCategories
+
+    /// The game's crop quality tiers, ranked: the built-in ones with the project's over them.
+    let cropQualities (project: GameProject) =
+        overBuiltins (fun (q: CropQualityDefinition) -> q.Id) (Builtin.cropQualities ()) project.CropQualities
+
+    /// The game's crop mutations, in roll order: the built-in ones with the project's over them.
+    let cropMutations (project: GameProject) =
+        overBuiltins (fun (m: CropMutationDefinition) -> m.Id) (Builtin.cropMutations ()) project.CropMutations
+
     let private validDays (days: float) = integer days && days > 0.0
 
     let private validWeather (weather: WeatherConfig) =
@@ -88,7 +117,12 @@ module ContentCompiler =
           Actions = project.Actions
           Minigames = project.Minigames
           Scenes = project.Scenes
-          StartSceneId = project.StartSceneId }
+          StartSceneId = project.StartSceneId
+          Terrains = terrains project
+          Tools = tools project
+          ItemCategories = itemCategories project
+          CropQualities = cropQualities project
+          CropMutations = cropMutations project }
 
     let compile (project: GameProject) =
         let installs = project.ContentPacks

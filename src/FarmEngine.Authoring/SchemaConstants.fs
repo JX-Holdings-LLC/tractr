@@ -32,6 +32,94 @@ module TileTypes =
 
     let All : string list = [ Grass; Soil; Water; Path; Wall; Door; Floor ]
 
+/// The tile layers a terrain is painted on (`TerrainDefinition.Layer`).
+[<RequireQualifiedAccess>]
+module TileLayers =
+    [<Literal>]
+    let Background = "background"
+
+    [<Literal>]
+    let Overlay = "overlay"
+
+    [<Literal>]
+    let Object = "object"
+
+    let All : string list = [ Background; Overlay; Object ]
+
+/// What a tool does (`ToolDefinition.Action`).
+[<RequireQualifiedAccess>]
+module ToolActions =
+    [<Literal>]
+    let Water = "water"
+
+    [<Literal>]
+    let Till = "till"
+
+    [<Literal>]
+    let Harvest = "harvest"
+
+    [<Literal>]
+    let Fish = "fish"
+
+    [<Literal>]
+    let Break = "break"
+
+    [<Literal>]
+    let Transform = "transform"
+
+    [<Literal>]
+    let Place = "place"
+
+    [<Literal>]
+    let Plant = "plant"
+
+    let All : string list = [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant ]
+
+    /// The actions a terrain transform can name.
+    let Transforming : string list = [ Till; Transform; Break ]
+
+/// The light a crop needs (`GrowthRequirements.Light`).
+[<RequireQualifiedAccess>]
+module LightNeeds =
+    [<Literal>]
+    let Light = "light"
+
+    [<Literal>]
+    let Dark = "dark"
+
+    let All : string list = [ Light; Dark ]
+
+/// What a neighbour requirement counts (`NeighborRequirement.Kind`).
+[<RequireQualifiedAccess>]
+module NeighborKinds =
+    [<Literal>]
+    let Crop = "crop"
+
+    [<Literal>]
+    let Terrain = "terrain"
+
+    [<Literal>]
+    let Water = "water"
+
+    let All : string list = [ Crop; Terrain; Water ]
+
+/// How a weather overlay draws (`WeatherOverlayDefinition.Style`).
+[<RequireQualifiedAccess>]
+module OverlayStyles =
+    [<Literal>]
+    let Rain = "rain"
+
+    [<Literal>]
+    let Snow = "snow"
+
+    [<Literal>]
+    let Dust = "dust"
+
+    [<Literal>]
+    let None = "none"
+
+    let All : string list = [ Rain; Snow; Dust; None ]
+
 /// TS `DirectionSchema`.
 [<RequireQualifiedAccess>]
 module Directions =
@@ -397,7 +485,7 @@ module PrimitivesSchema =
 module SettingsSchema =
     let ClassicCalendarSeasons () : CalendarSeason list =
         PrimitivesSchema.ClassicSeasons
-        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0 })
+        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0; Temperature = None })
 
     let DefaultProjectSettings : ProjectSettings = ProjectSettings.Default
 
@@ -515,4 +603,5 @@ module MigrationsSchema =
               "summer", [ entry "sun" 7.0; entry "rain" 1.0; entry "storm" 2.0 ]
               "fall", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
               "winter", [ entry "sun" 5.0; entry "snow" 5.0 ] ]
+          Overlays = None
           Extra = [] }

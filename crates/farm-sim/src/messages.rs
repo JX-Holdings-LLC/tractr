@@ -166,6 +166,8 @@ catalog! {
     PICKED_UP = "msg.pickedUp" => "Picked up {0}";
     DONT_HAVE_ITEM = "msg.dontHaveItem" => "You don't have that item.";
     CANT_USE_LIKE_THAT = "msg.cantUseLikeThat" => "{0} can't be used like that.";
+    ATE = "msg.ate" => "Ate {0}.";
+    CANT_GIFT = "msg.cantGift" => "{0} can't be given as a gift.";
     // Tools and farming.
     NEED_TOOL = "msg.needTool" => "You need a {0}!";
     TOOL_BROKEN = "msg.toolBroken" => "Your {0} is broken! A shop can repair it.";
@@ -182,6 +184,11 @@ catalog! {
     CANT_GROW_IN_SEASON = "msg.cantGrowInSeason" => "{0} can't grow in {1}! It grows in {2}.";
     CANNOT_GROW_IN_SEASON = "msg.cannotGrowInSeason" => "{0} cannot grow in {1}!";
     NO_SPACE_FOR_CROP = "msg.noSpaceForCrop" => "Not enough space for this crop!";
+    CANT_PLANT_HERE = "msg.cantPlantHere" => "{0} can't be planted here.";
+    NEEDS_FERTILIZER = "msg.needsFertilizer" => "{0} needs {1} to be planted.";
+    TRANSFORMED_TERRAIN = "msg.transformedTerrain" => "{0} became {1}.";
+    CLEARED_TERRAIN = "msg.clearedTerrain" => "Cleared the {0}.";
+    HAZARD = "msg.hazard" => "{0} saps your energy!";
     PLANTED = "msg.planted" => "Planted {0}! Water it so it grows.";
     PLANTED_FERTILIZED = "msg.plantedFertilized" => "Planted {0}! (Fertilized) Water it so it grows.";
     NO_SEED_TO_PLANT = "msg.noSeedToPlant" => "You have no {0} to plant.";
@@ -252,6 +259,7 @@ catalog! {
     SHOP_DOESNT_BUY = "msg.shopDoesntBuy" => "{0} doesn't buy items.";
     NOT_THAT_MANY = "msg.notThatMany" => "You don't have that many.";
     SOLD = "msg.sold" => "Sold {0}x {1} for ${2}";
+    CANT_SELL = "msg.cantSell" => "{0} can't be sold.";
     SHOP_DOESNT_REPAIR = "msg.shopDoesntRepair" => "{0} doesn't repair tools.";
     CANT_REPAIR = "msg.cantRepair" => "That can't be repaired.";
     PERFECT_SHAPE = "msg.perfectShape" => "{0} is in perfect shape.";
@@ -353,6 +361,22 @@ pub fn tool_noun(tool_type: &str) -> Arg {
         _ => return Arg::Text(tool_type.replacen('-', " ", 1)),
     };
     Arg::Message(template.into())
+}
+
+/// The name of a tool as messages say it in a game: [`tool_noun`] for a built-in tool under its
+/// built-in name, else the game's name for it in lower case (or [`tool_noun`] of an unknown id).
+pub fn tool_noun_in(ctx: &crate::EngineContext, tool_type: &str) -> Arg {
+    match ctx.tool(tool_type) {
+        Some(tool) => {
+            let builtin = crate::vocabulary::builtin_tool(tool_type).is_some_and(|builtin| builtin.name == tool.name);
+            if builtin {
+                tool_noun(tool_type)
+            } else {
+                Arg::Text(tool.name.to_lowercase())
+            }
+        }
+        None => tool_noun(tool_type),
+    }
 }
 
 /// A season id as messages say it: a message for the built-in seasons, else the id.

@@ -323,7 +323,7 @@ module Defaults =
 
     /// ProjectSettingsEditor `addSeason`: 28 days, id from the name.
     let newSeason (calendar: CalendarConfig) : CalendarSeason =
-        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0 }
+        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0; Temperature = None }
 
     /// ProjectSettingsEditor `addFestival`: day 1 of the first season (none without seasons).
     let newFestival (project: GameProject) (calendar: CalendarConfig) : CalendarFestival option =

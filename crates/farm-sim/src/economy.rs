@@ -9,9 +9,9 @@ use crate::engine_types::{Effects, EngineContext};
 use crate::inventory;
 use crate::messages;
 use crate::quests;
-use crate::schema::{crop_qualities, DialogueOption, GameState, Item, ShopDefinition, ShopSession};
+use crate::schema::{DialogueOption, GameContent, GameState, Item, ShopDefinition, ShopSession};
 use crate::world::world_movement;
-use crate::{content_builtin, units};
+use crate::{units, vocabulary};
 
 /// The shop definition `shop_id`.
 pub fn find_shop<'a>(ctx: &'a EngineContext, shop_id: &str) -> Option<&'a ShopDefinition> {
@@ -85,14 +85,16 @@ fn purchased_today(state: &GameState, shop_id: &str, item_id: &str) -> Option<u3
 
 /// What `shop` pays for one normal-quality `item`: `floor(value × sellPriceMultiplier)` (the
 /// multiplier in thousandths).
-pub fn sell_unit_price(item: &Item, shop: &ShopDefinition) -> i64 {
-    sell_unit_price_with_quality(item, None, shop)
+pub fn sell_unit_price(content: &GameContent, item: &Item, shop: &ShopDefinition) -> i64 {
+    sell_unit_price_with_quality(content, item, None, shop)
 }
 
-/// The value of one `item` at a crop `quality` (`None`: normal): `floor(value × quality
-/// multiplier)`, the same multipliers the harvest message uses.
-pub fn quality_value(item: &Item, quality: Option<&str>) -> i64 {
-    let multiplier = quality.and_then(content_builtin::quality_multiplier).unwrap_or(units::MILLI_ONE);
+/// The value of one `item` at a crop `quality` (`None`: normal): `floor(value × the tier's price
+/// multiplier)`, the same multipliers the harvest message uses. An unknown tier pays the value.
+pub fn quality_value(content: &GameContent, item: &Item, quality: Option<&str>) -> i64 {
+    let multiplier = quality
+        .and_then(|quality| vocabulary::crop_qualities(content).iter().find(|tier| tier.id == quality))
+        .map_or(units::MILLI_ONE, |tier| tier.price_multiplier);
     if multiplier == units::MILLI_ONE {
         return item.value;
     }
@@ -101,8 +103,13 @@ pub fn quality_value(item: &Item, quality: Option<&str>) -> i64 {
 
 /// What `shop` pays for one `item` at a crop `quality`: `floor(quality value ×
 /// sellPriceMultiplier)`.
-pub fn sell_unit_price_with_quality(item: &Item, quality: Option<&str>, shop: &ShopDefinition) -> i64 {
-    quality_value(item, quality)
+pub fn sell_unit_price_with_quality(
+    content: &GameContent,
+    item: &Item,
+    quality: Option<&str>,
+    shop: &ShopDefinition,
+) -> i64 {
+    quality_value(content, item, quality)
         .saturating_mul(i64::from(shop.sell_price_multiplier))
         .div_euclid(i64::from(units::MILLI_ONE))
 }
@@ -211,7 +218,17 @@ pub fn handle_sell_item(
     // Items routinely span several slots (stack caps, qualities), so count across all of them.
     let tiers: Vec<Option<String>> = match quality {
         Some(quality) => vec![inventory::slot_quality(Some(quality))],
-        None => crop_qualities::ALL.iter().map(|tier| inventory::slot_quality(Some(tier))).collect(),
+        None => {
+            let mut tiers: Vec<Option<String>> =
+                ctx.crop_qualities().iter().map(|tier| ctx.slot_quality(Some(&tier.id))).collect();
+            // Slots of a tier the game no longer has still sell, after the known ones.
+            for slot in state.player.inventory.iter().filter(|slot| slot.item.id == item_id) {
+                if !tiers.contains(&slot.quality) {
+                    tiers.push(slot.quality.clone());
+                }
+            }
+            tiers
+        }
     };
     let held: u64 = tiers
         .iter()
@@ -221,6 +238,9 @@ pub fn handle_sell_item(
     let Some(first) = first.filter(|_| held >= u64::from(quantity)) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NOT_THAT_MANY)];
     };
+    if ctx.item_category(&first.item.r#type).is_some_and(|category| !category.sellable) {
+        return vec![Effect::say(message_levels::ERROR, messages::CANT_SELL.with(&[&first.item.name]))];
+    }
     let item_name = match tiers.as_slice() {
         [Some(quality)] => format!("{} ({quality})", first.item.name),
         _ => first.item.name.clone(),
@@ -236,7 +256,7 @@ pub fn handle_sell_item(
         else {
             continue;
         };
-        let unit_price = sell_unit_price_with_quality(&slot.item, tier.as_deref(), shop);
+        let unit_price = sell_unit_price_with_quality(&ctx.content, &slot.item, tier.as_deref(), shop);
         total = total.saturating_add(unit_price.saturating_mul(i64::from(take)));
         inventory = inventory::remove_item_with_quality(&inventory, item_id, tier.as_deref(), take);
         remaining -= take;

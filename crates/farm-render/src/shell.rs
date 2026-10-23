@@ -335,7 +335,7 @@ mod tests {
         let project = starter();
         let content = farm_sim::state::create_content_from_project(&project);
         let mut state = farm_sim::state::create_game_state(&project, Some("snapshot"));
-        let mut crop = crops::create_planted_crop("wheat", 1, false);
+        let mut crop = crops::create_planted_crop("wheat", 1, "normal");
         crop.days_grown = Some(99);
         state.world.scenes[0].tiles[0][0].crop = Some(crop);
         let before = farm_sim::hash_state(&state);

@@ -18,7 +18,7 @@ use indexmap::IndexMap;
 use std::path::PathBuf;
 
 fn season(id: &str, name: &str, days: u32) -> CalendarSeason {
-    CalendarSeason { id: id.to_owned(), name: name.to_owned(), days }
+    CalendarSeason { id: id.to_owned(), name: name.to_owned(), days, temperature: None }
 }
 
 fn custom_calendar() -> CalendarConfig {

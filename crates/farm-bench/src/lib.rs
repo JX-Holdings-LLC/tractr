@@ -216,7 +216,7 @@ fn grow_scene(scene: &mut Scene, content: &GameContent, spec: FarmSpec) {
                 });
             } else if x < spec.crop_field && y < spec.crop_field {
                 let watered = (x + 2 * y) % 4 != 0;
-                let mut crop = crops::create_planted_crop(CROPS[(x + y) % CROPS.len()], 1, false);
+                let mut crop = crops::create_planted_crop(CROPS[(x + y) % CROPS.len()], 1, "normal");
                 crop.watered = watered;
                 tile.r#type = tile_types::SOIL.to_owned();
                 tile.background = tile_types::SOIL.to_owned();

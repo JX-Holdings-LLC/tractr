@@ -66,15 +66,13 @@ fn built_in_content_matches_the_pinned_catalog() {
     put("nodes", &content_builtin::default_node_types());
     put("shop", &content_builtin::create_default_shop());
     put("crops", &content_builtin::crop_definitions());
-    // The multipliers are thousandths; the catalog holds the factors.
-    let factors = |milli: IndexMap<String, u32>| -> IndexMap<String, f64> {
-        milli.into_iter().map(|(key, value)| (key, f64::from(value) / 1000.0)).collect()
-    };
-    put("quality", &factors(content_builtin::quality_multipliers()));
-    put("mutation", &factors(content_builtin::mutation_multipliers()));
     put("days", &content_builtin::DAYS_PER_SEASON);
     put("seasons", &content_builtin::SEASON_ORDER);
-    put("tools", &content_builtin::tool_definitions());
+    put("terrains", &content_builtin::terrains());
+    put("tools", &content_builtin::tools());
+    put("itemCategories", &content_builtin::item_categories());
+    put("cropQualities", &content_builtin::crop_qualities());
+    put("cropMutations", &content_builtin::crop_mutations());
     assert_same_within_grid("content-builtin", &expected, &serde_json::to_value(&actual).expect("serializes"));
 }
 

@@ -69,6 +69,15 @@ pub fn handle_use_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
         return vec![Effect::say(message_levels::ERROR, &messages::DONT_HAVE_ITEM)];
     };
     let Some(use_action_id) = slot.item.use_action_id.clone().filter(|id| !id.is_empty()) else {
+        // An item of an edible kind (M1) is eaten: one is used up for its energy.
+        if let Some(category) = ctx.item_category(&slot.item.r#type).filter(|category| category.edible) {
+            let energy = slot.item.energy.unwrap_or(category.energy);
+            let name = slot.item.name.clone();
+            state.player.inventory = inventory::remove_item(&state.player.inventory, item_id, 1);
+            let max = state.player.max_energy;
+            state.player.energy = state.player.energy.saturating_add(energy.max(0)).min(max.max(state.player.energy));
+            return vec![Effect::say(message_levels::SUCCESS, messages::ATE.with(&[&name]))];
+        }
         return vec![Effect::say(message_levels::INFO, messages::CANT_USE_LIKE_THAT.with(&[&slot.item.name]))];
     };
     let consume_on_use = slot.item.consume_on_use == Some(true);

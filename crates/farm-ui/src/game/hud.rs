@@ -3,7 +3,7 @@
 //! the controls hint row; the "Made with" credit.
 
 use super::{GameAction, GameView, Panel};
-use crate::format::{money, num, season_name};
+use crate::format::{num, season_name};
 use crate::i18n::Lang;
 use crate::icons::Icon;
 use crate::input::{GamepadButton, InputDevice};
@@ -31,12 +31,12 @@ enum StatValue {
 }
 
 struct Stat {
-    label: &'static str,
+    label: String,
     value: StatValue,
 }
 
 fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
-    let label = if stat.label.is_empty() { 0.0 } else { ui.measure(stat.label, 13.0, FontId::Regular) + 6.0 };
+    let label = if stat.label.is_empty() { 0.0 } else { ui.measure(&stat.label, 13.0, FontId::Regular) + 6.0 };
     let value = match &stat.value {
         StatValue::Chip(text) => ui.measure(text, 15.0, FontId::Bold) + 14.0,
         StatValue::Primary(text) | StatValue::Secondary(text) | StatValue::Plain(text) => {
@@ -53,9 +53,9 @@ fn draw_stat(ui: &mut Ui, rect: Rect, stat: &Stat) {
     let colors = ui.theme().colors;
     let mut area = rect;
     if !stat.label.is_empty() {
-        let label_width = ui.measure(stat.label, 13.0, FontId::Regular);
+        let label_width = ui.measure(&stat.label, 13.0, FontId::Regular);
         let label = area.cut_left(label_width + 6.0);
-        ui.label(label, stat.label, 13.0, FontId::Regular, colors.muted, Align::Start);
+        ui.label(label, &stat.label, 13.0, FontId::Regular, colors.muted, Align::Start);
     }
     let (cy, x) = (rect.y + rect.height / 2.0, area.x);
     match &stat.value {
@@ -136,6 +136,14 @@ fn toolbar_labels(view: &GameView<'_>, device: InputDevice, compact: bool, lang:
     ]
 }
 
+/// The energy label: the game's word for energy (M1), else the language's.
+fn energy_label(view: &GameView<'_>, lang: Lang) -> String {
+    match view.words(lang).energy.filter(|word| !word.is_empty()) {
+        Some(word) => format!("{word}:"),
+        None => lang.tr("hud.energy").to_owned(),
+    }
+}
+
 fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
     let state = view.state;
     let content = view.content;
@@ -143,20 +151,20 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
     let calendar = view.calendar;
     let mut stats = vec![
         Stat {
-            label: if compact { "" } else { lang.tr("hud.money") },
-            value: StatValue::Chip(money(state.player.money)),
+            label: if compact { String::new() } else { lang.tr("hud.money").to_owned() },
+            value: StatValue::Chip(view.money(lang, state.player.money)),
         },
         Stat {
-            label: lang.tr("hud.season"),
+            label: lang.tr("hud.season").to_owned(),
             value: StatValue::Primary(calendar.season_name.clone().unwrap_or_else(|| season_name(&clock.season, lang))),
         },
         Stat {
-            label: lang.tr("hud.day"),
+            label: lang.tr("hud.day").to_owned(),
             value: StatValue::Secondary(format!("{} / {}", num(calendar.day_of_season), num(calendar.season_days))),
         },
-        Stat { label: lang.tr("hud.year"), value: StatValue::Secondary(num(clock.year)) },
+        Stat { label: lang.tr("hud.year").to_owned(), value: StatValue::Secondary(num(clock.year)) },
         Stat {
-            label: lang.tr("hud.weather"),
+            label: lang.tr("hud.weather").to_owned(),
             value: StatValue::Plain(
                 content
                     .weather
@@ -166,7 +174,7 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
                     .map_or_else(|| lang.tr("hud.sunny").to_owned(), |weather| weather.name.clone()),
             ),
         },
-        Stat { label: lang.tr("hud.time"), value: StatValue::Plain(calendar.time_text.clone()) },
+        Stat { label: lang.tr("hud.time").to_owned(), value: StatValue::Plain(calendar.time_text.clone()) },
     ];
     if content.settings.energy_enabled {
         let max = if state.player.max_energy > 0 { state.player.max_energy } else { content.settings.max_energy };
@@ -178,7 +186,7 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         } else {
             format!("{} / {}", num(state.player.energy.div_euclid(point)), crate::format::energy(max))
         };
-        stats.push(Stat { label: lang.tr("hud.energy"), value: StatValue::Energy { ratio, text } });
+        stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text } });
     }
     stats
 }

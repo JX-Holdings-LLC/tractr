@@ -53,6 +53,7 @@ pub mod state;
 pub mod text;
 pub mod tools;
 pub mod units;
+pub mod vocabulary;
 pub mod weather;
 pub mod world;
 

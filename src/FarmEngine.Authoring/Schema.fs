@@ -152,6 +152,34 @@ and ArtFrame =
     static member Default : ArtFrame =
         { AssetId = None; X = 0.0; Y = 0.0; Width = 0.0; Height = 0.0; Ticks = 6.0 }
 
+/// The look of a game's sky (M1): the day/night tint and the foliage tint. Empty or absent parts
+/// keep the look below them: a scene's look, then its season's, then the game's, then the built-in.
+and AtmosphereLook =
+    {
+        /// Day/night multiply-tint keyframes, linear between them, by minute of the day; empty
+        /// keeps the look below.
+        Daylight: DaylightKey list
+        /// Multiply tint of trees and weeds (`#rrggbb`); absent keeps the look below.
+        FoliageTint: string option
+    }
+
+    /// A `AtmosphereLook` with every field at its schema default.
+    static member Default : AtmosphereLook =
+        { Daylight = []; FoliageTint = None }
+
+/// A game's atmosphere (M1): its look, and a look per season.
+and AtmosphereSettings =
+    {
+        /// The look of every season without its own.
+        AllSeasons: AtmosphereLook
+        /// Looks by season id.
+        Seasons: (string * AtmosphereLook) list
+    }
+
+    /// A `AtmosphereSettings` with every field at its schema default.
+    static member Default : AtmosphereSettings =
+        { AllSeasons = AtmosphereLook.Default; Seasons = [] }
+
 and CalendarConfig =
     {
         /// Ordered list of seasons; the calendar year is the sum of their lengths.
@@ -162,7 +190,7 @@ and CalendarConfig =
 
     /// A `CalendarConfig` with every field at its schema default.
     static member Default : CalendarConfig =
-        { Seasons = [ ({ Id = "spring"; Name = "Spring"; Days = 28.0 } : CalendarSeason); ({ Id = "summer"; Name = "Summer"; Days = 28.0 } : CalendarSeason); ({ Id = "fall"; Name = "Fall"; Days = 28.0 } : CalendarSeason); ({ Id = "winter"; Name = "Winter"; Days = 28.0 } : CalendarSeason) ]; Festivals = [] }
+        { Seasons = [ ({ Id = "spring"; Name = "Spring"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "summer"; Name = "Summer"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "fall"; Name = "Fall"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "winter"; Name = "Winter"; Days = 28.0; Temperature = None } : CalendarSeason) ]; Festivals = [] }
 
 and CalendarFestival =
     {
@@ -184,11 +212,13 @@ and CalendarSeason =
         Name: string
         /// In-game days this season lasts. int, positive.
         Days: float
+        /// How warm the season is, for crops with a temperature range (M1).
+        Temperature: float option
     }
 
     /// A `CalendarSeason` with every field at its schema default.
     static member Default : CalendarSeason =
-        { Id = ""; Name = ""; Days = 0.0 }
+        { Id = ""; Name = ""; Days = 0.0; Temperature = None }
 
 and ContentPack =
     {
@@ -255,13 +285,15 @@ and CropDefinition =
         YieldMax: float
         /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
         HarvestItemId: string option
+        /// What it needs beyond water and its seasons (M1).
+        Requirements: GrowthRequirements option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CropDefinition` with every field at its schema default.
     static member Default : CropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Extra = [] }
 
 /// TS `CropDefinitionSchema.multiTile` (inline object).
 and CropMultiTile =
@@ -275,6 +307,49 @@ and CropMultiTile =
     /// A `CropMultiTile` with every field at its schema default.
     static member Default : CropMultiTile =
         { Width = 0.0; Height = 0.0 }
+
+/// A crop mutation (M1): a rare harvest that yields more. Mutations are checked in list order.
+and CropMutationDefinition =
+    {
+        Id: string
+        Name: string
+        /// How much more a mutated harvest yields (2 = twice). positive.
+        YieldMultiplier: float
+        /// The part of a crop's mutation chance that lands on this mutation, checked in list order
+        /// (the shares add up to at most 1). 0..1.
+        Share: float
+        /// `#rrggbb`: how the editor and the game mark it.
+        Color: string
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `CropMutationDefinition` with every field at its schema default.
+    static member Default : CropMutationDefinition =
+        { Id = ""; Name = ""; YieldMultiplier = 1.0; Share = 0.0; Color = ""; Extra = [] }
+
+/// A crop quality tier (M1). Tiers are ranked in list order, the first being the plain one.
+and CropQualityDefinition =
+    {
+        Id: string
+        Name: string
+        /// Sell price multiplier (1 = the item's value). positive.
+        PriceMultiplier: float
+        /// Harvest yield multiplier. positive.
+        YieldMultiplier: float
+        /// Multiplies a crop's mutation chance at harvest. nonnegative.
+        MutationMultiplier: float
+        /// Stars shown after an item's name. int, nonnegative.
+        Stars: float
+        /// `#rrggbb`: how the editor marks it.
+        Color: string
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `CropQualityDefinition` with every field at its schema default.
+    static member Default : CropQualityDefinition =
+        { Id = ""; Name = ""; PriceMultiplier = 1.0; YieldMultiplier = 1.0; MutationMultiplier = 1.0; Stars = 0.0; Color = ""; Extra = [] }
 
 and CustomAsset =
     {
@@ -322,13 +397,28 @@ and CustomCropDefinition =
         YieldMax: float
         /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
         HarvestItemId: string option
+        /// What it needs beyond water and its seasons (M1).
+        Requirements: GrowthRequirements option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CustomCropDefinition` with every field at its schema default.
     static member Default : CustomCropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Extra = [] }
+
+/// A day/night tint keyframe: at `Minute` of the day the scene is multiplied by `Color`.
+and DaylightKey =
+    {
+        /// Minute of the day. nonnegative.
+        Minute: float
+        /// `#rrggbb` multiply colour (`#ffffff` leaves the scene as drawn).
+        Color: string
+    }
+
+    /// A `DaylightKey` with every field at its schema default.
+    static member Default : DaylightKey =
+        { Minute = 0.0; Color = "" }
 
 and Dialogue =
     {
@@ -506,11 +596,21 @@ and GameContent =
         /// Authored initial scenes — the template the world state is created from.
         Scenes: Scene list
         StartSceneId: string
+        /// Terrains (built-in merged with the project's).
+        Terrains: TerrainDefinition list
+        /// Tools (built-in merged with the project's).
+        Tools: ToolDefinition list
+        /// Item categories (built-in merged with the project's).
+        ItemCategories: ItemCategoryDefinition list
+        /// Crop quality tiers, ranked (built-in merged with the project's).
+        CropQualities: CropQualityDefinition list
+        /// Crop mutations, in roll order (built-in merged with the project's).
+        CropMutations: CropMutationDefinition list
     }
 
     /// A `GameContent` with every field at its schema default.
     static member Default : GameContent =
-        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = "" }
+        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = [] }
 
 and GameEvent =
     {
@@ -617,6 +717,16 @@ and GameProject =
         Minigames: MinigameDef list
         /// Installed content packs (M5). Array order = load order.
         ContentPacks: PackInstallation list
+        /// The project's terrains (M1), beside and over the built-in ones.
+        Terrains: (TerrainDefinition list) option
+        /// The project's tools (M1), beside and over the built-in ones.
+        Tools: (ToolDefinition list) option
+        /// The project's item categories (M1), beside and over the built-in ones.
+        ItemCategories: (ItemCategoryDefinition list) option
+        /// The project's crop qualities (M1), beside and over the built-in tiers.
+        CropQualities: (CropQualityDefinition list) option
+        /// The project's crop mutations (M1), beside and over the built-in ones.
+        CropMutations: (CropMutationDefinition list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -638,7 +748,24 @@ and GameProject =
 
     /// A `GameProject` with every field at its schema default.
     static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+
+/// The words of a game (M1): what it calls money, energy and the skills, in every language.
+and GameWords =
+    {
+        /// How an amount of money is written, `{0}` standing for the number (`${0}`, `{0} credits`).
+        Money: string option
+        /// What energy is called (`Energy`, `Oxygen`).
+        Energy: string option
+        /// Skill names by skill id.
+        Skills: (string * string) list
+        /// The same words in other languages, by locale code (their own `Locales` are not read).
+        Locales: (string * GameWords) list
+    }
+
+    /// A `GameWords` with every field at its schema default.
+    static member Default : GameWords =
+        { Money = None; Energy = None; Skills = []; Locales = [] }
 
 and GiftTastes =
     {
@@ -653,6 +780,30 @@ and GiftTastes =
     /// A `GiftTastes` with every field at its schema default.
     static member Default : GiftTastes =
         { Loved = []; Liked = []; Disliked = []; Hated = []; Extra = [] }
+
+/// What a crop needs to be planted and to grow, beyond water and its seasons (M1).
+and GrowthRequirements =
+    {
+        /// Terrains it can be planted on; empty: any plantable terrain.
+        Terrains: string list
+        /// One of `LightNeeds`: `light` (no terrain on its tile blocks light, and the scene is not
+        /// dark) or `dark`; absent: either.
+        Light: string option
+        /// The coolest it grows at (`Scene.Temperature`, else the season's).
+        MinTemperature: float option
+        /// The warmest it grows at.
+        MaxTemperature: float option
+        /// Scene tags it needs, all of them (`Scene.Tags`).
+        SceneTags: string list
+        /// Fertilizer items it must be planted with (one of them); empty: none needed.
+        Fertilizers: string list
+        /// Neighbours it needs around its tile.
+        Neighbors: NeighborRequirement list
+    }
+
+    /// A `GrowthRequirements` with every field at its schema default.
+    static member Default : GrowthRequirements =
+        { Terrains = []; Light = None; MinTemperature = None; MaxTemperature = None; SceneTags = []; Fertilizers = []; Neighbors = [] }
 
 and GraphicsSettings =
     {
@@ -689,19 +840,49 @@ and InventorySlot =
     static member Default : InventorySlot =
         { Item = Item.Default; Quantity = 0.0; Quality = None }
 
+/// A kind of item (M1) and what items of it do. The built-in kinds are seed, tool, crop, gift,
+/// quest, fertilizer, material and fish.
+and ItemCategoryDefinition =
+    {
+        Id: string
+        Name: string
+        /// Planted on soil (the item's `CropType` says what grows).
+        Plantable: bool
+        /// Planted with a seed to fertilize its soil.
+        Fertilizer: bool
+        /// Held and used as a tool (the item's `ToolType`): it wears down and shops repair it.
+        Equippable: bool
+        /// Eaten from the inventory for energy.
+        Edible: bool
+        /// Energy an item of it restores when eaten (the item's `Energy` replaces it). nonnegative.
+        Energy: float
+        /// Put down in the world (a machine type names the item).
+        Placeable: bool
+        /// Can be given to NPCs.
+        Giftable: bool
+        /// Shops buy it.
+        Sellable: bool
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `ItemCategoryDefinition` with every field at its schema default.
+    static member Default : ItemCategoryDefinition =
+        { Id = ""; Name = ""; Plantable = false; Fertilizer = false; Equippable = false; Edible = false; Energy = 0.0; Placeable = false; Giftable = true; Sellable = true; Extra = [] }
+
 and Item =
     {
         Id: string
         Name: string
         Visual: VisualRef option
         Description: string
-        /// One of `ItemTypes`.
+        /// An item category id (`ItemCategoryDefinition`; the built-in ones are `ItemTypes`).
         Type: string
         Stackable: bool
         MaxStack: float
         Value: float
         CropType: string option
-        /// One of `ToolTypes`.
+        /// A tool id (`ToolDefinition`; the built-in ones are `ToolTypes`).
         ToolType: string option
         ToolPower: float option
         /// Tool tier: 1 = basic. Higher tiers hit harder, cost less energy, gain AoE. int, positive.
@@ -712,13 +893,15 @@ and Item =
         UseActionId: string option
         /// Consume one of the item on a successful use.
         ConsumeOnUse: bool option
+        /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
+        Energy: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Item` with every field at its schema default.
     static member Default : Item =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Extra = [] }
 
 /// TS `TileMachineSchema.processing` (inline object): an in-flight machine job.
 and MachineProcessing =
@@ -848,6 +1031,23 @@ and MovementConfig =
         { PlayerSpeed = 4.5 }
 
 /// Weighted drop-table entry for a gathering node.
+/// Neighbours a crop needs around its tile: crops of a type, a terrain, or water.
+and NeighborRequirement =
+    {
+        /// One of `NeighborKinds`: `crop`, `terrain` or `water` (a terrain that is a water source).
+        Kind: string
+        /// The crop type or terrain id; unused for water.
+        Id: string option
+        /// How far to look, in tiles (1 = the eight tiles around). int, positive.
+        Radius: float
+        /// How many matching tiles are needed. int, positive.
+        Min: float
+    }
+
+    /// A `NeighborRequirement` with every field at its schema default.
+    static member Default : NeighborRequirement =
+        { Kind = ""; Id = None; Radius = 1.0; Min = 1.0 }
+
 and NodeDrop =
     {
         ItemId: string
@@ -1162,11 +1362,15 @@ and ProjectSettings =
         Locale: string
         /// Optional, creator-controlled credit shown in exported games.
         ShowMadeWithCredit: bool
+        /// What the game calls money, energy and the skills (M1); absent: the built-in words.
+        Words: GameWords option
+        /// The day/night and foliage tints (M1); absent: the built-in look.
+        Atmosphere: AtmosphereSettings option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
     static member Default : ProjectSettings =
-        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false }
+        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None }
 
 and Quest =
     {
@@ -1335,13 +1539,21 @@ and Scene =
         /// Indoor scenes (greenhouses, interiors, mine floors) keep the weather out: rain does not
         /// water their soil and storms do not damage their crops. Absent means outdoor.
         Indoor: bool option
+        /// No daylight reaches its crops (caves), for crops that need light or dark (M1).
+        Dark: bool option
+        /// How warm it is, for crops with a temperature range (M1); absent: the season's.
+        Temperature: float option
+        /// Free-form tags crops can require (`GrowthRequirements.SceneTags`).
+        Tags: (string list) option
+        /// Its own day/night and foliage tints (M1).
+        Atmosphere: AtmosphereLook option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Scene` with every field at its schema default.
     static member Default : Scene =
-        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Extra = [] }
+        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Extra = [] }
 
 and SceneTransition =
     {
@@ -1466,6 +1678,56 @@ and Tile =
         { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Extra = [] }
 
 /// Live machine instance on a tile.
+/// A kind of ground, path or object a tile can be (M1), and its rules. The built-in terrains are
+/// grass, soil, water, path, wall, door and floor.
+and TerrainDefinition =
+    {
+        Id: string
+        Name: string
+        /// One of `TileLayers`: the layer a tile of it is painted on.
+        Layer: string
+        /// `#rrggbb`: the editor's swatch, and how the game draws it without art.
+        Color: string
+        Visual: VisualRef option
+        /// The player and NPCs can walk on it.
+        Walkable: bool
+        /// Crops are planted on it (soil).
+        Plantable: bool
+        /// Counts as water for crops that need water nearby.
+        WaterSource: bool
+        /// The fishing action works on it.
+        Fishable: bool
+        /// A crop on a tile of it gets no light.
+        BlocksLight: bool
+        /// Energy the player loses on stepping onto it. nonnegative.
+        HazardEnergy: float
+        /// Keeps the weather off its tile, as an indoor scene does (greenhouse floors).
+        Indoor: bool
+        /// What tools turn it into.
+        Transforms: TerrainTransform list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `TerrainDefinition` with every field at its schema default.
+    static member Default : TerrainDefinition =
+        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Transforms = []; Extra = [] }
+
+/// A terrain change a tool makes.
+and TerrainTransform =
+    {
+        /// One of `ToolActions`: the action that makes the change (`till`, `transform` or `break`).
+        Action: string
+        /// Only this tool makes it; absent: every tool with the action.
+        Tool: string option
+        /// The terrain it becomes; empty removes an overlay or object.
+        Into: string
+    }
+
+    /// A `TerrainTransform` with every field at its schema default.
+    static member Default : TerrainTransform =
+        { Action = ""; Tool = None; Into = "" }
+
 and TileMachine =
     {
         TypeId: string
@@ -1520,11 +1782,54 @@ and TimeConfig =
         /// Whether the clock stops while a dialogue, shop, minigame or menu is open. Absent
         /// means on; v8 ran the clock on.
         PauseInModals: bool option
+        /// Minutes in a day (M1); absent: 1440. int, at least 60.
+        DayMinutes: float option
     }
 
     /// A `TimeConfig` with every field at its schema default.
     static member Default : TimeConfig =
-        { DayStartMinute = 360.0; DayEndMinute = 1560.0; MinutesPerRealSecond = 1.0; PauseInModals = None }
+        { DayStartMinute = 360.0; DayEndMinute = 1560.0; MinutesPerRealSecond = 1.0; PauseInModals = None; DayMinutes = None }
+
+/// The area a tool covers at one tier: `Width` tiles across the player's facing, `Length` tiles ahead.
+and ToolArea =
+    {
+        /// Odd widths centre on the faced tile. int, positive.
+        Width: float
+        /// int, positive.
+        Length: float
+    }
+
+    /// A `ToolArea` with every field at its schema default.
+    static member Default : ToolArea =
+        { Width = 1.0; Length = 1.0 }
+
+/// A tool (M1): what it does, what it costs and its key. The built-in tools are the watering can,
+/// hoe, axe, pickaxe, scythe and fishing rod.
+and ToolDefinition =
+    {
+        Id: string
+        Name: string
+        Description: string
+        /// One of `ToolActions`: water, till, harvest, fish, break, transform, place or plant. Any
+        /// tool strikes the gathering node it faces.
+        Action: string
+        /// The play-mode key that uses it (one character); absent: none.
+        Key: string option
+        /// Energy a tier 1 use costs; each tier above costs 15% less. nonnegative.
+        EnergyCost: float
+        /// The area it covers by tier (the first entry is tier 1, the last covers the tiers above).
+        Area: ToolArea list
+        /// The skill that gains experience when it breaks a node; absent: foraging.
+        Skill: string option
+        /// The terrain the `place` action puts down.
+        PlaceTerrain: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `ToolDefinition` with every field at its schema default.
+    static member Default : ToolDefinition =
+        { Id = ""; Name = ""; Description = ""; Action = ""; Key = None; EnergyCost = 0.0; Area = []; Skill = None; PlaceTerrain = None; Extra = [] }
 
 and VisualRef =
     {
@@ -1542,13 +1847,38 @@ and WeatherConfig =
         Types: WeatherTypeDefinition list
         /// Per-season weighted roll tables (rolled at each day start).
         Table: (string * WeatherTableEntry list) list
+        /// The game's own overlays (M1), beside and over the built-in rain and snow.
+        Overlays: (WeatherOverlayDefinition list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `WeatherConfig` with every field at its schema default.
     static member Default : WeatherConfig =
-        { Types = []; Table = []; Extra = [] }
+        { Types = []; Table = []; Overlays = None; Extra = [] }
+
+/// How a weather looks on screen (M1): particles and a tint. The built-in overlays are rain and snow.
+and WeatherOverlayDefinition =
+    {
+        Id: string
+        /// One of `OverlayStyles`: `rain` (streaks), `snow` (flakes), `dust` (drifting specks) or
+        /// `none` (the tint only).
+        Style: string
+        /// `#rrggbb` of the particles.
+        Color: string
+        /// Particles relative to the built-in amount. nonnegative.
+        Density: float
+        /// Speed relative to the built-in style. nonnegative.
+        Speed: float
+        /// `#rrggbb` multiplied over the scene while it falls; absent: none.
+        Tint: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `WeatherOverlayDefinition` with every field at its schema default.
+    static member Default : WeatherOverlayDefinition =
+        { Id = ""; Style = "rain"; Color = ""; Density = 1.0; Speed = 1.0; Tint = None; Extra = [] }
 
 and WeatherTableEntry =
     {
@@ -1571,7 +1901,7 @@ and WeatherTypeDefinition =
         CropDamageChance: float
         /// NPCs with schedules stay home (skip schedule walking).
         NpcsStayInside: bool
-        /// Renderer overlay hint: 'rain' | 'snow' | null.
+        /// The overlay it shows (a `WeatherOverlayDefinition` id: `rain`, `snow` or the game's own) or null.
         [<JsonNull>]
         Overlay: string option
         /// Undeclared keys, in order.

@@ -29,6 +29,7 @@ pub mod quests;
 pub mod save;
 pub mod settings;
 pub mod social;
+pub mod vocabulary;
 pub mod weather;
 pub mod world;
 
@@ -52,5 +53,6 @@ pub use quests::*;
 pub use save::*;
 pub use settings::*;
 pub use social::*;
+pub use vocabulary::*;
 pub use weather::*;
 pub use world::*;

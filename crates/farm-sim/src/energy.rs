@@ -3,7 +3,7 @@
 //! Player energy (M2). Per-action costs come from tool definitions; hitting zero collapses the
 //! player, ending the day with a penalty. Toggleable per project (settings.energyEnabled).
 
-use crate::content_builtin::ToolDefinition;
+use crate::schema::ToolDefinition;
 use crate::effects::Effect;
 use crate::engine_types::{Effects, EngineContext};
 use crate::game_time::{self, SleepOptions};
