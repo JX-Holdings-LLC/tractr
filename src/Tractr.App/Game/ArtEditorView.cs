@@ -19,10 +19,12 @@ namespace Tractr.App.Game;
 public sealed class ArtEditorView : UserControl, IRetirable
 {
     private static readonly FilePickerFileType ArtFiles = new("Artwork") { Patterns = ArtImport.FilePatterns };
+    private static readonly FilePickerFileType SoundFiles = new("OGG or WAV audio") { Patterns = AudioImport.FilePatterns };
     private readonly ProjectWorkspace _workspace;
     private readonly Action<string, VisualRef> _useMapBrush;
     private readonly DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly ListBox _assets = new() { Name = "ArtAssets", MinHeight = 130 };
+    private readonly ListBox _sounds = new() { Name = "SoundAssets", MinHeight = 60 };
     private readonly Border _preview = new() { Name = "ArtPreview", Width = 140, Height = 140 };
     private readonly VisualPreview _art = new();
     private readonly TextBlock _message = Ui.Wrapped("Import an image to start.", "muted", "small");
@@ -67,7 +69,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
         Ui.Label((_assets, "Artwork"), (_svgSize, "SVG size (longest side, px)"), (_assetName, "Asset name"), (_clips, "Animation clip"),
             (_clipName, "Clip name"), (_frameWidth, "Frame width"), (_frameHeight, "Frame height"), (_frameX, "Frame X"), (_frameY, "Frame Y"),
             (_frameTicks, "Ticks per frame"), (_target, "Assign to"), (_bindingAsset, "Artwork to assign"), (_bindingClip, "Clip to assign"),
-            (_cellSize, "Cell size"), (_cellColumn, "Cell column"), (_cellRow, "Cell row"), (_tileType, "Map tile behavior"));
+            (_cellSize, "Cell size"), (_cellColumn, "Cell column"), (_cellRow, "Cell row"), (_tileType, "Map tile behavior"), (_sounds, "Sounds and music"));
         Name = "ArtEditorView";
         _message.Name = "ArtMessage";
         _previewTimer.Tick += (_, _) => AdvancePreview();
@@ -118,6 +120,20 @@ public sealed class ArtEditorView : UserControl, IRetirable
         left.Children.Add(_pixelArt);
         _pixelArt.Click += (_, _) => _workspace.Apply(Edits.SetGraphics(GraphicsSettings.Default.WithPixelArt(_pixelArt.IsChecked == true)));
         left.Children.Add(_message);
+        left.Children.Add(Ui.Text("SOUNDS AND MUSIC", "section"));
+        left.Children.Add(Ui.Wrapped("Import OGG or WAV files. Sounds play from events, actions and cutscenes; music plays in scenes, seasons, weather and festivals.", "muted", "small"));
+        var importSounds = Ui.AsyncButton("Import sounds", () => PickSoundsAsync(CustomAssetTypes.Sound), error => _message.Text = $"Could not import: {error.Message}", "tool");
+        importSounds.Name = "ImportSoundButton";
+        ToolTip.SetTip(importSounds, "Choose sound effects (OGG or WAV); they are added as one undo step.");
+        var importMusic = Ui.AsyncButton("Import music", () => PickSoundsAsync(CustomAssetTypes.Music), error => _message.Text = $"Could not import: {error.Message}", "tool");
+        importMusic.Name = "ImportMusicButton";
+        ToolTip.SetTip(importMusic, "Choose music tracks (OGG or WAV); they are added as one undo step.");
+        left.Children.Add(Ui.HStack(8, importSounds, importMusic));
+        left.Children.Add(_sounds);
+        var removeSound = Ui.Button("Remove sound", RemoveSound, "tool");
+        removeSound.Name = "RemoveSoundButton";
+        ToolTip.SetTip(removeSound, "Remove the selected sound or music; what played it plays nothing (Problems lists those uses)");
+        left.Children.Add(removeSound);
 
         var right = new StackPanel { Spacing = 10 };
         right.Children.Add(_preview);
@@ -170,8 +186,6 @@ public sealed class ArtEditorView : UserControl, IRetirable
         _singleCell.Click += (_, _) => RefreshCellControls();
         right.Children.Add(Ui.HStack(8, _singleCell, Ui.Text("size", "muted", "small"), _cellSize,
             Ui.Text("column", "muted", "small"), _cellColumn, Ui.Text("row", "muted", "small"), _cellRow));
-        foreach (var type in TileTypes.All) _tileType.Items.Add(new ComboBoxItem { Content = type, Tag = type });
-        _tileType.SelectedIndex = 0;
         right.Children.Add(Ui.HStack(8, Ui.Text("Map tile behavior", "muted", "small"), _tileType));
         var bind = Ui.Button("Assign artwork", Bind, "accent");
         bind.Name = "BindArtButton";
@@ -263,11 +277,93 @@ public sealed class ArtEditorView : UserControl, IRetirable
         UpdatePreviewTimer();
     }
 
-    /// <summary>Opens an asset by id (Problems "Go to").</summary>
+    /// <summary>Opens an asset by id (Problems "Go to"): art in the art list, a sound in the sound list.</summary>
     public void SelectAsset(string assetId)
     {
+        if (_workspace.Current?.CustomAssets.FirstOrDefault(asset => asset.Id == assetId) is { } asset && AudioImport.IsAudio(asset))
+        {
+            Refresh();
+            _sounds.SelectedItem = _sounds.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, assetId));
+            return;
+        }
+
         _selectedAssetId = assetId;
         Refresh();
+    }
+
+    /// <summary>The selected sound or music asset's id, or null.</summary>
+    public string? SelectedSoundId => (_sounds.SelectedItem as ListBoxItem)?.Tag as string;
+
+    /// <summary>
+    /// Imports OGG and WAV files as sound or music assets (<paramref name="type"/>) as ONE undo
+    /// step; files that fail are reported by name and the rest are still imported.
+    /// </summary>
+    public void ImportSounds(IReadOnlyList<(string FileName, byte[] Bytes)> files, string type) => ImportSounds(files, type, []);
+
+    private void ImportSounds(IReadOnlyList<(string FileName, byte[] Bytes)> files, string type, IReadOnlyList<string> readErrors)
+    {
+        if (_workspace.Current is not { } project) return;
+        var errors = new List<string>(readErrors);
+        var assets = new List<CustomAsset>();
+        foreach (var (fileName, bytes) in files)
+        {
+            try
+            {
+                assets.Add(AudioImport.FromBytes(project, fileName, bytes, type));
+            }
+            catch (ArgumentException error)
+            {
+                errors.Add($"{fileName}: {error.Message}");
+            }
+        }
+
+        var imported = new List<CustomAsset>();
+        if (assets.Count > 0)
+        {
+            var before = project.CustomAssets.Select(asset => asset.Id).ToHashSet();
+            _workspace.Apply(ArtLibrary.Import(project, assets));
+            imported = _workspace.Current!.CustomAssets.Where(asset => !before.Contains(asset.Id)).ToList();
+            Refresh();
+            if (imported.Count > 0) _sounds.SelectedItem = _sounds.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, imported[^1].Id));
+        }
+
+        var what = type == CustomAssetTypes.Music ? "music track" : "sound";
+        var summary = imported.Count switch
+        {
+            0 => "",
+            1 => $"Imported {imported[0].Name} as {(type == CustomAssetTypes.Music ? "music" : "a sound")} ({DisplayFormat.FileSize(AudioImport.Size(imported[0]))}).",
+            _ => $"Imported {imported.Count} {what}s.",
+        };
+        _message.Text = errors.Count == 0 ? summary : string.Join(" ", new[] { summary, $"Could not import {string.Join("; ", errors)}" }.Where(part => part.Length > 0));
+    }
+
+    private async Task PickSoundsAsync(string type)
+    {
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { CanOpen: true } storage) return;
+        var title = type == CustomAssetTypes.Music ? "Import music" : "Import sounds";
+        var picked = await storage.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = true, FileTypeFilter = [SoundFiles, FilePickerFileTypes.All] });
+        if (picked.Count == 0) return;
+        var files = new List<(string, byte[])>();
+        var errors = new List<string>();
+        foreach (var file in picked)
+        {
+            try
+            {
+                files.Add((file.Name, await PickedFiles.ReadBytesAsync(file, PickedFiles.MaxAudioBytes, "sounds")));
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                errors.Add($"{file.Name}: {error.Message}");
+            }
+        }
+
+        ImportSounds(files, type, errors);
+    }
+
+    private void RemoveSound()
+    {
+        if (SelectedSoundId is not { } id || _workspace.Current?.CustomAssets.FirstOrDefault(asset => asset.Id == id) is not { } asset) return;
+        if (_workspace.Apply(Edits.RemoveAsset(id))) _message.Text = $"Removed {asset.Name}.";
     }
 
     public void ImportBytes(string fileName, byte[] bytes) => ImportFiles([(fileName, bytes)]);
@@ -411,7 +507,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
             _assets.SelectedItem = null;
             _assets.Items.Clear();
             var pixelArt = project.Graphics.OrNull()?.PixelArt != false;
-            foreach (var asset in project.CustomAssets)
+            foreach (var asset in project.CustomAssets.Where(asset => !AudioImport.IsAudio(asset)))
             {
                 var text = $"{asset.Name} · {SizeText(asset)}";
                 var thumbnail = new Image { Width = 32, Height = 32, Stretch = Stretch.Uniform, Source = Thumbnail(asset) };
@@ -426,6 +522,26 @@ public sealed class ArtEditorView : UserControl, IRetirable
                 _thumbnails.Remove(stale);
             }
             _assets.SelectedItem = _assets.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, _selectedAssetId));
+            var previousSound = SelectedSoundId;
+            _sounds.SelectedItem = null;
+            _sounds.Items.Clear();
+            foreach (var asset in project.CustomAssets.Where(AudioImport.IsAudio))
+            {
+                var text = $"{asset.Name} · {(asset.Type == CustomAssetTypes.Music ? "music" : "sound")} · {DisplayFormat.FileSize(AudioImport.Size(asset))}";
+                var item = new ListBoxItem { Tag = asset.Id, Content = Ui.Text(text, "small") };
+                AutomationProperties.SetName(item, text);
+                _sounds.Items.Add(item);
+            }
+            _sounds.SelectedItem = _sounds.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousSound));
+            if (_sounds.Items.Count == 0) _sounds.Items.Add(new ListBoxItem { Content = Ui.Text("No sounds or music yet.", "muted", "small"), IsEnabled = false });
+            var previousTile = (_tileType.SelectedItem as ComboBoxItem)?.Tag as string;
+            _tileType.SelectedItem = null;
+            _tileType.Items.Clear();
+            foreach (var terrain in ContentReadouts.Terrains(project))
+            {
+                _tileType.Items.Add(new ComboBoxItem { Content = string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name, Tag = terrain.Id });
+            }
+            _tileType.SelectedItem = _tileType.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousTile)) ?? _tileType.Items.OfType<ComboBoxItem>().FirstOrDefault();
             _pixelArt.IsChecked = pixelArt;
             var previousTarget = (_target.SelectedItem as ComboBoxItem)?.Tag;
             _target.Items.Clear();
@@ -441,13 +557,13 @@ public sealed class ArtEditorView : UserControl, IRetirable
             _target.SelectedItem = _target.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousTarget)) ?? _target.Items[0];
             var previousBinding = (_bindingAsset.SelectedItem as ComboBoxItem)?.Tag as string;
             _bindingAsset.Items.Clear();
-            foreach (var asset in project.CustomAssets) _bindingAsset.Items.Add(new ComboBoxItem { Tag = asset.Id, Content = asset.Name });
+            foreach (var asset in project.CustomAssets.Where(asset => !AudioImport.IsAudio(asset))) _bindingAsset.Items.Add(new ComboBoxItem { Tag = asset.Id, Content = asset.Name });
             _bindingAsset.SelectedItem = _bindingAsset.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousBinding))
                 ?? _bindingAsset.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, _selectedAssetId));
             var previousSource = (_frameSource.SelectedItem as ComboBoxItem)?.Tag as string;
             _frameSource.SelectedItem = null;
             _frameSource.Items.Clear();
-            foreach (var asset in project.CustomAssets) _frameSource.Items.Add(new ComboBoxItem { Tag = asset.Id, Content = asset.Name });
+            foreach (var asset in project.CustomAssets.Where(asset => !AudioImport.IsAudio(asset))) _frameSource.Items.Add(new ComboBoxItem { Tag = asset.Id, Content = asset.Name });
             _frameSource.SelectedItem = _frameSource.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousSource));
         }
         finally

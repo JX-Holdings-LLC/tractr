@@ -22,6 +22,9 @@ internal static class PickedFiles
     /// <summary>The largest content pack JSON the Mods view reads.</summary>
     public const long MaxPackBytes = 64L * 1024 * 1024;
 
+    /// <summary>The largest sound or music file the art studio imports (it is stored in the project as base64).</summary>
+    public const long MaxAudioBytes = 32L * 1024 * 1024;
+
     /// <summary>
     /// The text of <paramref name="file"/> (UTF-8, or the encoding its byte order mark names).
     /// </summary>
@@ -65,6 +68,34 @@ internal static class PickedFiles
         memory.Position = 0;
         using var reader = new StreamReader(memory, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         return await reader.ReadToEndAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>The bytes of <paramref name="file"/>, read up to <paramref name="maxBytes"/>.</summary>
+    /// <exception cref="FileTooLargeException">The file is larger than <paramref name="maxBytes"/>.</exception>
+    public static async Task<byte[]> ReadBytesAsync(IStorageFile file, long maxBytes, string what)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        var properties = await file.GetBasicPropertiesAsync().ConfigureAwait(true);
+        if (properties.Size is { } size && size > (ulong)maxBytes)
+        {
+            throw TooLarge(file.Name, (long)Math.Min(size, long.MaxValue), maxBytes, what);
+        }
+
+        await using var stream = await file.OpenReadAsync().ConfigureAwait(true);
+        using var memory = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(buffer).ConfigureAwait(true)) > 0)
+        {
+            if (memory.Length + read > maxBytes)
+            {
+                throw TooLarge(file.Name, memory.Length + read, maxBytes, what);
+            }
+
+            await memory.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(true);
+        }
+
+        return memory.ToArray();
     }
 
     /// <summary>

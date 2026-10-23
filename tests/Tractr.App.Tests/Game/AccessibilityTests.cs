@@ -18,9 +18,13 @@ public sealed class AccessibilityTests
 {
     private static readonly string[] ContentCategories =
     [
-        "NPCs", "Dialogue", "Items", "Crops", "Quests", "Events", "Shops", "Recipes", "Node types",
-        "Machine types", "Animal species", "Fish tables", "Actions", "Minigames",
+        "NPCs", "Dialogue", "Items", "Crops", "Quests", "Events", "Cutscenes", "Shops", "Recipes", "Node types",
+        "Machine types", "Animal species", "Fish tables", "Actions", "Minigames", "Terrains", "Tools", "Item kinds",
+        "Crop qualities", "Crop mutations",
     ];
+
+    /// <summary>Categories a new project has only built-ins of (or nothing): one of the project's own is made so its form shows.</summary>
+    private static readonly string[] NewEntryCategories = ["Cutscenes", "Terrains", "Tools", "Item kinds", "Crop qualities", "Crop mutations"];
 
     /// <summary>The unnamed controls under <paramref name="root"/>, described for the failure message.</summary>
     private static IEnumerable<string> Unnamed(Visual root, string where) =>
@@ -56,6 +60,12 @@ public sealed class AccessibilityTests
         {
             content.ViewModel.SelectCategory(category);
             Pump();
+            if (NewEntryCategories.Contains(category))
+            {
+                content.ViewModel.AddCommand.Execute(null);
+                Pump();
+            }
+
             var entries = FindByName<ListBox>(host.Window, "ContentEntities");
             if (entries.ItemCount > 0)
             {

@@ -726,6 +726,9 @@ type SettingsForm =
     static member Festival(id: string, name: string, seasonId: string, day: float, music: string | null) : CalendarFestival =
         SettingsForms.festival id name seasonId day music
 
+    /// `settings` with the game's words (null: the built-in words).
+    static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
+
     /// `time` with its day length (null: the built-in 1440 minutes).
     static member WithDayMinutes(time: TimeConfig, minutes: System.Nullable<float>) : TimeConfig =
         { time with DayMinutes = Option.ofNullable minutes }

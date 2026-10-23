@@ -39,6 +39,14 @@ public sealed partial class EditModeView
     private readonly CheckBox _doorReturn = new() { Name = "DoorReturn", Content = "Return door" };
     private readonly CheckBox _sceneIndoor = new() { Name = "SceneIndoor", Content = "Indoor (no weather)" };
     private bool _showingSceneIndoor;
+    private readonly CheckBox _sceneDark = new() { Name = "SceneDark", Content = "Dark (no daylight for crops)" };
+    private readonly ComboBox _sceneMusic = new() { Name = "SceneMusic", MinWidth = 160 };
+    private readonly TextBox _sceneTemperature = new() { Name = "SceneTemperature", Width = 70, PlaceholderText = "season's" };
+    private readonly TextBox _sceneTags = new() { Name = "SceneTags", PlaceholderText = "cave, greenhouse" };
+    private readonly TextBox _sceneFoliage = new() { Name = "SceneFoliageTint", Width = 90, PlaceholderText = "#rrggbb" };
+    private readonly TextBox _sceneDaylight = new() { Name = "SceneDaylight", AcceptsReturn = true, MinHeight = 54, PlaceholderText = "360 #ffd8a0" };
+    /// <summary>The surroundings' text fields as last shown, so a project change refreshes only the untouched ones.</summary>
+    private (string Temperature, string Tags, string Foliage, string Daylight) _shownSurroundings;
     private readonly Button _removeDoor = new() { Name = "RemoveDoorButton", Content = "Remove door" };
     private readonly StackPanel _transitionList = new() { Name = "TransitionList", Spacing = 6 };
     private readonly TextBlock _transitionCount = Ui.Text("", "muted", "small");
@@ -206,11 +214,7 @@ public sealed partial class EditModeView
             if (!_showingSceneIndoor) ApplyToScene(id => Edits.SetSceneIndoor(id, _sceneIndoor.IsChecked == true));
         };
         side.Children.Add(_sceneIndoor);
-        foreach (var type in TileTypes.All)
-        {
-            _newSceneTile.Items.Add(new ComboBoxItem { Content = Ui.Capitalize(type), Tag = type });
-        }
-        _newSceneTile.SelectedItem = _newSceneTile.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, TileTypes.Grass));
+        BuildSurroundings(side);
         AutomationProperties.SetName(_newSceneTile, "New scene tile");
         side.Children.Add(Ui.HStack(8, Ui.Text("New scene tile", "muted", "small"), _newSceneTile));
         side.Children.Add(WrapButtons(
@@ -293,7 +297,8 @@ public sealed partial class EditModeView
         RefreshSceneAnimals(project, scene);
         RefreshTransitionList(project, scene);
 
-        if (_sceneControlsSceneId != scene.Id)
+        var sceneChanged = _sceneControlsSceneId != scene.Id;
+        if (sceneChanged)
         {
             _sceneControlsSceneId = scene.Id;
             _sceneName.Text = scene.Name;
@@ -314,7 +319,10 @@ public sealed partial class EditModeView
         _removeDoor.IsEnabled = _doorAt is { } at && scene.Transitions.Any(t => t.FromX == at.X && t.FromY == at.Y);
         _showingSceneIndoor = true;
         _sceneIndoor.IsChecked = scene.Indoor.OrNullable() == true;
+        _sceneDark.IsChecked = scene.Dark.OrNullable() == true;
+        RefreshSurroundings(project, scene, sceneChanged);
         _showingSceneIndoor = false;
+        RefreshNewSceneTiles(project);
         RefreshSceneSizeInfo();
 
         var previous = (_doorDestination.SelectedItem as ComboBoxItem)?.Tag as string;
@@ -337,6 +345,115 @@ public sealed partial class EditModeView
                     item.Content = destination.Name;
             }
         }
+    }
+
+    /// <summary>
+    /// The scene's surroundings (M1, M2) under its Indoor box: Dark and the music apply at once;
+    /// the temperature, tags and the scene's own day/night and foliage tints with Save surroundings.
+    /// </summary>
+    private void BuildSurroundings(StackPanel side)
+    {
+        ToolTip.SetTip(_sceneDark, "Caves and cellars: crops that need light do not grow here, and crops that need the dark do.");
+        _sceneDark.IsCheckedChanged += (_, _) =>
+        {
+            if (!_showingSceneIndoor) ApplySurroundings(dark: _sceneDark.IsChecked == true);
+        };
+        side.Children.Add(_sceneDark);
+        _sceneMusic.SelectionChanged += (_, _) =>
+        {
+            if (!_showingSceneIndoor && _sceneMusic.SelectedItem is ComboBoxItem { Tag: string id }) ApplySurroundings(music: id);
+        };
+        AutomationProperties.SetName(_sceneMusic, "Scene music");
+        AutomationProperties.SetName(_sceneTemperature, "Scene temperature");
+        AutomationProperties.SetName(_sceneTags, "Scene tags");
+        AutomationProperties.SetName(_sceneFoliage, "Scene foliage tint");
+        AutomationProperties.SetName(_sceneDaylight, "Scene daylight");
+        ToolTip.SetTip(_sceneTemperature, "How warm it is here, for crops with a temperature range; empty uses the season's.");
+        ToolTip.SetTip(_sceneTags, "Words crops can require, separated by commas.");
+        ToolTip.SetTip(_sceneDaylight, "This scene's own day/night tint: one line per key, the minute of the day and a colour (360 #ffd8a0). Empty uses the season's.");
+        side.Children.Add(Ui.HStack(8, Ui.Text("Music", "muted", "small"), _sceneMusic));
+        side.Children.Add(Ui.HStack(8, Ui.Text("Temperature", "muted", "small"), _sceneTemperature, Ui.Text("Foliage tint", "muted", "small"), _sceneFoliage));
+        side.Children.Add(Ui.VStack(3, Ui.Text("Tags", "muted", "small"), _sceneTags));
+        side.Children.Add(Ui.VStack(3, Ui.Text("Daylight (minute and colour per line)", "muted", "small"), _sceneDaylight));
+        side.Children.Add(WrapButtons(NamedButton("SaveSurroundingsButton", "Save surroundings", () => ApplySurroundings(fields: true))));
+    }
+
+    /// <summary>
+    /// Shows the scene's surroundings. Text fields keep what was typed into them across project
+    /// changes, unless another scene is shown.
+    /// </summary>
+    private void RefreshSurroundings(GameProject project, Scene scene, bool sceneChanged)
+    {
+        var look = scene.Atmosphere.OrNull();
+        var stored = (
+            Temperature: scene.Temperature.OrNullable() is { } warmth ? DisplayFormat.Number(warmth) : "",
+            Tags: string.Join(", ", scene.Tags.OrEmpty()),
+            Foliage: look?.FoliageTint.OrNull() ?? "",
+            Daylight: look is null ? "" : SettingsForm.DaylightText(look.Daylight));
+        if (sceneChanged || _sceneTemperature.Text == _shownSurroundings.Temperature) _sceneTemperature.Text = stored.Temperature;
+        if (sceneChanged || _sceneTags.Text == _shownSurroundings.Tags) _sceneTags.Text = stored.Tags;
+        if (sceneChanged || _sceneFoliage.Text == _shownSurroundings.Foliage) _sceneFoliage.Text = stored.Foliage;
+        if (sceneChanged || _sceneDaylight.Text == _shownSurroundings.Daylight) _sceneDaylight.Text = stored.Daylight;
+        _shownSurroundings = stored;
+
+        var music = scene.Music.OrNull() ?? "";
+        var field = ContentForms.Field(nameof(Scene), nameof(Scene.Music), "Music", project)!;
+        var entries = ContentForms.Entries(field, ContentForms.Options(field.Reference, project), music);
+        var shown = _sceneMusic.Items.OfType<ComboBoxItem>().Select(item => (item.Tag as string, item.Content as string));
+        if (!shown.SequenceEqual(entries.Select(entry => ((string?)entry.Id, (string?)entry.Label))))
+        {
+            _sceneMusic.Items.Clear();
+            foreach (var entry in entries) _sceneMusic.Items.Add(new ComboBoxItem { Content = entry.Label, Tag = entry.Id });
+        }
+
+        _sceneMusic.SelectedItem = _sceneMusic.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, music));
+    }
+
+    /// <summary>
+    /// Saves the scene's surroundings: <paramref name="dark"/> or <paramref name="music"/> when
+    /// given, the text fields when <paramref name="fields"/>, the rest as stored. One undo step.
+    /// </summary>
+    private void ApplySurroundings(bool? dark = null, string? music = null, bool fields = false)
+    {
+        if (CurrentScene() is not { } scene) return;
+        try
+        {
+            var temperature = scene.Temperature.OrNullable();
+            IEnumerable<string> tags = scene.Tags.OrEmpty();
+            var atmosphere = scene.Atmosphere.OrNull();
+            if (fields)
+            {
+                var warmth = (_sceneTemperature.Text ?? "").Trim();
+                temperature = warmth.Length == 0 ? null
+                    : double.TryParse(warmth, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) ? value
+                    : throw new FormatException("Temperature must be a number.");
+                tags = (_sceneTags.Text ?? "").Split(',');
+                atmosphere = SettingsForm.Look("Scene", _sceneDaylight.Text, _sceneFoliage.Text);
+            }
+
+            var saved = _workspace.Apply(Edits.SetSceneEnvironment(scene.Id, dark ?? scene.Dark.OrNullable() == true, temperature, tags,
+                music ?? scene.Music.OrNull(), atmosphere));
+            if (fields) _editorMessage.Text = saved ? $"Saved the surroundings of {scene.Name}." : "No changes were made.";
+        }
+        catch (FormatException error)
+        {
+            _editorMessage.Text = $"Could not save the surroundings: {error.Message}";
+        }
+    }
+
+    /// <summary>The tile a new scene is filled with: one of the game's terrains (grass at first).</summary>
+    private void RefreshNewSceneTiles(GameProject project)
+    {
+        var terrains = ContentReadouts.Terrains(project);
+        if (_newSceneTile.Items.OfType<ComboBoxItem>().Select(item => item.Tag as string).SequenceEqual(terrains.Select(terrain => terrain.Id))) return;
+        var previous = (_newSceneTile.SelectedItem as ComboBoxItem)?.Tag as string ?? TileTypes.Grass;
+        _newSceneTile.Items.Clear();
+        foreach (var terrain in terrains)
+        {
+            _newSceneTile.Items.Add(new ComboBoxItem { Content = string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name, Tag = terrain.Id });
+        }
+        _newSceneTile.SelectedItem = _newSceneTile.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, previous))
+            ?? _newSceneTile.Items.OfType<ComboBoxItem>().FirstOrDefault();
     }
 
     /// <summary>

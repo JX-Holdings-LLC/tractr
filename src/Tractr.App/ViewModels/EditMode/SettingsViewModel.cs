@@ -13,13 +13,15 @@ public enum SettingsSection
 {
     Project,
     Weather,
+    Atmosphere,
     Mine,
     Export,
 }
 
 /// <summary>
-/// The Settings tab: project identity, gameplay settings and calendar (saved as one F# undo
-/// step), weather odds, the mine and export settings. Each section keeps what was typed into it
+/// The Settings tab: project identity, gameplay settings, the game's words and calendar (saved
+/// as one F# undo step), the weather (odds, overlays, each type's look and music), the
+/// atmosphere (day/night and foliage tints), the mine and export settings. Each section keeps what was typed into it
 /// until it is saved or reverted (#70): saving another section, toggling the mine, undo or a tab
 /// switch reload only the sections without unsaved fields. Season moves and removals change the
 /// draft rows and are saved with the project settings. Errors name the field (#46): the labels
@@ -37,6 +39,9 @@ public sealed class SettingsViewModel : ObservableObject
     public const string DayStartLabel = "Day start minute";
     public const string DayEndLabel = "Day end minute";
     public const string MinutesPerSecondLabel = "Game minutes per real second";
+    public const string DayMinutesLabel = "Minutes in a day";
+    public const string MoneyFormatLabel = "Money format";
+    public const string EnergyWordLabel = "Energy word";
     public const string MineSceneLabel = "Mine entrance scene";
     public const string MineXLabel = "Mine entrance X";
     public const string MineYLabel = "Mine entrance Y";
@@ -68,6 +73,10 @@ public sealed class SettingsViewModel : ObservableObject
     private string _dayStart = "";
     private string _dayEnd = "";
     private string _minutesPerSecond = "";
+    private string _dayMinutes = "";
+    private string _moneyFormat = "";
+    private string _energyWord = "";
+    private string _atmosphereMessage = "";
     private bool _pauseInModals;
     private bool _energyEnabled;
     private bool _skillsEnabled;
@@ -115,6 +124,9 @@ public sealed class SettingsViewModel : ObservableObject
         AddSeasonCommand = new RelayCommand(AddSeason);
         AddFestivalCommand = new RelayCommand(AddFestival);
         SaveWeatherCommand = new RelayCommand(SaveWeather);
+        AddOverlayCommand = new RelayCommand(AddOverlay);
+        SaveAtmosphereCommand = new RelayCommand(SaveAtmosphere);
+        RevertAtmosphereCommand = new RelayCommand(() => Load(SettingsSection.Atmosphere));
         SaveMineCommand = new RelayCommand(SaveMine);
         PickMineEntranceCommand = new RelayCommand(PickMineEntrance, () => _pickOnMap is not null);
         SaveExportCommand = new RelayCommand(SaveExport);
@@ -143,6 +155,18 @@ public sealed class SettingsViewModel : ObservableObject
     public string DayEnd { get => _dayEnd; set => SetProperty(ref _dayEnd, value ?? ""); }
 
     public string MinutesPerSecond { get => _minutesPerSecond; set => SetProperty(ref _minutesPerSecond, value ?? ""); }
+
+    /// <summary>Minutes in a game day (empty: the built-in 1440).</summary>
+    public string DayMinutes { get => _dayMinutes; set => SetProperty(ref _dayMinutes, value ?? ""); }
+
+    /// <summary>How money is written, {0} standing for the amount (empty: the built-in "$12").</summary>
+    public string MoneyFormat { get => _moneyFormat; set => SetProperty(ref _moneyFormat, value ?? ""); }
+
+    /// <summary>What energy is called (empty: "Energy").</summary>
+    public string EnergyWord { get => _energyWord; set => SetProperty(ref _energyWord, value ?? ""); }
+
+    /// <summary>The skills' names, one row per skill (empty: the built-in name).</summary>
+    public ObservableCollection<SkillNameDraft> SkillNames { get; } = [];
 
     /// <summary>"Pause the clock in dialogue, shops, minigames and menus".</summary>
     public bool PauseInModals { get => _pauseInModals; set => SetProperty(ref _pauseInModals, value); }
@@ -184,6 +208,43 @@ public sealed class SettingsViewModel : ObservableObject
     public string WeatherMessage { get => _weatherMessage; private set => SetProperty(ref _weatherMessage, value); }
 
     public RelayCommand SaveWeatherCommand { get; }
+
+    /// <summary>The game's weather overlays (beside the built-in rain and snow).</summary>
+    public ObservableCollection<OverlayDraft> Overlays { get; } = [];
+
+    /// <summary>Each weather type's overlay and music.</summary>
+    public ObservableCollection<WeatherLookDraft> WeatherLooks { get; } = [];
+
+    /// <summary>The overlay styles a row can pick.</summary>
+    public IReadOnlyList<string> OverlayStyles => SettingsForm.OverlayStyles;
+
+    public RelayCommand AddOverlayCommand { get; }
+
+    // ---- Atmosphere section ----
+
+    /// <summary>The look of every season first, then each season's own.</summary>
+    public ObservableCollection<LookDraft> Looks { get; } = [];
+
+    public string AtmosphereMessage { get => _atmosphereMessage; private set => SetProperty(ref _atmosphereMessage, value); }
+
+    public RelayCommand SaveAtmosphereCommand { get; }
+
+    /// <summary>Reloads the atmosphere's fields from the project.</summary>
+    public RelayCommand RevertAtmosphereCommand { get; }
+
+    // ---- Choices ----
+
+    /// <summary>The music a season, festival or weather type can play: none, the game's music assets and a missing <paramref name="current"/>.</summary>
+    public IReadOnlyList<PickerOption> MusicChoices(string? current) => Choices(nameof(CalendarSeason), nameof(CalendarSeason.Music), current);
+
+    /// <summary>The overlays a weather type can show: none, rain, snow, the game's saved overlays and a missing <paramref name="current"/>.</summary>
+    public IReadOnlyList<PickerOption> OverlayChoices(string? current) => Choices(nameof(WeatherTypeDefinition), nameof(WeatherTypeDefinition.Overlay), current);
+
+    private IReadOnlyList<PickerOption> Choices(string owner, string property, string? current)
+    {
+        if (_workspace.Current is not { } project || ContentForms.Field(owner, property, property, project) is not { } field) return [];
+        return ContentForms.Entries(field, ContentForms.Options(field.Reference, project), current);
+    }
 
     // ---- Mine section ----
 
@@ -274,6 +335,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         if (IsDirty(SettingsSection.Project)) Save();
         if (IsDirty(SettingsSection.Weather)) SaveWeather();
+        if (IsDirty(SettingsSection.Atmosphere)) SaveAtmosphere();
         if (IsDirty(SettingsSection.Mine)) SaveMine();
         if (IsDirty(SettingsSection.Export)) SaveExport();
         return !HasUnsavedChanges;
@@ -318,11 +380,19 @@ public sealed class SettingsViewModel : ObservableObject
             SettingsSection.Project =>
             [
                 _name, _version, _locale, _playerSpeed, _maxEnergy, _collapseFraction, _collapsePenalty, _dayStart, _dayEnd, _minutesPerSecond,
+                _dayMinutes, _moneyFormat, _energyWord,
                 Flag(_pauseInModals), Flag(_energyEnabled), Flag(_skillsEnabled), Flag(_showCredit), .. SkillLevels.Select(level => level.Xp),
-                .. Seasons.SelectMany(row => new[] { row.Id, row.Name, row.Days }),
-                .. Festivals.SelectMany(row => new[] { row.Id, row.Name, row.SeasonId, row.Day }),
+                .. SkillNames.Select(row => row.Name),
+                .. Seasons.SelectMany(row => new[] { row.Id, row.Name, row.Days, row.Temperature, row.Music }),
+                .. Festivals.SelectMany(row => new[] { row.Id, row.Name, row.SeasonId, row.Day, row.Music }),
             ],
-            SettingsSection.Weather => WeatherCells().OrderBy(cell => (cell.SeasonId, cell.WeatherId)).Select(cell => cell.Weight),
+            SettingsSection.Weather =>
+            [
+                .. WeatherCells().OrderBy(cell => (cell.SeasonId, cell.WeatherId)).Select(cell => cell.Weight),
+                .. Overlays.SelectMany(row => new[] { row.Id, row.Style, row.Color, row.Density, row.Speed, row.Tint }),
+                .. WeatherLooks.SelectMany(row => new[] { row.WeatherId, row.Overlay, row.Music }),
+            ],
+            SettingsSection.Atmosphere => Looks.SelectMany(row => new[] { row.SeasonId ?? "", row.Daylight, row.FoliageTint }),
             SettingsSection.Mine => [_mineSceneId ?? "", _mineX, _mineY, _mineFloors, _mineLadder],
             _ =>
             [
@@ -333,7 +403,7 @@ public sealed class SettingsViewModel : ObservableObject
         var keys = section switch
         {
             SettingsSection.Project => $"{SkillLevels.Count}/{Seasons.Count}/{Festivals.Count}",
-            SettingsSection.Weather => string.Join(",", WeatherCells().Select(cell => (cell.SeasonId, cell.WeatherId)).Order()),
+            SettingsSection.Weather => string.Join(",", WeatherCells().Select(cell => (cell.SeasonId, cell.WeatherId)).Order()) + $"/{Overlays.Count}",
             _ => "",
         };
         return keys + "\u001f" + string.Join("\u001f", fields);
@@ -349,6 +419,7 @@ public sealed class SettingsViewModel : ObservableObject
         {
             case SettingsSection.Project: LoadProject(project); break;
             case SettingsSection.Weather: LoadWeather(project); break;
+            case SettingsSection.Atmosphere: LoadAtmosphere(project); break;
             case SettingsSection.Mine: LoadMine(project); break;
             default: LoadExport(project); break;
         }
@@ -429,20 +500,37 @@ public sealed class SettingsViewModel : ObservableObject
         DayStart = Number(settings.Time.DayStartMinute);
         DayEnd = Number(settings.Time.DayEndMinute);
         MinutesPerSecond = Number(settings.Time.MinutesPerRealSecond);
+        DayMinutes = settings.Time.DayMinutes.OrNullable() is { } dayMinutes ? Number(dayMinutes) : "";
         PauseInModals = settings.Time.PauseInModals.OrNullable() != false;
+        var words = settings.Words.OrNull();
+        MoneyFormat = words?.Money.OrNull() ?? "";
+        EnergyWord = words?.Energy.OrNull() ?? "";
+        SkillNames.Clear();
+        foreach (var skill in ContentForms.Options("skill", project))
+        {
+            var name = words?.Skills.FirstOrDefault(entry => entry.Item1 == skill.Id)?.Item2 ?? "";
+            SkillNames.Add(new SkillNameDraft(skill.Id, name));
+        }
+
         ShowSkillLevels(settings.SkillLevelCurve.Select(Number));
         EnergyEnabled = settings.EnergyEnabled;
         SkillsEnabled = settings.SkillsEnabled;
         ShowCredit = settings.ShowMadeWithCredit;
         Seasons.Clear();
-        foreach (var season in settings.Calendar.Seasons) Seasons.Add(new SeasonDraft(season.Id, season.Name, Number(season.Days), saved: true));
+        foreach (var season in settings.Calendar.Seasons)
+        {
+            var temperature = season.Temperature.OrNullable() is { } warmth ? Number(warmth) : "";
+            Seasons.Add(new SeasonDraft(season.Id, season.Name, Number(season.Days), saved: true, temperature, season.Music.OrNull() ?? ""));
+        }
+
         _loadedSeasons = settings.Calendar.Seasons.Select(season => season.Id).ToList();
         Festivals.Clear();
         foreach (var festival in settings.Calendar.Festivals) Festivals.Add(FestivalRow(festival));
         Message = "";
     }
 
-    private static FestivalDraft FestivalRow(CalendarFestival festival) => new(festival.Id, festival.Name, festival.SeasonId, Number(festival.Day));
+    private static FestivalDraft FestivalRow(CalendarFestival festival) =>
+        new(festival.Id, festival.Name, festival.SeasonId, Number(festival.Day), festival.Music.OrNull() ?? "");
 
     private void ShowSkillLevels(IEnumerable<string> values)
     {
@@ -547,8 +635,9 @@ public sealed class SettingsViewModel : ObservableObject
         if (_workspace.Current is not { } project) return;
         try
         {
-            var seasons = Seasons.Select(row => CalendarSeason.Default.WithId(row.Id.Trim()).WithName(row.Name.Trim()).WithDays(Parse(row.Days, row.DaysLabel))).ToList();
-            var festivals = Festivals.Select(row => CalendarFestival.Default.WithId(row.Id.Trim()).WithName(row.Name.Trim()).WithSeasonId(row.SeasonId.Trim()).WithDay(Parse(row.Day, row.DayLabel))).ToList();
+            var seasons = Seasons.Select(row => SettingsForm.Season(row.Id.Trim(), row.Name.Trim(), Parse(row.Days, row.DaysLabel),
+                row.Temperature.Trim().Length == 0 ? null : Parse(row.Temperature, row.TemperatureLabel), row.Music)).ToList();
+            var festivals = Festivals.Select(row => SettingsForm.Festival(row.Id.Trim(), row.Name.Trim(), row.SeasonId.Trim(), Parse(row.Day, row.DayLabel), row.Music)).ToList();
             if (seasons.Count == 0) throw new FormatException("The calendar needs at least one season.");
             foreach (var season in seasons)
             {
@@ -569,7 +658,10 @@ public sealed class SettingsViewModel : ObservableObject
             }
 
             var curve = SkillLevelCurve();
-            var settings = project.Settings
+            double? dayMinutes = _dayMinutes.Trim().Length == 0 ? null : Whole(_dayMinutes, DayMinutesLabel);
+            if (dayMinutes < 60) throw new FormatException($"{DayMinutesLabel} must be at least 60.");
+            var words = SettingsForm.Words(project, _moneyFormat, _energyWord, SkillNames.Select(row => (row.SkillId, row.Name)));
+            var settings = SettingsForm.WithWords(project.Settings, words)
                 .WithLocale(_locale.Trim())
                 .WithEnergyEnabled(_energyEnabled)
                 .WithSkillsEnabled(_skillsEnabled)
@@ -579,7 +671,7 @@ public sealed class SettingsViewModel : ObservableObject
                 .WithCollapseMoneyPenalty(AtLeastZero(_collapsePenalty, CollapsePenaltyLabel))
                 .WithSkillLevelCurve(curve)
                 .WithMovement(project.Settings.Movement.WithPlayerSpeed(Positive(_playerSpeed, PlayerSpeedLabel)))
-                .WithTime(project.Settings.Time
+                .WithTime(SettingsForm.WithDayMinutes(project.Settings.Time, dayMinutes)
                     .WithDayStartMinute(Whole(_dayStart, DayStartLabel))
                     .WithDayEndMinute(Whole(_dayEnd, DayEndLabel))
                     .WithMinutesPerRealSecond(Positive(_minutesPerSecond, MinutesPerSecondLabel))
@@ -616,7 +708,28 @@ public sealed class SettingsViewModel : ObservableObject
         WeatherMessage = project.Weather.Types.Length == 0 ? "This project has no weather types." : "";
         Weather = [.. project.Settings.Calendar.Seasons.Select(season => new WeatherSeasonRow(season.Name, [.. project.Weather.Types.Select(type =>
             new WeatherCellDraft(season.Id, type.Id, type.Name, season.Name, Number(SettingsForm.WeatherWeight(project, season.Id, type.Id))))]))];
+        Overlays.Clear();
+        foreach (var overlay in project.Weather.Overlays.OrEmpty())
+        {
+            Overlays.Add(new OverlayDraft(overlay.Id, overlay.Style, overlay.Color, Number(overlay.Density), Number(overlay.Speed), overlay.Tint.OrNull() ?? ""));
+        }
+
+        WeatherLooks.Clear();
+        foreach (var type in project.Weather.Types)
+        {
+            WeatherLooks.Add(new WeatherLookDraft(type.Id, type.Name, type.Overlay.OrNull() ?? "", type.Music.OrNull() ?? ""));
+        }
     }
+
+    /// <summary>A new overlay row: drifting dust, with an id no other row or overlay has.</summary>
+    private void AddOverlay()
+    {
+        var taken = Overlays.Select(row => row.Id.Trim()).Concat(SettingsForm.OverlayStyles);
+        Overlays.Add(new OverlayDraft(Defaults.NextId("overlay", taken), "dust", "#c8b090", "1", "1", ""));
+    }
+
+    /// <summary>Drops an overlay row; saved with the weather. Weather types that showed it then show none of the game's.</summary>
+    public void RemoveOverlay(OverlayDraft overlay) => Overlays.Remove(overlay);
 
     private void SaveWeather()
     {
@@ -626,13 +739,59 @@ public sealed class SettingsViewModel : ObservableObject
             var weights = WeatherCells()
                 .Select(cell => (cell.SeasonId, cell.WeatherId, string.IsNullOrWhiteSpace(cell.Weight) ? 0 : Parse(cell.Weight, cell.Label)))
                 .ToList();
-            var saved = _workspace.Apply(SettingsForm.WeatherOdds(project, weights));
+            var overlays = Overlays.Select(row => SettingsForm.Overlay(row.Id, row.Style, row.Color,
+                Parse(row.Density, row.DensityLabel), Parse(row.Speed, row.SpeedLabel), row.Tint)).ToList();
+            var looks = WeatherLooks.Select(row => (row.WeatherId, row.Overlay, row.Music)).ToList();
+            // Looks first: they keep the odds table, which the weights then change.
+            var saved = _workspace.Apply(Edits.Batch("Weather", [SettingsForm.WeatherLooks(project, overlays, looks), SettingsForm.WeatherOdds(project, weights)]));
             Load(SettingsSection.Weather);
-            WeatherMessage = saved ? _workspace.SavedText("Weather odds") : "No changes were made.";
+            WeatherMessage = saved ? _workspace.SavedText("Weather") : "No changes were made.";
         }
         catch (FormatException error)
         {
             WeatherMessage = $"Could not save: {error.Message}";
+        }
+    }
+
+    // ---- Atmosphere section ----
+
+    private void LoadAtmosphere(GameProject project)
+    {
+        var atmosphere = project.Settings.Atmosphere.OrNull();
+        LookDraft Row(string? seasonId, string what, AtmosphereLook? look) =>
+            new(seasonId, what, look is null ? "" : SettingsForm.DaylightText(look.Daylight), look?.FoliageTint.OrNull() ?? "");
+        Looks.Clear();
+        Looks.Add(Row(null, "All seasons", atmosphere?.AllSeasons));
+        foreach (var season in project.Settings.Calendar.Seasons)
+        {
+            Looks.Add(Row(season.Id, string.IsNullOrWhiteSpace(season.Name) ? season.Id : season.Name,
+                atmosphere?.Seasons.FirstOrDefault(entry => entry.Item1 == season.Id)?.Item2));
+        }
+
+        AtmosphereMessage = "";
+    }
+
+    private void SaveAtmosphere()
+    {
+        if (_workspace.Current is not { } project) return;
+        try
+        {
+            AtmosphereLook? all = null;
+            var seasons = new List<(string, AtmosphereLook?)>();
+            foreach (var row in Looks)
+            {
+                var look = SettingsForm.Look(row.What, row.Daylight, row.FoliageTint);
+                if (row.SeasonId is { } seasonId) seasons.Add((seasonId, look));
+                else all = look;
+            }
+
+            var saved = _workspace.Apply(SettingsForm.Atmosphere(project, all, seasons));
+            Load(SettingsSection.Atmosphere);
+            AtmosphereMessage = saved ? _workspace.SavedText("Atmosphere") : "No changes were made.";
+        }
+        catch (FormatException error)
+        {
+            AtmosphereMessage = $"Could not save: {error.Message}";
         }
     }
 

@@ -206,7 +206,7 @@ let ``condition and outcome types are pinned`` () =
     Assert.Equal<string list>(
         [ "modifyFriendship"; "modifyEnergy"; "waterArea"; "message"; "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "clearFlag"
           "startQuest"; "completeQuest"; "spawnNPC"; "removeNPC"; "changeTile"; "warpPlayer"; "startDialogue"; "lockTransition"; "unlockTransition"
-          "playSound"; "performAction"; "startMinigame" ],
+          "playSound"; "performAction"; "startMinigame"; "playMusic"; "startCutscene" ],
         Vocabulary.outcomeTypes |> List.map fst)
     Assert.Equal("Water nearby soil (magic)", Vocabulary.outcomeLabel "waterArea")
     // Every outcome type the vocabulary offers is a schema outcome type.
@@ -266,7 +266,9 @@ let ``each outcome type shows the web fields`` () =
           "unlockTransition", [ "sceneId"; "x"; "y" ]
           "playSound", [ "soundId" ]
           "performAction", [ "actionId" ]
-          "startMinigame", [ "minigameId" ] ]
+          "startMinigame", [ "minigameId" ]
+          "playMusic", [ "soundId" ]
+          "startCutscene", [ "cutsceneId" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.outcomeTypes.Length)

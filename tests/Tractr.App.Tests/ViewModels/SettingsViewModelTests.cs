@@ -118,7 +118,7 @@ public sealed class SettingsViewModelTests
         storm.Weight = "4";
         viewModel.SaveWeatherCommand.Execute(null);
         Assert.Equal(4, SettingsForm.WeatherWeight(test.Project, "spring", "storm"));
-        Assert.Equal("Weather odds saved.", viewModel.WeatherMessage);
+        Assert.Equal("Weather saved.", viewModel.WeatherMessage);
         Assert.Equal("7.5", viewModel.PlayerSpeed);
         // The refresh the weather edit caused ran before the weather fields were reloaded.
         Assert.Equal("Unsaved changes kept (project, weather): save or revert them.", viewModel.Message);
