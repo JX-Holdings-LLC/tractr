@@ -603,6 +603,39 @@ Done in 0.7.0.
   log are a good base for lockstep multiplayer: shared farm, separate
   inventories and energy, and a split-screen or networked player.
 
+### M11: Finishing M1 and M2
+
+What 0.7.0 left out of the world vocabulary, sound and cutscenes.
+
+- [ ] **Packs add vocabulary.** Content packs can't yet add or replace
+  terrains, tools, item kinds, crop tiers, mutations or cutscenes; only
+  projects can (pairs with [M9](#m9-more-power-for-content-packs)).
+- [ ] **Audio memory.** Sound and music are decoded whole and kept
+  uncompressed (about 21 MB a minute of stereo), plus a resampled copy when
+  the device's rate differs, and the player's clip cache never evicts.
+  Stream long music and evict clips no longer playing.
+- [ ] **Audio in the editor**: a play button to preview a sound or music
+  asset, renaming them, and a Problems check for files that won't decode
+  (the player skips them silently today).
+- [ ] **Music across every scene change.** Music an event or cutscene chose
+  ends on doors and warps, but survives a mine ladder descent and debug
+  teleports.
+- [ ] **Cutscene polish**: smooth camera pans between ticks (only following
+  the player is interpolated), NPC and player pickers for a step's actor
+  and speaker (text fields today), creator-art NPC sprites that turn (they
+  face down; built-in NPC art turns), carrying a running cutscene through
+  Keep changes, and cutscene commands in the `farm-fuzz` generator.
+- [ ] **Edit Mode previews the sky**: the map shows terrain colours and art
+  but not the day/night tint, foliage tint or weather of a scene.
+- [ ] **Editor details**: a new scene filled with a game's own terrain
+  places it by the built-in layer rule instead of the terrain's layer; a new
+  weather overlay shows in the weather types' pickers only after saving the
+  weather; removing a season leaves its sky look behind unreported; and the
+  new Edit Mode strings don't go through `EditorStrings` yet (with the rest
+  of Edit Mode, see [Later](#later)).
+- [ ] **Advisories for the audio crates**: run cargo-deny's advisory check
+  in CI; lewton has had no release since 2021.
+
 ## Later
 
 - **Localization** of the rest of the editor UI (tabs, forms and Problems;
