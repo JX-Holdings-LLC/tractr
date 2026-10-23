@@ -178,19 +178,14 @@ fn saves_survive_items_being_added_changed_and_removed() {
 }
 
 #[test]
-fn bare_web_saves_load_and_reconcile() {
+fn json_saves_need_their_header() {
     let project = starter_project();
     let (content, target) = build(&project);
-    let mut state = state::create_game_state(&project, Some("save-file"));
-    let mut ghost = state.player.inventory[0].clone();
-    ghost.item.id = "item-from-nowhere".to_owned();
-    state.player.inventory.push(InventorySlot { quantity: 2, ..ghost });
+    let state = state::create_game_state(&project, Some("save-file"));
     let bare = serde_json::to_string(&state).unwrap();
-
     let loaded = load_save(&bare, &target, &content);
-    assert!(loaded.ok, "{:?}", loaded.errors);
-    assert!(loaded.header.is_none());
-    assert_eq!(loaded.quarantined, vec!["item-from-nowhere".to_owned()]);
+    assert!(!loaded.ok);
+    assert!(loaded.errors[0].contains("Save file has no header and state"), "{:?}", loaded.errors);
 }
 
 #[test]
@@ -200,7 +195,8 @@ fn saves_of_an_older_version_are_refused() {
     let fixture: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let project = starter_project();
     let (content, target) = build(&project);
-    let loaded = load_save(&fixture["input"].to_string(), &target, &content);
+    let file = serde_json::json!({ "header": serde_json::from_str::<serde_json::Value>(&write_save(&state::create_game_state(&project, None), &target)).unwrap()["header"], "state": fixture["input"] });
+    let loaded = load_save(&file.to_string(), &target, &content);
     assert!(!loaded.ok);
     assert!(loaded.errors[0].contains("Save version 4 is not supported"), "{:?}", loaded.errors);
 }
@@ -210,7 +206,7 @@ fn garbage_is_refused_softly() {
     let project = starter_project();
     let (content, target) = build(&project);
     assert!(load_save("not json", &target, &content).errors[0].starts_with("Save file is not valid JSON"));
-    assert_eq!(load_save("42", &target, &content).errors, vec!["Save state is not an object"]);
+    assert!(load_save("42", &target, &content).errors[0].contains("Save file is not a JSON object"));
     let bad_header = r#"{"header": {"format": "one"}, "state": {}}"#;
     assert!(load_save(bad_header, &target, &content).errors[0].starts_with("Save header is not valid"));
 }
@@ -364,10 +360,10 @@ fn loading_fits_the_clock_to_the_calendar_and_reseeds_an_empty_rng() {
     let mut game = state::create_game_state(&project, Some("old-save"));
     game.clock.day = 33;
     game.clock.season = "summer".to_owned();
-    let mut raw = serde_json::to_value(&game).unwrap();
-    // Written before the day of season existed, with no random state.
-    raw["clock"].as_object_mut().unwrap().remove("dayOfSeason");
-    raw.as_object_mut().unwrap().remove("rng");
+    let mut raw: serde_json::Value = serde_json::from_str(&write_save(&game, &target)).unwrap();
+    // A hand-edited save with no day of season and no random state.
+    raw["state"]["clock"].as_object_mut().unwrap().remove("dayOfSeason");
+    raw["state"].as_object_mut().unwrap().remove("rng");
     let loaded = load_save(&raw.to_string(), &target, &content);
     assert!(loaded.ok, "{:?}", loaded.errors);
     let state = loaded.state.unwrap();
@@ -425,8 +421,7 @@ fn restored_items_respect_the_inventory_limit() {
     state.player.max_inventory_size = state.player.inventory.len() as u32;
     let wood = project.items.iter().find(|item| item.id == "material-wood").expect("wood").clone();
     state.quarantined_items.push(InventorySlot::new(wood, 5));
-    let bare = serde_json::to_string(&state).unwrap();
-    let loaded = load_save(&bare, &target, &content);
+    let loaded = load_save(&write_save(&state, &target), &target, &content);
     assert!(loaded.ok, "{:?}", loaded.errors);
     assert!(loaded.restored.is_empty());
     let state = loaded.state.unwrap();

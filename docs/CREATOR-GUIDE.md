@@ -22,7 +22,7 @@ code. The editor shows this guide under **Help → Creator Guide** (F1).
 automatically in the app's data folder (`%APPDATA%\Tractr` on
 Windows, `~/.config/Tractr` on Linux). **File → Export Project JSON**
 writes a backup you can keep anywhere, and **Import Project JSON** brings one
-back, including projects made with the web version.
+back as a new project.
 
 ## 2. Build the world in Edit Mode
 

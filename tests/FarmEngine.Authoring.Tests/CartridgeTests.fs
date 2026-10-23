@@ -21,10 +21,10 @@ let private length (json: Json) = match json with JArray items -> items.Length |
 let private png = "data:image/png;base64,iVBORw0KGgo="
 
 [<Fact>]
-let ``format 2 carries start presentation and content without the project`` () =
+let ``a cartridge carries start presentation and content without the project`` () =
     let cart = read (CartridgeCompiler.Compile(starter ()))
-    Assert.Equal(2u, cart.CartFormat)
-    Assert.Equal(9u, cart.ProjectSchemaVersion)
+    Assert.Equal(3u, cart.CartFormat)
+    Assert.Equal(1u, cart.ProjectSchemaVersion)
     Assert.True(CartridgeReader.hasIdentifier (CartridgeCompiler.Compile(starter ())))
     let start = parse cart.StartJson
     Assert.Equal(Some (starter ()).Id, Json.asString (Json.get "id" start))
@@ -53,9 +53,9 @@ let ``data urls move to the asset table once and are referenced by content hash`
     let reference = Some("asset:" + asset.Id)
     let json = cart.PresentationJson
     Assert.DoesNotContain("data:", json)
-    let assets = Json.get "customAssets" (parse json)
-    Assert.Equal(reference, Json.asString (Json.get "dataUrl" (Json.index 0 assets)))
-    Assert.Equal(reference, Json.asString (Json.get "dataUrl" (Json.index 1 assets)))
+    let assets = match Json.get "customAssets" (parse json) with JArray items -> items | _ -> []
+    Assert.Equal(reference, Json.asString (Json.get "dataUrl" assets.[0]))
+    Assert.Equal(reference, Json.asString (Json.get "dataUrl" assets.[1]))
     Assert.DoesNotContain("data:image", cart.StartJson)
 
 [<Fact>]
@@ -216,7 +216,7 @@ let ``keep changes records the day of season when the absolute day does not give
 let ``keep changes keeps the project key order`` () =
     let project = starter ()
     let tool = { project with Player = { project.Player with EquippedTool = Some "tool-hoe" } }
-    let keys (json: Json) = Json.keys json
+    let keys (json: Json) = Json.spread json |> List.map fst
     let before = SchemaJson.encodeGameProject tool
     // The playtest ends with no tool equipped: the key goes, the others stay in place.
     let after = Playtest.applyStateJson before (engineState project [] [])

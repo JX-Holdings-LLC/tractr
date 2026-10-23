@@ -635,11 +635,6 @@ module internal ChecksContent =
                     match v.Frame with
                     | None -> ()
                     | Some f -> frame (path + ".frame") f a.Id label target
-        let customImage (path: string) (id: string option) (label: string) (target: NavigationTarget option) =
-            match id with
-            | Some id when id.Length > 0 && not (assets.ContainsKey id) ->
-                sink.Warning("graphics.missingCustomImage", path, sprintf "%s: custom image %s is not an asset" label id, target)
-            | _ -> ()
         project.CustomAssets
         |> Seq.iteri (fun i a ->
             let path = sprintf "customAssets[%d]" i
@@ -660,13 +655,10 @@ module internal ChecksContent =
                 sink.Error("graphics.sheetTooLarge", path + ".sheet", sprintf "%s: sprite sheet dimensions exceed the image" a.Name, target)
             | _ -> ())
         visual "playerVisual" project.PlayerVisual "Player" (Some NavigationTarget.Settings)
-        customImage "playerCustomImage" project.PlayerCustomImage "Player" (Some NavigationTarget.Settings)
         project.Npcs |> Seq.iteri (fun i n ->
-            visual (sprintf "npcs[%d].visual" i) n.Visual n.Name (Some(NavigationTarget.Npc n.Id))
-            customImage (sprintf "npcs[%d].customImage" i) n.CustomImage n.Name (Some(NavigationTarget.Npc n.Id)))
+            visual (sprintf "npcs[%d].visual" i) n.Visual n.Name (Some(NavigationTarget.Npc n.Id)))
         project.Items |> Seq.iteri (fun i d ->
-            visual (sprintf "items[%d].visual" i) d.Visual d.Name (Some(NavigationTarget.Item d.Id))
-            customImage (sprintf "items[%d].customImage" i) d.CustomImage d.Name (Some(NavigationTarget.Item d.Id)))
+            visual (sprintf "items[%d].visual" i) d.Visual d.Name (Some(NavigationTarget.Item d.Id)))
         match project.CustomCrops with
         | None -> ()
         | Some crops -> crops |> Seq.iteri (fun i d -> visual (sprintf "customCrops[%d].visual" i) d.Visual d.Name (Some(NavigationTarget.Crop d.Id)))
@@ -680,7 +672,7 @@ module internal ChecksContent =
                 row
                 |> Seq.iteri (fun x tile ->
                     // Most tiles carry no art of their own: no path or label strings for those.
-                    if tile.Visuals.IsSome || tile.CustomImage.IsSome || (match tile.Item with Some item -> item.Visual.IsSome | None -> false) then
+                    if tile.Visuals.IsSome || (match tile.Item with Some item -> item.Visual.IsSome | None -> false) then
                         let path = sprintf "scenes[%d].tiles[%d][%d]" s y x
                         let target = Some(NavigationTarget.Scene(scene.Id, x, y))
                         let label = sprintf "%s (%d,%d)" scene.Name x y
@@ -690,7 +682,6 @@ module internal ChecksContent =
                             visual (path + ".visuals.background") visuals.Background (label + " background") target
                             visual (path + ".visuals.overlay") visuals.Overlay (label + " overlay") target
                             visual (path + ".visuals.object") visuals.Object (label + " object") target
-                        customImage (path + ".customImage") tile.CustomImage label target
                         match tile.Item with
                         | None -> ()
                         | Some item -> visual (path + ".item.visual") item.Visual (sprintf "%s dropped item" scene.Name) target)))

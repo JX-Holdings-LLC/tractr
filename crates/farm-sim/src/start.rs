@@ -147,8 +147,6 @@ pub struct Presentation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub player_custom_image: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
@@ -164,7 +162,6 @@ impl Presentation {
             name: project.name.clone(),
             custom_assets: project.custom_assets.clone(),
             custom_crops: project.custom_crops.clone(),
-            player_custom_image: project.player_custom_image.clone(),
             player_visual: project.player_visual.clone(),
             graphics: project.graphics.clone(),
             game_panels: project.game_panels.clone().unwrap_or_default(),

@@ -4,18 +4,17 @@ open System
 open System.Collections.Generic
 open FarmEngine.Schemas
 
-/// The deterministic F# cartridge compiler (format 2, `schemas/cart.fbs`). A project is split
+/// The deterministic F# cartridge compiler (format 3, `schemas/cart.fbs`). A project is split
 /// into the compiled content, the inputs of a new game (`start`, Rust `StartState`) and what
 /// presentation reads (`presentation`, Rust `Presentation`); the player never reads project
 /// JSON. The sections are JSON in authoring units (docs/NUMERICS.md); the engine converts their
 /// numbers to its fixed-unit integers when it reads them. Every base64 `data:` URL inside them
 /// moves to the asset table and is replaced by `asset:<id>`, where the id is a content hash, so
-/// equal files are stored once and ids never depend on order. Plain F# throughout
-/// (`FlatBufferBuilder`, `Bytes`), so the web version compiles cartridges with the same code.
+/// equal files are stored once and ids never depend on order.
 [<AbstractClass; Sealed>]
 type CartridgeCompiler =
     /// The cartridge format this compiler writes (Rust `farm_cart::CART_FORMAT`).
-    static member Format = 2u
+    static member Format = 3u
 
     /// The inputs of `create_game_state` (Rust `StartState::from_project`).
     static member StartSection(project: GameProject) : Json =
@@ -72,7 +71,6 @@ type CartridgeCompiler =
               // Only the art the game uses ships (docs/EXPORT.md); the editor keeps the rest.
               yield "customAssets", Encode.list SchemaJson.encodeCustomAsset (AssetUsage.used project)
               yield! optional "customCrops" project.CustomCrops (Encode.list SchemaJson.encodeCustomCropDefinition)
-              yield! optional "playerCustomImage" project.PlayerCustomImage JString
               yield! optional "playerVisual" project.PlayerVisual SchemaJson.encodeVisualRef
               yield! optional "graphics" project.Graphics SchemaJson.encodeGraphicsSettings
               yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [])
@@ -224,12 +222,12 @@ type CartridgeCompiler =
         let contentOffset = builder.CreateByteVector contentBytes
         let startOffset = builder.CreateByteVector startBytes
         let presentationOffset = builder.CreateByteVector presentationBytes
-        builder.StartTable 9
-        builder.AddOffsetField(8, pluginsOffset)
-        builder.AddOffsetField(7, assetsOffset)
-        builder.AddOffsetField(6, presentationOffset)
-        builder.AddOffsetField(5, startOffset)
-        builder.AddOffsetField(4, contentOffset)
+        builder.StartTable 8
+        builder.AddOffsetField(7, pluginsOffset)
+        builder.AddOffsetField(6, assetsOffset)
+        builder.AddOffsetField(5, presentationOffset)
+        builder.AddOffsetField(4, startOffset)
+        builder.AddOffsetField(3, contentOffset)
         builder.AddOffsetField(2, info)
         builder.AddUInt32Field(1, CartridgeCompiler.UInt32Of project.SchemaVersion, 0u)
         builder.AddUInt32Field(0, CartridgeCompiler.Format, 0u)

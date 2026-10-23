@@ -10,8 +10,8 @@ let private same (expected: GameProject) (actual: GameProject) =
 
 // ── The sample games against the golden content fixtures ────────────────────
 
-/// The golden content fixtures hold the sample projects as the web version made them (with
-/// pinned times), at the current schema version.
+/// The golden content fixtures hold the sample projects (with pinned times), at the current
+/// schema version.
 let samples : obj[] seq =
     [ "starter-farm"; "cozy-garden"; "quest-rpg"; "blank" ] |> Seq.map (fun name -> [| box name |])
 
@@ -23,21 +23,10 @@ let private build (name: string) =
     | "blank" -> ProjectCatalog.CreateBlankProject fixedTime
     | _ -> invalidArg (nameof name) name
 
-/// Intended divergence from the web samples (#55): the Cozy Garden and Quest RPG samples have
-/// their own maps and set dressing (a garden with growing beds and hens; a village square with
-/// two more NPCs), where the web samples reuse the starter farm. Those parts are left out of the
-/// comparison; everything else still matches the goldens.
-let private ownDressing (name: string) =
-    match name with
-    | "cozy-garden" -> [ "scenes"; "animals" ]
-    | "quest-rpg" -> [ "scenes"; "npcs"; "dialogues" ]
-    | _ -> []
-
 [<Theory; MemberData(nameof samples)>]
 let ``sample projects match the golden content fixtures`` (name: string) =
-    let shared (json: Json) = ownDressing name |> List.fold (fun json key -> Json.remove key json) json
-    let expected = Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ]) |> shared |> Json.stableStringify
-    let stable (project: GameProject) = SchemaJson.encodeGameProject project |> shared |> Json.stableStringify
+    let expected = Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ]) |> Json.stableStringify
+    let stable (project: GameProject) = SchemaJson.encodeGameProject project |> Json.stableStringify
     let project = build name
     // The factory output is already in the current schema shape…
     assertSameStable name expected (stable project)
@@ -79,7 +68,6 @@ let templates : obj[] seq = seq {
 let ``every template is a valid project that compiles to a cartridge`` (id: string) (now: float) =
     let project = ProjectCatalog.CreateProjectForTemplate(id, now)
     Assert.Equal(now, project.GameStartTime)
-    Assert.Equal(now, project.CurrentTime)
     Assert.Empty(Problems.collect project |> Problems.errors)
     Assert.Empty(SchemaChecks.validateProject project)
     Assert.NotEmpty(CartridgeCompiler.Compile project)
@@ -173,9 +161,9 @@ let ``the starter project is seeded entirely from the pack`` () =
     Assert.Equal(9, project.CustomCrops.Value.Length)
 
 [<Fact>]
-let ``the default player is exactly the web one`` () =
+let ``the default player is pinned`` () =
     let expected =
-        Json.parse """{"x":5,"y":5,"direction":"down","sceneId":"scene-farm","inventory":[],"maxInventorySize":20,"money":100,"activeQuests":[],"completedQuests":[],"pixelX":0,"pixelY":0,"targetX":0,"targetY":0}"""
+        Json.parse """{"x":5,"y":5,"direction":"down","sceneId":"scene-farm","inventory":[],"maxInventorySize":20,"money":100,"activeQuests":[],"completedQuests":[]}"""
     Assert.Equal(Result.map Json.stableStringify expected, Ok(stableOf SchemaJson.encodePlayer (ProjectCatalog.CreateDefaultPlayer "scene-farm")))
 
 /// Port of the C# PolishAndEcosystemTests quest template case (m8 ecosystem).

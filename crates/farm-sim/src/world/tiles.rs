@@ -38,9 +38,6 @@ pub fn set_tile_layer(tile: &Tile, new_type: &str, visual: Option<&VisualRef>) -
     let layer = classify_tile_type(new_type);
     let mut updated = tile.clone();
     updated.r#type = new_type.to_owned();
-    if visual.is_some() {
-        updated.custom_image = None;
-    }
     if visual.is_some() || tile.visuals.is_some() {
         // { ...tile.visuals, [layer]: visual }
         let mut visuals = tile.visuals.clone().unwrap_or_default();

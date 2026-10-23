@@ -43,20 +43,6 @@ let expectError (expected: string) (result: Result<'T, string>) =
     | Error message -> Assert.Equal(expected, message)
     | Ok _ -> failwithf "expected the error %A" expected
 
-/// hash.ts: FNV-1a 64-bit (as two 32-bit lanes) over a stable JSON text — the hash the golden
-/// fixtures record.
-let hashText (text: string) : string =
-    let mutable h1 = 0x811c9dc5u
-    let mutable h2 = 0xcbf29ce4u
-    for ch in text do
-        let c = uint32 ch
-        h1 <- (h1 ^^^ c) * 0x01000193u
-        h2 <- (h2 ^^^ ((c <<< 1) ||| 1u)) * 0x01000193u
-    h1.ToString("x8") + h2.ToString("x8")
-
-/// `hashState`: the golden hash of a JSON value's stable text.
-let hashJson (value: Json) : string = hashText (Json.stableStringify value)
-
 /// The fixed `now` of the golden content fixtures.
 let fixedTime = 1_700_000_000_000.0
 

@@ -1,9 +1,9 @@
 //! Engine sessions over the C ABI (docs/LANGUAGES.md "FFI: .NET → Rust").
 //!
 //! A headless game for tools (the editor's Play Mode uses the graphical player in
-//! [`crate::player`] instead): sessions accept web-compatible project JSON or the F# FlatBuffers
+//! [`crate::player`] instead): sessions accept project JSON or the F# FlatBuffers
 //! cartridge. Commands and effects cross as JSON arrays, and state is stable JSON (see
-//! `farm_host::session`, shared with farm-wasm). The call shape stays coarse, handle-based and
+//! `farm_host::session`). The call shape stays coarse, handle-based and
 //! batched; Rust allocates results and .NET frees them with `fe_bytes_free`.
 //!
 //! A session is used by one thread at a time. A failed call writes its message to `out` (the
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn fe_session_save(session: *mut FeSession, out: *mut FeBy
     unsafe { with_session(session, out, |s| Ok(s.save())) }
 }
 
-/// Loads a save file (or a bare web `GameState`) into the session, replacing its state. Items
+/// Loads a save file into the session, replacing its state. Items
 /// the content no longer has are quarantined. Returns
 /// `{"warnings": […], "quarantined": […], "restored": […]}`; a refused save leaves the state
 /// untouched and answers `InvalidArgument` with the reasons in `out`.

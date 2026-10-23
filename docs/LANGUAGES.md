@@ -5,14 +5,13 @@ content, saves); the schema records, project logic, the content compiler,
 cartridges and Export Game are F#; the editor's Play Mode runs the Rust
 `farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
 plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
-browser for web demo exports. The web version is a separate project now, and
-Tractr reads only the current project and save formats (no migrations from
-older ones, since 0.5.0). The C# engine and the C# schema records are gone, and the simulation keeps every quantity as an integer
-(schema v9, [NUMERICS.md](NUMERICS.md)). See
-[ROADMAP.md](../ROADMAP.md#phase-7-one-engine). This is the reference for
-where code goes as the native app grows; read it before you port a new part
-of the web editor. [PORTING.md](PORTING.md) covers how Rust code mirrors the
-TypeScript.
+browser for web demo exports. Tractr reads only the current project and save
+formats (project schema version 1, save v5). The C# engine and the C# schema records
+are gone, and the simulation keeps every quantity as an integer
+([NUMERICS.md](NUMERICS.md)). See [ROADMAP.md](../ROADMAP.md). This is the
+reference for where code goes as the app grows; read it before you add a new
+part of the editor. [CONVENTIONS.md](CONVENTIONS.md) covers the code
+conventions.
 
 Everything below describes what is built, except where a design is marked
 **Future**; those designs are collected in [Future](#future-not-built).
@@ -28,9 +27,8 @@ Everything below describes what is built, except where a design is marked
 | **C#** | The Avalonia app: windows, views and view models, dialogs and file pickers, the project store on disk, image import, the Update Center, and hosting the Rust player and preview. | Game rules, project rules. A view model calls F# or Rust; it doesn't decide anything itself. |
 
 The contract between F# and Rust is the **cartridge**: a compiled, validated,
-binary form of a project. F# writes it and Rust reads it. JSON stays the
-interchange format with the web version and the debug format. It is no longer
-what the game runs on.
+binary form of a project. F# writes it and Rust reads it. JSON is the project
+file and the debug format; it is not what the game runs on.
 
 ### If you're unsure where something goes
 
@@ -88,7 +86,7 @@ led here):
                        │  farm-plugins (QuickJS in WebAssembly, run by wasmi)                         │
                        │  farm-render (draw lists; CPU raster) · farm-ui (HUD, dialogue, shop…)      │
                        │  farm-player (standalone game exe; also embedded in the editor's Play Mode)  │
-                       │  farm-wasm (same core + player for the web version and web demo exports)     │
+                       │  farm-wasm (same core + player for web demo exports)                          │
                        └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -111,17 +109,14 @@ what an exported game contains.
 - **Contents (as built):** the compiled content, the new-game start state and
   the presentation data as JSON sections with string ids and numbers in
   authoring units, an asset table with every embedded file once, and the pack
-  plugins with their granted hooks and minigame kinds (see "Format 2" below).
+  plugins with their granted hooks and minigame kinds (see "Format 3" below).
 - **Contents (Future):** content tables with ids interned to dense integer
   indices, a string table per locale, compiled condition bytecode, compiled
   dialogue graphs, flat tile-layer arrays and texture atlases packed at load.
   None of these exist yet.
 - **Version header:** `cart_format` (bumped on breaking change) plus the
   project schema version it was compiled from.
-- **Compatibility phase (history):** until the v9 cutover (phase 7), the
-  cartridge kept the `GameContent` shape and `double` values, so golden
-  hashes matched the TypeScript engine.
-- **Format 2 (current):** `cart.fbs` carries game info, the compiled content,
+- **Format 3 (current):** `cart.fbs` carries game info, the compiled content,
   the new-game start state (`StartState`) and presentation data
   (`Presentation`) as JSON in authoring units, which the engine converts to
   its fixed-unit integers as it reads them ([NUMERICS.md](NUMERICS.md)), plus
@@ -137,7 +132,7 @@ what an exported game contains.
 - The player's machine persists saves, so **Rust owns the save format and
   save loading** (from `Save.cs`). **F# owns project loading.** The creator
   persists projects. Both read only their current version (save v5, project
-  v9); older ones are refused.
+  version 1); others are refused.
 - The format is FlatBuffers too (`schemas/save.fbs`): a version header, a
   slot preview the title screen reads without loading the game, and the state
   compressed with zstd (pure-Rust `ruzstd`, so it also builds for wasm). JSON
@@ -148,7 +143,7 @@ what an exported game contains.
   carries `gameId`, the game version and the cartridge hash. Ids that no
   longer exist go to quarantine instead of failing the load. See
   [EXPORT.md](EXPORT.md#what-earlier-phases-must-get-right). Rust can also export a save as stable JSON for
-  debugging and for the web version.
+  debugging.
 - Saving is synchronous: the player serializes, compresses and writes the
   save on the simulation thread. Stable JSON is written straight from
   `Serialize` (`farm_sim::stable_json`), putting only the objects whose keys
@@ -250,10 +245,10 @@ what an exported game contains.
 
 ### WebAssembly (`farm-wasm`)
 
-- `wasm-bindgen` API that mirrors `farm-ffi`: `Player`, `Session`, `Preview`
-  and `renderJson`, over the same host protocol (`farm-host`, shared with
-  `farm-ffi`). The web editor's Play Mode uses it; the web demo export target
-  will too. Plugins run inside the module (QuickJS in wasmi, like the
+- `wasm-bindgen` API over `farm-ffi`'s player: `Player`, `hashState` and the
+  sound and music samples, over the same host protocol (`farm-host`, shared
+  with `farm-ffi`). The web demo export target uses it; headless sessions and
+  Edit Mode previews are `farm-ffi` only. Plugins run inside the module (QuickJS in wasmi, like the
   desktop), on the calling thread; a page that wants them off the main thread
   runs the whole player in a Worker. See `crates/farm-wasm/README.md`.
 
@@ -391,21 +386,20 @@ without a Rust toolchain, which reports them as skipped.
 
 ### Rust conventions
 
-- One TypeScript module → one Rust module, snake_case, same folder shape as
-  the web version (`farming/crops.ts` → `farm_sim::farming::crops`). The
-  golden-first workflow from PORTING.md still applies: port literally, and let
-  the goldens decide.
+- Modules are snake_case, one per engine system, in the folders of
+  [CONVENTIONS.md](CONVENTIONS.md); a change to play comes with a golden or
+  replay that pins it.
 - `farm-sim` has no I/O, no threads and no logging side effects. It is a
   reducer: `(state, content, command | ticks) → (state, effects, hook events)`.
-- State is **mutable inside a step, immutable across steps.** Unlike the
-  TypeScript reducer, Rust updates state in place. Undo and replay use the command log.
+- State is **mutable inside a step, immutable across steps.** Rust updates
+  state in place. Undo and replay use the command log.
   Snapshots for the debug drawer and playtest "keep changes" are explicit
   copies.
 - **Every sentence the engine shows a player comes from the message catalog**
   (`farm_sim::messages`): a stable key (`msg.notEnoughMoney`) and an English
   template with positional arguments. `Effect::say(level, message)` records
-  the English text in the effect, exactly as before, so replays, goldens and
-  the v8 parity tests see no change, and carries the message beside it,
+  the English text in the effect, exactly as before, so replays and goldens
+  see no change, and carries the message beside it,
   outside serialization and equality. The player translates it with the
   `farm-ui` table of the player's language (`Lang::message`), falling back to
   English for a key the table lacks. Built-in minigames' default texts and the
@@ -424,7 +418,7 @@ below record where each part went.
 | File(s) | Goes to | Notes |
 |---|---|---|
 | `Project.cs`, `World.cs`, `Actors.cs`, `Content.cs`, `Crafting.cs`, `Economy.cs`, `Events.cs`, `Extensibility.cs`, `Fishing.cs`, `Animals.cs`, `Mining.cs`, `Nodes.cs`, `Quests.cs`, `Social.cs`, `Weather.cs`, `Graphics.cs`, `Interface.cs`, `Settings.cs`, `Primitives.cs`, `GameContent.cs` | F# `FarmEngine.Authoring/Schema.fs` + `SchemaJson.fs` | Done in phase 7. The editor and F# use these records; C# builds them with `RecordWith` and reads options through `FSharpInterop`. Rust has its own serde types and reads cartridges. |
-| `Migrations.cs` | F# `Authoring.Migrations`, removed in 0.5.0 | Project v1→v9 (v8→v9 was the numerics grid). Since 0.5.0 `ProjectLoad` reads v9 only. |
+| `Migrations.cs` | F# `Authoring.Migrations`, removed in 0.5.0 | Project v1→v9 (v8→v9 was the numerics grid). Since 0.5.0 `ProjectLoad` reads the current version only (reset to version 1 in 0.6.0). |
 | `SchemaValidation.cs` | F# `Authoring.Validation` | Merged with Core `Validation.cs` into one Problems pipeline with JSON paths. |
 | `Packs.cs` (schemas) | F# `Authoring.Packs` | Manifests and permissions. |
 | `Save.cs`, `SaveMigrations.cs` | Rust `farm-cart::save` | Rust owns saves. The save migrations were removed in 0.5.0; only v5 saves load. |
@@ -673,19 +667,20 @@ the same tests, and was then deleted.
    v8→v9 project and save migrations, and re-record goldens from Rust
    ([NUMERICS.md](NUMERICS.md); done). From here Rust is the reference
    implementation and the `js` helpers are deleted. *Exit:* old v8 saves load
-   and play on in both apps (met), and benchmarks meet their budgets (not
+   and play on in both apps (met; the migrations and the Fable build were
+   removed in 0.5.0, when the two apps became separate projects), and benchmarks meet their budgets (not
    met for saving: about 2.5 ms against 1 ms, down from 10.7 ms, held to
    `SAVE_CEILING`; see [ROADMAP.md](../ROADMAP.md)).
 
-## Checklist: porting a new part of the web editor
+## Checklist: adding an editor feature
 
-Use this for every item in the editor list:
+Use this for every editor feature:
 
-1. **Split the web component.** List what it *decides* (defaults, checks,
-   derived values, what a button changes) and what it *shows*. Decisions go
-   to F#, display goes to C#.
-2. **Anything that changes play goes to Rust.** If the web component reaches
-   into engine rules, the rule belongs in `farm-sim`, not in the editor.
+1. **Split the feature.** List what it *decides* (defaults, checks, derived
+   values, what a button changes) and what it *shows*. Decisions go to F#,
+   display goes to C#.
+2. **Anything that changes play goes to Rust.** If the feature reaches into
+   engine rules, the rule belongs in `farm-sim`, not in the editor.
 3. **Add `Edit` cases** in F#. Every change to the project goes through
    `Document.apply`, so undo/redo and autosave come for free. Multi-step
    actions use `Edit.Batch`.

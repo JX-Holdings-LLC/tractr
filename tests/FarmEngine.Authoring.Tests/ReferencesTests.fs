@@ -195,10 +195,10 @@ let ``pickers keep a missing id and offer the empty entry`` () =
     Assert.Equal(project.Items.Length, known.Length)
     Assert.Equal(project.Items.Length, (References.picker ReferenceKind.Item None project None).Length)
 
-// ---- The condition/outcome vocabulary matches event-vocabulary.ts and event-forms.tsx ----
+// ---- The condition/outcome vocabulary ----
 
 [<Fact>]
-let ``condition and outcome types are the web lists`` () =
+let ``condition and outcome types are pinned`` () =
     Assert.Equal<string list>(
         [ "enterTile"; "interactTile"; "friendship"; "weather"; "inventorySpace"; "hasItem"; "flag"; "dayRange"; "season"; "yearRange"; "timeOfDay"; "questStatus"; "festivalId" ],
         Vocabulary.conditionTypes |> List.map fst)
@@ -209,7 +209,6 @@ let ``condition and outcome types are the web lists`` () =
           "playSound"; "performAction"; "startMinigame" ],
         Vocabulary.outcomeTypes |> List.map fst)
     Assert.Equal("Water nearby soil (magic)", Vocabulary.outcomeLabel "waterArea")
-    Assert.Equal("unlockScene", Vocabulary.outcomeLabel "unlockScene")
     // Every outcome type the vocabulary offers is a schema outcome type.
     for kind, _ in Vocabulary.outcomeTypes do
         Assert.Contains(kind, EventOutcomeTypes.All)
@@ -271,14 +270,13 @@ let ``each outcome type shows the web fields`` () =
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.outcomeTypes.Length)
-    Assert.Empty(keys "unlockScene")
     let radius = Vocabulary.outcomeFields "waterArea" |> List.head
     Assert.Equal((Some 0.0, Some 10.0, 1.0), (radius.Min, radius.Max, radius.WhenEmpty))
     Assert.Equal("From X", (Vocabulary.outcomeFields "lockTransition").[1].Label)
     Assert.True((Vocabulary.outcomeFields "spawnNPC").[1].Optional)
 
 [<Fact>]
-let ``condition defaults match event-vocabulary.ts`` () =
+let ``condition defaults are pinned`` () =
     let project = starter ()
     let json kind = Json.stringify (SchemaJson.encodeEventCondition (Vocabulary.defaultCondition kind project))
     let season = project.Settings.Calendar.Seasons.[0].Id

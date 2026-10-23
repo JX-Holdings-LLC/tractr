@@ -23,8 +23,7 @@ public sealed record ProjectLoadResult(GameProject? Project, IReadOnlyList<strin
 }
 
 /// <summary>
-/// Desktop project storage (web src/lib/projects.ts, with files instead of localStorage):
-/// one web-compatible project JSON per project in <c>&lt;root&gt;/projects/&lt;id&gt;.json</c>
+/// Desktop project storage: one project JSON per project in <c>&lt;root&gt;/projects/&lt;id&gt;.json</c>
 /// plus <c>index.json</c> (id, name, updated time). Every write is atomic and flushed to disk
 /// (<see cref="AtomicFile"/>) and keeps the previous version in <c>backups/</c>; every load goes
 /// through the F# project loader (<see cref="ProjectJson"/>), which reads the current schema
@@ -32,9 +31,8 @@ public sealed record ProjectLoadResult(GameProject? Project, IReadOnlyList<strin
 /// </summary>
 /// <remarks>
 /// The FILE is the source of truth for a project's id: <see cref="Load"/> hands back the project
-/// under the id its file name stands for, whatever id the JSON inside carries (every web export
-/// says <c>project-1</c>, and a hand-made copy repeats its original's id), so saving it writes
-/// the file it came from.
+/// under the id its file name stands for, whatever id the JSON inside carries (a hand-made copy
+/// repeats its original's id), so saving it writes the file it came from.
 /// </remarks>
 public sealed class ProjectStore
 {
@@ -233,7 +231,7 @@ public sealed class ProjectStore
         }
     }
 
-    /// <summary>A fresh unique project id (web <c>proj-&lt;base36 time&gt;</c>).</summary>
+    /// <summary>A fresh unique project id (<c>proj-&lt;base36 time&gt;</c>).</summary>
     public string NewId()
     {
         var now = (double)_time.GetUtcNow().ToUnixTimeMilliseconds();
@@ -247,7 +245,7 @@ public sealed class ProjectStore
         return id;
     }
 
-    /// <summary>Web-compatible project JSON (indented, camelCase, like the web export).</summary>
+    /// <summary>Project JSON (indented, camelCase).</summary>
     public static string ToJson(GameProject project) => ProjectLoad.toText(project);
 
     /// <summary>Parses and validates stored project JSON. Never throws.</summary>
@@ -260,9 +258,8 @@ public sealed class ProjectStore
     }
 
     /// <summary>
-    /// Imports project/exported-game JSON as a NEW project (web <c>importProjectFromData</c>):
-    /// full project files load as projects; exported games are layered over a blank
-    /// project. Editor-only state starts fresh. The caller saves the result.
+    /// Imports project JSON (Export Project JSON's file) as a NEW project: a new id, and
+    /// editor-only state starts fresh. The caller saves the result.
     /// </summary>
     public ProjectLoadResult Import(string json)
     {
@@ -281,37 +278,10 @@ public sealed class ProjectStore
             return ProjectLoadResult.Fail("The file does not contain a project (expected a JSON object).");
         }
 
-        var asProject = ProjectJson.loadProject(node);
-        GameProject project;
-        if (asProject.Ok && asProject.Data.OrNull() is { } loaded)
+        var loaded = ProjectJson.loadProject(node);
+        if (!loaded.Ok || loaded.Data.OrNull() is not { } project)
         {
-            project = loaded;
-        }
-        else
-        {
-            var exported = ProjectJson.loadExportedGame(node);
-            if (!exported.Ok || exported.Data.OrNull() is not { } game)
-            {
-                var errors = asProject.Errors.Length > 0 ? asProject.Errors : exported.Errors;
-                return ProjectLoadResult.Fail(errors.Length > 0 ? [.. errors] : ["Invalid project data"]);
-            }
-
-            // { ...createBlankProject(), ...exportedGame } at the JSON level, then re-validate.
-            var merged = RecordJson.ToNode(ProjectCatalog.CreateBlankProject(_time.GetUtcNow().ToUnixTimeMilliseconds())).AsObject();
-            var data = RecordJson.ToNode(game).AsObject();
-            foreach (var (key, value) in data)
-            {
-                merged[key] = value?.DeepClone();
-            }
-
-            merged["schemaVersion"] = ProjectSchema.CurrentProjectSchemaVersion;
-            var reparsed = ProjectJson.loadProject(merged);
-            if (!reparsed.Ok || reparsed.Data.OrNull() is not { } imported)
-            {
-                return ProjectLoadResult.Fail(reparsed.Errors.Length > 0 ? [.. reparsed.Errors] : ["Invalid project data"]);
-            }
-
-            project = imported;
+            return ProjectLoadResult.Fail(loaded.Errors.Length > 0 ? [.. loaded.Errors] : ["Invalid project data"]);
         }
 
         var name = string.IsNullOrWhiteSpace(project.Name) ? "Imported Game" : project.Name.Trim();

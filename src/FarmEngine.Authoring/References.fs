@@ -134,7 +134,6 @@ module References =
           oneOf "GameProject" "SelectedTileType" tileTypes
           optional "GameProject" "SelectedNpcId" ReferenceKind.Npc
           optional "GameProject" "SelectedItemId" ReferenceKind.Item
-          plain "GameProject" "PlayerCustomImage" "legacy player image: an asset id or a data URL"
           reference "GameProject" "CurrentSeason" ReferenceKind.Season
           optional "GameProject" "CurrentWeatherId" ReferenceKind.Weather
           plain "GameProject" "EventFlags" flag
@@ -154,7 +153,6 @@ module References =
           oneOf "Tile" "Background" tileTypes
           optionalOneOf "Tile" "Overlay" tileTypes
           optionalOneOf "Tile" "Object" tileTypes
-          plain "Tile" "CustomImage" "legacy tile image: an asset id or a data URL"
           optionalOneOf "Tile" "SoilState" (same SoilStates.All)
           reference "Crop" "Type" ReferenceKind.Crop
           oneOf "Crop" "Quality" (same CropQualities.All)
@@ -172,7 +170,6 @@ module References =
           // Items and crops
           oneOf "Item" "Type" (same ItemTypes.All)
           optional "Item" "CropType" ReferenceKind.Crop
-          plain "Item" "CustomImage" "legacy item image: an asset id or a data URL"
           optionalOneOf "Item" "ToolType" toolTypes
           optional "Item" "UseActionId" ReferenceKind.Action
           list "CropDefinition" "Seasons" ReferenceKind.Season
@@ -180,12 +177,10 @@ module References =
           list "CustomCropDefinition" "Seasons" ReferenceKind.Season
           optionalAs "CustomCropDefinition" "HarvestItemId" ReferenceKind.Item "(crop-<id>)"
           optionalOneOf "InventorySlot" "Quality" (same CropQualities.All)
-          plain "CustomCropDefinition" "CustomAsset" "legacy crop image as a data URL"
           // Characters and dialogue
           reference "Npc" "SceneId" ReferenceKind.Scene
           optionalOneOf "Npc" "MovePattern" (same NpcMovePatterns.All)
           oneOf "Npc" "Appearance" appearances
-          plain "Npc" "CustomImage" "legacy NPC image: an asset id or a data URL"
           reference "NpcBirthday" "Season" ReferenceKind.Season
           reference "NpcScheduleEntry" "SceneId" ReferenceKind.Scene
           list "GiftTastes" "Loved" ReferenceKind.Item

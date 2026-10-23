@@ -7,23 +7,23 @@ open FarmEngine.Schemas
 module Builtin =
     /// Built-in crops by id, in pack order.
     let crops () : (string * CropDefinition) list =
-        let add id name seed value time days stages seasons regrow regrowthTime regrowthDays size low high chance =
+        let add id name seed value days stages seasons regrow regrowthDays size low high chance =
             id,
             { CropDefinition.Default with
                 Id = id; Name = name; SeedCost = seed; BaseHarvestValue = value
-                GrowthTime = time; GrowthDays = Some days; Stages = stages; Seasons = seasons
-                CanRegrow = regrow; RegrowthTime = regrowthTime; RegrowthDays = regrowthDays
+                GrowthDays = Some days; Stages = stages; Seasons = seasons
+                CanRegrow = regrow; RegrowthDays = regrowthDays
                 MultiTile = (size |> Option.map (fun (w, h) -> { Width = w; Height = h }))
                 YieldMin = low; YieldMax = high; MutationChance = Some chance }
-        [ add "wheat" "Wheat" 10.0 25.0 15000.0 3.0 4.0 ["spring"; "fall"] false None None None 1.0 2.0 0.01
-          add "corn" "Corn" 15.0 40.0 25000.0 5.0 5.0 ["summer"; "fall"] false None None None 1.0 3.0 0.015
-          add "tomato" "Tomato" 20.0 50.0 20000.0 4.0 5.0 ["summer"] true (Some 8000.0) (Some 2.0) None 1.0 3.0 0.02
-          add "carrot" "Carrot" 8.0 20.0 12000.0 2.0 4.0 ["spring"; "fall"; "winter"] false None None None 1.0 2.0 0.008
-          add "potato" "Potato" 12.0 30.0 18000.0 4.0 4.0 ["spring"; "fall"] false None None None 2.0 4.0 0.012
-          add "strawberry" "Strawberry" 30.0 60.0 22000.0 4.0 5.0 ["spring"] true (Some 10000.0) (Some 2.0) None 1.0 2.0 0.025
-          add "pumpkin" "Pumpkin" 50.0 150.0 35000.0 7.0 6.0 ["fall"] false None None (Some(2.0, 2.0)) 1.0 1.0 0.05
-          add "cauliflower" "Cauliflower" 40.0 120.0 28000.0 6.0 5.0 ["spring"] false None None (Some(2.0, 2.0)) 1.0 1.0 0.04
-          add "blueberry" "Blueberry" 35.0 70.0 24000.0 5.0 5.0 ["summer"] true (Some 9000.0) (Some 2.0) None 2.0 5.0 0.03 ]
+        [ add "wheat" "Wheat" 10.0 25.0 3.0 4.0 ["spring"; "fall"] false None None 1.0 2.0 0.01
+          add "corn" "Corn" 15.0 40.0 5.0 5.0 ["summer"; "fall"] false None None 1.0 3.0 0.015
+          add "tomato" "Tomato" 20.0 50.0 4.0 5.0 ["summer"] true (Some 2.0) None 1.0 3.0 0.02
+          add "carrot" "Carrot" 8.0 20.0 2.0 4.0 ["spring"; "fall"; "winter"] false None None 1.0 2.0 0.008
+          add "potato" "Potato" 12.0 30.0 4.0 4.0 ["spring"; "fall"] false None None 2.0 4.0 0.012
+          add "strawberry" "Strawberry" 30.0 60.0 4.0 5.0 ["spring"] true (Some 2.0) None 1.0 2.0 0.025
+          add "pumpkin" "Pumpkin" 50.0 150.0 7.0 6.0 ["fall"] false None (Some(2.0, 2.0)) 1.0 1.0 0.05
+          add "cauliflower" "Cauliflower" 40.0 120.0 6.0 5.0 ["spring"] false None (Some(2.0, 2.0)) 1.0 1.0 0.04
+          add "blueberry" "Blueberry" 35.0 70.0 5.0 5.0 ["summer"] true (Some 2.0) None 2.0 5.0 0.03 ]
 
     let items () : Item list =
         let result = ResizeArray<Item>()

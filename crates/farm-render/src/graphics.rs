@@ -53,8 +53,6 @@ pub fn art_assets(assets: &[CustomAsset]) -> Vec<ArtAsset> {
 pub struct NpcArt {
     pub scene_id: String,
     pub visual: Option<VisualRef>,
-    /// Shared, so refreshing the live state copies no `data:` URL.
-    pub custom_image: Option<Arc<str>>,
 }
 
 /// An animal instance for the art pass.
@@ -76,8 +74,6 @@ pub struct DefinitionArt {
 pub struct CropArt {
     pub id: String,
     pub visual: Option<VisualRef>,
-    /// Legacy image binding (a `data:` URL of a custom asset).
-    pub custom_asset: Option<String>,
 }
 
 /// The subset of a game the graphics pipeline reads (TS `GraphicsSource`): custom assets, player
@@ -91,8 +87,6 @@ pub struct CropArt {
 pub struct GraphicsSource {
     pub assets: Vec<ArtAsset>,
     pub player_visual: Option<VisualRef>,
-    /// Shared with every frame's snapshot (no copy of a `data:` URL per frame).
-    pub player_custom_image: Option<Arc<str>>,
     /// `graphics.pixelArt` (true when the game has no graphics settings).
     pub pixel_art: bool,
     pub npcs: Vec<NpcArt>,
@@ -108,15 +102,7 @@ fn definitions<'a>(items: impl IntoIterator<Item = (&'a String, &'a Option<Visua
 }
 
 fn crop_art(crops: Option<&Vec<CustomCropDefinition>>) -> Vec<CropArt> {
-    crops
-        .into_iter()
-        .flatten()
-        .map(|crop| CropArt {
-            id: crop.id.clone(),
-            visual: crop.visual.clone(),
-            custom_asset: crop.custom_asset.clone(),
-        })
-        .collect()
+    crops.into_iter().flatten().map(|crop| CropArt { id: crop.id.clone(), visual: crop.visual.clone() }).collect()
 }
 
 fn animal_art(animals: &[farm_sim::schema::AnimalState]) -> Vec<AnimalArt> {
@@ -130,14 +116,12 @@ impl GraphicsSource {
     fn base(
         assets: &[CustomAsset],
         player_visual: Option<&VisualRef>,
-        player_custom_image: Option<&String>,
         graphics: Option<&GraphicsSettings>,
         custom_crops: Option<&Vec<CustomCropDefinition>>,
     ) -> Self {
         Self {
             assets: art_assets(assets),
             player_visual: player_visual.cloned(),
-            player_custom_image: player_custom_image.map(|url| Arc::from(url.as_str())),
             pixel_art: graphics.is_none_or(|graphics| graphics.pixel_art),
             npcs: Vec::new(),
             animal_species: Vec::new(),
@@ -154,7 +138,6 @@ impl GraphicsSource {
         Self::base(
             &presentation.custom_assets,
             presentation.player_visual.as_ref(),
-            presentation.player_custom_image.as_ref(),
             presentation.graphics.as_ref(),
             presentation.custom_crops.as_ref(),
         )
@@ -173,18 +156,13 @@ impl GraphicsSource {
         let mut source = Self::base(
             &project.custom_assets,
             project.player_visual.as_ref(),
-            project.player_custom_image.as_ref(),
             project.graphics.as_ref(),
             project.custom_crops.as_ref(),
         );
         source.npcs = project
             .npcs
             .iter()
-            .map(|npc| NpcArt {
-                scene_id: npc.scene_id.clone(),
-                visual: npc.visual.clone(),
-                custom_image: npc.custom_image.as_deref().map(Arc::from),
-            })
+            .map(|npc| NpcArt { scene_id: npc.scene_id.clone(), visual: npc.visual.clone() })
             .collect();
         source.animal_species = definitions(project.animal_species.iter().map(|d| (&d.id, &d.visual)));
         source.animals = animal_art(&project.animals);
@@ -202,7 +180,6 @@ impl GraphicsSource {
             .map(|npc| NpcArt {
                 scene_id: state.npcs.get(&npc.id).map_or(&npc.scene_id, |live| &live.scene_id).clone(),
                 visual: npc.visual.clone(),
-                custom_image: npc.custom_image.as_deref().map(Arc::from),
             })
             .collect();
         self.node_types = definitions(content.node_types.iter().map(|d| (&d.id, &d.visual)));
@@ -367,22 +344,15 @@ pub fn resolve_visual(
 /// per-layer tile art, crop growth frames, node, machine and item art. Nothing else changes.
 pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, scene: &Scene, tick: f64, moving: bool) {
     let assets = &source.assets;
-    let legacy = |url: Option<&str>| -> Option<VisualRef> {
-        let url = url.filter(|url| !url.is_empty())?;
-        let asset = assets.iter().find(|asset| &*asset.image_url == url)?;
-        Some(VisualRef { asset_id: asset.id.clone(), ..VisualRef::default() })
-    };
     let art = |visual: Option<&VisualRef>| resolve_visual(assets, visual, tick, "down", true);
 
     snapshot.pixel_art = Some(source.pixel_art);
-    snapshot.player.image_url = source.player_custom_image.clone();
-    let player_visual = source.player_visual.clone().or_else(|| legacy(source.player_custom_image.as_deref()));
-    snapshot.player.sprite = resolve_visual(assets, player_visual.as_ref(), tick, &snapshot.player.direction, moving);
+    snapshot.player.sprite =
+        resolve_visual(assets, source.player_visual.as_ref(), tick, &snapshot.player.direction, moving);
 
     let npcs: Vec<&NpcArt> = source.npcs.iter().filter(|npc| npc.scene_id == scene.id).collect();
     for (target, npc) in snapshot.npcs.iter_mut().zip(&npcs) {
-        let visual = npc.visual.clone().or_else(|| legacy(npc.custom_image.as_deref()));
-        target.sprite = art(visual.as_ref());
+        target.sprite = art(npc.visual.as_ref());
     }
     let animals = source.animals.iter().filter(|animal| animal.scene_id == scene.id);
     for (target, animal) in snapshot.npcs.iter_mut().skip(npcs.len()).zip(animals) {
@@ -413,9 +383,7 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
 
             if let (Some(target_crop), Some(crop)) = (target.crop.as_mut(), tile.crop.as_ref()) {
                 let definition = source.custom_crops.iter().find(|c| c.id == crop.r#type);
-                let visual = definition
-                    .and_then(|d| d.visual.clone())
-                    .or_else(|| legacy(definition.and_then(|d| d.custom_asset.as_deref())));
+                let visual = definition.and_then(|d| d.visual.clone());
                 let asset = visual.as_ref().and_then(|v| assets.iter().find(|asset| asset.id == v.asset_id));
                 let growth = asset
                     .and_then(|asset| asset.animations.as_ref())
@@ -439,11 +407,7 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
                 machine.sprite = art(GraphicsSource::visual_of(&source.machine_types, type_id));
             }
             if let Some(item) = target.item.as_mut() {
-                let visual = tile
-                    .item
-                    .as_ref()
-                    .and_then(|item| item.visual.clone().or_else(|| legacy(item.custom_image.as_deref())));
-                item.sprite = art(visual.as_ref());
+                item.sprite = art(tile.item.as_ref().and_then(|item| item.visual.as_ref()));
             }
         }
     }

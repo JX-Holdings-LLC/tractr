@@ -21,8 +21,7 @@
 //! how the [`crate::units`] adapters know to write the stored integers instead of authoring
 //! numbers. The hash text is 16 lowercase hex digits.
 //!
-//! [`stable_stringify`] (stable JSON) stays for debug output and the readable goldens;
-//! [`hash_text`] is the v8 text hash (FNV-1a over UTF-16), kept for the FFI's `fe_hash_text`.
+//! [`stable_stringify`] (stable JSON) is for debug output and the readable goldens.
 
 use crate::stable_json;
 use serde::ser::{self, Serialize};
@@ -43,19 +42,6 @@ pub fn canonical_bytes<T: Serialize + ?Sized>(value: &T) -> Vec<u8> {
 /// xxh3-64 of the canonical binary encoding of `value`, as 16 hex digits.
 pub fn hash_state<T: Serialize + ?Sized>(value: &T) -> String {
     format!("{:016x}", twox_hash::XxHash3_64::oneshot(&canonical_bytes(value)))
-}
-
-/// FNV-1a over the UTF-16 code units of `text`, as two 32-bit lanes rendered in hex (the v8
-/// state hash over stable JSON; still exported as `fe_hash_text`).
-pub fn hash_text(text: &str) -> String {
-    let mut h1: u32 = 0x811c9dc5;
-    let mut h2: u32 = 0xcbf29ce4;
-    for unit in text.encode_utf16() {
-        let c = u32::from(unit);
-        h1 = (h1 ^ c).wrapping_mul(0x01000193);
-        h2 = (h2 ^ ((c << 1) | 1)).wrapping_mul(0x01000193);
-    }
-    format!("{h1:08x}{h2:08x}")
 }
 
 /// Encoding failure: only a custom error from a value's own `Serialize` impl.
@@ -407,13 +393,6 @@ mod tests {
     use super::*;
     use indexmap::IndexMap;
     use serde::Serialize;
-
-    #[test]
-    fn hashes_text_like_the_v8_engine() {
-        assert_eq!(hash_text("{}"), "5465b8257807bf56");
-        assert_eq!(hash_text("[]"), "741638a538a6be56");
-        assert_eq!(hash_text("null"), "77074ba4d9fff516");
-    }
 
     #[derive(Serialize)]
     struct Sample {

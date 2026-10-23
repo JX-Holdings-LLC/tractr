@@ -263,9 +263,7 @@ let private vary (project: JsonObject) (variation: ProjectVariation) =
         player["x"] <- JsonValue.Create(x % w)
         player["y"] <- JsonValue.Create(y % h)
     | Face direction -> player["direction"] <- JsonValue.Create direction
-    | WallClock ms ->
-        project["currentTime"] <- JsonValue.Create ms
-        project["gameStartTime"] <- JsonValue.Create ms
+    | WallClock ms -> project["gameStartTime"] <- JsonValue.Create ms
     | Calendar(day, season) ->
         project["currentDay"] <- JsonValue.Create day
         project["currentSeason"] <- JsonValue.Create season

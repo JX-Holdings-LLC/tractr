@@ -15,7 +15,7 @@ table SavePreview {
   saved_at:long;
   // A small PNG of the scene when the save was written.
   thumbnail_png:[ubyte];
-  // The day within `season` (0 in saves written before it existed).
+  // The day within `season`.
   day_of_season:double;
 }
 

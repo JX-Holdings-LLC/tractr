@@ -55,7 +55,7 @@ fn every_golden_fixture_writes_like_the_reference() {
     let mut checked = 0;
     for path in files {
         let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        // The v8 primitives hold lone surrogates (`"\ud800"`), which serde_json cannot read.
+        // The fixed vectors hold lone surrogates (`"\ud800"`), which serde_json cannot read.
         let Ok(value) = serde_json::from_str::<Value>(&text) else { continue };
         checked += 1;
         let text = same_text(&path.display().to_string(), &value);

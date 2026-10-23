@@ -138,7 +138,6 @@ fn make_project() -> GameProject {
         selected_tile_type: "grass".to_owned(),
         selected_npc_id: None,
         selected_item_id: None,
-        current_time: 1_000_000.0,
         custom_assets: Vec::new(),
         current_season: "spring".to_owned(),
         current_day: 1,
@@ -278,11 +277,8 @@ fn set_tile_layer_updates_one_layer_and_keeps_the_others() {
     assert_eq!(soil.object.as_deref(), Some("wall"));
     assert!(soil.collision, "changing the background keeps the object layer's collision");
 
-    let mut with_image = grass.clone();
-    with_image.custom_image = Some("img".to_owned());
     let visual = VisualRef { asset_id: "asset-1".to_owned(), animation: None, frame: None };
-    let painted = tiles::set_tile_layer(&with_image, "path", Some(&visual));
-    assert_eq!(painted.custom_image, None);
+    let painted = tiles::set_tile_layer(&grass, "path", Some(&visual));
     assert_eq!(painted.overlay.as_deref(), Some("path"));
     let visuals = painted.visuals.expect("visuals set");
     assert_eq!(visuals.overlay, Some(visual));

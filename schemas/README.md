@@ -63,4 +63,4 @@ A save file has a header (save format, game id, game version, cartridge
 hash), a slot preview (farm name, date, money, play time, saved-at time and a
 thumbnail) and the `GameState` as zstd-compressed stable JSON. The title
 screen reads previews without decompressing states. `farm-cart` also reads
-JSON saves with the same header and bare web `GameState`s.
+JSON saves with the same header.

@@ -35,18 +35,15 @@ let ``a project of the current schema version loads`` () =
 let ``other schema versions are refused`` () =
     let errors (text: string) = (ProjectJson.loadProjectText text).Errors
     Assert.Equal<string list>(
-        [ "Project schema version 8 is not supported (this engine reads version " + current + ")." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 8)))
+        [ "Project schema version 0 is not supported (this engine reads version " + current + ")." ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 0)))
     Assert.Equal<string list>(
-        [ "Project schema version 10 is newer than this engine supports (" + current + "). Update the engine." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 10)))
+        [ "Project schema version 2 is newer than this engine supports (" + current + "). Update the engine." ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 2)))
     Assert.Equal<string list>(
         [ "Project data has no schemaVersion (this engine reads version " + current + ")." ],
         errors (patched (fun o -> o.Remove "schemaVersion" |> ignore)))
     Assert.Equal<string list>([ "Project data is not an object" ], errors "[1,2,3]")
-    Assert.Equal<string list>(
-        [ "Game schema version 2.5 is not supported (this engine reads version " + current + ")." ],
-        (ProjectJson.loadExportedGameText (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 2.5))).Errors)
 
 let private malformed () : (string * string) list =
     let arrayOf (items: JsonNode list) =
@@ -60,7 +57,7 @@ let private malformed () : (string * string) list =
       "null tile", patched (fun o -> o.["scenes"].[0].["tiles"] <- arrayOf [ arrayOf [ null ] ])
       "customCrops is an object", patched (fun o -> o["customCrops"] <- JsonObject())
       "null event", patched (fun o -> o["events"] <- arrayOf [ null ])
-      "exported name is a number", """{"name":42}"""
+      "name is a number", """{"name":42}"""
       "array payload", "[1,2,3]"
       "empty object", "{}" ]
 
@@ -78,8 +75,6 @@ let ``loading never throws and always explains a refusal`` (name: string) =
     Assert.Equal<string list>(first.Errors, second.Errors)
     Assert.Equal(stableProject first.Data, stableProject second.Data)
     Assert.True(first.Ok || not first.Errors.IsEmpty, name + ": refused without an error")
-    let game = ProjectJson.loadExportedGameText text
-    Assert.True(game.Ok || not game.Errors.IsEmpty, name + ": exported game refused without an error")
 
 [<Fact>]
 let ``malformed values are reported where they are`` () =
@@ -92,7 +87,6 @@ let ``loading does not change the caller's node`` () =
     let raw = JsonNode.Parse(starterText ())
     let before = raw.ToJsonString()
     ProjectJson.loadProject raw |> ignore
-    ProjectJson.loadExportedGame raw |> ignore
     Assert.Equal(before, raw.ToJsonString())
 
 [<Fact>]
@@ -100,8 +94,6 @@ let ``invalid JSON text is reported, not thrown`` () =
     let result = ProjectJson.loadProjectText "garbage"
     Assert.False result.Ok
     Assert.StartsWith("Project data is not valid JSON: ", result.Errors.[0])
-    let exported = ProjectJson.loadExportedGameText "{"
-    Assert.StartsWith("Game data is not valid JSON: ", exported.Errors.[0])
 
 [<Fact>]
 let ``whole-number fields with a fraction are reported`` () =

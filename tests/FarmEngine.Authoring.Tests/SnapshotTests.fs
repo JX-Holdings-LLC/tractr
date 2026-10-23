@@ -85,12 +85,6 @@ let private snapshot (text: string) : JsonObject =
         match attempt (fun () -> CartridgeCompiler.Compile data) with
         | Ok bytes -> o["cartridge"] <- JsonValue.Create(sha bytes)
         | Error message -> o["cartridge"] <- JsonValue.Create("throws " + message)
-    let game = ProjectLoad.loadExportedGameText text
-    o["gameOk"] <- JsonValue.Create game.Ok
-    o["gameErrors"] <- strings game.Errors
-    match game.Data with
-    | None -> ()
-    | Some data -> o["game"] <- JsonValue.Create(shaText (Json.stableStringify (SchemaJson.encodeExportedGame data)))
     o
 
 let private options = JsonSerializerOptions(WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping)

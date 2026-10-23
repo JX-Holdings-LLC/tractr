@@ -12,19 +12,14 @@ use crate::widgets::{Button, ButtonKind};
 use farm_render::{resolve_visual, FontId, ImageStore, Rect, SnapshotSprite, TextAlign};
 use farm_sim::schema::Npc;
 use farm_sim::Command;
-use std::sync::Arc;
 
 const TEXT_SIZE: f32 = 15.0;
 const OPTION_SIZE: f32 = 14.0;
 
-/// The NPC's art facing the player, as the map resolves it: the creator's visual, the NPC's
-/// custom image, then the built-in art for its appearance.
+/// The NPC's art facing the player, as the map resolves it: the creator's visual, then the
+/// built-in art for its appearance.
 fn portrait_sprite(view: &GameView<'_>, npc: &Npc) -> Option<SnapshotSprite> {
     resolve_visual(view.art.assets, npc.visual.as_ref(), 0.0, "down", false)
-        .or_else(|| {
-            let url = npc.custom_image.as_deref().filter(|url| !url.is_empty())?;
-            Some(SnapshotSprite { image_url: Arc::from(url), ..SnapshotSprite::default() })
-        })
         .or_else(|| view.art.builtin.and_then(|art| art.npc(Some(npc.appearance.as_str()), Some("down"), 0.0, false)))
 }
 

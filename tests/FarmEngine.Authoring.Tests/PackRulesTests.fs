@@ -6,7 +6,7 @@ open FarmEngine.Schemas
 open FarmEngine.Authoring.Tests.TestProjects
 
 [<Fact>]
-let ``compatibility range language matches web behavior including zero major and suffixes`` () =
+let ``the engine range language handles zero majors and suffixes`` () =
     let versions = ["0.5.0"; "0.9.0"; "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 "]
     let everything = versions
     // Each range, and the versions it accepts (an unparseable version is always accepted; an

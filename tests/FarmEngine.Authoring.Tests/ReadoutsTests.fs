@@ -89,20 +89,18 @@ let ``the crop summary adds regrowth and multi-tile rows`` () =
     Assert.Equal("2 day(s)", value "Regrowth time" tomato)
     Assert.Equal("2.0%", value "Mutation chance" tomato)
     Assert.DoesNotContain(tomato, fun line -> line.Label = "Multi-tile size")
-    // Only the legacy wall-clock time: 12500 ms is 2.5 → 3 days.
-    let legacy = { builtinCrop "tomato" with RegrowthDays = None; RegrowthTime = Some 12500.0 }
-    Assert.Equal("3 day(s)", value "Regrowth time" (Readouts.cropSummary project legacy))
-    // A zero is not shown, like the web's truthiness check.
-    let zero = { builtinCrop "tomato" with RegrowthDays = Some 0.0; RegrowthTime = None }
-    Assert.DoesNotContain(Readouts.cropSummary project zero, fun line -> line.Label = "Regrowth time")
+    // Absent or 0 regrows in a day, as the engine counts it.
+    let zero = { builtinCrop "tomato" with RegrowthDays = Some 0.0 }
+    Assert.Equal("1 day(s)", value "Regrowth time" (Readouts.cropSummary project zero))
+    Assert.Equal("1 day(s)", value "Regrowth time" (Readouts.cropSummary project { zero with RegrowthDays = None }))
     let pumpkin = Readouts.cropSummary project (builtinCrop "pumpkin")
     Assert.Equal("2 × 2 tiles", value "Multi-tile size" pumpkin)
     Assert.DoesNotContain(pumpkin, fun line -> line.Label = "Regrowth time")
     Assert.Equal("Multi-tile size", (List.last pumpkin).Label)
-    // Growth days from the legacy time (17500 ms → 3.5 → 4), and unknown seasons capitalized.
-    let old = { builtinCrop "wheat" with GrowthDays = None; GrowthTime = 17500.0; Seasons = [ "monsoon" ] }
+    // Absent growth days count as one, and unknown seasons are capitalized.
+    let old = { builtinCrop "wheat" with GrowthDays = None; Seasons = [ "monsoon" ] }
     let summary = Readouts.cropSummary project old
-    Assert.Equal("4", value "Growth days" summary)
+    Assert.Equal("1", value "Growth days" summary)
     Assert.Equal("Monsoon", value "Seasons" summary)
     Assert.Equal("None", value "Seasons" (Readouts.cropSummary project { old with Seasons = [] }))
 
@@ -160,7 +158,6 @@ let ``customizing a built-in crop keeps its id and values`` () =
         Assert.Equal(crop.RegrowthDays, custom.RegrowthDays)
         Assert.Equal(crop.MultiTile, custom.MultiTile)
         Assert.Equal<string list>(crop.Seasons, custom.Seasons)
-        Assert.Equal(None, custom.CustomAsset)
         Assert.Equal(crop, Readouts.cropOfCustom custom)
     // Saved, it replaces the built-in with the same definition, and its readouts match.
     let project = blank () |> apply (UpsertCrop(ContentReadouts.CustomizeCrop(builtinCrop "tomato")))

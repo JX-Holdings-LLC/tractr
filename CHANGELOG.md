@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.6.0
+
+- **Projects are schema version 1.** Breaking: the version numbering starts
+  over (nothing was ever saved at a later version), the fields Tractr kept
+  only so older project files would load are gone, and a file of any other
+  version is refused with "Project schema version N is not supported".
+  Nothing else about a project changes:
+  - crops: the millisecond `growthTime`, `regrowthTime` and `plantedAt` (crops
+    grow by `growthDays` and `regrowthDays`; an absent or 0 value counts as one
+    day);
+  - the `customImage` field of items, tiles and NPCs, the project's
+    `playerCustomImage` and the custom crop `customAsset` (art binds through
+    `visual`; the editor's thumbnail for those fields goes with them);
+  - the `unlockScene` event outcome (use `unlockTransition`);
+  - the player's `pixelX`, `pixelY`, `targetX` and `targetY`, and the
+    project's `currentTime`, which nothing read.
+- **Import Project JSON reads whole projects only.** The fallback that layered
+  a web "exported game" file over a blank project is gone.
+- **Cartridges are format 3.** The slot format 1 used for the whole project is
+  gone; export games again with this version. JSON saves need their
+  `{"header", "state"}` envelope (a bare `GameState`, as the web version
+  wrote, is refused).
+- **The Quest RPG sample asks for what it says.** "Rebuild the Square" needs 5
+  wood and 3 stone; it stored the amounts under a key the engine never read,
+  so one of each finished it.
+- **For contributors:**
+  - `farm-wasm` is now just the web demo's player. It keeps `Player`,
+    `hashState`, the sound and music samples, `version` and `lastPanic`;
+    `Session`, `Preview`, `renderJson` and `hashText`, which only the web
+    editor used, are removed. The wasm smoke test no longer replays the
+    goldens (they still run natively in `cargo test`).
+  - The old FNV text hash is gone (`farm_sim::hash_text`, `fe_hash_text`,
+    `FarmFfi.HashText`; C ABI version 3), and so are the unused JavaScript
+    helpers of `Json.fs` (`index`, `toJsString`, `toNumber`, `add`,
+    `propertyKey`, `withDefault`, `keys`, `JsNumber.round`).
+  - The renderer drops the snapshot `imageUrl` fields and `SharedUrls`
+    (`shell_snapshot_shared` is `shell_snapshot`).
+  - `packs-project.ts-reference.json` and the tests that compared against it
+    are deleted; the built-in catalog test moved to `builtin_and_packs.rs`.
+    The golden projects `fixture-v1`, `fixture-v8` and the replay
+    `legacy-v1-fixture-play` are `small-farm`, `fixture-farm` and
+    `small-farm-play`, and the Cozy Garden and Quest RPG content goldens hold
+    the samples as the editor makes them. Goldens, snapshots, parity fixtures
+    and the fixture cartridges are re-recorded.
+  - `docs/PORTING.md` is `docs/CONVENTIONS.md`, with only the conventions that
+    still apply; comments and docs no longer describe compatibility with the
+    web version.
+
 ## 0.5.0
 
 - **Tractr and the web version are separate projects now.** Tractr reads and

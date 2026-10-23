@@ -5,9 +5,8 @@
 //! the game loop reads held keys and one-shot presses, then calls [`InputManager::end_frame`].
 //! [`bindings`] turns a frame's presses into engine [`Command`]s and UI toggles.
 //!
-//! Keys are normalized TS `KeyboardEvent.key.toLowerCase()` values (`"w"`, `"arrowup"`, `" "`,
-//! `"enter"`, `"escape"`, …) so bindings, creator hotkeys and saved settings are interchangeable
-//! with the web version. Hosts translate their native key events with [`key_names`]
+//! Keys are `KeyboardEvent.key.toLowerCase()` values (`"w"`, `"arrowup"`, `" "`, `"enter"`,
+//! `"escape"`, …): the vocabulary of bindings, creator hotkeys and saved settings. Hosts translate their native key events with [`key_names`]
 //! ([`key_names::from_avalonia`], [`key_names::from_dom_code`]) or the
 //! [`InputManager::key_down_avalonia`] convenience methods.
 

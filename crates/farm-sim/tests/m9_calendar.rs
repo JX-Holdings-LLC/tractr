@@ -300,7 +300,6 @@ fn custom_crop() -> CustomCropDefinition {
         name: "Moonflower".to_owned(),
         seed_cost: 10,
         base_harvest_value: 20,
-        growth_time: 15000,
         growth_days: Some(3),
         stages: 4,
         seasons: vec!["a".to_owned()],

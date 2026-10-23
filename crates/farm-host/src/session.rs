@@ -1,6 +1,6 @@
 //! Headless engine sessions for tools and tests (docs/LANGUAGES.md "FFI: .NET → Rust").
 //!
-//! A session accepts web-compatible project JSON or the F# FlatBuffers cartridge. Commands and
+//! A session accepts project JSON or the F# FlatBuffers cartridge. Commands and
 //! effects cross as JSON arrays, and state is stable JSON. The graphical player is
 //! [`crate::player`] instead.
 
@@ -128,7 +128,7 @@ impl HostSession {
         save_file::write_save(&self.state, &self.target)
     }
 
-    /// Loads a JSON save file (or a bare web `GameState`), replacing the state. Items the content
+    /// Loads a JSON save file, replacing the state. Items the content
     /// no longer has are quarantined. Returns `{"warnings", "quarantined", "restored"}`; a refused
     /// save leaves the state untouched and the error lists the reasons.
     pub fn load_save(&mut self, save: &[u8]) -> Result<String, String> {

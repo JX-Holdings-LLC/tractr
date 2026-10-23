@@ -131,12 +131,10 @@ module SampleProjects =
         let gate : SceneTransition = { SceneTransition.Default with FromX = 8.0; FromY = 11.0; ToSceneId = "scene-square"; ToX = 8.0; ToY = 1.0 }
         let home : SceneTransition = { SceneTransition.Default with FromX = 8.0; FromY = 0.0; ToSceneId = "scene-farm"; ToX = 8.0; ToY = 10.0 }
         let square = { SampleMaps.scene "scene-square" "Village Square" SampleMaps.square with Transitions = [ home ] }
-        // The reference sample writes targetQuantity as an extension field, not
-        // targetItemQuantity. Preserve its JSON shape during the compatibility phase.
         let collect id description item (quantity: float) : QuestObjective =
             { QuestObjective.Default with
                 Id = id; Type = "collect"; Description = description; TargetItemId = Some item
-                Extra = [ "targetQuantity", JNumber quantity ]; Completed = false; Progress = 0.0 }
+                TargetItemQuantity = Some quantity; Completed = false; Progress = 0.0 }
         let quests : Quest list =
             [ { Quest.Default with
                   Id = "quest-rebuild-square"; Name = "Rebuild the Square"

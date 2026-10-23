@@ -298,7 +298,6 @@ public sealed class ContentEditorView : UserControl, IRetirable
     private void ShowForm()
     {
         _form.Children.Clear();
-        _contentForm?.ReleaseImages();
         _contentForm = null;
         var entity = ViewModel.FormEntity;
         _form.IsVisible = entity is not null;

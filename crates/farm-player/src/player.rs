@@ -32,8 +32,8 @@ use farm_plugins::PluginHostOptions;
 use farm_render::graphics::{art_assets, ArtAsset};
 use farm_render::tiny_skia::Pixmap;
 use farm_render::{
-    apply_graphics, compute_camera, shell_snapshot_shared, BuiltinArt, Composition, DrawList, GraphicsSource,
-    SharedUrls, SnapshotOptions, SnapshotPop, TileWindow, Upscale, WorldLayer, WorldSnapshot,
+    apply_graphics, compute_camera, shell_snapshot, BuiltinArt, Composition, DrawList, GraphicsSource, SnapshotOptions,
+    SnapshotPop, TileWindow, Upscale, WorldLayer, WorldSnapshot,
 };
 use farm_runtime::host::{calendar_view, MinigameInput};
 use farm_runtime::music::{self, MusicCue};
@@ -223,8 +223,6 @@ struct GameDef {
 struct Game {
     session: PlaySession,
     graphics: GraphicsSource,
-    /// Image URLs shared from frame to frame.
-    urls: SharedUrls,
     /// The slot autosaves go to (0 in embedded mode: none).
     slot: u32,
     play_seconds: f64,
@@ -303,8 +301,8 @@ pub struct Player {
     /// The last [`Player::frame_composition`]: its frame size, world tints and world layer (draw
     /// list, native size, upscale).
     planned: Planned,
-    /// The title screen's backdrop: the start of the game, its art and shared URLs (built once).
-    title_state: Option<(GameState, GraphicsSource, SharedUrls)>,
+    /// The title screen's backdrop: the start of the game and its art (built once).
+    title_state: Option<(GameState, GraphicsSource)>,
     sounds: Vec<SoundRequest>,
     requests: Vec<PlayerRequest>,
     poisoned: Option<String>,
@@ -805,7 +803,7 @@ impl Player {
             camera: None,
             tile_window: view.map(|(width, height, integer)| visible_tiles(width, height, integer, world, target)),
         };
-        let mut snapshot = shell_snapshot_shared(content, state, scene, &options, &mut game.urls);
+        let mut snapshot = shell_snapshot(content, state, scene, &options);
         if pops {
             let live = session.pops();
             if !live.is_empty() {
@@ -843,10 +841,10 @@ impl Player {
         }
         // The title screen shows the start of the game behind the menu.
         if self.screens.first() == Some(&Screen::Title) {
-            let (state, graphics, urls) = self.title_state.get_or_insert_with(|| {
+            let (state, graphics) = self.title_state.get_or_insert_with(|| {
                 let state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
                 let graphics = GraphicsSource::from_state(&self.def.presentation, &self.def.content, &state);
-                (state, graphics, SharedUrls::new())
+                (state, graphics)
             });
             let Some(scene) = state
                 .world
@@ -872,7 +870,7 @@ impl Player {
                 camera: None,
                 tile_window: Some(visible_tiles(width, height, integer, world, target)),
             };
-            let mut snapshot = shell_snapshot_shared(&self.def.content, state, scene, &options, urls);
+            let mut snapshot = shell_snapshot(&self.def.content, state, scene, &options);
             let tick = if reduced { 0.0 } else { (self.time * 20.0).floor() };
             snapshot.tick = tick;
             apply_graphics(&mut snapshot, graphics, scene, tick, false);
@@ -1089,7 +1087,6 @@ impl Player {
         preview: &SavePreview,
         thumbnail: Option<(farm_render::ImageId, f32, f32)>,
     ) -> SlotPreviewView {
-        let calendar = &self.def.content.settings.calendar;
         SlotPreviewView {
             farm_name: preview.farm_name.clone(),
             day: preview.day,
@@ -1099,13 +1096,7 @@ impl Player {
             play_seconds: preview.play_seconds,
             saved_at: preview.saved_at,
             thumbnail,
-            // Preview days are whole numbers (the FlatBuffers fields are doubles). Saves written
-            // before the day of season was recorded place the absolute day in the calendar.
-            day_of_season: Some(if preview.day_of_season > 0.0 {
-                preview.day_of_season
-            } else {
-                f64::from(farm_sim::game_time::day_of_season(calendar, preview.day as u32))
-            }),
+            day_of_season: Some(preview.day_of_season),
         }
     }
 
@@ -1252,7 +1243,7 @@ impl Player {
         for error in session.plugin_errors() {
             self.plugin_error_toast(&error);
         }
-        self.game = Some(Game { session, graphics, urls: SharedUrls::new(), slot, play_seconds });
+        self.game = Some(Game { session, graphics, slot, play_seconds });
         self.game_ui = GameUi { toasts: std::mem::take(&mut self.game_ui.toasts), ..GameUi::new() };
         self.screens.clear();
         self.drain_session_events();
@@ -1559,7 +1550,7 @@ impl Player {
     }
 
     /// Reads the save slots again after the host changed its store behind the player's back
-    /// (the web version restoring saves from browser storage).
+    /// (the web demo restoring saves from browser storage).
     pub fn reload_saves(&mut self) {
         self.refresh_slots();
     }

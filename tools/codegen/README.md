@@ -35,18 +35,18 @@ records in case order and the union), from:
   `int`, `uint32`, `Json`, another record or union, `'T list`,
   `(string * 'T) list` (an ordered map) and `option`. `'T option` is left out
   when `None`; `'T option option` is absent (`None`), `null` (`Some None`) or
-  a value. An `Extra` field keeps undeclared keys (zod `.passthrough()`);
-  without one they are dropped;
+  a value. An `Extra` field keeps undeclared keys; without one they are
+  dropped;
 - the record's `Default`: a missing key decodes to the field's value there (a
   nested record at its own `Default` is written `Type.Default`);
-- a union whose cases each carry one record is a zod discriminated union on
-  `type`, with the tag from the union's `Type` member;
+- a union whose cases each carry one record is a union tagged by `type`,
+  with the tag from the union's `Type` member;
 - three attributes for what the types do not say (defined at the top of
   `Schema.fs`; the generator reads them and nothing reads them at run time):
   - `[<JsonKey "selectedNPCId">]`: the JSON key, when it is not the field name
     in camelCase;
-  - `[<JsonNull>]`: an `option` zod declares `.nullable()`, written as `null`
-    when `None`;
+  - `[<JsonNull>]`: an `option` whose key is required and may be `null`,
+    written as `null` when `None`;
   - `[<JsonDecode "…">]`: the decoder, as an F# expression over `key`, `path`
     and `value`, when it is not the one the type gives (the event flags'
     `boolean | number | string` values, the lenient rng `algorithm` literal).

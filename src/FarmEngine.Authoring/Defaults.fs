@@ -147,13 +147,13 @@ module Defaults =
     let newCrop (project: GameProject) : CustomCropDefinition =
         { CustomCropDefinition.Default with
             Id = nextId "custom" (allIds project); Name = "New Crop"; SeedCost = 10.0; BaseHarvestValue = 20.0
-            GrowthTime = 15000.0; GrowthDays = Some 3.0; Stages = 4.0
+            GrowthDays = Some 3.0; Stages = 4.0
             Seasons = [ firstSeasonId project ]; CanRegrow = false
             YieldMin = 1.0; YieldMax = 2.0; MutationChance = Some 0.01 }
 
-    /// CropEditor `handleDuplicateCrop`: same values, new id, " Copy" name, no custom art.
+    /// CropEditor `handleDuplicateCrop`: same values, new id, " Copy" name.
     let duplicateCrop (project: GameProject) (crop: CustomCropDefinition) : CustomCropDefinition =
-        { crop with Id = nextId "custom" (allIds project); Name = sprintf "%s Copy" crop.Name; CustomAsset = None }
+        { crop with Id = nextId "custom" (allIds project); Name = sprintf "%s Copy" crop.Name }
 
     /// QuestEditor `handleCreateQuest`.
     let newQuest (project: GameProject) : Quest =

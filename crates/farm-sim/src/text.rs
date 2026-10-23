@@ -1,6 +1,6 @@
-//! Text and JSON-value semantics the JSON boundary shares with the web version: UTF-16 key
-//! order and `JSON.stringify` escaping for stable JSON, and JavaScript truthiness and
-//! `String(value)` for flag values (flags hold `boolean | number | string`).
+//! Text and JSON-value semantics of the JSON boundary: UTF-16 key order and `JSON.stringify`
+//! escaping for stable JSON, and JavaScript truthiness and `String(value)` for flag values (flags
+//! hold `boolean | number | string`). Changing them changes saves and replay outcomes.
 
 use crate::units;
 use serde_json::Value;

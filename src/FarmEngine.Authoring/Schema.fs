@@ -6,18 +6,15 @@ open FarmEngine.Authoring
 // kept by hand. Numbers are `float` in authoring units (tiles, points, minutes; docs/NUMERICS.md):
 // project JSON keeps them, and the Rust engine converts them to fixed-unit integers when it loads
 // a cartridge. `option` is an optional or nullable field; `Extra` keeps the keys the schema does
-// not declare (zod `.passthrough()`), in order.
+// not declare, in order.
 //
 // JSON: SchemaJson.fs is generated from this file (tools/codegen/schema-json.fsx; run it after
 // changing a record or union here). It follows from the types, the `Default` members (a missing
 // key decodes to the field's value in `Default`) and the `[<Json…>]` attributes below, which say
 // what the types do not.
 //
-// Forward compatibility: a record without `Extra` (zod's default `.strip()`) drops keys it does
-// not declare when it loads, so a key a newer build writes at the same schema version (a new
-// `settings.*` field, say) is gone after the next save here. That is zod parity, on purpose. A
-// field older builds must carry through needs a schema version bump with a migration, or `Extra`
-// on its record.
+// A record without `Extra` drops keys it does not declare when it loads. A change to what a
+// project stores bumps the schema version (`ProjectSchema.CurrentProjectSchemaVersion`).
 //
 // The Rust engine has its own serde types for the same JSON (crates/farm-sim/src/schema). The
 // parity tests keep the two in step: ParityTests.fs records an F# encoding of every field of every
@@ -61,7 +58,7 @@ type ActionDef =
         EnergyCost: float
         /// Optional single-character play-mode hotkey (max length 1). Reserved gameplay keys (movement/tools/panels) are ignored by hosts.
         Hotkey: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -85,7 +82,7 @@ and AnimalSpeciesDefinition =
         DaysToAdult: float
         /// Renderer hint.
         Color: string
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -114,7 +111,7 @@ and AnimalState =
         DaysSinceProduct: float
         /// Product waiting to be collected.
         ProductReady: bool
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -198,7 +195,7 @@ and ContentPack =
         Manifest: PackManifest
         Content: PackContent
         Plugins: PackPlugin list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -210,11 +207,9 @@ and ContentPack =
 and Crop =
     {
         Type: string
-        /// Legacy wall-clock plant timestamp (ms). Superseded by plantedOnDay from schema v4.
-        PlantedAt: float
-        /// Absolute in-game day the crop was planted (schema v4+). int.
+        /// Absolute in-game day the crop was planted. int.
         PlantedOnDay: float option
-        /// Watered in-game days accumulated toward growthDays (schema v4+).
+        /// Watered in-game days accumulated toward growthDays.
         DaysGrown: float option
         /// Killed by season change; renders dead and can be cleared.
         Withered: bool option
@@ -230,13 +225,13 @@ and Crop =
         MultiTileId: string option
         HarvestCount: float
         DaysWithoutWater: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Crop` with every field at its schema default.
     static member Default : Crop =
-        { Type = ""; PlantedAt = 0.0; PlantedOnDay = None; DaysGrown = None; Withered = None; Stage = 0.0; Watered = false; LastWateredDay = None; Quality = ""; Mutation = None; IsMultiTileRoot = None; MultiTileId = None; HarvestCount = 0.0; DaysWithoutWater = 0.0; Extra = [] }
+        { Type = ""; PlantedOnDay = None; DaysGrown = None; Withered = None; Stage = 0.0; Watered = false; LastWateredDay = None; Quality = ""; Mutation = None; IsMultiTileRoot = None; MultiTileId = None; HarvestCount = 0.0; DaysWithoutWater = 0.0; Extra = [] }
 
 and CropDefinition =
     {
@@ -245,14 +240,12 @@ and CropDefinition =
         Visual: VisualRef option
         SeedCost: float
         BaseHarvestValue: float
-        /// Legacy wall-clock growth duration (ms). Kept for pre-v4 data; the engine uses growthDays.
-        GrowthTime: float
-        /// In-game days from planting to maturity (authoritative from schema v4). positive.
+        /// In-game days from planting to maturity. positive; validation requires it (absent or 0
+        /// grows in one day).
         GrowthDays: float option
         /// int, positive.
         Stages: float
         Seasons: string list
-        RegrowthTime: float option
         /// In-game days between repeat harvests for regrowing crops. positive.
         RegrowthDays: float option
         CanRegrow: bool
@@ -262,13 +255,13 @@ and CropDefinition =
         YieldMax: float
         /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
         HarvestItemId: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CropDefinition` with every field at its schema default.
     static member Default : CropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthTime = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthTime = None; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Extra = [] }
 
 /// TS `CropDefinitionSchema.multiTile` (inline object).
 and CropMultiTile =
@@ -298,7 +291,7 @@ and CustomAsset =
         TileType: string option
         /// Present when the image is an animated sprite sheet (M7).
         Sheet: SpriteSheet option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -306,7 +299,7 @@ and CustomAsset =
     static member Default : CustomAsset =
         { Id = ""; Name = ""; Type = ""; Width = None; Height = None; Animations = None; DataUrl = ""; TileType = None; Sheet = None; Extra = [] }
 
-/// TS `CustomCropDefinitionSchema = CropDefinitionSchema.extend({ customAsset })` (zod 3 `extend` keeps passthrough). C# records can't extend a sealed record, so the fields are repeated.
+/// A project's own crop (`customCrops`): the fields of `CropDefinition`.
 and CustomCropDefinition =
     {
         Id: string
@@ -314,14 +307,12 @@ and CustomCropDefinition =
         Visual: VisualRef option
         SeedCost: float
         BaseHarvestValue: float
-        /// Legacy wall-clock growth duration (ms). Kept for pre-v4 data; the engine uses growthDays.
-        GrowthTime: float
-        /// In-game days from planting to maturity (authoritative from schema v4). positive.
+        /// In-game days from planting to maturity. positive; validation requires it (absent or 0
+        /// grows in one day).
         GrowthDays: float option
         /// int, positive.
         Stages: float
         Seasons: string list
-        RegrowthTime: float option
         /// In-game days between repeat harvests for regrowing crops. positive.
         RegrowthDays: float option
         CanRegrow: bool
@@ -331,14 +322,13 @@ and CustomCropDefinition =
         YieldMax: float
         /// The item a harvest gives. Absent: the item named `crop-{id}` (the editor's convention).
         HarvestItemId: string option
-        CustomAsset: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CustomCropDefinition` with every field at its schema default.
     static member Default : CustomCropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthTime = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthTime = None; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; CustomAsset = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Extra = [] }
 
 and Dialogue =
     {
@@ -346,7 +336,7 @@ and Dialogue =
         NpcId: string
         Text: string
         Options: DialogueOption list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -379,7 +369,7 @@ and DialogueOption =
         RequiresFriendship: float option
         /// Choosing this option performs a creator-defined action.
         ActionId: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -413,7 +403,7 @@ and EventOutcome =
         SoundId: string option
         ActionId: string option
         MinigameId: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -421,7 +411,7 @@ and EventOutcome =
     static member Default : EventOutcome =
         { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; Extra = [] }
 
-/// Additive project export settings. The web project schema is passthrough, so the web editor can keep this block even before it exposes native export controls.
+/// The project's export settings (Export Game).
 and ExportSettings =
     {
         Title: string option
@@ -456,59 +446,6 @@ and ExportWindow =
     static member Default : ExportWindow =
         { Width = 1280; Height = 800; Fullscreen = false }
 
-and ExportedGame =
-    {
-        /// int.
-        SchemaVersion: float option
-        Version: string
-        Name: string
-        Scenes: Scene list
-        Npcs: Npc list
-        Items: Item list
-        Events: GameEvent list
-        Dialogues: Dialogue list
-        Quests: Quest list
-        StartSceneId: string
-        CustomAssets: CustomAsset list
-        CustomCrops: (CustomCropDefinition list) option
-        PlayerCustomImage: string option
-        PlayerVisual: VisualRef option
-        Graphics: GraphicsSettings option
-        GamePanels: (GamePanel list) option
-        CurrentSeason: string
-        CurrentDay: float
-        CurrentTimeMinutes: float
-        /// int.
-        CurrentYear: float
-        GameStartTime: float
-        Shops: ShopDefinition list
-        NodeTypes: NodeTypeDefinition list
-        Settings: ProjectSettings
-        Recipes: RecipeDefinition list
-        MachineTypes: MachineTypeDefinition list
-        Weather: WeatherConfig
-        AnimalSpecies: AnimalSpeciesDefinition list
-        Animals: AnimalState list
-        FishTables: FishTable list
-        Mine: MineConfig
-        Actions: ActionDef list
-        Minigames: MinigameDef list
-        ContentPacks: PackInstallation list
-        /// Player start state (M6): included so exported games start identically.
-        Player: Player option
-        CurrentWeatherId: string option
-        SocialState: ((string * NpcSocialState) list) option
-        /// int, nonnegative.
-        MineDeepestFloor: float option
-        QuarantinedItems: (InventorySlot list) option
-        /// Undeclared keys, in order (zod `.passthrough()`).
-        Extra: (string * Json) list
-    }
-
-    /// A `ExportedGame` with every field at its schema default.
-    static member Default : ExportedGame =
-        { SchemaVersion = None; Version = ""; Name = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; StartSceneId = ""; CustomAssets = []; CustomCrops = None; PlayerCustomImage = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Player = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; Extra = [] }
-
 and FishTable =
     {
         Id: string
@@ -521,7 +458,7 @@ and FishTable =
         /// Chance (0..1) a cast catches junk instead of rolling the table.
         JunkChance: float
         JunkItemId: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -587,7 +524,7 @@ and GameEvent =
         Outcomes: EventOutcome list
         Active: bool
         Repeatable: bool
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -650,10 +587,8 @@ and GameProject =
         SelectedNpcId: string option
         [<JsonNull>]
         SelectedItemId: string option
-        CurrentTime: float
         CustomAssets: CustomAsset list
         CustomCrops: (CustomCropDefinition list) option
-        PlayerCustomImage: string option
         PlayerVisual: VisualRef option
         Graphics: GraphicsSettings option
         GamePanels: (GamePanel list) option
@@ -697,13 +632,13 @@ and GameProject =
         /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop or
         /// minigame, today's shop purchases, NPC walks, mine floor). Only the engine reads it.
         KeptState: Json option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `GameProject` with every field at its schema default.
     static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CurrentTime = 0.0; CustomAssets = []; CustomCrops = None; PlayerCustomImage = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
 
 and GiftTastes =
     {
@@ -711,7 +646,7 @@ and GiftTastes =
         Liked: string list
         Disliked: string list
         Hated: string list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -766,7 +701,6 @@ and Item =
         MaxStack: float
         Value: float
         CropType: string option
-        CustomImage: string option
         /// One of `ToolTypes`.
         ToolType: string option
         ToolPower: float option
@@ -778,13 +712,13 @@ and Item =
         UseActionId: string option
         /// Consume one of the item on a successful use.
         ConsumeOnUse: bool option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Item` with every field at its schema default.
     static member Default : Item =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; CustomImage = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Extra = [] }
 
 /// TS `TileMachineSchema.processing` (inline object): an in-flight machine job.
 and MachineProcessing =
@@ -810,7 +744,7 @@ and MachineTypeDefinition =
         BlocksMovement: bool
         /// Station categories a placed machine of this type provides to nearby hand-crafting (e.g. a Kitchen provides 'cooking').
         StationCategories: string list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -854,7 +788,7 @@ and MineConfig =
         LadderChance: float
         /// Elevator checkpoint every N floors. int, positive.
         ElevatorEvery: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -884,7 +818,7 @@ and MinigameDef =
         Config: (string * Json) list
         /// Declarative consequences by score tier (highest matching minScore).
         ResultTiers: MinigameResultTier list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -923,7 +857,7 @@ and NodeDrop =
         Max: float
         /// positive.
         Weight: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -950,7 +884,7 @@ and NodeTypeDefinition =
         Color: string
         /// Whether the node blocks movement while present.
         BlocksMovement: bool
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -982,14 +916,13 @@ and Npc =
         /// Birthday: day-of-season (1-28) within birthSeason, doubles gift effects.
         Birthday: NpcBirthday option
         Appearance: string
-        CustomImage: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Npc` with every field at its schema default.
     static member Default : Npc =
-        { Id = ""; Name = ""; Visual = None; X = 0.0; Y = 0.0; SceneId = ""; Dialogue = []; CanMove = false; MovePattern = None; WanderRadius = None; PatrolPoints = None; Schedule = None; GiftTastes = None; Birthday = None; Appearance = ""; CustomImage = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; X = 0.0; Y = 0.0; SceneId = ""; Dialogue = []; CanMove = false; MovePattern = None; WanderRadius = None; PatrolPoints = None; Schedule = None; GiftTastes = None; Birthday = None; Appearance = ""; Extra = [] }
 
 /// TS `NPCSchema.birthday` (inline object).
 and NpcBirthday =
@@ -1013,7 +946,7 @@ and NpcScheduleEntry =
         X: float
         /// int.
         Y: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1056,7 +989,7 @@ and PackContent =
         PlayerStart: PackPlayerStart option
         /// Per-locale string tables for game text (M7 i18n). Keys address content fields: `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`, `quest:{id}:description`. The authored text is the fallback locale.
         Strings: (string * (string * string) list) list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1101,7 +1034,7 @@ and PackManifest =
         /// Fully-qualified IDs this pack intentionally replaces. Redefining an existing ID without declaring it here is a conflict surfaced in the Problems panel (the earlier definition wins).
         Overrides: string list
         Permissions: PackPermissions
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1125,7 +1058,7 @@ and PackPermissions =
         /// (`lantern-catch`); minigame defs play one as `packId:name` (docs/PLUGINS.md). None and
         /// empty both allow none.
         Minigames: (string list) option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1143,7 +1076,7 @@ and PackPlayerStart =
         Y: float option
         Money: float option
         Inventory: PackStartItem list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1162,7 +1095,7 @@ and PackPlugin =
         /// set = intersection with manifest permissions.minigames.
         Minigames: (string list) option
         Source: string
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1200,21 +1133,13 @@ and Player =
         ActiveQuests: string list
         CompletedQuests: string list
         EquippedTool: string option
-        /// Pixel X position for smooth movement interpolation
-        PixelX: float
-        /// Pixel Y position for smooth movement interpolation
-        PixelY: float
-        /// Target pixel X for interpolation
-        TargetX: float
-        /// Target pixel Y for interpolation
-        TargetY: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Player` with every field at its schema default.
     static member Default : Player =
-        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; PixelX = 0.0; PixelY = 0.0; TargetX = 0.0; TargetY = 0.0; Extra = [] }
+        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Extra = [] }
 
 and ProjectSettings =
     {
@@ -1261,7 +1186,7 @@ and Quest =
         /// Absolute-day window (M3): offered from/until these days (inclusive).
         AvailableFromDay: float option
         AvailableToDay: float option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1284,7 +1209,7 @@ and QuestObjective =
         TargetSceneId: string option
         Completed: bool
         Progress: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1310,7 +1235,7 @@ and QuestRewards =
         Experience: float option
         /// The skill `Experience` goes to (farming, mining, foraging, fishing, social, …). Absent: farming.
         Skill: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1333,7 +1258,7 @@ and RecipeDefinition =
         /// Hand-craftable only while near a machine providing this station category.
         RequiresStationCategory: string option
         Unlock: RecipeUnlock option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1372,7 +1297,7 @@ and RecipeUnlock =
         QuestId: string option
         /// Only craftable in these seasons.
         Seasons: (string list) option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1410,7 +1335,7 @@ and Scene =
         /// Indoor scenes (greenhouses, interiors, mine floors) keep the weather out: rain does not
         /// water their soil and storms do not damage their crops. Absent means outdoor.
         Indoor: bool option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1427,7 +1352,7 @@ and SceneTransition =
         ToY: float
         /// Locked transitions don't fire; events can lock/unlock them (M3).
         Locked: bool option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1447,7 +1372,7 @@ and ShopDefinition =
         /// Whether this shop repairs broken tools (for durability * repairCostPerPoint).
         RepairsTools: bool
         RepairCostPerPoint: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1465,7 +1390,7 @@ and ShopStockEntry =
         Seasons: (string list) option
         /// Max units purchasable per in-game day (absent = unlimited). int, positive.
         DailyLimit: float option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1496,7 +1421,7 @@ and SpriteSheet =
         /// int, positive.
         TicksPerFrame: float
         Directional: bool
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1527,19 +1452,18 @@ and Tile =
         /// Mine ladder going down (M4 mining, generated floors).
         LadderDown: bool option
         Collision: bool
-        CustomImage: string option
         Visuals: TileVisuals option
         /// One of `SoilStates`.
         SoilState: string option
         SoilMoisture: float
         SoilFertility: float
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Tile` with every field at its schema default.
     static member Default : Tile =
-        { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; CustomImage = None; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Extra = [] }
+        { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Extra = [] }
 
 /// Live machine instance on a tile.
 and TileMachine =
@@ -1549,7 +1473,7 @@ and TileMachine =
         Processing: MachineProcessing option
         /// Finished output awaiting collection.
         Output: (RecipeIngredient list) option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1565,7 +1489,7 @@ and TileNode =
         RemainingHealth: float
         /// Set when depleted; used for respawn scheduling. int.
         DepletedOnDay: float option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1618,7 +1542,7 @@ and WeatherConfig =
         Types: WeatherTypeDefinition list
         /// Per-season weighted roll tables (rolled at each day start).
         Table: (string * WeatherTableEntry list) list
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -1650,7 +1574,7 @@ and WeatherTypeDefinition =
         /// Renderer overlay hint: 'rain' | 'snow' | null.
         [<JsonNull>]
         Overlay: string option
-        /// Undeclared keys, in order (zod `.passthrough()`).
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 

@@ -144,7 +144,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn round_trips_the_typescript_json_shape() {
+    fn round_trips_the_command_json_shape() {
         let command: Command = serde_json::from_value(json!({"type": "move", "dir": "up"})).unwrap();
         assert_eq!(command, Command::Move { dir: "up".to_owned() });
         assert_eq!(serde_json::to_value(&command).unwrap(), json!({"type": "move", "dir": "up"}));

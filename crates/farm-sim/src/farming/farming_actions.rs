@@ -780,10 +780,6 @@ pub(crate) mod test_support {
                 money: 100,
                 active_quests: vec!["quest-wheat".to_owned()],
                 completed_quests: Vec::new(),
-                pixel_x: 0.0,
-                pixel_y: 0.0,
-                target_x: 0.0,
-                target_y: 0.0,
                 ..Player::default()
             },
             event_flags: IndexMap::new(),
@@ -792,7 +788,6 @@ pub(crate) mod test_support {
             selected_tile_type: "grass".to_owned(),
             selected_npc_id: None,
             selected_item_id: None,
-            current_time: 1_000_000.0,
             custom_assets: Vec::new(),
             current_season: "spring".to_owned(),
             current_day: 1,

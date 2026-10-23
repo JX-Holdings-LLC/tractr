@@ -25,7 +25,7 @@ type AuthoringTiles =
             | "background" -> { tile with Background = tileType }
             | "overlay" -> { tile with Overlay = Some tileType }
             | _ -> { tile with Object = Some tileType; Collision = (tileType = "wall") }
-        let tile = { tile with Type = tileType; CustomImage = (if visual.IsSome then None else tile.CustomImage) }
+        let tile = { tile with Type = tileType }
         if visual.IsSome || tile.Visuals.IsSome then
             let visuals = defaultArg tile.Visuals TileVisuals.Default
             let visuals =

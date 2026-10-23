@@ -218,8 +218,7 @@ id, version, content and state hashes, effects and save warnings.
 
 The player exits with an error for a malformed cartridge, an incompatible
 save or a replay hash mismatch. `--save` writes a binary save; a path ending in
-`.json` writes the JSON form instead. `--load` reads either, and bare web
-`GameState` JSON too. The checked-in cartridge and replay in
+`.json` writes the JSON form instead. `--load` reads either. The checked-in cartridge and replay in
 `fixtures/golden/cartridges` are exercised on Windows and Linux.
 
 ## Embedding the player

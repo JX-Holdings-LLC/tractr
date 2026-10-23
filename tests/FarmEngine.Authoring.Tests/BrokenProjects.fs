@@ -88,7 +88,7 @@ let private scene (id: string) (name: string) (extra: string) =
 
 let private crop (cropType: string) (quality: string) (mutation: string) =
     let mutation = if mutation = "" then "" else sprintf ""","mutation":"%s" """ mutation
-    sprintf """{"type":"%s","plantedAt":0,"stage":0,"watered":false,"quality":"%s"%s,"harvestCount":0,"daysWithoutWater":0}""" cropType quality mutation
+    sprintf """{"type":"%s","stage":0,"watered":false,"quality":"%s"%s,"harvestCount":0,"daysWithoutWater":0}""" cropType quality mutation
 
 let private pack (id: string) (dependencies: string) =
     sprintf """{"enabled":true,"pack":{"manifest":{"id":"%s","name":"Pack","version":"1.0.0","dependencies":[%s]},"content":{},"plugins":[]}}""" id dependencies

@@ -24,9 +24,8 @@ demo of the same game can go on an itch.io page.
 | macOS | Later | An `.app`; needs signing and notarization |
 | Consoles, mobile apps | Not planned | Keep the player portable (see [open questions](#open-questions)); the web demo has touch controls for phones |
 
-The web version's HTML export (a single file that embeds `shell.iife.js`, from
-`src/lib/export-html.ts`) is **not** ported. The web demo is a different thing:
-the same Rust player compiled to WebAssembly, reading the same `game.cart`.
+The web demo is the same Rust player compiled to WebAssembly, reading the same
+`game.cart`.
 
 ## How export works
 
@@ -296,10 +295,8 @@ variable would replace the config's flags, so release builds don't set one.
 
 ## Export settings
 
-Export settings live in the project, in a new optional `export` object. The
-field is additive and optional, so it doesn't bump the schema version. The
-web `GameProjectSchema` is `.passthrough()`, and native import and JSON
-round-trip tests preserve the block. `Defaults.newExportSettings` creates
+Export settings live in the project, in an optional `export` object; JSON
+import and export keep it. `Defaults.newExportSettings` creates
 `gameId` once from the project id; later title changes leave it alone. The
 F# Problems pipeline validates the block and blocks export on errors.
 
@@ -323,8 +320,7 @@ project that never saved export settings exports with the defaults.
 
 ## What the player must include (phase 6)
 
-The web version relied on the browser for a lot of this. A desktop game has
-to do it itself. `farm-player` has a **game shell** (in `farm-ui`) that
+A desktop game has to do all of this itself. `farm-player` has a **game shell** (in `farm-ui`) that
 surrounds the game. It is built as listed here, with the differences noted
 after the list; [PLAYER.md](PLAYER.md) describes it in full.
 

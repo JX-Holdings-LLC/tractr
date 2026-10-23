@@ -230,7 +230,6 @@ fn apply_outcome(
             let Some(minigame_id) = non_empty(outcome.minigame_id.as_deref()) else { return vec![] };
             start_minigame_session(ctx, state, minigame_id, None)
         }
-        OutcomeKind::UnlockScene => outcome_unlock_scene(state, outcome),
     }
 }
 
@@ -380,20 +379,6 @@ fn outcome_lock_transition(state: &mut GameState, outcome: &EventOutcome, locked
     for transition in &mut state.world.scenes[scene_index].transitions {
         if transition.from_x == x && transition.from_y == y {
             transition.locked = Some(locked);
-        }
-    }
-    vec![]
-}
-
-/// Legacy outcome (pre-v5): unlock every transition that leads to the named scene. It was
-/// authorable in the editor but a runtime no-op.
-fn outcome_unlock_scene(state: &mut GameState, outcome: &EventOutcome) -> Effects {
-    let Some(scene_id) = non_empty(outcome.scene_id.as_deref()) else { return vec![] };
-    for scene in &mut state.world.scenes {
-        for transition in &mut scene.transitions {
-            if transition.to_scene_id == scene_id && transition.locked == Some(true) {
-                transition.locked = Some(false);
-            }
         }
     }
     vec![]

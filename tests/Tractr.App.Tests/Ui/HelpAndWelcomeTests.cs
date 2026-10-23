@@ -57,7 +57,7 @@ public sealed class HelpAndWelcomeTests
             }
         }
 
-        // The web version's mode and toolbar names.
+        // The mode and toolbar names.
         Assert.Equal("Play Mode", EditorStrings.Get("en", "mode.play"));
         Assert.Equal("Modo Juego", EditorStrings.Get("es", "mode.play"));
         Assert.Equal("Proyectos", EditorStrings.Get("es", "mode.projects"));

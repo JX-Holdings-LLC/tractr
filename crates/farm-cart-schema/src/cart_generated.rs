@@ -644,11 +644,11 @@ impl<'a> Cartridge<'a> {
   pub const VT_CART_FORMAT: flatbuffers::VOffsetT = 4;
   pub const VT_PROJECT_SCHEMA_VERSION: flatbuffers::VOffsetT = 6;
   pub const VT_INFO: flatbuffers::VOffsetT = 8;
-  pub const VT_CONTENT_JSON: flatbuffers::VOffsetT = 12;
-  pub const VT_START_JSON: flatbuffers::VOffsetT = 14;
-  pub const VT_PRESENTATION_JSON: flatbuffers::VOffsetT = 16;
-  pub const VT_ASSETS: flatbuffers::VOffsetT = 18;
-  pub const VT_PLUGINS: flatbuffers::VOffsetT = 20;
+  pub const VT_CONTENT_JSON: flatbuffers::VOffsetT = 10;
+  pub const VT_START_JSON: flatbuffers::VOffsetT = 12;
+  pub const VT_PRESENTATION_JSON: flatbuffers::VOffsetT = 14;
+  pub const VT_ASSETS: flatbuffers::VOffsetT = 16;
+  pub const VT_PLUGINS: flatbuffers::VOffsetT = 18;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {

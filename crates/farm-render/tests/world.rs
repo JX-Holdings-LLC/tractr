@@ -166,7 +166,8 @@ fn camera_translates_and_culls_the_world() {
 fn pixel_art_uses_nearest_neighbour_sampling() {
     let url = data_url(2, 1, &[Color::rgb(255, 0, 0), Color::rgb(0, 0, 255)]);
     let mut snapshot = scene(&[&["grass"]]);
-    snapshot.tiles[0][0].image_url = Some(Arc::from(url.as_str()));
+    let background = SnapshotSprite { image_url: Arc::from(url.as_str()), ..SnapshotSprite::default() };
+    snapshot.tiles[0][0].art_layers = Some(vec![Some(background)]);
     snapshot.pixel_art = Some(true);
     let mut renderer = color_blocks();
     let crisp = renderer.render(&snapshot, 1.0);

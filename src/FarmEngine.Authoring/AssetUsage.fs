@@ -40,7 +40,7 @@ module AssetUsage =
 
     /// The project's assets that `json` (exported content) names by id, plus every asset their
     /// animation frames draw from, in project order: the art a content pack must carry so its
-    /// definitions keep their look elsewhere (`VisualRef.assetId`, crop `customAsset`, …).
+    /// definitions keep their look elsewhere (`VisualRef.assetId`, …).
     let referencedBy (project: GameProject) (json: Json list) : CustomAsset list =
         let values = HashSet<string>()
         for value in json do
@@ -49,8 +49,8 @@ module AssetUsage =
         project.CustomAssets |> List.filter (fun asset -> used.Contains asset.Id)
 
     /// Assets nothing in the game refers to. An asset counts as used when any value in the
-    /// project outside the asset list names its id or its data URL (visual bindings, legacy
-    /// custom images, crop art, pack content, the export icon), when it is the tile art for a
+    /// project outside the asset list names its id (visual bindings, frames, pack content, the
+    /// export icon), when it is the tile art for a
     /// tile type the project mentions, or when a used asset's animation frames draw from it.
     /// The editor's brush selection does not count. A coincidental match only keeps an asset
     /// (and hides its warning); a used asset is never left out.
@@ -63,7 +63,6 @@ module AssetUsage =
         strings values json
         let refersTo (asset: CustomAsset) =
             values.Contains asset.Id
-            || (asset.DataUrl.Length > 0 && values.Contains asset.DataUrl)
             || (asset.Type = CustomAssetTypes.Tile
                 && (match asset.TileType with
                     | None -> false

@@ -70,8 +70,8 @@ module PackRules =
             | _ -> None
         | _ -> None
 
-    /// Compatibility intentionally follows the web engine's small range language, including
-    /// its major-only caret check for 0.x versions and ignored prerelease suffixes.
+    /// A small range language (`*`, exact, `^x.y.z`, `>=x.y.z`), with a major-only caret check
+    /// for 0.x versions and prerelease suffixes ignored, as the engine checks packs.
     let isEngineCompatible (range: string option) (version: string) =
         let range = match range with None -> "*" | Some s -> JsNumber.trim s
         if range = "" || range = "*" then true
@@ -124,9 +124,8 @@ module PackRules =
             Some(String.Join(", ", kinds) + " (the pack's plugins run and draw these minigames, and read the player's keys while one is open)")
 
     /// The pack key that carries art: `assets`, a list of custom assets (as in a project's
-    /// `customAssets`) with their images as `data:image/…` URLs. Native packs add it next to
-    /// `manifest`, `content` and `plugins`; the web keeps it as an unknown key (zod
-    /// `.passthrough()`), so it lives in `ContentPack.Extra`.
+    /// `customAssets`) with their images as `data:image/…` URLs, next to `manifest`, `content`
+    /// and `plugins`. It lives in `ContentPack.Extra`.
     [<Literal>]
     let AssetsKey = "assets"
 

@@ -1,12 +1,12 @@
 //! `farm-cart`: cartridge and save formats (docs/LANGUAGES.md "Contracts between languages").
 //!
-//! Format 2 cartridges are FlatBuffers with compatibility JSON sections (content, new-game start
-//! state, presentation) and an embedded asset table. Saves are binary (`FGSV`: header, slot
+//! Cartridges (format 3) are FlatBuffers with JSON sections (content, new-game start state,
+//! presentation) and an embedded asset table. Saves are binary (`FGSV`: header, slot
 //! preview, zstd-compressed state) or JSON with the same header.
 #![forbid(unsafe_code)]
 
 /// Cartridge format version. Bumped on every breaking change to the cartridge layout.
-pub const CART_FORMAT: u32 = 2;
+pub const CART_FORMAT: u32 = 3;
 
 pub mod cartridge;
 pub mod save;

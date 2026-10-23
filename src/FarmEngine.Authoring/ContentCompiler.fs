@@ -3,13 +3,13 @@ namespace FarmEngine.Authoring
 open System
 open FarmEngine.Schemas
 
-/// Project -> immutable compatibility content. Gameplay state is created by Rust; authored
+/// Project -> immutable game content. Gameplay state is created by Rust; authored
 /// defaults, pack composition and locale selection are resolved here before cartridge writing.
 module ContentCompiler =
     let private integer (value: float) = not (Double.IsNaN value || Double.IsInfinity value) && Math.Truncate value = value
 
-    /// A custom crop as the crop definition the engine gets: its `customAsset` and passthrough
-    /// fields ride along, like the structural TS type. Through JSON, so every field the two
+    /// A custom crop as the crop definition the engine gets, undeclared fields included. Through
+    /// JSON, so every field the two
     /// records share carries over without a hand-kept field list (`Readouts.cropOfCustom` is this
     /// too). Throws InvalidOperationException for a crop the crop decoder refuses.
     let cropOfCustom (crop: CustomCropDefinition) : CropDefinition =

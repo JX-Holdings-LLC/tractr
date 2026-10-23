@@ -1562,7 +1562,6 @@
                 "soilFertility": 100,
                 "crop": {
                   "type": "wheat",
-                  "plantedAt": 0,
                   "plantedOnDay": 1,
                   "daysGrown": 1,
                   "stage": 1,

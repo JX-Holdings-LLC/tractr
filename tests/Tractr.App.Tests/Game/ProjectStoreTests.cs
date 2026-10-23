@@ -67,9 +67,9 @@ public sealed class ProjectStoreTests
         Assert.Equal(["index.json", "proj-a.json"], files.Select(Path.GetFileName).Order(StringComparer.Ordinal));
         Assert.Equal("Second", store.Load("proj-a").Project!.Name);
         Assert.Equal("Second", Assert.Single(store.List()).Name);
-        // Web-compatible JSON: camelCase, indented, at the current schema version.
+        // Project JSON: camelCase, indented, at the current schema version.
         var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a.json"));
-        Assert.Contains("\n  \"schemaVersion\": 9", text, StringComparison.Ordinal);
+        Assert.Contains("\n  \"schemaVersion\": 1", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class ProjectStoreTests
         Directory.CreateDirectory(store.ProjectsDirectory);
         File.WriteAllText(store.PathFor("broken"), "{ not json");
         File.WriteAllText(store.PathFor("future"), """{ "schemaVersion": 999, "scenes": [] }""");
-        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 8, "scenes": [] }""");
+        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 0, "scenes": [] }""");
 
         var broken = store.Load("broken");
         Assert.False(broken.Ok);
@@ -109,12 +109,12 @@ public sealed class ProjectStoreTests
         Assert.Contains("newer than this engine supports", future.Errors[0], StringComparison.Ordinal);
         var old = store.Load("old");
         Assert.False(old.Ok);
-        Assert.Contains("schema version 8 is not supported", old.Errors[0], StringComparison.Ordinal);
+        Assert.Contains("schema version 0 is not supported", old.Errors[0], StringComparison.Ordinal);
         Assert.False(store.Load("missing").Ok);
     }
 
     [Fact]
-    public void Import_CreatesANewProjectFromWebJson()
+    public void Import_CreatesANewProjectFromProjectJson()
     {
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
@@ -124,17 +124,10 @@ public sealed class ProjectStoreTests
         Assert.StartsWith("proj-", fromFixture.Project!.Id, StringComparison.Ordinal);
         Assert.Equal("tiles", fromFixture.Project.Mode);
 
-        // An exported game (no editor fields) is layered over a blank project.
-        var exported = JsonNode.Parse(ProjectStore.ToJson(FarmEngine.Authoring.ProjectCatalog.CreateInitialProject(0)))!.AsObject();
-        foreach (var key in new[] { "id", "mode", "selectedTileType", "selectedNPCId", "selectedItemId", "eventFlags", "currentTime", "player" })
-        {
-            exported.Remove(key);
-        }
-
-        var fromExport = store.Import(exported.ToJsonString());
-        Assert.True(fromExport.Ok, string.Join("; ", fromExport.Errors));
-        Assert.Equal("My Farming Game", fromExport.Project!.Name);
-        Assert.NotEmpty(fromExport.Project.Npcs);
+        // Only whole projects import: a file without the editor fields is refused.
+        var partial = JsonNode.Parse(ProjectStore.ToJson(FarmEngine.Authoring.ProjectCatalog.CreateInitialProject(0)))!.AsObject();
+        partial.Remove("player");
+        Assert.False(store.Import(partial.ToJsonString()).Ok);
 
         Assert.False(store.Import("[1, 2]").Ok);
         Assert.False(store.Import("nope").Ok);

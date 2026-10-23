@@ -1,5 +1,5 @@
 //! String tables of the engine-owned interface: HUD labels, toolbar, panels, the game shell and
-//! its dialogs (the web version's `src/lib/i18n.ts`). Game text (item names, dialogue) is not
+//! its dialogs. Game text (item names, dialogue) is not
 //! here; content packs localize it with their own string tables (`farm_sim::packs`).
 //!
 //! A [`Lang`] looks a key up in its table; a key it lacks falls back to English, then to the key

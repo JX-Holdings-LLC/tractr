@@ -114,7 +114,7 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
-      # The web version's player (crates/farm-wasm): build the `--target web` package, then run
+      # The web demo's player (crates/farm-wasm): build the `--target web` package, then run
       # it in Node (frames, storage, plugins and every golden replay), and the web demo page's
       # script (tools/wasm/web-template/game.js) against it.
       - name: WebAssembly player build and smoke test (farm-wasm)

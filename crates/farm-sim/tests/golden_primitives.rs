@@ -1,11 +1,10 @@
-//! The RNG, stable JSON and hash primitives. `fixtures/golden/vectors` holds fixed vectors
-//! (recorded once from the original TypeScript engine, never re-recorded): the RNG streams and
-//! the stable JSON text and text hash of edge-case values. `fixtures/golden/rng.json` and
+//! The RNG, stable JSON and hash primitives. `fixtures/golden/vectors` holds fixed vectors, never
+//! re-recorded: the RNG streams and the stable JSON text of edge-case values. `fixtures/golden/rng.json` and
 //! `hash.json` are recorded from this engine
 //! (`FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_primitives`).
 
 use farm_sim::rng::{self, Rng, RngState};
-use farm_sim::{hash_text, stable_json, units};
+use farm_sim::{stable_json, units};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
@@ -274,10 +273,9 @@ fn decode_tagged(value: &Value) -> Value {
     }
 }
 
-/// Stable JSON (debug output, readable goldens) and the text hash (`fe_hash_text`) match the
-/// fixed vectors.
+/// Stable JSON (debug output, readable goldens) matches the fixed vectors.
 #[test]
-fn stable_stringify_and_text_hash_match_the_fixed_vectors() {
+fn stable_stringify_matches_the_fixed_vectors() {
     for entry in golden("vectors/stable-text.json").as_array().unwrap() {
         let name = entry["name"].as_str().unwrap();
         if contains_mark(&entry["input"]) {
@@ -289,7 +287,6 @@ fn stable_stringify_and_text_hash_match_the_fixed_vectors() {
         }
         let stable = stable_json::stringify_value(&decode_tagged(&entry["input"]));
         assert_eq!(entry["stable"].as_str().unwrap(), stable, "{name}: stable text");
-        assert_eq!(entry["hash"].as_str().unwrap(), hash_text(&stable), "{name}: hash");
     }
 }
 

@@ -30,7 +30,6 @@ use farm_runtime::panels::PanelView;
 use farm_sim::overlay::OverlayView;
 use farm_sim::schema::{item_types, GameContent, GameState, Item};
 use farm_sim::Command;
-use std::sync::Arc;
 
 /// A host panel over the game (web `showInventory` / `showQuests` / `showCrafting`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,10 +217,6 @@ pub(crate) fn draw_item_art(
     let definition = content.items.iter().find(|candidate| candidate.id == item.id).unwrap_or(item);
     let visual = definition.visual.as_ref().or(item.visual.as_ref());
     let sprite = resolve_visual(art.assets, visual, 0.0, "down", true)
-        .or_else(|| {
-            let url = definition.custom_image.as_deref().or(item.custom_image.as_deref())?;
-            Some(SnapshotSprite { image_url: Arc::from(url), ..SnapshotSprite::default() })
-        })
         .or_else(|| art.builtin.and_then(|builtin| builtin.item(Some(definition.r#type.as_str()))));
     if let Some(sprite) = sprite {
         if draw_sprite(ui, images, &sprite, rect, art.pixel_art) {

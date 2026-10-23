@@ -11,13 +11,11 @@
 // - the web demo's surfaces (a touch phone at density 3, a 1366×768 laptop) lay out in CSS
 //   pixels; FARM_WASM_SCREENSHOTS=<dir> writes their frames as PNGs;
 // - pack plugins run in the player (QuickJS in wasmi, inside WebAssembly);
-// - Session replays of the goldens in fixtures/golden/replays (recorded from the Rust engine)
-//   reproduce every step's state hash and effects, the final state and the final project;
-// - Preview, renderJson (and its request checks), hashState, hashText and the sound cues answer.
+// - hashState and the sound and music samples answer.
 //
 // tools/wasm/game-page.mjs tests the web demo page's own script against the same build.
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateSync } from "node:zlib";
@@ -30,16 +28,6 @@ farm.initSync({ module: readFileSync(path.join(dist, "farm_wasm_bg.wasm")) });
 
 const fixture = (...parts) => path.join(root, "fixtures", ...parts);
 const json = (...parts) => JSON.parse(readFileSync(fixture(...parts), "utf8"));
-
-/** Stable JSON as the engine writes it: keys sorted by code unit, JavaScript numbers. */
-function stable(value) {
-  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
-  if (value !== null && typeof value === "object") {
-    const keys = Object.keys(value).sort();
-    return `{${keys.map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
 
 /** Writes an opaque RGBA frame as a PNG (FARM_WASM_SCREENSHOTS). */
 function writePng(file, { width, height, pixels }) {
@@ -155,7 +143,7 @@ await test("a player renders fixture-project.json and takes input", () => {
   assert.throws(() => player.debug(() => 0), { name: "FarmError", kind: "invalid" });
   assert.throws(() => player.commands(Symbol("x")), { name: "FarmError", kind: "invalid" });
   assert.throws(() => player.queryJson({ toJSON: () => undefined }), { name: "FarmError", kind: "invalid" });
-  assert.throws(() => farm.renderJson(() => 0), { name: "FarmError", kind: "invalid" });
+  assert.throws(() => farm.hashState(() => 0), { name: "FarmError", kind: "invalid" });
   frame(player);
   assert.match(player.hash(), /^[0-9a-f]{16}$/);
 
@@ -294,88 +282,16 @@ await test("pack plugins run in the player", () => {
   player.free();
 });
 
-const replays = readdirSync(fixture("golden", "replays"))
-  .filter((name) => name.endsWith(".json") && name !== "index.json")
-  .sort();
-for (const name of replays) {
-  await test(`session replays golden ${name}`, () => {
-    const replay = json("golden", "replays", name);
-    const session = new farm.Session(replay.project, replay.seed ?? undefined, replay.autoStartQuests === true);
-    // The goldens script commands wherever the player stands.
-    session.setScripted(true);
-    assert.equal(session.hash(), replay.initialHash, "initial state");
-    replay.steps.forEach((step, index) => {
-      const { input } = step;
-      const effects =
-        input.kind === "command" ? session.apply([input.command]) : session.tick(input.ticks);
-      assert.equal(session.hash(), step.hash, `state hash after step ${index} (${JSON.stringify(input)})`);
-      assert.equal(stable(JSON.parse(effects)), stable(step.effects), `effects of step ${index}`);
-    });
-    assert.equal(session.hash(), replay.finalHash);
-    assert.equal(stable(JSON.parse(session.stateJson())), stable(replay.finalState));
-    assert.equal(stable(JSON.parse(session.projectJson())), stable(replay.finalProject));
-    session.free();
-  });
-}
-
-await test("sessions save, load and run cartridges", () => {
-  const cart = readFileSync(fixture("golden", "cartridges", "fixture-project.cart"));
-  const replay = json("golden", "cartridges", "twenty-ticks.json");
-  const session = new farm.Session(cart);
-  const before = session.hash();
-  const save = session.save();
-  for (const input of replay.inputs) session.tick(input.ticks);
-  assert.notEqual(session.hash(), before);
-  assert.match(session.hash(), /^[0-9a-f]{16}$/);
-  assert.throws(() => session.projectJson(), { kind: "invalid" });
-  const report = JSON.parse(session.loadSave(save));
-  assert.deepEqual(report, { quarantined: [], restored: [], warnings: [] });
-  assert.equal(session.hash(), before);
-  assert.throws(() => session.loadSave(save.replace('"gameId":"', '"gameId":"other-')), /different game/);
-  session.free();
-});
-
-await test("previews, render requests, hashes and sounds", () => {
+await test("hashes and sounds", () => {
   const project = json("golden", "content", "starter-farm.json").project;
-  const preview = new farm.Preview(project);
-  const image = preview.render({ sceneId: project.player.sceneId, camera: { x: 40, y: 30, width: 100.5, height: 60 }, scale: 2 });
-  assert.equal(image.width, 201);
-  assert.equal(image.height, 120);
-  assert.equal(image.pixels.length, 201 * 120 * 4);
-  assert.throws(() => preview.render({ sceneId: "missing" }), /Scene missing not found/);
-  const empty = preview.renderVisual({ visual: { assetId: "missing" }, size: 16 });
-  assert.equal(empty.width, 0);
-  preview.free();
-
-  const snapshot = farm.renderJson({ type: "editorSnapshot", project, sceneId: project.player.sceneId });
-  assert.equal(typeof snapshot, "string");
-  const png = farm.renderJson({ type: "rasterize", snapshot: JSON.parse(snapshot), scale: 1 });
-  assert.ok(png instanceof Uint8Array);
-  assert.deepEqual([...png.subarray(0, 4)], [0x89, 0x50, 0x4e, 0x47]);
-
-  // Render requests whose work the image size would not bound are refused.
-  const huge = { width: 100000, height: 100000, tileSize: 0, tileGap: 0, gridOverlay: true };
-  assert.throws(() => farm.renderJson({ type: "rasterize", snapshot: huge }), { kind: "invalid", message: /at most/ });
-  assert.throws(
-    () => farm.renderJson({ type: "rasterize", snapshot: { ...JSON.parse(snapshot), tileSize: 0 } }),
-    { kind: "invalid", message: /Tile size/ },
-  );
-  assert.throws(() => new farm.Preview(project).render({ sceneId: project.player.sceneId, tileSize: -1 }), { kind: "invalid" });
-
-  // The state hash of a state as JSON (since v9 xxh3 over the binary state, not a text hash).
-  const session = new farm.Session(project);
-  session.tick(40);
-  assert.equal(farm.hashState(session.stateJson()), session.hash());
-  assert.equal(farm.hashState(JSON.parse(session.stateJson())), session.hash());
-  assert.notEqual(farm.hashText(session.stateJson()), session.hash(), "hashText is the v8 text hash");
-  assert.throws(() => farm.hashState("{oops"), { kind: "invalid" });
-  session.free();
   const player = new farm.Player(project, { seed: "wasm-hash" });
   frame(player);
+  // The state hash of a state as JSON (since v9 xxh3 over the binary state, not a text hash).
   assert.equal(farm.hashState(player.stateJson()), player.hash());
+  assert.equal(farm.hashState(JSON.parse(player.stateJson())), player.hash());
+  assert.throws(() => farm.hashState("{oops"), { kind: "invalid" });
   player.free();
 
-  assert.equal(farm.hashText("{}"), "5465b8257807bf56");
   assert.ok(farm.sfxCues().includes("coin"));
   const samples = farm.sfxSamples("coin", 48000);
   assert.ok(samples instanceof Float32Array && samples.length > 1000);

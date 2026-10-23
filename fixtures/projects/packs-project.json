@@ -1,7 +1,7 @@
 {
- "schemaVersion": 9,
+ "schemaVersion": 1,
  "id": "packs-proj",
- "name": "Current V7 Farm",
+ "name": "Fixture Farm",
  "version": "2.0",
  "scenes": [
   {
@@ -141,10 +141,6 @@
   "money": 500,
   "activeQuests": [],
   "completedQuests": [],
-  "pixelX": 0,
-  "pixelY": 0,
-  "targetX": 0,
-  "targetY": 0,
   "energy": 80,
   "maxEnergy": 100,
   "skills": {
@@ -163,7 +159,6 @@
  "selectedTileType": "grass",
  "selectedNPCId": null,
  "selectedItemId": null,
- "currentTime": 0,
  "customAssets": [],
  "currentSeason": "spring",
  "currentDay": 1,
@@ -384,7 +379,6 @@
        "name": "Berry Bush 2",
        "seedCost": 6,
        "baseHarvestValue": 8,
-       "growthTime": 1,
        "growthDays": 2,
        "stages": 3,
        "seasons": [
@@ -400,7 +394,6 @@
        "name": "Pack Wheat Crop",
        "seedCost": 1,
        "baseHarvestValue": 1,
-       "growthTime": 1,
        "growthDays": 1,
        "stages": 2,
        "seasons": [
@@ -460,7 +453,6 @@
        "name": "Berry Bush",
        "seedCost": 5,
        "baseHarvestValue": 7,
-       "growthTime": 1,
        "growthDays": 3,
        "stages": 3,
        "seasons": [
@@ -676,7 +668,7 @@
        "dialogue:hello:text": "Bonjour",
        "npc:baker:name": "Boulanger",
        "quest:intro:name": "Intro FR",
-       "item:wheat:name": "Bl\u00e9",
+       "item:wheat:name": "Blé",
        "weird:key": "x",
        "a:b:c:d": "deep"
       },
@@ -781,7 +773,6 @@
    "name": "Glowcorn",
    "seedCost": 5,
    "baseHarvestValue": 9,
-   "growthTime": 1000,
    "growthDays": 2,
    "stages": 3,
    "seasons": [
@@ -789,8 +780,7 @@
    ],
    "canRegrow": false,
    "yieldMin": 1,
-   "yieldMax": 1,
-   "customAsset": "asset-1"
+   "yieldMax": 1
   }
  ],
  "quarantinedItems": [
