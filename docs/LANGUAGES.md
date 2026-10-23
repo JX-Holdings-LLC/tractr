@@ -604,7 +604,7 @@ Later items (native and web roadmaps):
 | Export Game: web demo | Done: the `farm-wasm` player template + `game.cart` + `index.html`, for itch.io pages ([EXPORT.md](EXPORT.md#output-layout)). |
 | Seed selection, fertilizer choice | Done: the `interactWith` command and the inventory's Hold button ([PLAYER.md](PLAYER.md#controls)) |
 | Richer animals, fishing and relationships, multi-tile buildings, roaming insects, real-time combat | `farm-sim` (+ `farm-ui` for player UI; F# for the authoring side) |
-| Audio-file import | C# import; F# embeds in the cartridge; Rust mixes it in `farm-player::audio` (seasonal music crossfades, weather ambience layers) |
+| Audio-file import | Done (M2): OGG and WAV sound and music assets, imported by the editor, carried in the cartridge's asset table, decoded by `farm-player::audio_assets` and mixed in `farm-player::audio`; `farm_runtime::music::chosen_music` picks the music ([PLAYER.md](PLAYER.md)) |
 | Zip/folder content packs with binary assets | F# pack loader + compiler. JSON packs already carry their art: "Export selection as pack" embeds the images the entries use in the pack's `assets` (as data URLs), and installing a pack adds them to the project's art (`PackExport.build`, `PackMerge.mergeAssets`). |
 | JSON Schema for mod autocomplete | F# generates it from the authoring types |
 | Property-based determinism, economy and loading tests | Done: proptest (Rust), FsCheck (F#) |
@@ -713,8 +713,9 @@ issue before work starts.
 - **Asynchronous saving** within a 1 ms budget on the simulation thread.
 - **GPU effects** on the wgpu renderer (`farm-gpu` draws the CPU renderer's
   frames today), and a measured 4 ms 1080p frame target on an integrated GPU.
-- **kira audio** (crossfades, ambience layers); the player mixes its own audio
-  and outputs it through cpal.
+- **kira audio**; the player mixes its own audio (built-in music, ambience and
+  the game's own sounds and music, with crossfades) and outputs it through
+  cpal.
 - **Generated FFI bindings with `SafeHandle`s**; `FarmEngine.Interop` is
   hand-written `LibraryImport` declarations with owning wrappers.
 - **The balancing lab** (`FarmEngine.Lab`).
