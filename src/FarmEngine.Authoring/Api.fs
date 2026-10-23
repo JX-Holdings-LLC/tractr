@@ -105,6 +105,18 @@ type Edits =
     static member RemoveAction(actionId: string) : Edit = RemoveAction actionId
     static member UpsertMinigame(minigame: MinigameDef) : Edit = UpsertMinigame minigame
     static member RemoveMinigame(minigameId: string) : Edit = RemoveMinigame minigameId
+    static member UpsertTerrain(terrain: TerrainDefinition) : Edit = UpsertTerrain terrain
+    static member RemoveTerrain(terrainId: string) : Edit = RemoveTerrain terrainId
+    static member UpsertTool(tool: ToolDefinition) : Edit = UpsertTool tool
+    static member RemoveTool(toolId: string) : Edit = RemoveTool toolId
+    static member UpsertItemCategory(category: ItemCategoryDefinition) : Edit = UpsertItemCategory category
+    static member RemoveItemCategory(categoryId: string) : Edit = RemoveItemCategory categoryId
+    static member UpsertCropQuality(quality: CropQualityDefinition) : Edit = UpsertCropQuality quality
+    static member RemoveCropQuality(qualityId: string) : Edit = RemoveCropQuality qualityId
+    static member UpsertCropMutation(mutation: CropMutationDefinition) : Edit = UpsertCropMutation mutation
+    static member RemoveCropMutation(mutationId: string) : Edit = RemoveCropMutation mutationId
+    static member UpsertCutscene(cutscene: Cutscene) : Edit = UpsertCutscene cutscene
+    static member RemoveCutscene(cutsceneId: string) : Edit = RemoveCutscene cutsceneId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
     static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
     static member SetMine(config: MineConfig) : Edit = SetMine config
@@ -214,6 +226,12 @@ type Defaults =
     static member NewMachineType(project: GameProject) : MachineTypeDefinition = Defaults.newMachineType project
     static member NewNodeType(project: GameProject) : NodeTypeDefinition = Defaults.newNodeType project
     static member NewDrop(project: GameProject) : NodeDrop = Defaults.newDrop project
+    static member NewTerrain(project: GameProject) : TerrainDefinition = Defaults.newTerrain project
+    static member NewTool(project: GameProject) : ToolDefinition = Defaults.newTool project
+    static member NewItemCategory(project: GameProject) : ItemCategoryDefinition = Defaults.newItemCategory project
+    static member NewCropQuality(project: GameProject) : CropQualityDefinition = Defaults.newCropQuality project
+    static member NewCropMutation(project: GameProject) : CropMutationDefinition = Defaults.newCropMutation project
+    static member NewCutscene(project: GameProject) : Cutscene = Defaults.newCutscene project
     static member NewAnimalSpecies(project: GameProject) : AnimalSpeciesDefinition = Defaults.newAnimalSpecies project
     static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState = Defaults.newAnimal project speciesId sceneId x y
     static member NewFishTable(project: GameProject) : FishTable = Defaults.newFishTable project
@@ -518,6 +536,28 @@ type ContentReadouts =
     /// The node type summary card.
     static member NodeTypeSummary(project: GameProject, node: NodeTypeDefinition) : IReadOnlyList<ReadoutLine> =
         Readouts.nodeTypeSummary project node |> ContentReadouts.List
+
+    /// Built-in terrains, tools, item categories, crop qualities and mutations the project does not
+    /// replace (M1; read-only in the editor until customized).
+    static member BuiltinTerrains(project: GameProject) : IReadOnlyList<TerrainDefinition> = Readouts.builtinTerrains project |> ContentReadouts.List
+    static member BuiltinTools(project: GameProject) : IReadOnlyList<ToolDefinition> = Readouts.builtinTools project |> ContentReadouts.List
+    static member BuiltinItemCategories(project: GameProject) : IReadOnlyList<ItemCategoryDefinition> =
+        Readouts.builtinItemCategories project |> ContentReadouts.List
+    static member BuiltinCropQualities(project: GameProject) : IReadOnlyList<CropQualityDefinition> =
+        Readouts.builtinCropQualities project |> ContentReadouts.List
+    static member BuiltinCropMutations(project: GameProject) : IReadOnlyList<CropMutationDefinition> =
+        Readouts.builtinCropMutations project |> ContentReadouts.List
+    /// True when `id` is a built-in definition of `kind` ("terrain", "tool", "itemCategory",
+    /// "cropQuality", "cropMutation").
+    static member IsBuiltinVocabulary(kind: string, id: string) : bool = Readouts.isBuiltinVocabulary kind id
+    /// The list line under a terrain.
+    static member TerrainListNote(terrain: TerrainDefinition, builtin: bool) : string =
+        Readouts.vocabularyListNote "terrain" terrain.Id builtin (Readouts.terrainNote terrain)
+    /// The list line under a tool.
+    static member ToolListNote(tool: ToolDefinition, builtin: bool) : string =
+        Readouts.vocabularyListNote "tool" tool.Id builtin (Readouts.toolNote tool)
+    /// The list line under an item category, crop quality or mutation ("Built-in", "Custom", …).
+    static member VocabularyListNote(kind: string, id: string, builtin: bool) : string = Readouts.vocabularyListNote kind id builtin ""
 
     /// A schedule minute as a clock time ("8:00 AM", "1:00 AM (next day)").
     static member Clock(minute: float) : string = Readouts.clock minute

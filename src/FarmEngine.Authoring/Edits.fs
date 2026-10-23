@@ -120,6 +120,20 @@ type Edit =
     | RemoveAction of actionId: string
     | UpsertMinigame of minigame: MinigameDef
     | RemoveMinigame of minigameId: string
+    /// The world vocabulary (M1) and cutscenes (M2). Removing one that replaced a built-in
+    /// definition brings the built-in back; uses of a removed one stay (Problems lists them).
+    | UpsertTerrain of terrain: TerrainDefinition
+    | RemoveTerrain of terrainId: string
+    | UpsertTool of tool: ToolDefinition
+    | RemoveTool of toolId: string
+    | UpsertItemCategory of category: ItemCategoryDefinition
+    | RemoveItemCategory of categoryId: string
+    | UpsertCropQuality of quality: CropQualityDefinition
+    | RemoveCropQuality of qualityId: string
+    | UpsertCropMutation of mutation: CropMutationDefinition
+    | RemoveCropMutation of mutationId: string
+    | UpsertCutscene of cutscene: Cutscene
+    | RemoveCutscene of cutsceneId: string
     | SetWeather of config: WeatherConfig
     /// ProjectSettingsEditor weather table: a weight of 0 removes the entry.
     | SetWeatherWeight of seasonId: string * weatherId: string * weight: float

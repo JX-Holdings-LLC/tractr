@@ -84,6 +84,18 @@ module Document =
         | RemoveAction actionId -> EditContent.removeAction actionId project
         | UpsertMinigame minigame -> EditContent.upsertMinigame minigame project
         | RemoveMinigame minigameId -> EditContent.removeMinigame minigameId project
+        | UpsertTerrain terrain -> EditContent.upsertTerrain terrain project
+        | RemoveTerrain terrainId -> EditContent.removeTerrain terrainId project
+        | UpsertTool tool -> EditContent.upsertTool tool project
+        | RemoveTool toolId -> EditContent.removeTool toolId project
+        | UpsertItemCategory category -> EditContent.upsertItemCategory category project
+        | RemoveItemCategory categoryId -> EditContent.removeItemCategory categoryId project
+        | UpsertCropQuality quality -> EditContent.upsertCropQuality quality project
+        | RemoveCropQuality qualityId -> EditContent.removeCropQuality qualityId project
+        | UpsertCropMutation mutation -> EditContent.upsertCropMutation mutation project
+        | RemoveCropMutation mutationId -> EditContent.removeCropMutation mutationId project
+        | UpsertCutscene cutscene -> EditContent.upsertCutscene cutscene project
+        | RemoveCutscene cutsceneId -> EditContent.removeCutscene cutsceneId project
         | SetWeather config -> EditContent.setWeather config project
         | SetWeatherWeight(seasonId, weatherId, weight) -> EditContent.setWeatherWeight seasonId weatherId weight project
         | SetMine config -> EditContent.setMine config project

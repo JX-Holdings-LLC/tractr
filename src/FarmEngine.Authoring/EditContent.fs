@@ -276,8 +276,41 @@ module internal EditContent =
     let private actions = (fun (p: GameProject) -> p.Actions), (fun (p: GameProject) l -> { p with Actions = l }), (fun (a: ActionDef) -> a.Id)
     let private minigames = (fun (p: GameProject) -> p.Minigames), (fun (p: GameProject) l -> { p with Minigames = l }), (fun (m: MinigameDef) -> m.Id)
 
+    let private terrains =
+        (fun (p: GameProject) -> defaultArg p.Terrains []), (fun (p: GameProject) l -> { p with Terrains = (if List.isEmpty l then None else Some l) }), (fun (x: TerrainDefinition) -> x.Id)
+    let private tools =
+        (fun (p: GameProject) -> defaultArg p.Tools []), (fun (p: GameProject) l -> { p with Tools = (if List.isEmpty l then None else Some l) }), (fun (x: ToolDefinition) -> x.Id)
+    let private itemCategories =
+        (fun (p: GameProject) -> defaultArg p.ItemCategories []), (fun (p: GameProject) l -> { p with ItemCategories = (if List.isEmpty l then None else Some l) }), (fun (x: ItemCategoryDefinition) -> x.Id)
+    let private cropQualities =
+        (fun (p: GameProject) -> defaultArg p.CropQualities []), (fun (p: GameProject) l -> { p with CropQualities = (if List.isEmpty l then None else Some l) }), (fun (x: CropQualityDefinition) -> x.Id)
+    let private cropMutations =
+        (fun (p: GameProject) -> defaultArg p.CropMutations []), (fun (p: GameProject) l -> { p with CropMutations = (if List.isEmpty l then None else Some l) }), (fun (x: CropMutationDefinition) -> x.Id)
+    let private cutscenes =
+        (fun (p: GameProject) -> defaultArg p.Cutscenes []), (fun (p: GameProject) l -> { p with Cutscenes = (if List.isEmpty l then None else Some l) }), (fun (x: Cutscene) -> x.Id)
     let private upsertIn (get, set, idOf) item project = upsert get set idOf item project
     let private removeIn (get, set, idOf) cleanup id project = remove get set idOf cleanup id project
+
+    // ---- The world vocabulary (M1) and cutscenes (M2) ----
+
+    let upsertTerrain (terrain: TerrainDefinition) (project: GameProject) = upsertIn terrains terrain project
+    let removeTerrain (terrainId: string) (project: GameProject) = removeIn terrains noCleanup terrainId project
+
+    let upsertTool (tool: ToolDefinition) (project: GameProject) = upsertIn tools tool project
+    let removeTool (toolId: string) (project: GameProject) = removeIn tools noCleanup toolId project
+
+    let upsertItemCategory (category: ItemCategoryDefinition) (project: GameProject) = upsertIn itemCategories category project
+    let removeItemCategory (categoryId: string) (project: GameProject) = removeIn itemCategories noCleanup categoryId project
+
+    let upsertCropQuality (quality: CropQualityDefinition) (project: GameProject) = upsertIn cropQualities quality project
+    let removeCropQuality (qualityId: string) (project: GameProject) = removeIn cropQualities noCleanup qualityId project
+
+    let upsertCropMutation (mutation: CropMutationDefinition) (project: GameProject) = upsertIn cropMutations mutation project
+    let removeCropMutation (mutationId: string) (project: GameProject) = removeIn cropMutations noCleanup mutationId project
+
+    let upsertCutscene (cutscene: Cutscene) (project: GameProject) = upsertIn cutscenes cutscene project
+    let removeCutscene (cutsceneId: string) (project: GameProject) = removeIn cutscenes noCleanup cutsceneId project
+
 
     let upsertQuest (quest: Quest) (project: GameProject) = upsertIn quests quest project
     let removeQuest (questId: string) (project: GameProject) = removeIn quests Cleanup.dropQuest questId project

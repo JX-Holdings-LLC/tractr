@@ -164,6 +164,7 @@ module Problems =
         let context = Context.create project
         ChecksWorld.run context sink
         ChecksContent.run context sink
+        ChecksVocabulary.run context sink
         ChecksExport.run project sink
         sink.ToList()
 

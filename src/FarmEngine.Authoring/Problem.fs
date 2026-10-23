@@ -31,6 +31,12 @@ type NavigationTarget =
     | Interface
     | Pack of id: string
     | Asset of id: string
+    | Terrain of id: string
+    | Tool of id: string
+    | ItemCategory of id: string
+    | CropQuality of id: string
+    | CropMutation of id: string
+    | Cutscene of id: string
 
 /// One line of the Problems panel: the same shape for schema errors, content lints and editor
 /// checks. `Path` is a JSON path into the project (`npcs[3].dialogue[0].options[1].nextDialogueId`)
@@ -57,7 +63,8 @@ type Problem =
 
     /// The editor tab to open: "scene", "npc", "item", "crop", "quest", "event", "shop",
     /// "recipe", "nodeType", "machineType", "animalSpecies", "fishTable", "action", "minigame",
-    /// "settings", "interface", "pack", "asset" or "" when there is nowhere to go.
+    /// "settings", "interface", "pack", "asset", "terrain", "tool", "itemCategory", "cropQuality",
+    /// "cropMutation", "cutscene" or "" when there is nowhere to go.
     member this.TargetKind =
         match this.Target with
         | None -> ""
@@ -81,6 +88,12 @@ type Problem =
             | NavigationTarget.Interface -> "interface"
             | NavigationTarget.Pack _ -> "pack"
             | NavigationTarget.Asset _ -> "asset"
+            | NavigationTarget.Terrain _ -> "terrain"
+            | NavigationTarget.Tool _ -> "tool"
+            | NavigationTarget.ItemCategory _ -> "itemCategory"
+            | NavigationTarget.CropQuality _ -> "cropQuality"
+            | NavigationTarget.CropMutation _ -> "cropMutation"
+            | NavigationTarget.Cutscene _ -> "cutscene"
 
     /// The id of the thing to open (scene id for tiles), or null for settings/interface/none.
     member this.TargetId: string | null =
@@ -92,7 +105,9 @@ type Problem =
             | NavigationTarget.Npc id | NavigationTarget.Item id | NavigationTarget.Crop id | NavigationTarget.Quest id
             | NavigationTarget.Event id | NavigationTarget.Shop id | NavigationTarget.Recipe id | NavigationTarget.NodeType id
             | NavigationTarget.MachineType id | NavigationTarget.AnimalSpecies id | NavigationTarget.FishTable id
-            | NavigationTarget.Action id | NavigationTarget.Minigame id | NavigationTarget.Pack id | NavigationTarget.Asset id -> id
+            | NavigationTarget.Action id | NavigationTarget.Minigame id | NavigationTarget.Pack id | NavigationTarget.Asset id
+            | NavigationTarget.Terrain id | NavigationTarget.Tool id | NavigationTarget.ItemCategory id
+            | NavigationTarget.CropQuality id | NavigationTarget.CropMutation id | NavigationTarget.Cutscene id -> id
             | NavigationTarget.Settings | NavigationTarget.Interface -> null
 
     /// Tile to scroll to for a scene target (0 otherwise).
@@ -149,6 +164,16 @@ type internal Context =
       SeasonIds: System.Collections.Generic.HashSet<string>
       FestivalIds: System.Collections.Generic.HashSet<string>
       WeatherIds: System.Collections.Generic.HashSet<string>
+      /// The game's terrains, tools, item categories, crop qualities and mutations (M1).
+      TerrainIds: System.Collections.Generic.HashSet<string>
+      ToolIds: System.Collections.Generic.HashSet<string>
+      CategoryIds: System.Collections.Generic.HashSet<string>
+      QualityIds: System.Collections.Generic.HashSet<string>
+      MutationIds: System.Collections.Generic.HashSet<string>
+      /// Cutscenes, sound assets and music assets (M2).
+      CutsceneIds: System.Collections.Generic.HashSet<string>
+      SoundIds: System.Collections.Generic.HashSet<string>
+      MusicIds: System.Collections.Generic.HashSet<string>
       /// Flags something can set: `setFlag`/`clearFlag` outcomes, dialogue `eventFlag`s, the
       /// project's flag table and every event's auto-managed fired flag.
       KnownFlags: System.Collections.Generic.HashSet<string> }
@@ -194,6 +219,14 @@ module internal Context =
           SeasonIds = ids (project.Settings.Calendar.Seasons |> Seq.map (fun s -> s.Id))
           FestivalIds = ids (project.Settings.Calendar.Festivals |> Seq.map (fun f -> f.Id))
           WeatherIds = ids (project.Weather.Types |> Seq.map (fun w -> w.Id))
+          TerrainIds = ids (ContentCompiler.terrains project |> Seq.map (fun t -> t.Id))
+          ToolIds = ids (ContentCompiler.tools project |> Seq.map (fun t -> t.Id))
+          CategoryIds = ids (ContentCompiler.itemCategories project |> Seq.map (fun c -> c.Id))
+          QualityIds = ids (ContentCompiler.cropQualities project |> Seq.map (fun q -> q.Id))
+          MutationIds = ids (ContentCompiler.cropMutations project |> Seq.map (fun m -> m.Id))
+          CutsceneIds = ids (defaultArg project.Cutscenes [] |> Seq.map (fun c -> c.Id))
+          SoundIds = ids (project.CustomAssets |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Sound) |> Seq.map (fun a -> a.Id))
+          MusicIds = ids (project.CustomAssets |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Music) |> Seq.map (fun a -> a.Id))
           KnownFlags = flags }
 
     /// A scene tile is inside the scene grid.

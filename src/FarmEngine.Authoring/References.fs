@@ -31,6 +31,18 @@ type ReferenceKind =
     | Pack
     /// A crafting station category that machine types provide (`stationCategories`).
     | StationCategory
+    /// The world vocabulary (M1).
+    | Terrain
+    | Tool
+    | ItemCategory
+    | CropQuality
+    | CropMutation
+    /// A weather overlay (M1): the built-in rain and snow or the game's own.
+    | Overlay
+    /// Sound and music assets and cutscenes (M2).
+    | Sound
+    | Music
+    | Cutscene
 
 module ReferenceKind =
     let all =
@@ -38,7 +50,9 @@ module ReferenceKind =
           ReferenceKind.Shop; ReferenceKind.Recipe; ReferenceKind.Crop; ReferenceKind.NodeType; ReferenceKind.MachineType
           ReferenceKind.AnimalSpecies; ReferenceKind.Animal; ReferenceKind.FishTable; ReferenceKind.Action
           ReferenceKind.Minigame; ReferenceKind.Event; ReferenceKind.Weather; ReferenceKind.Season; ReferenceKind.Festival
-          ReferenceKind.Skill; ReferenceKind.Asset; ReferenceKind.Pack; ReferenceKind.StationCategory ]
+          ReferenceKind.Skill; ReferenceKind.Asset; ReferenceKind.Pack; ReferenceKind.StationCategory
+          ReferenceKind.Terrain; ReferenceKind.Tool; ReferenceKind.ItemCategory; ReferenceKind.CropQuality
+          ReferenceKind.CropMutation; ReferenceKind.Overlay; ReferenceKind.Sound; ReferenceKind.Music; ReferenceKind.Cutscene ]
 
     /// The name C# uses ("item", "npc", "nodeType", …).
     let name (kind: ReferenceKind) =
@@ -66,6 +80,15 @@ module ReferenceKind =
         | ReferenceKind.Asset -> "asset"
         | ReferenceKind.Pack -> "pack"
         | ReferenceKind.StationCategory -> "stationCategory"
+        | ReferenceKind.Terrain -> "terrain"
+        | ReferenceKind.Tool -> "tool"
+        | ReferenceKind.ItemCategory -> "itemCategory"
+        | ReferenceKind.CropQuality -> "cropQuality"
+        | ReferenceKind.CropMutation -> "cropMutation"
+        | ReferenceKind.Overlay -> "overlay"
+        | ReferenceKind.Sound -> "sound"
+        | ReferenceKind.Music -> "music"
+        | ReferenceKind.Cutscene -> "cutscene"
 
     let tryParse (text: string) = all |> List.tryFind (fun kind -> name kind = text)
 
@@ -123,15 +146,13 @@ module References =
           QuestObjectiveTypes.Talk, "Talk to NPC"; QuestObjectiveTypes.Visit, "Visit Scene"
           QuestObjectiveTypes.Craft, "Craft Item"; QuestObjectiveTypes.Gift, "Give Gift" ]
 
-    let private tileTypes = same TileTypes.All
-    let private toolTypes = same ToolTypes.All
     let private flag = "a flag name: flags are free text that events, actions and dialogue set and check"
 
     let declarations: FieldDeclaration list =
         [ // Project
           reference "GameProject" "StartSceneId" ReferenceKind.Scene
           oneOf "GameProject" "Mode" (same EditorModes.All)
-          oneOf "GameProject" "SelectedTileType" tileTypes
+          reference "GameProject" "SelectedTileType" ReferenceKind.Terrain
           optional "GameProject" "SelectedNpcId" ReferenceKind.Npc
           optional "GameProject" "SelectedItemId" ReferenceKind.Item
           reference "GameProject" "CurrentSeason" ReferenceKind.Season
@@ -143,20 +164,20 @@ module References =
           reference "Player" "SceneId" ReferenceKind.Scene
           list "Player" "ActiveQuests" ReferenceKind.Quest
           list "Player" "CompletedQuests" ReferenceKind.Quest
-          optionalOneOf "Player" "EquippedTool" toolTypes
+          optional "Player" "EquippedTool" ReferenceKind.Tool
           keys "Player" "Skills" ReferenceKind.Skill
           // World
           list "Scene" "Npcs" ReferenceKind.Npc
           list "Scene" "Events" ReferenceKind.Event
           reference "SceneTransition" "ToSceneId" ReferenceKind.Scene
-          oneOf "Tile" "Type" tileTypes
-          oneOf "Tile" "Background" tileTypes
-          optionalOneOf "Tile" "Overlay" tileTypes
-          optionalOneOf "Tile" "Object" tileTypes
+          reference "Tile" "Type" ReferenceKind.Terrain
+          reference "Tile" "Background" ReferenceKind.Terrain
+          optional "Tile" "Overlay" ReferenceKind.Terrain
+          optional "Tile" "Object" ReferenceKind.Terrain
           optionalOneOf "Tile" "SoilState" (same SoilStates.All)
           reference "Crop" "Type" ReferenceKind.Crop
-          oneOf "Crop" "Quality" (same CropQualities.All)
-          optionalOneOf "Crop" "Mutation" (same CropMutations.All)
+          reference "Crop" "Quality" ReferenceKind.CropQuality
+          optional "Crop" "Mutation" ReferenceKind.CropMutation
           plain "Crop" "MultiTileId" "groups the tiles of one planted multi-tile crop"
           reference "TileNode" "TypeId" ReferenceKind.NodeType
           reference "TileMachine" "TypeId" ReferenceKind.MachineType
@@ -166,17 +187,17 @@ module References =
           plain "VisualRef" "Animation" "a clip name on the chosen asset"
           optionalAs "ArtFrame" "AssetId" ReferenceKind.Asset "(same image)"
           oneOf "CustomAsset" "Type" (same CustomAssetTypes.All)
-          optionalOneOf "CustomAsset" "TileType" tileTypes
+          optional "CustomAsset" "TileType" ReferenceKind.Terrain
           // Items and crops
-          oneOf "Item" "Type" (same ItemTypes.All)
+          reference "Item" "Type" ReferenceKind.ItemCategory
           optional "Item" "CropType" ReferenceKind.Crop
-          optionalOneOf "Item" "ToolType" toolTypes
+          optional "Item" "ToolType" ReferenceKind.Tool
           optional "Item" "UseActionId" ReferenceKind.Action
           list "CropDefinition" "Seasons" ReferenceKind.Season
           optionalAs "CropDefinition" "HarvestItemId" ReferenceKind.Item "(crop-<id>)"
           list "CustomCropDefinition" "Seasons" ReferenceKind.Season
           optionalAs "CustomCropDefinition" "HarvestItemId" ReferenceKind.Item "(crop-<id>)"
-          optionalOneOf "InventorySlot" "Quality" (same CropQualities.All)
+          optional "InventorySlot" "Quality" ReferenceKind.CropQuality
           // Characters and dialogue
           reference "Npc" "SceneId" ReferenceKind.Scene
           optionalOneOf "Npc" "MovePattern" (same NpcMovePatterns.All)
@@ -227,9 +248,10 @@ module References =
           optional "EventOutcome" "QuestId" ReferenceKind.Quest
           optional "EventOutcome" "NpcId" ReferenceKind.Npc
           optional "EventOutcome" "DialogueId" ReferenceKind.Dialogue
-          optionalOneOf "EventOutcome" "NewTileType" tileTypes
+          optional "EventOutcome" "NewTileType" ReferenceKind.Terrain
           optional "EventOutcome" "SceneId" ReferenceKind.Scene
-          plain "EventOutcome" "SoundId" "a sound name the host plays; sounds are not project content yet"
+          plain "EventOutcome" "SoundId" "a sound or music asset, or a built-in sound name the player plays"
+          optional "EventOutcome" "CutsceneId" ReferenceKind.Cutscene
           optional "EventOutcome" "ActionId" ReferenceKind.Action
           optional "EventOutcome" "MinigameId" ReferenceKind.Minigame
           // Economy, crafting, gathering
@@ -243,7 +265,7 @@ module References =
           list "RecipeUnlock" "Seasons" ReferenceKind.Season
           optional "MachineTypeDefinition" "ItemId" ReferenceKind.Item
           plain "MachineTypeDefinition" "StationCategories" "the station categories this machine provides (it defines them)"
-          oneOf "NodeTypeDefinition" "RequiredTool" toolTypes
+          reference "NodeTypeDefinition" "RequiredTool" ReferenceKind.Tool
           reference "NodeDrop" "ItemId" ReferenceKind.Item
           // Wildlife
           optionalAs "AnimalSpeciesDefinition" "FeedItemId" ReferenceKind.Item "(grazes for free)"
@@ -261,7 +283,41 @@ module References =
           // Settings, weather, mine, interface
           plain "ProjectSettings" "Locale" "a locale code for pack string tables"
           reference "CalendarFestival" "SeasonId" ReferenceKind.Season
-          optionalOneOf "WeatherTypeDefinition" "Overlay" [ "rain", "rain"; "snow", "snow" ]
+          optional "WeatherTypeDefinition" "Overlay" ReferenceKind.Overlay
+          optional "WeatherTypeDefinition" "Music" ReferenceKind.Music
+          oneOf "WeatherOverlayDefinition" "Style" (same OverlayStyles.All)
+          optional "Scene" "Music" ReferenceKind.Music
+          plain "Scene" "Tags" "free-form tags crops can require"
+          optional "CalendarSeason" "Music" ReferenceKind.Music
+          optional "CalendarFestival" "Music" ReferenceKind.Music
+          keys "AtmosphereSettings" "Seasons" ReferenceKind.Season
+          // World vocabulary (M1)
+          oneOf "TerrainDefinition" "Layer" (same TileLayers.All)
+          oneOf "TerrainTransform" "Action" (same ToolActions.Transforming)
+          optionalAs "TerrainTransform" "Tool" ReferenceKind.Tool "(any tool)"
+          optionalAs "TerrainTransform" "Into" ReferenceKind.Terrain "(remove)"
+          oneOf "ToolDefinition" "Action" (same ToolActions.All)
+          optionalAs "ToolDefinition" "Skill" ReferenceKind.Skill "(foraging)"
+          optional "ToolDefinition" "PlaceTerrain" ReferenceKind.Terrain
+          list "GrowthRequirements" "Terrains" ReferenceKind.Terrain
+          optionalOneOf "GrowthRequirements" "Light" (same LightNeeds.All)
+          plain "GrowthRequirements" "SceneTags" "scene tags (`Scene.Tags`)"
+          list "GrowthRequirements" "Fertilizers" ReferenceKind.Item
+          oneOf "NeighborRequirement" "Kind" (same NeighborKinds.All)
+          plain "NeighborRequirement" "Id" "a crop type or terrain id, by kind"
+          keys "GameWords" "Skills" ReferenceKind.Skill
+          plain "GameWords" "Locales" "words by locale code"
+          // Cutscenes (M2)
+          oneOf "CutsceneStep" "Type" (same CutsceneStepTypes.All)
+          plain "CutsceneStep" "Label" "a step label jumps and choices go to"
+          plain "CutsceneStep" "Actor" "player or an NPC id"
+          plain "CutsceneStep" "Speaker" "player, an NPC id, or none for a narrator"
+          optionalOneOf "CutsceneStep" "Direction" (same Directions.All)
+          optionalOneOf "CutsceneStep" "Emote" (same Emotes.All)
+          plain "CutsceneStep" "Goto" "a step label of the cutscene"
+          optionalOneOf "CutsceneStep" "Mode" [ "out", "Fade out"; "in", "Fade in" ]
+          plain "CutsceneStep" "SoundId" "a sound asset (sound) or a music asset (music)"
+          plain "CutsceneChoice" "Goto" "a step label of the cutscene"
           keys "WeatherConfig" "Table" ReferenceKind.Season
           reference "WeatherTableEntry" "WeatherId" ReferenceKind.Weather
           optional "MineConfig" "EntranceSceneId" ReferenceKind.Scene
@@ -363,6 +419,19 @@ module References =
         | ReferenceKind.Pack -> project.ContentPacks |> entries (fun p -> p.Pack.Manifest.Id) (fun p -> named p.Pack.Manifest.Name)
         | ReferenceKind.StationCategory ->
             project.MachineTypes |> List.collect (fun m -> m.StationCategories) |> entries id (fun _ -> None)
+        | ReferenceKind.Terrain -> ContentCompiler.terrains project |> entries (fun t -> t.Id) (fun t -> named t.Name)
+        | ReferenceKind.Tool -> ContentCompiler.tools project |> entries (fun t -> t.Id) (fun t -> named t.Name)
+        | ReferenceKind.ItemCategory -> ContentCompiler.itemCategories project |> entries (fun c -> c.Id) (fun c -> named c.Name)
+        | ReferenceKind.CropQuality -> ContentCompiler.cropQualities project |> entries (fun q -> q.Id) (fun q -> named q.Name)
+        | ReferenceKind.CropMutation -> ContentCompiler.cropMutations project |> entries (fun m -> m.Id) (fun m -> named m.Name)
+        | ReferenceKind.Overlay ->
+            [ OverlayStyles.Rain; OverlayStyles.Snow ] @ (defaultArg project.Weather.Overlays [] |> List.map (fun o -> o.Id))
+            |> entries id (fun _ -> None)
+        | ReferenceKind.Sound ->
+            project.CustomAssets |> List.filter (fun a -> a.Type = CustomAssetTypes.Sound) |> entries (fun a -> a.Id) (fun a -> named a.Name)
+        | ReferenceKind.Music ->
+            project.CustomAssets |> List.filter (fun a -> a.Type = CustomAssetTypes.Music) |> entries (fun a -> a.Id) (fun a -> named a.Name)
+        | ReferenceKind.Cutscene -> defaultArg project.Cutscenes [] |> entries (fun c -> c.Id) (fun c -> named c.Name)
 
     /// A picker's entries: the "nothing chosen" entry when `empty` allows it, a "(missing: id)"
     /// entry when `current` names something that is not among `available`, then `available`.

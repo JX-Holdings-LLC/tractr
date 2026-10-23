@@ -50,17 +50,20 @@ module internal ChecksContent =
         | Some crops -> check "crop" "customCrops" (crops |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Crop id))
 
     let private items (context: Context) (sink: Sink) =
+        let categories = ContentCompiler.itemCategories context.Project
+        let kind (item: Item) = categories |> List.tryFind (fun c -> c.Id = item.Type)
+        let isSeed item = kind item |> Option.exists (fun c -> c.Plantable)
         context.Project.Items
         |> Seq.iteri (fun i item ->
             let path = sprintf "items[%d]" i
             let target = Some(NavigationTarget.Item item.Id)
             if System.String.IsNullOrWhiteSpace item.Name then
                 sink.Warning("item.emptyName", path + ".name", sprintf "Item \"%s\" has no name" item.Id, target)
-            if item.Type = ItemTypes.Seed && not (hasValue item.CropType) then
+            if isSeed item && not (hasValue item.CropType) then
                 sink.Warning("item.seedWithoutCrop", path + ".cropType", sprintf "Seed \"%s\" does not say which crop it grows" item.Name, target)
-            if item.Type = ItemTypes.Tool && not (hasValue item.ToolType) then
+            if kind item |> Option.exists (fun c -> c.Equippable) && not (hasValue item.ToolType) then
                 sink.Warning("item.toolWithoutType", path + ".toolType", sprintf "Tool \"%s\" has no tool type, so it cannot be used" item.Name, target)
-            if item.Type <> ItemTypes.Seed && missing context.CropIds item.CropType then
+            if not (isSeed item) && missing context.CropIds item.CropType then
                 sink.Warning("item.unknownCrop", path + ".cropType", sprintf "Item \"%s\" belongs to missing crop \"%s\"" item.Name (text item.CropType), target)
             // validate-extensibility.ts: "on use" action must exist.
             if missing context.ActionIds item.UseActionId then
@@ -70,7 +73,8 @@ module internal ChecksContent =
         match context.Project.CustomCrops with
         | None -> ()
         | Some crops ->
-            let seedsFor = HashSet<string>(context.Project.Items |> Seq.filter (fun i -> i.Type = ItemTypes.Seed) |> Seq.choose (fun i -> i.CropType))
+            let plantable = HashSet<string>(ContentCompiler.itemCategories context.Project |> Seq.filter (fun c -> c.Plantable) |> Seq.map (fun c -> c.Id))
+            let seedsFor = HashSet<string>(context.Project.Items |> Seq.filter (fun i -> plantable.Contains i.Type) |> Seq.choose (fun i -> i.CropType))
             crops
             |> Seq.iteri (fun i crop ->
                 let path = sprintf "customCrops[%d]" i
