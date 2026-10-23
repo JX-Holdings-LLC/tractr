@@ -1,5 +1,6 @@
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
+using FarmEngine.Schemas;
 using Tractr.App.ViewModels.EditMode;
 
 namespace Tractr.App.Tests.ViewModels;
@@ -134,6 +135,147 @@ public sealed class SettingsViewModelTests
         Assert.Equal(7.5, test.Project.Settings.Movement.PlayerSpeed);
         Assert.True(viewModel.IsDirty(SettingsSection.Weather));
         Assert.False(viewModel.IsDirty(SettingsSection.Project));
+    }
+
+    /// <summary>A workspace whose project has one music track, "Theme" (music-1).</summary>
+    private static TestWorkspace WithMusic()
+    {
+        var test = new TestWorkspace();
+        test.Workspace.Apply(Edits.UpsertAsset(CustomAsset.Default.WithId("music-1").WithName("Theme").WithType(CustomAssetTypes.Music)
+            .WithDataUrl("data:audio/ogg;base64,T2dnUw==")));
+        return test;
+    }
+
+    [Fact]
+    public void WordsDayLengthAndCalendarMusicSaveWithTheProjectSettings()
+    {
+        using var test = WithMusic();
+        var viewModel = new SettingsViewModel(test.Workspace);
+        Assert.Equal("", viewModel.MoneyFormat);
+        Assert.Contains(viewModel.SkillNames, row => row.SkillId == "farming" && row.Name == "" && row.Label == "Farming skill name");
+        Assert.Contains(viewModel.MusicChoices(""), option => option.Id == "music-1");
+        Assert.Equal("", viewModel.MusicChoices("")[0].Id);
+        Assert.True(viewModel.MusicChoices("music-gone").Single(option => option.Id == "music-gone").Missing);
+
+        viewModel.MoneyFormat = "credits";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Could not save: The money format needs {0} where the amount goes, like {0} credits.", viewModel.Message);
+        viewModel.MoneyFormat = "{0} credits";
+        viewModel.DayMinutes = "30";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Could not save: Minutes per day must be at least 60.", viewModel.Message);
+        viewModel.DayMinutes = "600";
+        viewModel.Seasons[0].Temperature = "warm";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal($"Could not save: {viewModel.Seasons[0].TemperatureLabel} must be a number.", viewModel.Message);
+
+        var before = test.Project;
+        viewModel.Seasons[0].Temperature = "12";
+        viewModel.Seasons[0].Music = "music-1";
+        viewModel.EnergyWord = "Oxygen";
+        viewModel.SkillNames.First(row => row.SkillId == "farming").Name = "Gardening";
+        viewModel.AddFestivalCommand.Execute(null);
+        viewModel.Festivals[^1].Music = "music-1";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Settings saved.", viewModel.Message);
+        var settings = test.Project.Settings;
+        var words = settings.Words.OrNull()!;
+        Assert.Equal(("{0} credits", "Oxygen"), (words.Money.OrNull(), words.Energy.OrNull()));
+        Assert.Equal(("farming", "Gardening"), (words.Skills.Single().Item1, words.Skills.Single().Item2));
+        Assert.Equal(600, settings.Time.DayMinutes.OrNullable());
+        Assert.Equal((12.0, "music-1"), (settings.Calendar.Seasons[0].Temperature.OrNullable(), settings.Calendar.Seasons[0].Music.OrNull()));
+        Assert.Equal("music-1", settings.Calendar.Festivals[^1].Music.OrNull());
+        Assert.False(viewModel.HasUnsavedChanges);
+        test.Workspace.Undo();
+        Assert.Same(before, test.Project);
+        Assert.Equal("", viewModel.MoneyFormat);
+
+        // Saving again without the new fields keeps a season's temperature and music.
+        viewModel.Seasons[1].Temperature = "20";
+        viewModel.SaveCommand.Execute(null);
+        viewModel.Name = "Renamed";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal(20, test.Project.Settings.Calendar.Seasons[1].Temperature.OrNullable());
+    }
+
+    [Fact]
+    public void WeatherOverlaysAndEachTypesLookSaveWithTheOddsAsOneUndoStep()
+    {
+        using var test = WithMusic();
+        var viewModel = new SettingsViewModel(test.Workspace);
+        Assert.Empty(viewModel.Overlays);
+        Assert.Equal(test.Project.Weather.Types.Select(type => type.Id), viewModel.WeatherLooks.Select(row => row.WeatherId));
+        Assert.Contains(viewModel.OverlayChoices(""), option => option.Id == "rain");
+
+        viewModel.AddOverlayCommand.Execute(null);
+        var overlay = Assert.Single(viewModel.Overlays);
+        Assert.Equal(("overlay-1", "dust"), (overlay.Id, overlay.Style));
+        Assert.True(viewModel.IsDirty(SettingsSection.Weather));
+        overlay.Color = "sandy";
+        viewModel.SaveWeatherCommand.Execute(null);
+        Assert.Equal("Could not save: Overlay \"overlay-1\" colour must be a colour like #ffd8a0.", viewModel.WeatherMessage);
+        overlay.Color = "#C8B090";
+        overlay.Density = "lots";
+        viewModel.SaveWeatherCommand.Execute(null);
+        Assert.Equal($"Could not save: {overlay.DensityLabel} must be a number.", viewModel.WeatherMessage);
+        overlay.Density = "2";
+
+        var before = test.Project;
+        var look = viewModel.WeatherLooks[0];
+        look.Overlay = "overlay-1";
+        look.Music = "music-1";
+        viewModel.Weather[0].Cells[0].Weight = "7";
+        viewModel.SaveWeatherCommand.Execute(null);
+        Assert.Equal("Weather saved.", viewModel.WeatherMessage);
+        var weather = test.Project.Weather;
+        var saved = Assert.Single(weather.Overlays.OrEmpty());
+        Assert.Equal(("overlay-1", "#c8b090", 2.0), (saved.Id, saved.Color, saved.Density));
+        Assert.Equal(("overlay-1", "music-1"), (weather.Types[0].Overlay.OrNull(), weather.Types[0].Music.OrNull()));
+        Assert.Equal(7, SettingsForm.WeatherWeight(test.Project, viewModel.Weather[0].Cells[0].SeasonId, viewModel.Weather[0].Cells[0].WeatherId));
+        Assert.Contains(viewModel.OverlayChoices(""), option => option.Id == "overlay-1");
+
+        viewModel.RemoveOverlay(viewModel.Overlays[0]);
+        viewModel.SaveWeatherCommand.Execute(null);
+        Assert.Null(test.Project.Weather.Overlays.OrNull());
+        test.Workspace.Undo();
+        test.Workspace.Undo();
+        Assert.Same(before, test.Project);
+    }
+
+    [Fact]
+    public void TheAtmosphereSavesTheLookOfEverySeasonAndEachSeasonsOwn()
+    {
+        using var test = new TestWorkspace();
+        var viewModel = new SettingsViewModel(test.Workspace);
+        Assert.Equal(["All seasons", .. test.Project.Settings.Calendar.Seasons.Select(season => season.Name)], viewModel.Looks.Select(row => row.What));
+        Assert.All(viewModel.Looks, row => Assert.Equal("", row.Daylight));
+
+        viewModel.Looks[0].Daylight = "1200 #8080c0\n360 #ffd8a0";
+        viewModel.Looks[1].FoliageTint = "green";
+        viewModel.SaveAtmosphereCommand.Execute(null);
+        Assert.Equal($"Could not save: {viewModel.Looks[1].What} foliage tint must be a colour like #ffd8a0.", viewModel.AtmosphereMessage);
+        Assert.True(viewModel.IsDirty(SettingsSection.Atmosphere));
+        viewModel.Looks[1].FoliageTint = "#80A060";
+        viewModel.SaveAtmosphereCommand.Execute(null);
+        Assert.Equal("Atmosphere saved.", viewModel.AtmosphereMessage);
+        var atmosphere = test.Project.Settings.Atmosphere.OrNull()!;
+        Assert.Equal([360.0, 1200.0], atmosphere.AllSeasons.Daylight.Select(key => key.Minute));
+        Assert.Equal((viewModel.Looks[1].SeasonId, "#80a060"), (atmosphere.Seasons.Single().Item1, atmosphere.Seasons.Single().Item2.FoliageTint.OrNull()));
+        Assert.Equal("360 #ffd8a0\n1200 #8080c0", viewModel.Looks[0].Daylight);
+
+        viewModel.Looks[0].Daylight = "noon";
+        viewModel.SaveAtmosphereCommand.Execute(null);
+        Assert.Equal("Could not save: All seasons daylight line 1 needs a minute of the day and a colour, like 360 #ffd8a0.", viewModel.AtmosphereMessage);
+        viewModel.RevertAtmosphereCommand.Execute(null);
+        Assert.False(viewModel.HasUnsavedChanges);
+        foreach (var row in viewModel.Looks)
+        {
+            row.Daylight = "";
+            row.FoliageTint = "";
+        }
+
+        viewModel.SaveAtmosphereCommand.Execute(null);
+        Assert.Null(test.Project.Settings.Atmosphere.OrNull());
     }
 
     [Fact]

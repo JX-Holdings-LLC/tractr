@@ -338,6 +338,25 @@ let ``new list rows start like the web add buttons`` () =
     Assert.NotEqual<string>("dialogue-1", dialogue.Id)
     Assert.True((Vocabulary.newElement "GiftTastes" project (box farmer) []).IsNone)
 
+[<Fact>]
+let ``cutscene steps show the fields of their type and pick music or sounds by it`` () =
+    Assert.Equal<string list>([ "Text"; "Speaker" ], Vocabulary.stepFields CutsceneStepTypes.Say)
+    let hidden = Vocabulary.hiddenProperties "CutsceneStep" CutsceneStepTypes.Move
+    Assert.DoesNotContain("X", hidden)
+    Assert.DoesNotContain("Wait", hidden)
+    Assert.Contains("Text", hidden)
+    Assert.Contains("Outcomes", hidden)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Music, Some "(the game's own music)")), Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Music)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Sound, None)), Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Sound)
+    Assert.Equal(None, Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Say)
+    let project = starter ()
+    let step = Vocabulary.newElement "CutsceneStep" project (box project) [] |> Option.get :?> CutsceneStep
+    Assert.Equal(CutsceneStepTypes.Say, step.Type)
+    let music = Vocabulary.outcomeFields EventOutcomeTypes.PlayMusic |> List.exactlyOne
+    Assert.Equal((FieldKind.Reference ReferenceKind.Music, true, Some "(the game's own music)"), (music.Kind, music.Optional, music.Empty))
+    Assert.Equal(FieldKind.Reference ReferenceKind.Cutscene, (Vocabulary.outcomeFields EventOutcomeTypes.StartCutscene |> List.exactlyOne).Kind)
+    Assert.Equal(FieldKind.Reference ReferenceKind.Terrain, (Vocabulary.outcomeFields EventOutcomeTypes.ChangeTile |> List.last).Kind)
+
 // ---- Animation edits ----
 
 let private withClip () =

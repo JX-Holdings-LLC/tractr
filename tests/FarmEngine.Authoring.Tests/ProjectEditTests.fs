@@ -270,3 +270,68 @@ let ``removing the only season of a list keeps the list closed`` () =
     Assert.Contains("shop.unknownSeason", codes)
     Assert.Contains("quest.unknownSeason", codes)
     Assert.Contains("event.conditionUnknownSeason", codes)
+
+[<Fact>]
+let ``daylight keys read one minute and colour per line, in minute order`` () =
+    let keys = SettingsForms.parseDaylight "Spring daylight" "1200 #8080C0\n\n  360, #ffd8a0 "
+    Assert.Equal<(float * string) list>([ 360.0, "#ffd8a0"; 1200.0, "#8080c0" ], keys |> List.map (fun k -> k.Minute, k.Color))
+    Assert.Equal("360 #ffd8a0\n1200 #8080c0", SettingsForms.daylightText keys)
+    let error = Assert.Throws<System.FormatException>(fun () -> SettingsForms.parseDaylight "Spring daylight" "360 #ffd8a0\nnoon orange" |> ignore)
+    Assert.Equal("Spring daylight line 2 needs a minute of the day and a colour, like 360 #ffd8a0.", error.Message)
+    Assert.Equal(None, SettingsForms.look "Spring" "" " ")
+    let tint = Assert.Throws<System.FormatException>(fun () -> SettingsForms.look "Spring" "" "green" |> ignore)
+    Assert.Equal("Spring foliage tint must be a colour like #ffd8a0.", tint.Message)
+
+[<Fact>]
+let ``the atmosphere keeps only what is set and seasons the calendar has`` () =
+    let project = starter ()
+    let all = SettingsForms.look "All seasons" "360 #ffd8a0" ""
+    let spring = SettingsForms.look "Spring" "" "#80a060"
+    let next = project |> apply (SettingsForms.atmosphere project all [ "spring", spring; "summer", None; "ghost", spring ])
+    let atmosphere = next.Settings.Atmosphere.Value
+    Assert.Equal(1, atmosphere.AllSeasons.Daylight.Length)
+    Assert.Equal<string list>([ "spring" ], atmosphere.Seasons |> List.map fst)
+    let cleared = next |> apply (SettingsForms.atmosphere next None [ "spring", None ])
+    Assert.True(cleared.Settings.Atmosphere.IsNone)
+
+[<Fact>]
+let ``the game's words need a money placeholder and keep their translations`` () =
+    let current = Some { GameWords.Default with Locales = [ "es", { GameWords.Default with Energy = Some "Energía" } ] }
+    let words = SettingsForms.words current "{0} credits" " Oxygen " [ "farming", "Gardening"; "mining", " " ]
+    Assert.Equal(Some "{0} credits", words.Value.Money)
+    Assert.Equal(Some "Oxygen", words.Value.Energy)
+    Assert.Equal<(string * string) list>([ "farming", "Gardening" ], words.Value.Skills)
+    Assert.Equal(1, words.Value.Locales.Length)
+    Assert.Equal(None, SettingsForms.words None "" "" [ "farming", "" ])
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.words None "credits" "" [] |> ignore) |> ignore
+
+[<Fact>]
+let ``weather looks set overlays, each type's overlay and music, as one edit`` () =
+    let project = starter ()
+    let dust = SettingsForms.overlay "dust-storm" OverlayStyles.Dust "#C8B090" 2.0 1.0 "#e0d0b0"
+    Assert.Equal("#c8b090", dust.Color)
+    let weather = project.Weather.Types.[0]
+    let next = project |> apply (SettingsForms.weatherLooks project [ dust ] [ weather.Id, "dust-storm", "music-1" ])
+    Assert.Equal<string list>([ "dust-storm" ], next.Weather.Overlays.Value |> List.map (fun o -> o.Id))
+    Assert.Equal((Some "dust-storm", Some "music-1"), (next.Weather.Types.[0].Overlay, next.Weather.Types.[0].Music))
+    Assert.True((project.Weather.Table = next.Weather.Table))
+    let none = next |> apply (SettingsForms.weatherLooks next [] [ weather.Id, "", "" ])
+    Assert.True(none.Weather.Overlays.IsNone)
+    Assert.Equal((None, None), (none.Weather.Types.[0].Overlay, none.Weather.Types.[0].Music))
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.weatherLooks project [ dust; dust ] [] |> ignore) |> ignore
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.overlay "x" "hail" "#ffffff" 1.0 1.0 null |> ignore) |> ignore
+
+[<Fact>]
+let ``scene surroundings are stored only when set`` () =
+    let project = starter ()
+    let sceneId = project.Scenes.[0].Id
+    let look = SettingsForms.look "Scene" "0 #202040" ""
+    let next = project |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ " cave "; ""; "cave"; "damp" ], Some "music-1", look))
+    let scene = next.Scenes.[0]
+    Assert.Equal((Some true, Some 8.0, Some [ "cave"; "damp" ], Some "music-1"), (scene.Dark, scene.Temperature, scene.Tags, scene.Music))
+    Assert.Equal(1, scene.Atmosphere.Value.Daylight.Length)
+    Assert.Same(next, next |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ "cave"; "damp" ], Some "music-1", look)))
+    let cleared = next |> apply (SetSceneEnvironment(sceneId, false, None, [], Some "", None))
+    let scene = cleared.Scenes.[0]
+    Assert.Equal((None, None, None, None), (scene.Dark, scene.Temperature, scene.Tags, scene.Music))
+    Assert.True(scene.Atmosphere.IsNone)

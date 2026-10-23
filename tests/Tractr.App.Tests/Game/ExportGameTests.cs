@@ -153,7 +153,8 @@ public sealed class ExportGameTests
     {
         using var host = new GameTestHost();
         using var dir = new TempDir();
-        host.Workspace.Open(host.Workspace.Current!.WithSelectedTileType("lava"));
+        // A tile of a terrain the game doesn't have is an error.
+        host.Workspace.Apply(Edits.PaintTile(host.Workspace.Current!.StartSceneId, 0, 0, "lava"));
         var viewModel = Create(host, dir.Path);
         Assert.True(viewModel.IsBlockedByProblems);
         Assert.Contains("must be fixed before export", viewModel.ProblemsText, StringComparison.Ordinal);

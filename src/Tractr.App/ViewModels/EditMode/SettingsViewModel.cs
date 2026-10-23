@@ -39,7 +39,7 @@ public sealed class SettingsViewModel : ObservableObject
     public const string DayStartLabel = "Day start minute";
     public const string DayEndLabel = "Day end minute";
     public const string MinutesPerSecondLabel = "Game minutes per real second";
-    public const string DayMinutesLabel = "Minutes in a day";
+    public const string DayMinutesLabel = "Minutes per day";
     public const string MoneyFormatLabel = "Money format";
     public const string EnergyWordLabel = "Energy word";
     public const string MineSceneLabel = "Mine entrance scene";

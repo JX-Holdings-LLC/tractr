@@ -18,6 +18,16 @@ public sealed partial class CreatorGuideNamesTests
         "animation clips",
         "Errors block export",
         "pauses",
+        // Terms of the world vocabulary and of sound: what generated fields stand for, file formats.
+        "walk",
+        "planted",
+        "blocks light",
+        "tool type",
+        "eaten",
+        "Growth requirements",
+        "OGG",
+        "WAV",
+        "pause in modals",
     };
 
     [GeneratedRegex(@"\*\*([^*]+)\*\*")]

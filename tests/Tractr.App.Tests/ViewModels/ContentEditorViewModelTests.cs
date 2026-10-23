@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
@@ -176,6 +177,84 @@ public sealed class ContentEditorViewModelTests
         viewModel.DeleteCommand.Execute(null);
         Assert.Null(viewModel.SelectedId);
         Assert.Equal(actions, test.Project.Actions.Length);
+    }
+
+    [Fact]
+    public void BuiltinTerrainsAreListedAndCustomizedLikeNodeTypes()
+    {
+        using var test = new TestWorkspace();
+        var (viewModel, draft) = Create(test);
+        viewModel.SelectCategory("Terrains");
+        var grass = viewModel.Rows.Single(row => row.Id == TileTypes.Grass);
+        Assert.Equal("Built-in · background", grass.Note);
+        Assert.True(grass.HasArtSlot);
+        viewModel.SelectRow(TileTypes.Grass);
+        Assert.Null(viewModel.FormEntity);
+        Assert.True(viewModel.ShowCustomize);
+        Assert.Equal("This is a built-in terrain. Customize it to change it.", viewModel.Message);
+
+        viewModel.CustomizeCommand.Execute(null);
+        Assert.Contains(test.Project.Terrains.OrEmpty(), terrain => terrain.Id == TileTypes.Grass);
+        Assert.StartsWith("Replaces built-in", viewModel.Rows.First().Note, StringComparison.Ordinal);
+        Assert.Equal("Remove your changes and use the built-in terrain again", viewModel.DeleteTip);
+        var renamed = (JsonObject)RecordJson.ToNode(viewModel.FormEntity!, typeof(TerrainDefinition))!;
+        renamed["name"] = "Meadow";
+        draft()!.Entity = RecordJson.FromNode<TerrainDefinition>(renamed);
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Meadow", test.Project.Terrains.OrEmpty().Single().Name);
+
+        viewModel.DeleteCommand.Execute(null);
+        Assert.Equal($"Removed your changes: {TileTypes.Grass} is the built-in terrain again.", viewModel.Message);
+        Assert.Empty(test.Project.Terrains.OrEmpty());
+
+        viewModel.AddCommand.Execute(null);
+        var created = Assert.Single(test.Project.Terrains.OrEmpty());
+        Assert.Equal(created.Id, viewModel.SelectedId);
+        Assert.StartsWith("Custom · background", viewModel.Rows.First(row => row.Id == created.Id).Note, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Tools", "tool")]
+    [InlineData("Item kinds", "item kind")]
+    [InlineData("Crop qualities", "crop quality")]
+    [InlineData("Crop mutations", "crop mutation")]
+    public void VocabularyCategoriesListBuiltinsAndAddTheirOwn(string category, string kind)
+    {
+        using var test = new TestWorkspace();
+        var (viewModel, _) = Create(test);
+        viewModel.SelectCategory(category);
+        Assert.NotEmpty(viewModel.Rows);
+        Assert.All(viewModel.Rows, row => Assert.StartsWith("Built-in", row.Note, StringComparison.Ordinal));
+        viewModel.SelectRow(viewModel.Rows[0].Id);
+        Assert.Equal($"This is a built-in {kind}. Customize it to change it.", viewModel.Message);
+
+        var builtins = viewModel.Rows.Count;
+        viewModel.AddCommand.Execute(null);
+        Assert.Equal(builtins + 1, viewModel.Rows.Count);
+        Assert.NotNull(viewModel.FormEntity);
+        Assert.StartsWith("Custom", viewModel.Rows[0].Note, StringComparison.Ordinal);
+        Assert.Equal(viewModel.Rows[0].Id, viewModel.SelectedId);
+        viewModel.DeleteCommand.Execute(null);
+        Assert.Equal(builtins, viewModel.Rows.Count);
+    }
+
+    [Fact]
+    public void CutscenesAreAddedAndDuplicated()
+    {
+        using var test = new TestWorkspace();
+        var (viewModel, _) = Create(test);
+        viewModel.SelectCategory("Cutscenes");
+        Assert.Empty(viewModel.Rows);
+        Assert.True(viewModel.ShowDuplicate);
+        viewModel.AddCommand.Execute(null);
+        var cutscene = Assert.Single(test.Project.Cutscenes.OrEmpty());
+        Assert.Equal(cutscene, viewModel.FormEntity);
+        Assert.Equal(["fade", "say", "fade"], cutscene.Steps.Select(step => step.Type));
+        viewModel.DuplicateCommand.Execute(null);
+        Assert.StartsWith("Duplicated as ", viewModel.Message, StringComparison.Ordinal);
+        Assert.Equal(2, test.Project.Cutscenes.OrEmpty().Length);
+        Assert.Equal(test.Project.Cutscenes.OrEmpty()[1].Id, viewModel.SelectedId);
+        Assert.Contains(ContentEditorViewModel.Search(test.Project, cutscene.Name), result => result.Category == "Cutscenes" && result.Id == cutscene.Id);
     }
 
     [Fact]

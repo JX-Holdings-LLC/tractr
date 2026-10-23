@@ -106,7 +106,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var saveWeather = Ui.CommandButton("Save weather", ViewModel.SaveWeatherCommand, "accent");
         saveWeather.Name = "SaveWeatherButton";
         form.Children.Add(saveWeather);
-        form.Children.Add(Ui.Text("ATMOSPHERE", "section"));
+        form.Children.Add(Ui.Text("THE SKY", "section"));
         form.Children.Add(Ui.Wrapped("The day/night tint (one line per key: the minute of the day and a colour, like 360 #ffd8a0) and the tint of trees and weeds. A season's own look replaces the look of all seasons; empty fields keep the look below them, down to the built-in one.", "muted", "small"));
         form.Children.Add(_looks);
         form.Children.Add(Shown("AtmosphereMessage", nameof(SettingsViewModel.AtmosphereMessage)));
