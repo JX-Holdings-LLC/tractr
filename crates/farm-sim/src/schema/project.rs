@@ -141,6 +141,7 @@ pub struct GameProject {
     pub extra: Map<String, Value>,
 }
 
-/// The project schema version. Only this version loads (there are no migrations): bump it when
-/// the persisted shape changes, so files of another shape are refused with a message.
-pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 1;
+/// The project schema version (F# `ProjectSchema.CurrentProjectSchemaVersion`): bump it when the
+/// persisted shape changes, so older engines refuse the new shape with a message. Version 2 (M1,
+/// M2) only added optional content; the editor reads version 1 files as version 2.
+pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 2;

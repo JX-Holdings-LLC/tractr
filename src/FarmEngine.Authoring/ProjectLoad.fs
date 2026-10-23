@@ -10,10 +10,18 @@ type LoadResult<'T> =
 
 /// Loading projects and exported games: the schema version check, the typed parse
 /// (`SchemaJson`) and the schema checks (`SchemaChecks`, at most 20 errors, like zod's
-/// `safeParse` shown in the editor). Only the current schema version loads; there are no
-/// migrations from older ones. Never throws.
+/// `safeParse` shown in the editor). The current schema version loads, and version 1, whose
+/// files are the same shape (`migrate`). Never throws.
 module ProjectLoad =
     let private failed (errors: string list) : LoadResult<'T> = { Ok = false; Data = None; Errors = errors }
+
+    /// Version 1 (0.5–0.6) to 2 (0.7, M1 and M2): the new fields are all optional or defaulted,
+    /// so a version 1 file reads as it is under the new number.
+    let private migrate (raw: Json) : Json =
+        match raw, Json.get "schemaVersion" raw with
+        | JObject members, JNumber 1.0 ->
+            JObject(members |> List.map (fun (key, value) -> if key = "schemaVersion" then key, JNumber ProjectSchema.CurrentProjectSchemaVersion else key, value))
+        | _ -> raw
 
     /// Why `raw` cannot be read as a `noun` of the current schema version, if it cannot.
     let private versionError (noun: string) (raw: Json) : string option =
@@ -21,7 +29,7 @@ module ProjectLoad =
         match raw with
         | JObject _ ->
             match Json.get "schemaVersion" raw with
-            | JNumber v when v = current -> None
+            | JNumber v when v = current || v = 1.0 -> None
             | JNumber v when v > current ->
                 Some(
                     noun + " schema version " + JsNumber.format v + " is newer than this engine supports ("
@@ -39,7 +47,7 @@ module ProjectLoad =
         | Some error -> failed [ error ]
         | None ->
             try
-                match Decode.run decode raw with
+                match Decode.run decode (migrate raw) with
                 | Error issue -> failed [ issue ]
                 | Ok value ->
                     let value = prepare value

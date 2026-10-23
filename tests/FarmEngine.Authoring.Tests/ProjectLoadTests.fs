@@ -1,5 +1,5 @@
-/// Loading projects and exported games (`ProjectLoad`, `ProjectJson`): only the current schema
-/// version loads, and a refusal always says why.
+/// Loading projects and exported games (`ProjectLoad`, `ProjectJson`): the current schema version
+/// and version 1 (read as the current one) load, and a refusal always says why.
 module FarmEngine.Authoring.Tests.ProjectLoadTests
 
 open System.Text.Json.Nodes
@@ -32,14 +32,20 @@ let ``a project of the current schema version loads`` () =
     Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, result.Data.Value.SchemaVersion)
 
 [<Fact>]
+let ``a version 1 project loads as the current version`` () =
+    let result = ProjectJson.loadProjectText (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 1))
+    Assert.True(result.Ok, String.concat "\n" result.Errors)
+    Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, result.Data.Value.SchemaVersion)
+
+[<Fact>]
 let ``other schema versions are refused`` () =
     let errors (text: string) = (ProjectJson.loadProjectText text).Errors
     Assert.Equal<string list>(
         [ "Project schema version 0 is not supported (this engine reads version " + current + ")." ],
         errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 0)))
     Assert.Equal<string list>(
-        [ "Project schema version 2 is newer than this engine supports (" + current + "). Update the engine." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 2)))
+        [ "Project schema version 3 is newer than this engine supports (" + current + "). Update the engine." ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 3)))
     Assert.Equal<string list>(
         [ "Project data has no schemaVersion (this engine reads version " + current + ")." ],
         errors (patched (fun o -> o.Remove "schemaVersion" |> ignore)))
