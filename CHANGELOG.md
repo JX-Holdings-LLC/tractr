@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+- **Releases publish again.** The release workflow uses release
+  infrastructure `d7f42f9`, whose publish step waits for a draft it has just
+  created to appear in GitHub's release list. Before, the lookup ran at once,
+  found nothing, and stopped the 0.3.2, 0.4.0, 0.6.0 and 0.7.0 releases with
+  "No release found" after their drafts were made.
+
 ## 0.7.0
 
 Roadmap milestones M1 (a data-driven world vocabulary) and M2 (sound and

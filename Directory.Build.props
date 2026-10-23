@@ -19,7 +19,7 @@
          the version below, which stays in step with the Cargo workspace version
          (tools/release/versions.sh). -->
     <FarmReleaseBuild Condition="'$(Version)' != ''">true</FarmReleaseBuild>
-    <Version Condition="'$(Version)' == ''">0.7.0</Version>
+    <Version Condition="'$(Version)' == ''">0.7.1</Version>
     <Authors>Tractr contributors</Authors>
     <Product>Tractr</Product>
   </PropertyGroup>
