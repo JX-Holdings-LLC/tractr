@@ -5,7 +5,7 @@
 mod common;
 
 use farm_runtime::input::{bindings, key_names, InputManager, Modifiers, MoveVector};
-use farm_sim::schema::{ActionDef, ShopSession};
+use farm_sim::schema::{ActionDef, Cutscene, CutsceneState, ShopSession};
 use farm_sim::{state, Command, GameContent, GameProject, GameState};
 
 #[test]
@@ -203,6 +203,63 @@ fn poll_play_frame_only_handles_escape_while_a_modal_is_open() {
     let host_modal = bindings::poll_play_frame(&input, &shop_open, &content, true);
     assert!(host_modal.commands.is_empty());
     assert!(host_modal.escape);
+}
+
+/// The test project playing a cutscene of these steps (JSON) at step 0.
+fn in_cutscene(steps: serde_json::Value, skippable: bool) -> (GameState, GameContent) {
+    let cutscene: Cutscene =
+        serde_json::from_value(serde_json::json!({"id": "c", "steps": steps, "skippable": skippable})).unwrap();
+    let (mut state, content) = play(|p| p.cutscenes = Some(vec![cutscene]));
+    state.cutscene = Some(CutsceneState { cutscene_id: "c".to_owned(), ..CutsceneState::default() });
+    (state, content)
+}
+
+fn pressed(keys: &[&str]) -> InputManager {
+    let mut input = InputManager::new();
+    for key in keys {
+        input.key_down(key, Modifiers::NONE);
+    }
+    input
+}
+
+#[test]
+fn a_cutscene_line_moves_on_with_interact_keys_and_holds_everything_else() {
+    let (state, content) = in_cutscene(serde_json::json!([{"type": "say", "text": "Hi"}]), true);
+    for key in ["e", " ", "Enter"] {
+        let frame = bindings::poll_play_frame(&pressed(&[key]), &state, &content, false);
+        assert_eq!(frame.commands, [Command::AdvanceCutscene], "{key}");
+    }
+    let frame = bindings::poll_play_frame(&pressed(&["q", "z", "i", "1", "w"]), &state, &content, false);
+    assert!(frame.commands.is_empty() && !frame.toggle_inventory && !frame.escape);
+    assert_eq!(bindings::move_intent(&pressed(&["d"]), &state, None), MoveVector::new(0.0, 0.0));
+}
+
+#[test]
+fn a_cutscene_question_is_answered_with_digits() {
+    let (state, content) = in_cutscene(
+        serde_json::json!([{"type": "choice", "text": "?", "options": [{"text": "a"}, {"text": "b"}]}]),
+        true,
+    );
+    let frame = bindings::poll_play_frame(&pressed(&["2"]), &state, &content, false);
+    assert_eq!(frame.commands, [Command::ChooseCutsceneOption { index: 1 }]);
+    // Past the answers, and interact (accepting a focused answer is the UI's), send nothing.
+    for key in ["3", "e"] {
+        assert!(bindings::poll_play_frame(&pressed(&[key]), &state, &content, false).commands.is_empty(), "{key}");
+    }
+}
+
+#[test]
+fn escape_skips_a_skippable_cutscene_and_otherwise_opens_the_menu() {
+    let steps = serde_json::json!([{"type": "say", "text": "Hi"}]);
+    let (state, content) = in_cutscene(steps.clone(), true);
+    let frame = bindings::poll_play_frame(&pressed(&["e", "Escape"]), &state, &content, false);
+    assert_eq!((frame.commands.as_slice(), frame.escape), ([Command::SkipCutscene].as_slice(), false));
+    let (state, content) = in_cutscene(steps, false);
+    let frame = bindings::poll_play_frame(&pressed(&["Escape"]), &state, &content, false);
+    assert!(frame.commands.is_empty() && frame.escape);
+    // A host menu over the cutscene takes Escape first.
+    let frame = bindings::poll_play_frame(&pressed(&["e", "Escape"]), &state, &content, true);
+    assert!(frame.commands.is_empty() && frame.escape);
 }
 
 #[test]

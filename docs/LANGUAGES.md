@@ -6,7 +6,7 @@ cartridges and Export Game are F#; the editor's Play Mode runs the Rust
 `farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
 plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
 browser for web demo exports. Tractr reads only the current project and save
-formats (project schema version 1, save v5). The C# engine and the C# schema records
+formats (project schema version 2, save v5). The C# engine and the C# schema records
 are gone, and the simulation keeps every quantity as an integer
 ([NUMERICS.md](NUMERICS.md)). See [ROADMAP.md](../ROADMAP.md). This is the
 reference for where code goes as the app grows; read it before you add a new
@@ -132,7 +132,7 @@ what an exported game contains.
 - The player's machine persists saves, so **Rust owns the save format and
   save loading** (from `Save.cs`). **F# owns project loading.** The creator
   persists projects. Both read only their current version (save v5, project
-  version 1); others are refused.
+  version 2); others are refused.
 - The format is FlatBuffers too (`schemas/save.fbs`): a version header, a
   slot preview the title screen reads without loading the game, and the state
   compressed with zstd (pure-Rust `ruzstd`, so it also builds for wasm). JSON
@@ -604,7 +604,7 @@ Later items (native and web roadmaps):
 | Export Game: web demo | Done: the `farm-wasm` player template + `game.cart` + `index.html`, for itch.io pages ([EXPORT.md](EXPORT.md#output-layout)). |
 | Seed selection, fertilizer choice | Done: the `interactWith` command and the inventory's Hold button ([PLAYER.md](PLAYER.md#controls)) |
 | Richer animals, fishing and relationships, multi-tile buildings, roaming insects, real-time combat | `farm-sim` (+ `farm-ui` for player UI; F# for the authoring side) |
-| Audio-file import | C# import; F# embeds in the cartridge; Rust mixes it in `farm-player::audio` (seasonal music crossfades, weather ambience layers) |
+| Audio-file import | Done (M2): OGG and WAV sound and music assets, imported by the editor, carried in the cartridge's asset table, decoded by `farm-player::audio_assets` and mixed in `farm-player::audio`; `farm_runtime::music::chosen_music` picks the music ([PLAYER.md](PLAYER.md)) |
 | Zip/folder content packs with binary assets | F# pack loader + compiler. JSON packs already carry their art: "Export selection as pack" embeds the images the entries use in the pack's `assets` (as data URLs), and installing a pack adds them to the project's art (`PackExport.build`, `PackMerge.mergeAssets`). |
 | JSON Schema for mod autocomplete | F# generates it from the authoring types |
 | Property-based determinism, economy and loading tests | Done: proptest (Rust), FsCheck (F#) |
@@ -713,8 +713,9 @@ issue before work starts.
 - **Asynchronous saving** within a 1 ms budget on the simulation thread.
 - **GPU effects** on the wgpu renderer (`farm-gpu` draws the CPU renderer's
   frames today), and a measured 4 ms 1080p frame target on an integrated GPU.
-- **kira audio** (crossfades, ambience layers); the player mixes its own audio
-  and outputs it through cpal.
+- **kira audio**; the player mixes its own audio (built-in music, ambience and
+  the game's own sounds and music, with crossfades) and outputs it through
+  cpal.
 - **Generated FFI bindings with `SafeHandle`s**; `FarmEngine.Interop` is
   hand-written `LibraryImport` declarations with owning wrappers.
 - **The balancing lab** (`FarmEngine.Lab`).

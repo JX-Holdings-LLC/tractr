@@ -27,6 +27,10 @@ type Edits =
     /// The layer a tile type naturally paints on (web `classifyTileType`).
     static member LayerFor(tileType: string) : TileLayer = TileRules.layerOf tileType
 
+    /// The layer a terrain of `project` paints on (its definition's; the built-in rule for an
+    /// unknown one).
+    static member LayerIn(project: GameProject, tileType: string) : TileLayer = TileRules.layerIn (ContentCompiler.terrains project) tileType
+
     static member PaintTiles(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>, tileType: string) : Edit =
         PaintTiles(sceneId, layer, Edits.Cells cells, tileType)
 
@@ -57,6 +61,11 @@ type Edits =
     static member RemoveScene(sceneId: string) : Edit = RemoveScene sceneId
     static member RenameScene(sceneId: string, name: string) : Edit = RenameScene(sceneId, name)
     static member SetSceneIndoor(sceneId: string, indoor: bool) : Edit = SetSceneIndoor(sceneId, indoor)
+    /// The scene's surroundings: dark, temperature (null: the season's), tags, music (null or
+    /// empty: none) and its own atmosphere look (null: none).
+    static member SetSceneEnvironment(sceneId: string, dark: bool, temperature: System.Nullable<float>, tags: seq<string>,
+                                      music: string | null, atmosphere: AtmosphereLook | null) : Edit =
+        SetSceneEnvironment(sceneId, dark, Option.ofNullable temperature, List.ofSeq tags, Option.ofObj music, Option.ofObj atmosphere)
     static member ResizeScene(sceneId: string, width: int, height: int) : Edit = ResizeScene(sceneId, width, height)
     /// Largest scene side `ResizeScene` takes.
     static member MaxSceneSize = EditScenes.MaxSceneSize
@@ -105,6 +114,18 @@ type Edits =
     static member RemoveAction(actionId: string) : Edit = RemoveAction actionId
     static member UpsertMinigame(minigame: MinigameDef) : Edit = UpsertMinigame minigame
     static member RemoveMinigame(minigameId: string) : Edit = RemoveMinigame minigameId
+    static member UpsertTerrain(terrain: TerrainDefinition) : Edit = UpsertTerrain terrain
+    static member RemoveTerrain(terrainId: string) : Edit = RemoveTerrain terrainId
+    static member UpsertTool(tool: ToolDefinition) : Edit = UpsertTool tool
+    static member RemoveTool(toolId: string) : Edit = RemoveTool toolId
+    static member UpsertItemCategory(category: ItemCategoryDefinition) : Edit = UpsertItemCategory category
+    static member RemoveItemCategory(categoryId: string) : Edit = RemoveItemCategory categoryId
+    static member UpsertCropQuality(quality: CropQualityDefinition) : Edit = UpsertCropQuality quality
+    static member RemoveCropQuality(qualityId: string) : Edit = RemoveCropQuality qualityId
+    static member UpsertCropMutation(mutation: CropMutationDefinition) : Edit = UpsertCropMutation mutation
+    static member RemoveCropMutation(mutationId: string) : Edit = RemoveCropMutation mutationId
+    static member UpsertCutscene(cutscene: Cutscene) : Edit = UpsertCutscene cutscene
+    static member RemoveCutscene(cutsceneId: string) : Edit = RemoveCutscene cutsceneId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
     static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
     static member SetMine(config: MineConfig) : Edit = SetMine config
@@ -214,6 +235,12 @@ type Defaults =
     static member NewMachineType(project: GameProject) : MachineTypeDefinition = Defaults.newMachineType project
     static member NewNodeType(project: GameProject) : NodeTypeDefinition = Defaults.newNodeType project
     static member NewDrop(project: GameProject) : NodeDrop = Defaults.newDrop project
+    static member NewTerrain(project: GameProject) : TerrainDefinition = Defaults.newTerrain project
+    static member NewTool(project: GameProject) : ToolDefinition = Defaults.newTool project
+    static member NewItemCategory(project: GameProject) : ItemCategoryDefinition = Defaults.newItemCategory project
+    static member NewCropQuality(project: GameProject) : CropQualityDefinition = Defaults.newCropQuality project
+    static member NewCropMutation(project: GameProject) : CropMutationDefinition = Defaults.newCropMutation project
+    static member NewCutscene(project: GameProject) : Cutscene = Defaults.newCutscene project
     static member NewAnimalSpecies(project: GameProject) : AnimalSpeciesDefinition = Defaults.newAnimalSpecies project
     static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState = Defaults.newAnimal project speciesId sceneId x y
     static member NewFishTable(project: GameProject) : FishTable = Defaults.newFishTable project
@@ -222,6 +249,7 @@ type Defaults =
     static member DuplicateAction(project: GameProject, action: ActionDef) : ActionDef = Defaults.duplicateAction project action
     static member NewMinigame(project: GameProject) : MinigameDef = Defaults.newMinigame project
     static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef = Defaults.duplicateMinigame project minigame
+    static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene = Defaults.duplicateCutscene project cutscene
     static member NewResultTier() : MinigameResultTier = Defaults.newResultTier ()
     static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene = Defaults.newScene project name width height
     static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene = Defaults.newSceneWith project name width height defaultTile
@@ -365,7 +393,7 @@ type FormField internal (key: string, label: string, kind: string, reference: st
             | FieldKind.OneOf choices -> "choice", "", References.choiceOptions choices, "", ""
             | FieldKind.Reference kind -> "reference", ReferenceKind.name kind, [], "", ""
             | FieldKind.ReferenceList kind -> "referenceList", ReferenceKind.name kind, [], "", ""
-        FormField(field.Key, field.Label, kind, reference, choices, field.Optional, None, field.Placeholder,
+        FormField(field.Key, field.Label, kind, reference, choices, field.Optional, field.Empty, field.Placeholder,
                   field.WhenEmpty, field.Min, field.Max, onLabel, offLabel, "")
 
     static member internal OfRole(label: string, role: FieldRole) =
@@ -402,6 +430,13 @@ type ContentForms =
         match References.roleIn project owner property with
         | Some role -> FormField.OfRole(label, role)
         | None -> null
+
+    /// What `owner.property` holds in `project` while the record's `type` is `kind` (a cutscene
+    /// step's sound is a music picker on a music step): `Field`, unless the type changes it.
+    static member Field(owner: string, property: string, label: string, project: GameProject, kind: string) : FormField | null =
+        match Vocabulary.roleFor owner property kind with
+        | Some role -> FormField.OfRole(label, role)
+        | None -> ContentForms.Field(owner, property, label, project)
 
     /// What a minigame kind plays like in `project`: a built-in kind's help, or for a kind an
     /// enabled pack defines, which pack runs it (empty for a kind the game doesn't have).
@@ -518,6 +553,30 @@ type ContentReadouts =
     /// The node type summary card.
     static member NodeTypeSummary(project: GameProject, node: NodeTypeDefinition) : IReadOnlyList<ReadoutLine> =
         Readouts.nodeTypeSummary project node |> ContentReadouts.List
+
+    /// Built-in terrains, tools, item categories, crop qualities and mutations the project does not
+    /// replace (M1; read-only in the editor until customized).
+    static member BuiltinTerrains(project: GameProject) : IReadOnlyList<TerrainDefinition> = Readouts.builtinTerrains project |> ContentReadouts.List
+    static member BuiltinTools(project: GameProject) : IReadOnlyList<ToolDefinition> = Readouts.builtinTools project |> ContentReadouts.List
+    static member BuiltinItemCategories(project: GameProject) : IReadOnlyList<ItemCategoryDefinition> =
+        Readouts.builtinItemCategories project |> ContentReadouts.List
+    static member BuiltinCropQualities(project: GameProject) : IReadOnlyList<CropQualityDefinition> =
+        Readouts.builtinCropQualities project |> ContentReadouts.List
+    static member BuiltinCropMutations(project: GameProject) : IReadOnlyList<CropMutationDefinition> =
+        Readouts.builtinCropMutations project |> ContentReadouts.List
+    /// The game's terrains, built-in and its own, in the order the map's tile palette lists them.
+    static member Terrains(project: GameProject) : IReadOnlyList<TerrainDefinition> = ContentCompiler.terrains project |> ContentReadouts.List
+    /// True when `id` is a built-in definition of `kind` ("terrain", "tool", "itemCategory",
+    /// "cropQuality", "cropMutation").
+    static member IsBuiltinVocabulary(kind: string, id: string) : bool = Readouts.isBuiltinVocabulary kind id
+    /// The list line under a terrain.
+    static member TerrainListNote(terrain: TerrainDefinition, builtin: bool) : string =
+        Readouts.vocabularyListNote "terrain" terrain.Id builtin (Readouts.terrainNote terrain)
+    /// The list line under a tool.
+    static member ToolListNote(tool: ToolDefinition, builtin: bool) : string =
+        Readouts.vocabularyListNote "tool" tool.Id builtin (Readouts.toolNote tool)
+    /// The list line under an item category, crop quality or mutation ("Built-in", "Custom", …).
+    static member VocabularyListNote(kind: string, id: string, builtin: bool) : string = Readouts.vocabularyListNote kind id builtin ""
 
     /// A schedule minute as a clock time ("8:00 AM", "1:00 AM (next day)").
     static member Clock(minute: float) : string = Readouts.clock minute
@@ -653,6 +712,51 @@ type SettingsForm =
 
     static member CanMoveSeason(project: GameProject, seasonId: string, delta: int) : bool =
         SettingsForms.canMoveSeason project seasonId delta
+
+    /// The game's words from the fields (null when none is set); blank fields keep the built-in
+    /// words. Throws `FormatException` for a money format without `{0}`.
+    static member Words(project: GameProject, money: string | null, energy: string | null, skills: seq<struct (string * string)>) : GameWords | null =
+        SettingsForms.words project.Settings.Words money energy (skills |> Seq.map (fun (struct (id, name)) -> id, name) |> List.ofSeq) |> Option.toObj
+
+    /// A calendar season row; null or empty music is none.
+    static member Season(id: string, name: string, days: float, temperature: System.Nullable<float>, music: string | null) : CalendarSeason =
+        SettingsForms.season id name days (Option.ofNullable temperature) music
+
+    /// A festival row; null or empty music is none.
+    static member Festival(id: string, name: string, seasonId: string, day: float, music: string | null) : CalendarFestival =
+        SettingsForms.festival id name seasonId day music
+
+    /// `settings` with the game's words (null: the built-in words).
+    static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
+
+    /// `time` with its day length (null: the built-in 1440 minutes).
+    static member WithDayMinutes(time: TimeConfig, minutes: System.Nullable<float>) : TimeConfig =
+        { time with DayMinutes = Option.ofNullable minutes }
+
+    /// Day/night keyframes as text, one "minute #colour" per line.
+    static member DaylightText(keys: seq<DaylightKey>) : string = SettingsForms.daylightText (List.ofSeq keys)
+
+    /// An atmosphere look from its fields, or null when it sets nothing. Throws `FormatException`
+    /// naming the field (`label` daylight, `label` foliage tint).
+    static member Look(label: string, daylight: string | null, foliageTint: string | null) : AtmosphereLook | null =
+        SettingsForms.look label daylight foliageTint |> Option.toObj
+
+    /// The game's atmosphere as one edit: the look of every season (null: none) and the seasons'
+    /// own looks by season id (null looks are left out).
+    static member Atmosphere(project: GameProject, allSeasons: AtmosphereLook | null, seasons: seq<struct (string * AtmosphereLook | null)>) : Edit =
+        SettingsForms.atmosphere project (Option.ofObj allSeasons) (seasons |> Seq.map (fun (struct (id, look)) -> id, Option.ofObj look) |> List.ofSeq)
+
+    /// A weather overlay from its fields; throws `FormatException` naming what is wrong.
+    static member Overlay(id: string, style: string, color: string, density: float, speed: float, tint: string | null) : WeatherOverlayDefinition =
+        SettingsForms.overlay id style color density speed tint
+
+    /// The weather's overlays and each type's overlay and music (weather id, overlay, music) as
+    /// one edit; throws `FormatException` for two overlays with one id.
+    static member WeatherLooks(project: GameProject, overlays: seq<WeatherOverlayDefinition>, looks: seq<struct (string * string * string)>) : Edit =
+        SettingsForms.weatherLooks project (List.ofSeq overlays) (looks |> Seq.map (fun (struct (id, overlay, music)) -> id, overlay, music) |> List.ofSeq)
+
+    /// The overlay styles in the editor's order.
+    static member OverlayStyles: IReadOnlyList<string> = OverlayStyles.All |> Array.ofList :> IReadOnlyList<string>
 
 /// What `Patterns.Build` hands to C#: the edit to apply, or the message to show.
 [<Sealed>]

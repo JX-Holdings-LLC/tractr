@@ -8,6 +8,7 @@ use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
+use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
@@ -16,6 +17,9 @@ use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
 use super::settings::ProjectSettings;
+use super::vocabulary::{
+    CropMutationDefinition, CropQualityDefinition, ItemCategoryDefinition, TerrainDefinition, ToolDefinition,
+};
 use super::weather::WeatherConfig;
 use super::world::Scene;
 use indexmap::IndexMap;
@@ -50,6 +54,18 @@ pub struct GameContent {
     /// Authored initial scenes — the template the world state is created from.
     pub scenes: Vec<Scene>,
     pub start_scene_id: String,
+    /// Terrains (built-in merged with the project's).
+    pub terrains: Vec<TerrainDefinition>,
+    /// Tools (built-in merged with the project's).
+    pub tools: Vec<ToolDefinition>,
+    /// Item categories (built-in merged with the project's).
+    pub item_categories: Vec<ItemCategoryDefinition>,
+    /// Crop quality tiers, ranked (built-in merged with the project's).
+    pub crop_qualities: Vec<CropQualityDefinition>,
+    /// Crop mutations, in roll order (built-in merged with the project's).
+    pub crop_mutations: Vec<CropMutationDefinition>,
+    /// Cutscenes (M2).
+    pub cutscenes: Vec<Cutscene>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

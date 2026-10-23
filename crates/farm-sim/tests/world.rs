@@ -681,6 +681,30 @@ fn fires_transitions_when_the_occupied_tile_changes() {
 }
 
 #[test]
+fn music_an_event_chose_ends_with_the_scene() {
+    let (ctx, mut state) = make_engine_with("transition-music", |mut project| {
+        project.scenes[0].transitions = vec![SceneTransition {
+            from_x: 3,
+            from_y: 2,
+            to_scene_id: "scene-cave".to_owned(),
+            to_x: 2,
+            to_y: 2,
+            ..SceneTransition::default()
+        }];
+        project.scenes.push(tiles::create_empty_scene("scene-cave", "Cave", 5, 5));
+        project
+    });
+    state.music = Some("song".to_owned());
+    // Walking inside the scene keeps it.
+    with_intent(&ctx, &mut state, 0, -1);
+    advance_tick(&ctx, &mut state, 3);
+    assert_eq!((state.player.scene_id.as_str(), state.music.as_deref()), ("scene-test", Some("song")));
+    // The transition into the cave ends it.
+    advance_tick(&ctx, &mut state, 4);
+    assert_eq!((state.player.scene_id.as_str(), state.music.as_deref()), ("scene-cave", None));
+}
+
+#[test]
 fn locked_transitions_do_not_fire() {
     let (ctx, mut state) = make_engine_with("locked", |mut project| {
         project.scenes[0].transitions = vec![SceneTransition {

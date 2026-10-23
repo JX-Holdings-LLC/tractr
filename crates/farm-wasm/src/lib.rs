@@ -82,15 +82,38 @@ export interface FrameRequest {
 
 /** What a frame tells the page besides the pixels. */
 export interface FrameInfo {
-  /** Sound cues to play now (`sfxSamples(cue, rate)`), with their gain (volumes applied). */
-  sounds: { cue: string; gain: number }[];
+  /**
+   * Sound cues to play now (`sfxSamples(cue, rate)`), with their gain (volumes applied). With
+   * `asset`, the cue is the game's own sound: its samples are `player.audioClip(cue)`.
+   */
+  sounds: { cue: string; gain: number; asset?: boolean }[];
   /** `quit`, `fullscreen:on`, `fullscreen:off`, `title:<text>`. */
   requests: string[];
   screen: "title" | "playing" | "pause" | "settings" | "credits" | "loadSlots" | "saveSlots" | "newGameSlots" | "confirm";
   /** An in-game panel or an engine modal is open. */
   modal: boolean;
-  /** The loops to play now (`musicSamples(name, rate)`, looped) with their gains; null is silence. */
-  music: { music: string | null; musicGain: number; ambience: string | null; ambienceGain: number };
+  /**
+   * The loops to play now (`musicSamples(name, rate)`, looped) with their gains; null is silence.
+   * `asset` is the game's own music (`player.audioClip(asset)`), looped at `musicGain` instead of
+   * `music`; `music` is the built-in fallback.
+   */
+  music: {
+    music: string | null;
+    musicGain: number;
+    asset: string | null;
+    ambience: string | null;
+    ambienceGain: number;
+  };
+}
+
+/** A game's decoded sound or music asset (`Player.audioClip`). */
+export interface AudioClip {
+  /** The file's own rate: `AudioContext.createBuffer(channels, samples.length / channels, sampleRate)`. */
+  sampleRate: number;
+  /** 1 or 2. */
+  channels: number;
+  /** -1..1, interleaved (left, right) when stereo. */
+  samples: Float32Array<ArrayBuffer>;
 }
 
 export interface FrameResult {

@@ -7,12 +7,16 @@
 use crate::builtin_art::BuiltinArt;
 use crate::num::to_int;
 use crate::snapshot::{
-    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEntity, SnapshotItem, SnapshotMachine, SnapshotNode,
-    SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem, SnapshotMachine,
+    SnapshotNode, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
 };
+use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
-use farm_sim::schema::{directions, soil_states, tile_types, GameContent, GameProject, GameState, Scene};
+use farm_sim::schema::{
+    directions, soil_states, tile_types, AtmosphereSettings, GameContent, GameProject, GameState, Scene,
+};
 use farm_sim::units::{self, MicroMinutes};
+use farm_sim::vocabulary;
 use farm_sim::world::tiles;
 use serde::{Deserialize, Serialize};
 
@@ -80,12 +84,50 @@ fn tiles_of(position: i32) -> f64 {
     units::position_to_tiles(position)
 }
 
+/// The game's terrains as the renderer reads them (M1): colour and farmable ground.
+fn snapshot_terrains(content: &GameContent) -> Vec<SnapshotTerrain> {
+    vocabulary::terrains(content)
+        .iter()
+        .map(|terrain| SnapshotTerrain {
+            id: terrain.id.clone(),
+            color: terrain.color.clone(),
+            plantable: terrain.plantable,
+        })
+        .collect()
+}
+
+/// The atmosphere of `scene` at the clock: the game's look for the scene and season (M1), its day
+/// length, and today's weather overlay resolved from the weather type.
+fn snapshot_atmosphere(content: &GameContent, state: &GameState, scene: &Scene) -> SnapshotAtmosphere {
+    let clock = &state.clock;
+    let settings = &content.settings;
+    let look = AtmosphereSettings::resolve(settings.atmosphere.as_ref(), &clock.season, scene.atmosphere.as_ref());
+    let day_minutes = settings.time.minutes_per_day();
+    let overlay_id = content
+        .weather
+        .types
+        .iter()
+        .find(|weather| weather.id == clock.weather_id)
+        .and_then(|weather| weather.overlay.clone());
+    SnapshotAtmosphere {
+        time_minutes: units::to_f64::<MicroMinutes>(clock.time_minutes),
+        weather_id: Some(clock.weather_id.clone()),
+        season: Some(clock.season.clone()),
+        overlay: overlay_id.as_deref().and_then(|id| content.weather.overlay(id)),
+        weather_overlay: overlay_id,
+        day_minutes: (day_minutes != units::MINUTES_PER_DAY).then_some(f64::from(day_minutes)),
+        daylight: (!look.daylight.is_empty()).then_some(look.daylight),
+        foliage_tint: look.foliage_tint,
+    }
+}
+
 fn build_tiles(
     scene: &Scene,
     content: &GameContent,
     hide_item_at: impl Fn(usize, usize) -> bool,
     window: Option<TileWindow>,
 ) -> Vec<Vec<SnapshotTile>> {
+    let terrains = vocabulary::terrains(content);
     let mut rows = Vec::with_capacity(cells(scene.height));
     for y in 0..cells(scene.height) {
         // Rows outside the window stay empty; inside, cells left of it are stand-ins and the
@@ -108,9 +150,9 @@ fn build_tiles(
                 }
             };
             let background = if tile.background.is_empty() { tile.r#type.clone() } else { tile.background.clone() };
-            let soil = background == tile_types::SOIL;
-            // Soil state (read only): plantable soil is drawn tilled; wet after watering or rain
-            // (moisture), speckled once fertilized.
+            let soil = vocabulary::find_terrain(terrains, &background).is_some_and(|terrain| terrain.plantable);
+            // Soil state (read only): plantable ground is drawn tilled; wet after watering or
+            // rain (moisture), speckled once fertilized.
             let watered = soil && (tile.soil_state.as_deref() == Some(soil_states::WATERED) || tile.soil_moisture > 0);
             let fertilized =
                 soil && (tile.soil_state.as_deref() == Some(soil_states::FERTILIZED) || tile.soil_fertility > 0);
@@ -177,6 +219,9 @@ pub fn shell_snapshot(
     options: &SnapshotOptions,
 ) -> WorldSnapshot {
     let tiles = build_tiles(scene, content, |_, _| false, options.tile_window);
+    // A cutscene (M2) turns and walks characters and shows emotes over them.
+    let cutscene = (scene.id == state.player.scene_id).then(|| cutscenes::view(content, state)).flatten();
+    let directed = |actor: &str| cutscene_actor(cutscene.as_ref(), actor);
 
     let mut npcs = Vec::new();
     for npc in &content.npcs {
@@ -188,14 +233,23 @@ pub fn shell_snapshot(
         let (x, y) = (tiles_of(x), tiles_of(y));
         // A scheduled or patrolling NPC with path steps left is walking toward the next step.
         let next = live.and_then(|live| live.path.as_ref()).and_then(|path| path.first());
+        let (direction, moving) = directed(&npc.id).unwrap_or_else(|| {
+            let direction =
+                next.map_or(directions::DOWN, |next| direction_toward(x, y, f64::from(next.x), f64::from(next.y)));
+            (direction.to_owned(), next.is_some())
+        });
+        // NPCs stand on whole tiles, except while a cutscene walks them: a fractional position
+        // is their tile corner, not a centre (`entity_pixel_origin` reads it as one).
+        let between_tiles = x.fract() != 0.0 || y.fract() != 0.0;
+        let pixel = |coord: f64| between_tiles.then_some(options.padding + (coord * options.tile_size));
         npcs.push(SnapshotEntity {
             x,
             y,
             appearance: Some(npc.appearance.clone()),
-            direction: next
-                .map_or(directions::DOWN, |next| direction_toward(x, y, f64::from(next.x), f64::from(next.y)))
-                .to_owned(),
-            moving: next.is_some(),
+            direction,
+            moving,
+            pixel_x: pixel(x),
+            pixel_y: pixel(y),
             ..SnapshotEntity::default()
         });
     }
@@ -227,17 +281,8 @@ pub fn shell_snapshot(
         pixel_art: None,
         grid_overlay: false,
         tick: clock.tick as f64,
-        atmosphere: Some(SnapshotAtmosphere {
-            time_minutes: units::to_f64::<MicroMinutes>(clock.time_minutes),
-            weather_id: Some(clock.weather_id.clone()),
-            season: Some(clock.season.clone()),
-            weather_overlay: content
-                .weather
-                .types
-                .iter()
-                .find(|weather| weather.id == clock.weather_id)
-                .and_then(|weather| weather.overlay.clone()),
-        }),
+        atmosphere: Some(snapshot_atmosphere(content, state, scene)),
+        terrains: Some(snapshot_terrains(content)),
         tiles,
         npcs,
         player: SnapshotEntity {
@@ -246,12 +291,32 @@ pub fn shell_snapshot(
             direction: state.player.direction.clone(),
             pixel_x: options.pixel_x,
             pixel_y: options.pixel_y,
-            moving: state.player.move_intent.dx != 0 || state.player.move_intent.dy != 0,
+            moving: state.player.move_intent.dx != 0
+                || state.player.move_intent.dy != 0
+                || directed(cutscenes::PLAYER).is_some_and(|(_, moving)| moving),
             ..SnapshotEntity::default()
         },
         pops: None,
+        emotes: cutscene.as_ref().filter(|view| !view.emotes.is_empty()).map(|view| {
+            view.emotes
+                .iter()
+                .map(|emote| SnapshotEmote {
+                    x: tiles_of(emote.x),
+                    y: tiles_of(emote.y),
+                    player: emote.actor == cutscenes::PLAYER,
+                    emote: emote.emote.clone(),
+                    progress: f64::from(emote.progress) / f64::from(units::MILLI_ONE),
+                })
+                .collect()
+        }),
         tile_window: options.tile_window,
     }
+}
+
+/// The direction and walk of an actor the running cutscene turns or walks.
+fn cutscene_actor(view: Option<&CutsceneView>, actor: &str) -> Option<(String, bool)> {
+    let actor = view?.actors.iter().find(|known| known.actor == actor)?;
+    Some((actor.direction.clone(), actor.moving))
 }
 
 /// Port of `ShellSnapshot.BuildEditorSnapshot`: the authored `scene` of `project` with 1px grid
@@ -306,6 +371,7 @@ pub fn editor_snapshot(
         grid_overlay: true,
         tick: 0.0,
         atmosphere: None,
+        terrains: Some(snapshot_terrains(content)),
         tiles,
         npcs,
         player: SnapshotEntity {
@@ -315,6 +381,7 @@ pub fn editor_snapshot(
             ..SnapshotEntity::default()
         },
         pops: None,
+        emotes: None,
         tile_window: None,
     }
 }
@@ -335,7 +402,7 @@ mod tests {
         let project = starter();
         let content = farm_sim::state::create_content_from_project(&project);
         let mut state = farm_sim::state::create_game_state(&project, Some("snapshot"));
-        let mut crop = crops::create_planted_crop("wheat", 1, false);
+        let mut crop = crops::create_planted_crop("wheat", 1, "normal");
         crop.days_grown = Some(99);
         state.world.scenes[0].tiles[0][0].crop = Some(crop);
         let before = farm_sim::hash_state(&state);
@@ -437,6 +504,57 @@ mod tests {
         assert_eq!(window, TileWindow { x0: 0, y0: 0, x1: 15, y1: 11 });
         let far = SnapshotCamera { x: 3200.0, y: 3200.0, width: 64.0, height: 64.0 };
         assert_eq!(TileWindow::for_camera(&far, 0.0, 32.0, 1), TileWindow { x0: 99, y0: 99, x1: 103, y1: 104 });
+    }
+
+    #[test]
+    fn the_atmosphere_carries_the_games_look_day_length_and_overlay() {
+        use farm_sim::schema::{
+            AtmosphereLook, AtmosphereSettings, DaylightKey, WeatherOverlayDefinition, WeatherTypeDefinition,
+        };
+        let project = starter();
+        let mut content = farm_sim::state::create_content_from_project(&project);
+        let mut state = farm_sim::state::create_game_state(&project, None);
+        let mut scene = state.world.scenes[0].clone();
+        let key = |minute: f64, color: &str| DaylightKey { minute, color: color.into() };
+        let look = |keys: Vec<DaylightKey>, foliage: Option<&str>| AtmosphereLook {
+            daylight: keys,
+            foliage_tint: foliage.map(str::to_owned),
+        };
+        let mut settings =
+            AtmosphereSettings { all_seasons: look(vec![key(60.0, "#ffffff")], Some("#aa8866")), ..Default::default() };
+        settings.seasons.insert("winter".to_owned(), look(vec![key(0.0, "#000000")], None));
+        content.settings.atmosphere = Some(settings);
+        content.settings.time.day_minutes = Some(900);
+        content.weather.overlays = Some(vec![WeatherOverlayDefinition {
+            id: "sand".into(),
+            style: "dust".into(),
+            ..WeatherOverlayDefinition::default()
+        }]);
+        content.weather.types.push(WeatherTypeDefinition {
+            id: "sandstorm".into(),
+            overlay: Some("sand".into()),
+            ..WeatherTypeDefinition::default()
+        });
+        state.clock.season = "winter".into();
+        state.clock.weather_id = "sandstorm".into();
+        let atmosphere = |state: &GameState, scene: &Scene| {
+            shell_snapshot(&content, state, scene, &SnapshotOptions::default()).atmosphere.unwrap()
+        };
+        let winter = atmosphere(&state, &scene);
+        assert_eq!(winter.daylight, Some(vec![key(0.0, "#000000")]), "the season's keys");
+        assert_eq!(winter.foliage_tint.as_deref(), Some("#aa8866"), "the game's tint");
+        assert_eq!(winter.day_minutes, Some(900.0));
+        assert_eq!(winter.weather_overlay.as_deref(), Some("sand"));
+        assert_eq!(winter.overlay.as_ref().map(|overlay| overlay.style.as_str()), Some("dust"));
+        scene.atmosphere = Some(look(vec![key(5.0, "#123456")], None));
+        assert_eq!(atmosphere(&state, &scene).daylight, Some(vec![key(5.0, "#123456")]), "the scene's keys");
+        state.clock.season = "spring".into();
+        scene.atmosphere = None;
+        assert_eq!(atmosphere(&state, &scene).daylight, Some(vec![key(60.0, "#ffffff")]), "the game's keys");
+        state.clock.weather_id = "sun".into();
+        assert_eq!(atmosphere(&state, &scene).overlay, None);
+        state.clock.weather_id = "rain".into();
+        assert_eq!(atmosphere(&state, &scene).overlay.map(|overlay| overlay.id), Some("rain".to_owned()));
     }
 
     #[test]

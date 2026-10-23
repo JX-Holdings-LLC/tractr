@@ -4,6 +4,7 @@ use super::actors::{Dialogue, Npc, Player};
 use super::animals::{AnimalSpeciesDefinition, AnimalState};
 use super::content::{CustomAsset, CustomCropDefinition, InventorySlot, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
+use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
@@ -17,6 +18,9 @@ use super::quests::Quest;
 use super::save::{KeptState, RngState};
 use super::settings::ProjectSettings;
 use super::social::NpcSocialState;
+use super::vocabulary::{
+    CropMutationDefinition, CropQualityDefinition, ItemCategoryDefinition, TerrainDefinition, ToolDefinition,
+};
 use super::weather::WeatherConfig;
 use super::world::Scene;
 use indexmap::IndexMap;
@@ -46,7 +50,7 @@ pub struct GameProject {
     pub start_scene_id: String,
     /// One of [`super::editor_modes`].
     pub mode: String,
-    /// One of [`super::tile_types`].
+    /// A terrain id (the built-in ones are [`super::tile_types`]).
     pub selected_tile_type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub selected_tile_visual: Option<VisualRef>,
@@ -94,6 +98,24 @@ pub struct GameProject {
     pub minigames: Vec<MinigameDef>,
     /// Installed content packs (M5). Array order = load order.
     pub content_packs: Vec<PackInstallation>,
+    /// The project's terrains (M1), beside and over the built-in ones.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terrains: Option<Vec<TerrainDefinition>>,
+    /// The project's tools (M1), beside and over the built-in ones.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<ToolDefinition>>,
+    /// The project's item categories (M1), beside and over the built-in ones.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_categories: Option<Vec<ItemCategoryDefinition>>,
+    /// The project's crop qualities (M1), beside and over the built-in tiers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crop_qualities: Option<Vec<CropQualityDefinition>>,
+    /// The project's crop mutations (M1), beside and over the built-in ones.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crop_mutations: Option<Vec<CropMutationDefinition>>,
+    /// Cutscenes (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscenes: Option<Vec<Cutscene>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,
@@ -121,4 +143,4 @@ pub struct GameProject {
 
 /// The project schema version. Only this version loads (there are no migrations): bump it when
 /// the persisted shape changes, so files of another shape are refused with a message.
-pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 1;
+pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 2;

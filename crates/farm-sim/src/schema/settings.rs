@@ -5,6 +5,7 @@
 
 use super::primitives::CLASSIC_SEASONS;
 use crate::units;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -15,6 +16,12 @@ pub struct CalendarSeason {
     /// In-game days this season lasts. int, positive.
     #[serde(with = "crate::units::count")]
     pub days: u32,
+    /// How warm the season is, for crops with a temperature range (M1).
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub temperature: Option<i32>,
+    /// A music asset that plays in the season instead of the game's own music (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -27,6 +34,9 @@ pub struct CalendarFestival {
     /// 1-based day within that season. int, positive.
     #[serde(with = "crate::units::count")]
     pub day: u32,
+    /// A music asset that plays all festival day (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -61,12 +71,24 @@ pub struct TimeConfig {
     /// Absent means on ([`TimeConfig::pauses_in_modals`]); v8 ran the clock on.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pause_in_modals: Option<bool>,
+    /// Minutes in a day (M1); absent: [`units::MINUTES_PER_DAY`].
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub day_minutes: Option<u32>,
 }
+
+/// The fewest minutes a day may have.
+pub const MIN_DAY_MINUTES: u32 = 60;
 
 impl TimeConfig {
     /// [`TimeConfig::pause_in_modals`], on unless a project turns it off.
     pub fn pauses_in_modals(&self) -> bool {
         self.pause_in_modals != Some(false)
+    }
+
+    /// Minutes in a day: [`TimeConfig::day_minutes`], else 1440. A day shorter than
+    /// [`MIN_DAY_MINUTES`] reads as that.
+    pub fn minutes_per_day(&self) -> u32 {
+        self.day_minutes.unwrap_or(units::MINUTES_PER_DAY).max(MIN_DAY_MINUTES)
     }
 }
 
@@ -77,6 +99,7 @@ impl Default for TimeConfig {
             day_end_minute: 26 * 60,
             minutes_per_real_second: units::MINUTE / units::TICKS_PER_SECOND,
             pause_in_modals: None,
+            day_minutes: None,
         }
     }
 }
@@ -121,6 +144,107 @@ pub struct ProjectSettings {
     pub locale: String,
     /// Optional, creator-controlled credit shown in exported games.
     pub show_made_with_credit: bool,
+    /// What the game calls money, energy and the skills (M1); absent: the built-in words.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub words: Option<GameWords>,
+    /// The day/night and foliage tints (M1); absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub atmosphere: Option<AtmosphereSettings>,
+}
+
+/// The words of a game (M1): what it calls money, energy and the skills, in every language.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GameWords {
+    /// How an amount of money is written, `{0}` standing for the number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub money: Option<String>,
+    /// What energy is called.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub energy: Option<String>,
+    /// Skill names by skill id.
+    pub skills: IndexMap<String, String>,
+    /// The same words in other languages, by locale code.
+    pub locales: IndexMap<String, GameWords>,
+}
+
+impl GameWords {
+    /// The words for `locale`: the locale's own where it has them, else these.
+    pub fn for_locale(&self, locale: &str) -> GameWords {
+        let mut words = GameWords {
+            money: self.money.clone(),
+            energy: self.energy.clone(),
+            skills: self.skills.clone(),
+            locales: IndexMap::new(),
+        };
+        if let Some(local) = self.locales.get(locale) {
+            if local.money.is_some() {
+                words.money.clone_from(&local.money);
+            }
+            if local.energy.is_some() {
+                words.energy.clone_from(&local.energy);
+            }
+            for (skill, name) in &local.skills {
+                words.skills.insert(skill.clone(), name.clone());
+            }
+        }
+        words
+    }
+}
+
+/// A day/night tint keyframe: at `minute` of the day the scene is multiplied by `color`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct DaylightKey {
+    #[serde(with = "crate::units::screen")]
+    pub minute: f64,
+    /// `#rrggbb` multiply colour.
+    pub color: String,
+}
+
+/// The look of a game's sky (M1). Empty or absent parts keep the look below them: a scene's
+/// look, then its season's, then the game's, then the built-in.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AtmosphereLook {
+    pub daylight: Vec<DaylightKey>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub foliage_tint: Option<String>,
+}
+
+/// A game's atmosphere (M1): its look, and a look per season.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AtmosphereSettings {
+    /// The look of every season without its own.
+    pub all_seasons: AtmosphereLook,
+    /// Looks by season id.
+    pub seasons: IndexMap<String, AtmosphereLook>,
+}
+
+impl AtmosphereSettings {
+    /// The look of `season` in `scene`: each part from the first of the scene's look, the
+    /// season's, then the game's that has it (`None` where none does: the built-in look).
+    pub fn resolve(
+        settings: Option<&AtmosphereSettings>,
+        season: &str,
+        scene: Option<&AtmosphereLook>,
+    ) -> AtmosphereLook {
+        let mut layers: Vec<&AtmosphereLook> = Vec::new();
+        layers.extend(scene);
+        if let Some(settings) = settings {
+            layers.extend(settings.seasons.get(season));
+            layers.push(&settings.all_seasons);
+        }
+        AtmosphereLook {
+            daylight: layers
+                .iter()
+                .find(|look| !look.daylight.is_empty())
+                .map(|look| look.daylight.clone())
+                .unwrap_or_default(),
+            foliage_tint: layers.iter().find_map(|look| look.foliage_tint.clone()),
+        }
+    }
 }
 
 impl Default for ProjectSettings {
@@ -137,6 +261,8 @@ impl Default for ProjectSettings {
             skill_level_curve: vec![0, 50, 150, 300, 500, 750, 1050, 1400, 1800, 2250],
             locale: "en".to_owned(),
             show_made_with_credit: false,
+            words: None,
+            atmosphere: None,
         }
     }
 }
@@ -151,7 +277,7 @@ pub fn classic_calendar_seasons() -> Vec<CalendarSeason> {
                 Some(first) => first.to_uppercase().chain(chars).collect(),
                 None => String::new(),
             };
-            CalendarSeason { id: (*id).to_owned(), name, days: 28 }
+            CalendarSeason { id: (*id).to_owned(), name, days: 28, temperature: None, music: None }
         })
         .collect()
 }

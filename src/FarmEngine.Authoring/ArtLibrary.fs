@@ -20,9 +20,12 @@ module ArtLibrary =
                 UpsertAsset { asset with Id = id })
         Batch("Import art", edits)
 
-    /// The assets "Remove unused art" would delete: those nothing in the game uses
-    /// (`AssetUsage.unused`), in project order.
-    let unused (project: GameProject) : CustomAsset list = AssetUsage.unused project
+    /// The assets "Remove unused art" would delete: the images nothing in the game uses
+    /// (`AssetUsage.unused`), in project order. Sound and music are kept: the art studio lists
+    /// them apart, and a track waiting for its scene is not clutter.
+    let unused (project: GameProject) : CustomAsset list =
+        AssetUsage.unused project
+        |> List.filter (fun asset -> asset.Type <> CustomAssetTypes.Sound && asset.Type <> CustomAssetTypes.Music)
 
     /// AssetManager "Remove unused art" for the whole library: every unused asset, as ONE undo
     /// step. Nothing unused → an empty batch (a no-op).

@@ -151,6 +151,57 @@ module Readouts =
         let own = project.NodeTypes |> List.map (fun node -> node.Id) |> Set.ofList
         Builtin.nodeTypes () @ Builtin.mineNodeTypes () |> List.filter (fun node -> not (own.Contains node.Id))
 
+    /// The built-in definitions of a vocabulary list (M1) the project does not replace.
+    let private builtinsNotIn (idOf: 'T -> string) (builtins: 'T list) (own: 'T list option) : 'T list =
+        let own = defaultArg own [] |> List.map idOf |> Set.ofList
+        builtins |> List.filter (fun definition -> not (own.Contains(idOf definition)))
+
+    let builtinTerrains (project: GameProject) = builtinsNotIn (fun (t: TerrainDefinition) -> t.Id) (Builtin.terrains ()) project.Terrains
+    let builtinTools (project: GameProject) = builtinsNotIn (fun (t: ToolDefinition) -> t.Id) (Builtin.tools ()) project.Tools
+    let builtinItemCategories (project: GameProject) =
+        builtinsNotIn (fun (c: ItemCategoryDefinition) -> c.Id) (Builtin.itemCategories ()) project.ItemCategories
+    let builtinCropQualities (project: GameProject) =
+        builtinsNotIn (fun (q: CropQualityDefinition) -> q.Id) (Builtin.cropQualities ()) project.CropQualities
+    let builtinCropMutations (project: GameProject) =
+        builtinsNotIn (fun (m: CropMutationDefinition) -> m.Id) (Builtin.cropMutations ()) project.CropMutations
+
+    /// Whether `id` is a built-in vocabulary definition of `kind` (terrain, tool, itemCategory,
+    /// cropQuality, cropMutation).
+    let isBuiltinVocabulary (kind: string) (id: string) : bool =
+        match kind with
+        | "terrain" -> Builtin.terrains () |> List.exists (fun t -> t.Id = id)
+        | "tool" -> Builtin.tools () |> List.exists (fun t -> t.Id = id)
+        | "itemCategory" -> Builtin.itemCategories () |> List.exists (fun c -> c.Id = id)
+        | "cropQuality" -> Builtin.cropQualities () |> List.exists (fun q -> q.Id = id)
+        | "cropMutation" -> Builtin.cropMutations () |> List.exists (fun m -> m.Id = id)
+        | _ -> false
+
+    /// "Background · walkable · plantable" (a terrain's list line).
+    let terrainNote (terrain: TerrainDefinition) : string =
+        [ yield terrain.Layer
+          if not terrain.Walkable then yield "blocks"
+          if terrain.Plantable then yield "plantable"
+          if terrain.Fishable then yield "fishable"
+          if terrain.WaterSource then yield "water"
+          if terrain.HazardEnergy > 0.0 then yield "hazard"
+          if terrain.Indoor then yield "sheltered" ]
+        |> String.concat " · "
+
+    /// "till · key T · 4 energy" (a tool's list line).
+    let toolNote (tool: ToolDefinition) : string =
+        [ yield tool.Action
+          match tool.Key with
+          | Some key when key.Length > 0 -> yield "key " + key.ToUpperInvariant()
+          | _ -> ()
+          yield sprintf "%s energy" (JsNumber.format tool.EnergyCost) ]
+        |> String.concat " · "
+
+    /// The list line under a vocabulary definition: "Built-in · note" (`builtin` when it is listed
+    /// read-only), "Replaces built-in · note" or "Custom · note".
+    let vocabularyListNote (kind: string) (id: string) (builtin: bool) (note: string) : string =
+        let origin = if builtin then "Built-in" elif isBuiltinVocabulary kind id then "Replaces built-in" else "Custom"
+        if note.Length = 0 then origin else origin + " · " + note
+
     /// "4 hp · axe · no respawn" (web NodeTypeEditor's list line).
     let nodeTypeNote (node: NodeTypeDefinition) : string =
         let tier = if node.RequiredToolTier > 1.0 then sprintf " t%s" (JsNumber.format node.RequiredToolTier) else ""
@@ -199,12 +250,13 @@ module Readouts =
 
     // ---- Form layout ----
 
-    /// Tabs a content form groups its fields into (web CropEditor's Basic / Growth / Asset);
-    /// empty for a record shown as one form. Properties not listed go on the last tab.
+    /// Tabs a content form groups its fields into (web CropEditor's Basic / Growth / Asset, and
+    /// the growth requirements of M1); empty for a record shown as one form. Properties not listed go on the last tab.
     let formTabs (recordType: string) : FormTab list =
         match recordType with
         | "CustomCropDefinition" ->
             [ { Title = "Basic"; Properties = [ "Id"; "Name"; "SeedCost"; "BaseHarvestValue"; "Seasons"; "YieldMin"; "YieldMax" ] }
               { Title = "Growth"; Properties = [ "GrowthDays"; "Stages"; "CanRegrow"; "RegrowthDays"; "MutationChance"; "MultiTile" ] }
+              { Title = "Requirements"; Properties = [ "Requirements" ] }
               { Title = "Asset"; Properties = [ "Visual" ] } ]
         | _ -> []

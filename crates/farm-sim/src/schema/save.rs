@@ -17,6 +17,7 @@
 use super::actors::GridPoint;
 use super::animals::AnimalState;
 use super::content::InventorySlot;
+use super::cutscenes::CutsceneState;
 use super::extensibility::MinigameSession;
 use super::social::NpcSocialState;
 use super::world::Scene;
@@ -246,6 +247,13 @@ pub struct GameState {
     /// return to the inventory when the pack comes back (M5).
     pub quarantined_items: Vec<InventorySlot>,
     pub rng: RngState,
+    /// Music an event or cutscene chose (M2: a music asset id; empty: none), until the player
+    /// changes scene. Absent: the music the place and the day pick.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
+    /// The cutscene being played (M2), a modal like dialogue.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscene: Option<CutsceneState>,
 }
 
 /// What "Keep changes" carries from a playtest into the next one beyond the project's own

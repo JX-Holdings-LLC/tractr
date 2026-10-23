@@ -34,7 +34,7 @@ public sealed class SettingsEditorTests
         var project = host.Workspace.Current!;
         Assert.Equal(4, SettingsForm.WeatherWeight(project, "spring", "storm"));
         Assert.Equal(0, SettingsForm.WeatherWeight(project, "summer", "rain"));
-        Assert.Equal("Weather odds saved.", FindByName<TextBlock>(host.Window, "WeatherMessage").Text);
+        Assert.Equal("Weather saved.", FindByName<TextBlock>(host.Window, "WeatherMessage").Text);
 
         Press(host, "SaveWeatherButton");
         Assert.Equal("No changes were made.", FindByName<TextBlock>(host.Window, "WeatherMessage").Text);

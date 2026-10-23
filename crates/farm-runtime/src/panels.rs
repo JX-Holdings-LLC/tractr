@@ -19,7 +19,8 @@ pub struct PanelState {
     /// Values are `boolean | string | number`.
     pub flags: IndexMap<String, Value>,
     pub inventory: Vec<InventorySlot>,
-    /// A modal interaction (dialogue/shop/minigame/host menu) is open: actions are disabled.
+    /// A modal interaction (dialogue/shop/minigame/cutscene/host menu) is open: actions are
+    /// disabled.
     pub blocked: bool,
 }
 
@@ -32,7 +33,11 @@ impl PanelState {
             day: f64::from(state.clock.day),
             flags: state.flags.clone(),
             inventory: state.player.inventory.clone(),
-            blocked: state.dialogue.is_some() || state.minigame.is_some() || state.shop.is_some() || host_modal_open,
+            blocked: state.dialogue.is_some()
+                || state.minigame.is_some()
+                || state.shop.is_some()
+                || state.cutscene.is_some()
+                || host_modal_open,
         }
     }
 

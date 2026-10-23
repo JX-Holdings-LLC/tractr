@@ -13,8 +13,8 @@ use crate::schema::{EventOutcome, GameState, MoveIntent, NpcSocialState, Outcome
 use crate::units;
 use crate::world::world_movement;
 use crate::{
-    crafting, dialogue_system, economy, energy, events, extensibility, game_time, inventory, mines, skills, social,
-    weather,
+    crafting, cutscenes, dialogue_system, economy, energy, events, extensibility, game_time, inventory, mines, skills,
+    social, weather,
 };
 
 /// Simulation runs at a fixed rate; rendering interpolates between ticks.
@@ -74,6 +74,9 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
         Command::StartMinigame { minigame_id } => extensibility::handle_start_minigame(ctx, state, minigame_id),
         Command::ResolveMinigame { score } => extensibility::handle_resolve_minigame(ctx, state, *score),
         Command::CancelMinigame => extensibility::handle_cancel_minigame(state),
+        Command::AdvanceCutscene => cutscenes::handle_advance(ctx, state),
+        Command::ChooseCutsceneOption { index } => cutscenes::handle_choose(ctx, state, *index),
+        Command::SkipCutscene => cutscenes::handle_skip(ctx, state),
         Command::PluginMutation { plugin_id, mutation } => apply_plugin_mutation(ctx, state, plugin_id, mutation),
     }
 }
@@ -83,11 +86,13 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
 /// hook.
 fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<Effects> {
     // While a modal is open only its own commands apply (the player UI sends nothing else); the
-    // held intent is stored but movement stays frozen, and plugin mutations are content.
+    // held intent is stored but movement stays frozen, and plugin mutations are content. A
+    // dialogue, shop or minigame an outcome opened over a cutscene comes first.
     let dialogue = state.dialogue.is_some();
     let shop = state.shop.is_some();
     let minigame = state.minigame.is_some();
-    if dialogue || shop || minigame {
+    let cutscene = state.cutscene.is_some();
+    if dialogue || shop || minigame || cutscene {
         let allowed = match command {
             Command::SetMoveIntent { .. } | Command::PluginMutation { .. } => true,
             Command::ChooseDialogueOption { .. } | Command::CloseDialogue => dialogue,
@@ -95,6 +100,9 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
                 shop
             }
             Command::ResolveMinigame { .. } | Command::CancelMinigame => minigame,
+            Command::AdvanceCutscene | Command::ChooseCutsceneOption { .. } | Command::SkipCutscene => {
+                cutscene && !(dialogue || shop || minigame)
+            }
             _ => false,
         };
         if !allowed {
@@ -104,6 +112,9 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
     match command {
         Command::DescendMine { floor } => mines::descend_refusal(ctx, state, *floor),
         Command::ExitMine => mines::exit_refusal(state),
+        Command::AdvanceCutscene => cutscenes::advance_refusal(ctx, state),
+        Command::ChooseCutsceneOption { index } => cutscenes::choose_refusal(ctx, state, *index),
+        Command::SkipCutscene => cutscenes::skip_refusal(ctx, state),
         Command::OpenShop { shop_id } => economy::open_shop_refusal(ctx, state, shop_id),
         // Minigames open from actions, items, tools and plugins, which decide what they are
         // for; opening one on demand would hand out its rewards for any score.
@@ -261,26 +272,28 @@ pub fn advance_tick(ctx: &EngineContext, state: &mut GameState, ticks: u64) -> E
     effects
 }
 
-/// Is a dialogue, shop or minigame open? The player's body stays put while one is, and with
-/// `time.pauseInModals` the clock does too.
+/// Is a dialogue, shop, minigame or cutscene open? The player's body stays put while one is, and
+/// with `time.pauseInModals` the clock does too.
 pub fn modal_open(state: &GameState) -> bool {
-    state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some()
+    state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some() || state.cutscene.is_some()
 }
 
 fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     // An invalid day window would collapse the player every tick (#24).
     let time = game_time::time_config(&ctx.content.settings.time);
     state.clock.tick = state.clock.tick.saturating_add(1);
+    // A cutscene plays on whatever the clock does (M2); nothing happens without one.
+    let mut effects = cutscenes::advance(ctx, state);
     let modal = modal_open(state);
-    // With `pauseInModals` an open dialogue, shop or minigame stops the clock: no minutes pass,
-    // so no minute-boundary systems run and the day cannot end mid-conversation (#37).
+    // With `pauseInModals` an open dialogue, shop, minigame or cutscene stops the clock: no
+    // minutes pass, so no minute-boundary systems run and the day cannot end mid-conversation
+    // (#37).
     if modal && time.pauses_in_modals() {
-        return Vec::new();
+        return effects;
     }
     // The time rate is stored in micro-minutes per tick.
     let before_minute = units::whole_minute(state.clock.time_minutes);
     state.clock.time_minutes = state.clock.time_minutes.saturating_add(time.minutes_per_real_second);
-    let mut effects = Vec::new();
 
     // Free movement integrates every tick from the held intent. Frozen while a dialogue, shop or
     // minigame is open (modal interactions pause the body).

@@ -206,7 +206,7 @@ let ``condition and outcome types are pinned`` () =
     Assert.Equal<string list>(
         [ "modifyFriendship"; "modifyEnergy"; "waterArea"; "message"; "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "clearFlag"
           "startQuest"; "completeQuest"; "spawnNPC"; "removeNPC"; "changeTile"; "warpPlayer"; "startDialogue"; "lockTransition"; "unlockTransition"
-          "playSound"; "performAction"; "startMinigame" ],
+          "playSound"; "performAction"; "startMinigame"; "playMusic"; "startCutscene" ],
         Vocabulary.outcomeTypes |> List.map fst)
     Assert.Equal("Water nearby soil (magic)", Vocabulary.outcomeLabel "waterArea")
     // Every outcome type the vocabulary offers is a schema outcome type.
@@ -266,7 +266,9 @@ let ``each outcome type shows the web fields`` () =
           "unlockTransition", [ "sceneId"; "x"; "y" ]
           "playSound", [ "soundId" ]
           "performAction", [ "actionId" ]
-          "startMinigame", [ "minigameId" ] ]
+          "startMinigame", [ "minigameId" ]
+          "playMusic", [ "soundId" ]
+          "startCutscene", [ "cutsceneId" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.outcomeTypes.Length)
@@ -335,6 +337,25 @@ let ``new list rows start like the web add buttons`` () =
     Assert.DoesNotContain(dialogue.Id, Defaults.allIds project)
     Assert.NotEqual<string>("dialogue-1", dialogue.Id)
     Assert.True((Vocabulary.newElement "GiftTastes" project (box farmer) []).IsNone)
+
+[<Fact>]
+let ``cutscene steps show the fields of their type and pick music or sounds by it`` () =
+    Assert.Equal<string list>([ "Text"; "Speaker" ], Vocabulary.stepFields CutsceneStepTypes.Say)
+    let hidden = Vocabulary.hiddenProperties "CutsceneStep" CutsceneStepTypes.Move
+    Assert.DoesNotContain("X", hidden)
+    Assert.DoesNotContain("Wait", hidden)
+    Assert.Contains("Text", hidden)
+    Assert.Contains("Outcomes", hidden)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Music, Some "(the game's own music)")), Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Music)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Sound, None)), Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Sound)
+    Assert.Equal(None, Vocabulary.roleFor "CutsceneStep" "SoundId" CutsceneStepTypes.Say)
+    let project = starter ()
+    let step = Vocabulary.newElement "CutsceneStep" project (box project) [] |> Option.get :?> CutsceneStep
+    Assert.Equal(CutsceneStepTypes.Say, step.Type)
+    let music = Vocabulary.outcomeFields EventOutcomeTypes.PlayMusic |> List.exactlyOne
+    Assert.Equal((FieldKind.Reference ReferenceKind.Music, true, Some "(the game's own music)"), (music.Kind, music.Optional, music.Empty))
+    Assert.Equal(FieldKind.Reference ReferenceKind.Cutscene, (Vocabulary.outcomeFields EventOutcomeTypes.StartCutscene |> List.exactlyOne).Kind)
+    Assert.Equal(FieldKind.Reference ReferenceKind.Terrain, (Vocabulary.outcomeFields EventOutcomeTypes.ChangeTile |> List.last).Kind)
 
 // ---- Animation edits ----
 

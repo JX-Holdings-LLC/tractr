@@ -7,6 +7,10 @@
 //! - Music and ambience loops ([`MusicBank`]) render on a thread of their own when the stream
 //!   opens (a few seconds of work); until they are ready the game plays without them. The
 //!   callback loops them in the mixer's two slots and fades between cues.
+//! - A game's own sounds and music arrive decoded with the requests and cues; they are
+//!   resampled to the device's rate on first use and kept ([`ClipCache`]). A sound is
+//!   resampled at once; music on a thread of its own, while what plays keeps playing, and then
+//!   the slot fades over to it. Built-in music stays silent while a music asset plays.
 //! - Device loss (headphones unplugged, a Bluetooth device gone) or a new default device reopens
 //!   the stream on the current default device, retrying with a growing delay;
 //!   [`Audio::maintain`] does that and is called every frame.
@@ -18,9 +22,10 @@
 // Wall-clock time paces device checks and retries here; it never reaches the simulation.
 #![allow(clippy::disallowed_types, clippy::disallowed_methods)]
 
-use crate::audio::{LoopRequest, Mixer, MusicBank, SoundBank, SoundRequest, Voice, LOOP_SLOTS};
+use crate::audio::{resample, ClipCache, LoopRequest, Mixer, MusicBank, SoundBank, SoundRequest, Voice, LOOP_SLOTS};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{DeviceId, ErrorKind, FromSample, SampleFormat, SizedSample, Stream, StreamConfig};
+use farm_runtime::audio::Clip;
 use farm_runtime::music::MusicCue;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender, SyncSender};
@@ -57,8 +62,14 @@ struct Output {
     /// The music loops, once the thread rendering them is done.
     music: Option<MusicBank>,
     music_ready: Receiver<MusicBank>,
-    /// The cue the callback was last told about.
-    sent: Option<MusicCue>,
+    /// The game's sounds and music at the device's rate.
+    clips: ClipCache,
+    /// Music being resampled on threads of their own, and where they send it.
+    preparing: Vec<Clip>,
+    clip_sender: Sender<(Clip, Arc<[f32]>)>,
+    clip_ready: Receiver<(Clip, Arc<[f32]>)>,
+    /// What each loop slot was last told to play.
+    sent: [Option<LoopRequest>; LOOP_SLOTS],
     /// The device the stream plays on (to notice a new default device).
     device: Option<DeviceId>,
     /// Set by the error callback when the stream died.
@@ -166,16 +177,52 @@ fn open() -> Option<Output> {
     let _ = std::thread::Builder::new().name("farm-music".to_owned()).spawn(move || {
         let _ = music_sender.send(MusicBank::new(rate));
     });
+    let (clip_sender, clip_ready) = mpsc::channel();
     Some(Output {
         _stream: stream,
         sender,
         bank,
         music: None,
         music_ready,
-        sent: None,
+        clips: ClipCache::new(rate),
+        preparing: Vec::new(),
+        clip_sender,
+        clip_ready,
+        sent: Default::default(),
         device: device.id().ok(),
         failed,
     })
+}
+
+impl Output {
+    /// The loop of a music asset at `gain`, once it is resampled; `None` while it is being
+    /// resampled on a thread of its own (started here).
+    fn asset_loop(&mut self, clip: &Clip, gain: f32) -> Option<LoopRequest> {
+        let stereo = clip.channels == 2;
+        while let Ok((done, samples)) = self.clip_ready.try_recv() {
+            self.preparing.retain(|pending| *pending != done);
+            self.clips.insert(done, samples);
+        }
+        if let Some(samples) = self.clips.get(clip) {
+            return Some(LoopRequest { samples: Some(samples), stereo, gain });
+        }
+        if clip.sample_rate == self.clips.sample_rate() {
+            // Nothing to resample: the clip's own samples.
+            return Some(LoopRequest { samples: Some(self.clips.prepare(clip, true)), stereo, gain });
+        }
+        if !self.preparing.contains(clip) {
+            let (source, sender, rate) = (clip.clone(), self.clip_sender.clone(), self.clips.sample_rate());
+            let spawned = std::thread::Builder::new().name("farm-music-asset".to_owned()).spawn(move || {
+                let samples = resample(&source, rate, true);
+                let _ = sender.send((source, samples));
+            });
+            if spawned.is_err() {
+                return Some(LoopRequest { samples: Some(self.clips.prepare(clip, true)), stereo, gain });
+            }
+            self.preparing.push(clip.clone());
+        }
+        None
+    }
 }
 
 /// The current default output device.
@@ -195,10 +242,15 @@ impl Audio {
         })
     }
 
-    /// Plays a sound (silently dropped while the device is gone).
-    pub fn play(&self, request: SoundRequest) {
-        if let Some(output) = &self.output {
-            if let Some(voice) = output.bank.voice(&request) {
+    /// Plays a sound: the game's sound asset the request carries, else the built-in preset
+    /// (silently dropped while the device is gone).
+    pub fn play(&mut self, request: SoundRequest) {
+        if let Some(output) = self.output.as_mut() {
+            let voice = match request.clip {
+                Some(_) => output.clips.voice(&request),
+                None => output.bank.voice(&request),
+            };
+            if let Some(voice) = voice {
                 let _ = output.sender.try_send(Command::Sound(voice));
             }
         }
@@ -215,17 +267,30 @@ impl Audio {
         if output.music.is_none() {
             output.music = output.music_ready.try_recv().ok();
         }
-        let Some(music) = &output.music else { return };
-        if output.sent == Some(self.cue) {
-            return;
+        let cue = &self.cue;
+        // A slot whose loop is not ready (the built-in loops still rendering, a music asset being
+        // resampled) keeps playing what it plays; silence is always ready.
+        let bank = output.music.as_ref();
+        let built_in = |name: Option<&str>, gain: f32| match name {
+            None => Some(LoopRequest::default()),
+            Some(name) => bank.map(|bank| LoopRequest { samples: bank.get(name), stereo: false, gain }),
+        };
+        let ambience = built_in(cue.ambience, cue.ambience_gain);
+        let music = match &cue.asset {
+            None => built_in(cue.music, cue.music_gain),
+            Some(asset) => output.asset_loop(&asset.clip, cue.music_gain),
+        };
+        let requests: [Option<LoopRequest>; LOOP_SLOTS] = [music, ambience];
+        for (slot, request) in requests.into_iter().enumerate() {
+            let Some(request) = request else { continue };
+            if output.sent[slot].as_ref().is_some_and(|sent| sent.same(&request)) {
+                continue;
+            }
+            // A full queue: try again next frame.
+            if output.sender.try_send(Command::Loop(slot, request.clone())).is_ok() {
+                output.sent[slot] = Some(request);
+            }
         }
-        let slots: [LoopRequest; LOOP_SLOTS] = music.slots(&self.cue);
-        let mut sent = true;
-        for (slot, request) in slots.into_iter().enumerate() {
-            sent &= output.sender.try_send(Command::Loop(slot, request)).is_ok();
-        }
-        // A full queue: try again next frame.
-        output.sent = sent.then_some(self.cue);
     }
 
     /// Whether a stream is open now.
@@ -297,7 +362,7 @@ impl SpeakerThread {
                 loop {
                     match receiver.recv_timeout(Duration::from_millis(250)) {
                         Ok(SpeakerCommand::Sound(request)) => {
-                            if let Some(audio) = &audio {
+                            if let Some(audio) = audio.as_mut() {
                                 audio.play(request);
                             }
                         }

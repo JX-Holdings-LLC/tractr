@@ -129,7 +129,8 @@ default, so a partial or older file loads; an unreadable file is ignored.
   rainy weather, no ambience in indoor scenes, and day music on the title
   screens; the Music volume sets both, and the game fades between loops.
   The loops render on a thread of their own when the device opens; the web
-  demo renders them with `musicSamples` and loops them with WebAudio. Sound
+  demo renders them with `musicSamples` and loops them with WebAudio. A game
+  may bring its own sounds and music ([below](#sound-and-music)). Sound
   follows the default output device:
   when it goes away (headphones unplugged) or another one becomes the default,
   the game reopens the stream on the current default device.
@@ -145,6 +146,58 @@ default, so a partial or older file loads; an unreadable file is ignored.
 
 The first run takes fullscreen and integer scaling from the cartridge's
 `GameInfo` (`window.fullscreen`, `pixelScale`).
+
+## Sound and music
+
+The built-in sounds and music above play in every game. A game can bring its
+own as well: `sound` and `music` assets (Ogg Vorbis or WAV) in the project,
+shipped in the cartridge's asset table like its images.
+
+- **Decoding.** The player decodes each sound and music asset once, when the
+  game loads (`farm_player::audio_assets`, with the pure-Rust lewton and hound
+  decoders), at the file's own sample rate. WAV may be 8- to 32-bit PCM or
+  32-bit float; mono and stereo stay as they are, more channels are mixed
+  down to mono. A file is at most 10 minutes long. The format comes from the
+  file's first bytes, not its MIME type. Decoded audio stays in memory, about
+  21 MB a minute of stereo at 44.1 kHz.
+- **Sounds.** `playSound(id)` plays the sound asset `id` once, mixed with
+  everything else at the sound-effects volume. Without such an asset the
+  built-in preset of that name plays, as before. An asset whose id is a
+  built-in cue's name (`coin`, `harvest`, `ui`…) replaces that cue wherever
+  the game plays it.
+- **Music.** The music is chosen every frame
+  (`farm_runtime::music::chosen_music`); the first that applies wins:
+  1. the music an event or cutscene chose (`playMusic`), until the player
+     changes scene through a transition or a warp to another scene (an empty
+     id goes back to the place's music);
+  2. today's festival's music;
+  3. the weather's music, outdoors only (not in an indoor scene);
+  4. the scene's music;
+  5. the season's music;
+  6. none of them: the built-in day and night music.
+
+  The chosen asset loops at the Music volume, and the game crossfades
+  (1.2 seconds) when the choice changes. The built-in music is silent while
+  an asset plays; the ambience (birds, crickets, rain) plays either way. The
+  title screens keep the built-in day music.
+- **Fallbacks.** An asset that is missing, has the other type (a `sound`
+  named as music, or the reverse), or does not decode (not Ogg Vorbis or WAV,
+  broken, too long) is left out when the game loads
+  (`Player::audio_assets().failed()` lists it with the reason), and the
+  built-in sound or music plays in its place. Audio never stops the game.
+- **Playback.** A `SoundRequest` carries its sound asset's decoded `Clip`,
+  and a `MusicCue` its music asset (`asset`, with the built-in `music` as the
+  fallback), so a host needs nothing else. The desktop game and the editor's
+  Play Mode (`speaker`) resample a clip to the device's rate the first time
+  it plays (cubic interpolation) and keep it while the device stays open:
+  a sound at once, music on a thread of its own while the music before it
+  keeps playing. The web demo plays them too: a frame names them
+  (`info.sounds[].asset`, `info.music.asset`), the page fetches the decoded
+  samples with `Player.audioClip(id)` and WebAudio resamples them
+  ([crates/farm-wasm/README.md](../crates/farm-wasm/README.md#sound)).
+
+Like the built-in sounds, none of this reaches the simulation: the state,
+its hash and replays are the same with or without sound.
 
 ## Saves
 
@@ -416,7 +469,12 @@ about 4.4 MB to the Linux template (13.4 → 17.8 MB stripped; 5.5 → 7.3 MB gz
   running the right commands, disabled states, wrapping, scaling.
 - `crates/farm-player/tests/player.rs`: title → new game → walk → sleep →
   autosave → quit to title → continue (same state hash), slot previews,
-  settings round trip, pause, embedded mode, plugins, a minigame, a gamepad.
+  settings round trip, pause, embedded mode, plugins, a minigame, a gamepad,
+  the game's own sounds and music and their fallbacks.
+- `crates/farm-player/src/audio.rs`, `audio_assets.rs`: decoding (Ogg Vorbis
+  from `fixtures/audio/tone.ogg`, WAV), refused files, resampling, stereo
+  mixing and the clip cache; `farm_runtime::music`'s tests cover the music's
+  order of precedence.
 - `crates/farm-player/tests/screenshots.rs`: goldens of the title screen,
   settings, gameplay HUD, dialogue and shop at 1280×800 and 1920×1080, stored
   at half size in `fixtures/player/`. Bless with `FARM_PLAYER_BLESS=1`; write

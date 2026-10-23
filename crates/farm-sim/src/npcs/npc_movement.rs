@@ -130,8 +130,13 @@ pub fn advance_npcs(ctx: &EngineContext, state: &mut GameState, minutes: u32) {
 
     // Storms keep scheduled NPCs home (M4b).
     let stay_inside = weather::current_weather(ctx, state).is_some_and(|w| w.npcs_stay_inside);
+    // A cutscene directs its actors: their schedules and patterns wait for it to end (M2).
+    let directed = crate::cutscenes::directed_npcs(ctx, state);
 
     for def in movers {
+        if directed.contains(&def.id) {
+            continue;
+        }
         let Some(npc) = state.npcs.get(&def.id).cloned() else {
             continue;
         };

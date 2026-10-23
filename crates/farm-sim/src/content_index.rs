@@ -10,9 +10,11 @@
 //! call [`crate::EngineContext::reindex`] afterwards.
 
 use crate::schema::{
-    ActionDef, AnimalSpeciesDefinition, Dialogue, GameContent, Item, MachineTypeDefinition, MinigameDef,
-    NodeTypeDefinition, Npc, Quest, RecipeDefinition, Scene, ShopDefinition,
+    ActionDef, AnimalSpeciesDefinition, Dialogue, GameContent, Item, ItemCategoryDefinition, MachineTypeDefinition,
+    MinigameDef, NodeTypeDefinition, Npc, Quest, RecipeDefinition, Scene, ShopDefinition, TerrainDefinition,
+    ToolDefinition,
 };
+use crate::vocabulary;
 use indexmap::IndexMap;
 
 /// Positions of the first definition of each id in one content list.
@@ -61,6 +63,12 @@ pub struct ContentIndex {
     pub actions: IdTable,
     pub minigames: IdTable,
     pub scenes: IdTable,
+    /// Over [`vocabulary::terrains`].
+    pub terrains: IdTable,
+    /// Over [`vocabulary::tools`].
+    pub tools: IdTable,
+    /// Over [`vocabulary::item_categories`].
+    pub item_categories: IdTable,
 }
 
 impl ContentIndex {
@@ -79,6 +87,9 @@ impl ContentIndex {
             actions: IdTable::build(&content.actions, action_id),
             minigames: IdTable::build(&content.minigames, minigame_id),
             scenes: IdTable::build(&content.scenes, scene_id),
+            terrains: IdTable::build(vocabulary::terrains(content), terrain_id),
+            tools: IdTable::build(vocabulary::tools(content), tool_id),
+            item_categories: IdTable::build(vocabulary::item_categories(content), item_category_id),
         }
     }
 }
@@ -118,6 +129,15 @@ pub(crate) fn minigame_id(def: &MinigameDef) -> &str {
     &def.id
 }
 pub(crate) fn scene_id(def: &Scene) -> &str {
+    &def.id
+}
+pub(crate) fn terrain_id(def: &TerrainDefinition) -> &str {
+    &def.id
+}
+pub(crate) fn tool_id(def: &ToolDefinition) -> &str {
+    &def.id
+}
+pub(crate) fn item_category_id(def: &ItemCategoryDefinition) -> &str {
     &def.id
 }
 

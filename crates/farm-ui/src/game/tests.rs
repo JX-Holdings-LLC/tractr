@@ -571,3 +571,64 @@ fn a_pack_minigame_draws_its_own_frame_scaled_into_the_window() {
     assert!(fixture.ui.focused().is_none());
     assert_eq!(command(&fixture.click(WidgetId::new("minigame-give-up"))), Some(&Command::CancelMinigame));
 }
+
+#[test]
+fn the_pointer_over_a_pack_minigame_reaches_it_in_canvas_units() {
+    use crate::input::UiInput;
+    use farm_runtime::canvas::{CanvasPointer, MinigameCanvas, CANVAS_WIDTH};
+    let mut fixture = Fixture::starter();
+    fixture.ctx.content.minigames.push(farm_sim::schema::MinigameDef {
+        id: "glow:catch".into(),
+        name: "Lantern Catch".into(),
+        kind: "glow:lantern-catch".into(),
+        ..Default::default()
+    });
+    fixture.state.minigame = Some(MinigameSession { minigame_id: "glow:catch".into(), ..MinigameSession::default() });
+    let mut view = farm_runtime::host::HostedMinigame::mount(None, 0.5).unwrap().view();
+    view.kind = "glow:lantern-catch".into();
+    view.canvas = Some(MinigameCanvas { pack_id: "glow".into(), commands: Vec::new() });
+    fixture.minigame = Some(view);
+    fixture.idle();
+    fixture.idle();
+    let frame = fixture.ui.last_rect(WidgetId::new("minigame-canvas")).expect("the canvas takes the pointer");
+    let (scale, ui_scale) = (frame.width / CANVAS_WIDTH, fixture.scale);
+    let physical = |x: f32, y: f32| Some(((frame.x + x * scale) * ui_scale, (frame.y + y * scale) * ui_scale));
+    let pointers = |actions: Vec<GameAction>| -> Vec<CanvasPointer> {
+        actions
+            .into_iter()
+            .filter_map(|action| match action {
+                GameAction::MinigamePointer(pointer) => Some(pointer),
+                _ => None,
+            })
+            .collect()
+    };
+    let near = |pointer: &CanvasPointer, x: f32, y: f32| (pointer.x - x).abs() < 0.01 && (pointer.y - y).abs() < 0.01;
+    // Hovering, pressing, dragging off the canvas (held: it stays on the edge) and letting go.
+    let hover = pointers(fixture.frame(UiInput { pointer: physical(100.0, 50.0), ..UiInput::default() }));
+    assert!(matches!(&hover[..], [p] if near(p, 100.0, 50.0) && !p.down && !p.pressed && !p.released), "{hover:?}");
+    let press =
+        UiInput { pointer: physical(200.0, 120.0), pointer_pressed: true, pointer_down: true, ..UiInput::default() };
+    let pressed = pointers(fixture.frame(press));
+    assert!(matches!(&pressed[..], [p] if near(p, 200.0, 120.0) && p.down && p.pressed && !p.released), "{pressed:?}");
+    let drag = UiInput { pointer: physical(-50.0, 120.0), pointer_down: true, ..UiInput::default() };
+    let dragged = pointers(fixture.frame(drag));
+    assert!(matches!(&dragged[..], [p] if near(p, 0.0, 120.0) && p.down && !p.pressed), "{dragged:?}");
+    let up = UiInput { pointer: physical(-50.0, 120.0), pointer_released: true, ..UiInput::default() };
+    let released = pointers(fixture.frame(up));
+    assert!(matches!(&released[..], [p] if !p.down && p.released), "{released:?}");
+    // A tap within one frame is a press and a release.
+    let tap =
+        UiInput { pointer: physical(10.0, 20.0), pointer_pressed: true, pointer_released: true, ..UiInput::default() };
+    let tapped = pointers(fixture.frame(tap));
+    assert!(matches!(&tapped[..], [p] if near(p, 10.0, 20.0) && p.pressed && p.released && !p.down), "{tapped:?}");
+    // Off the canvas, nothing is reported: not hovering, not a press, not its release.
+    let outside = physical(-50.0, 120.0);
+    assert!(pointers(fixture.frame(UiInput { pointer: outside, ..UiInput::default() })).is_empty());
+    let press = UiInput { pointer: outside, pointer_pressed: true, pointer_down: true, ..UiInput::default() };
+    assert!(pointers(fixture.frame(press)).is_empty());
+    let drag = UiInput { pointer: physical(100.0, 50.0), pointer_down: true, ..UiInput::default() };
+    let dragged_in = pointers(fixture.frame(drag));
+    assert!(matches!(&dragged_in[..], [p] if !p.down && !p.pressed), "hovering only: {dragged_in:?}");
+    let up = UiInput { pointer: physical(100.0, 50.0), pointer_released: true, ..UiInput::default() };
+    assert!(pointers(fixture.frame(up)).iter().all(|p| !p.released && !p.pressed));
+}

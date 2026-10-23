@@ -12,7 +12,7 @@ module internal EditScenes =
 
     let private paintCells (sceneId: string) (layer: TileLayer) (cells: (int * int) list) (tileType: string) (project: GameProject) =
         let visual = brushVisual project tileType
-        let next = Proj.mapScene sceneId (Proj.mapCells cells (TileRules.paint layer tileType visual)) project
+        let next = Proj.mapScene sceneId (Proj.mapCells cells (TileRules.paintIn (ContentCompiler.terrains project) layer tileType visual)) project
         if LanguagePrimitives.PhysicalEquality next project then project
         elif next.SelectedTileType = tileType then next
         else { next with SelectedTileType = tileType }
@@ -107,7 +107,7 @@ module internal EditScenes =
     /// Web eyedropper (`case 'eyedropper'`): the tile's type and the art on that type's own layer.
     let brushAt (project: GameProject) (sceneId: string) (x: int) (y: int) : (string * VisualRef option) option =
         match Proj.tryScene sceneId project |> Option.bind (fun scene -> Proj.tryTile scene x y) with
-        | Some tile -> Some(tile.Type, TileRules.visualOf (TileRules.layerOf tile.Type) tile)
+        | Some tile -> Some(tile.Type, TileRules.visualOf (TileRules.layerIn (ContentCompiler.terrains project) tile.Type) tile)
         | None -> None
 
     /// EditorPanel "Clear Items".
@@ -125,8 +125,9 @@ module internal EditScenes =
 
     /// SceneManager `fillScene`: every tile takes the type (through the layer rules), losing crops and items.
     let fillScene (sceneId: string) (tileType: string) (project: GameProject) =
+        let terrains = ContentCompiler.terrains project
         Proj.mapScene sceneId (Proj.mapTiles (fun tile ->
-            { AuthoringTiles.SetTileLayer(tile, tileType) with Crop = None; Item = None })) project
+            { AuthoringTiles.SetTileLayerIn(terrains, tile, tileType, None) with Crop = None; Item = None })) project
 
     /// SceneManager `createScene` / `duplicateScene` (the scene is built by `Defaults`); an existing id is a no-op.
     let addScene (scene: Scene) (project: GameProject) =
@@ -150,6 +151,20 @@ module internal EditScenes =
     let setSceneIndoor (sceneId: string) (indoor: bool) (project: GameProject) =
         let value = if indoor then Some true else None
         Proj.mapScene sceneId (fun scene -> if scene.Indoor = value then scene else { scene with Indoor = value }) project
+
+    /// The scene's surroundings (M1, M2), stored the way the schema leaves them out when unused:
+    /// `dark` only when true, tags trimmed without blanks or repeats, no empty music id, and no
+    /// atmosphere look without keyframes or a foliage tint.
+    let setSceneEnvironment (sceneId: string) (dark: bool) (temperature: float option) (tags: string list) (music: string option)
+                            (atmosphere: AtmosphereLook option) (project: GameProject) =
+        let tags = tags |> List.map (fun tag -> tag.Trim()) |> List.filter (fun tag -> tag.Length > 0) |> List.distinct
+        let music = music |> Option.map (fun id -> id.Trim()) |> Option.filter (fun id -> id.Length > 0)
+        let atmosphere = atmosphere |> Option.filter (fun look -> not look.Daylight.IsEmpty || look.FoliageTint.IsSome)
+        let dark = if dark then Some true else None
+        let tags = if tags.IsEmpty then None else Some tags
+        Proj.mapScene sceneId (fun scene ->
+            if scene.Dark = dark && scene.Temperature = temperature && scene.Tags = tags && scene.Music = music && scene.Atmosphere = atmosphere then scene
+            else { scene with Dark = dark; Temperature = temperature; Tags = tags; Music = music; Atmosphere = atmosphere }) project
 
     /// The largest scene side (the game cuts bigger scenes when it loads them).
     [<Literal>]

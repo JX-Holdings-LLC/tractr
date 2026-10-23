@@ -5,28 +5,26 @@
 //! 2. soft drop shadows under entities and objects (built-in art only);
 //! 3. y-sorted objects and entities (nodes, machines, crops, items, NPCs, animals, the player)
 //!    so tall things overlap whoever stands behind them; ties keep insertion order;
-//! 4. atmosphere: day/night tint (modulate), seasonal foliage, rain or snow;
+//! 4. atmosphere: day/night tint (modulate), seasonal foliage, the weather overlay;
 //! 5. floating pops and the Edit Mode grid.
 //!
 //! Art per layer or entity: creator-bound sprite or image → built-in art → the original colored
-//! shapes. Coordinates are world pixels at 1×; hosts scale when rasterizing. Geometry is computed
+//! shapes. Tile colours and which ground is farmable come from the snapshot's terrains (M1), the
+//! built-in palette for anything they don't name. Coordinates are world pixels at 1×; hosts scale when rasterizing. Geometry is computed
 //! in `f64` and converted to `f32` exactly where the C# renderer converts to `float`.
 
-use crate::atmosphere::{self, WeatherOverlay};
+use crate::atmosphere::{self, WeatherLook, WeatherOverlay};
 use crate::builtin_art::{BuiltinArt, BuiltinArtEntry};
 use crate::canvas2d::{self, entity_pixel_origin};
 use crate::css_color::{self, Color};
 use crate::draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
 use crate::images::{ImageId, ImageStore};
 use crate::num::{cs_clamp, cs_compare, cs_max, cs_min, round_half_even, to_byte, to_int};
-use crate::snapshot::{SnapshotEntity, SnapshotSprite, SnapshotTile, WorldSnapshot};
+use crate::snapshot::{SnapshotEmote, SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot};
 use std::sync::Arc;
 
 const BACKGROUND_TINT: Color = Color::rgba(0x1a, 0x1a, 0x2e, 0x10);
 const SHADOW_COLOR: Color = Color::rgba(0, 0, 0, 0x48);
-const RAIN_TINT: Color = Color::rgb(0xC8, 0xD2, 0xE6);
-const RAIN_DROP: Color = Color::rgba(0xD8, 0xEC, 0xFF, 0x9A);
-const SNOW_FLAKE: Color = Color::rgba(0xFF, 0xFF, 0xFF, 0xDC);
 
 /// Builds the draw list of a world frame. `art` is the built-in pack for anything the project
 /// binds no art to (`None` draws the original colored shapes only); `images` decodes and caches
@@ -50,6 +48,24 @@ pub fn build_world_into(
     builder.world();
 }
 
+/// The glyph and colour of a cutscene emote (`farm_sim::schema::emotes::ALL`); a symbol the
+/// font lacks falls back to plain text, an unknown emote to an ellipsis.
+fn emote_glyph(emote: &str) -> (&'static str, &'static str) {
+    let (glyph, fallback, color) = match emote {
+        "exclaim" => ("!", "!", "#d64545"),
+        "question" => ("?", "?", "#3b6fd6"),
+        "heart" => ("\u{2665}", "<3", "#e0457b"),
+        "music" => ("\u{266a}", "~", "#7a4fd6"),
+        "anger" => ("\u{203c}", "!!", "#b02020"),
+        "sweat" => ("\u{2026}", "...", "#3f9fd0"),
+        "sleep" => ("Zz", "Zz", "#5a6b8c"),
+        "idea" => ("\u{2605}", "*", "#e0a400"),
+        _ => ("\u{2026}", "...", "#555555"),
+    };
+    let glyph = if crate::text::font(FontId::Bold).covers(glyph) { glyph } else { fallback };
+    (glyph, color)
+}
+
 /// Trees and weeds take the seasonal foliage tint; rocks and ores don't.
 fn is_foliage(entry: Option<&BuiltinArtEntry>) -> bool {
     entry.is_some_and(|entry| entry.name.starts_with("node-tree") || entry.name.starts_with("node-weeds"))
@@ -61,6 +77,19 @@ fn rect(x: f64, y: f64, width: f64, height: f64) -> Rect {
 
 fn parse(css: &str) -> Color {
     css_color::parse(Some(css))
+}
+
+/// A snapshot terrain with its colour parsed once per frame (`None`: the built-in colour).
+struct Terrain<'a> {
+    id: &'a str,
+    color: Option<Color>,
+    plantable: bool,
+}
+
+impl<'a> Terrain<'a> {
+    fn new(terrain: &'a SnapshotTerrain) -> Self {
+        Self { id: &terrain.id, color: css_color::try_parse(&terrain.color), plantable: terrain.plantable }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,6 +128,8 @@ struct Builder<'a, 'l> {
     season: Option<&'a str>,
     foliage_tint: Option<Color>,
     art_scale: f64,
+    /// The snapshot's terrains; `None`: the built-in palette.
+    terrains: Option<Vec<Terrain<'a>>>,
 }
 
 impl<'a, 'l> Builder<'a, 'l> {
@@ -109,6 +140,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         images: &'l mut ImageStore,
     ) -> Self {
         let season = snapshot.atmosphere.as_ref().and_then(|a| a.season.as_deref());
+        let foliage = snapshot.atmosphere.as_ref().and_then(|a| a.foliage_tint.as_deref());
         Self {
             list,
             snapshot,
@@ -121,8 +153,30 @@ impl<'a, 'l> Builder<'a, 'l> {
             pitch: snapshot.pitch(),
             tick: snapshot.tick,
             season,
-            foliage_tint: atmosphere::foliage_tint(season),
+            foliage_tint: atmosphere::foliage_tint_in(season, foliage),
             art_scale: art.map_or(1.0, |art| snapshot.tile_size / f64::from(art.tile_size())),
+            terrains: snapshot.terrains.as_ref().map(|terrains| terrains.iter().map(Terrain::new).collect()),
+        }
+    }
+
+    fn terrain(&self, id: &str) -> Option<&Terrain<'a>> {
+        self.terrains.as_ref()?.iter().find(|terrain| terrain.id == id)
+    }
+
+    /// The colour of a terrain: its definition's, else the built-in one (`fallback`'s for an id
+    /// the built-in palette doesn't know either).
+    fn terrain_color(&self, id: &str, fallback: &str) -> Color {
+        match self.terrain(id).and_then(|terrain| terrain.color) {
+            Some(color) => color,
+            None => canvas2d::tile_color(Some(id), fallback),
+        }
+    }
+
+    /// Whether a terrain is farmable ground: its definition says so; without terrains, `soil`.
+    fn plantable(&self, id: &str) -> bool {
+        match &self.terrains {
+            Some(_) => self.terrain(id).is_some_and(|terrain| terrain.plantable),
+            None => id == "soil",
         }
     }
 
@@ -292,8 +346,9 @@ impl<'a, 'l> Builder<'a, 'l> {
             y += 1;
         }
         for npc in &snapshot.npcs {
-            let px = entity_pixel_origin(npc.x, padding, pitch);
-            let py = entity_pixel_origin(npc.y, padding, pitch);
+            // A cutscene walks NPCs between tiles (pixel override); otherwise they stand on one.
+            let px = npc.pixel_x.unwrap_or_else(|| entity_pixel_origin(npc.x, padding, pitch));
+            let py = npc.pixel_y.unwrap_or_else(|| entity_pixel_origin(npc.y, padding, pitch));
             let seq = drawables.len();
             drawables.push(Drawable {
                 sort_y: py + ts,
@@ -365,13 +420,20 @@ impl<'a, 'l> Builder<'a, 'l> {
         // ---- Atmosphere -------------------------------------------------------------------------
         if let Some(atmosphere) = &snapshot.atmosphere {
             let world_rect = Rect::new(0.0, 0.0, world_width as f32, world_height as f32);
-            let overlay =
-                atmosphere::weather_overlay(atmosphere.weather_id.as_deref(), atmosphere.weather_overlay.as_deref());
-            let mut tint = atmosphere::daylight_tint(atmosphere.time_minutes);
-            if overlay == Some(WeatherOverlay::Rain) {
+            let overlay = atmosphere::weather_look(
+                atmosphere.weather_id.as_deref(),
+                atmosphere.weather_overlay.as_deref(),
+                atmosphere.overlay.as_ref(),
+            );
+            let mut tint = atmosphere::daylight_tint_in(
+                atmosphere.time_minutes,
+                atmosphere.day_minutes.unwrap_or(atmosphere::DAY_MINUTES),
+                atmosphere.daylight.as_deref().unwrap_or_default(),
+            );
+            if let Some(weather) = overlay.and_then(|overlay| overlay.tint) {
                 // Integer math, like the C# byte arithmetic.
                 let mix = |a: u8, b: u8| (u32::from(a) * u32::from(b) / 255) as u8;
-                tint = Color::rgb(mix(tint.r, RAIN_TINT.r), mix(tint.g, RAIN_TINT.g), mix(tint.b, RAIN_TINT.b));
+                tint = Color::rgb(mix(tint.r, weather.r), mix(tint.g, weather.g), mix(tint.b, weather.b));
             }
             if !atmosphere::is_neutral(tint) {
                 // Modulate multiplies color (and alpha) so the padding and letterbox stay untouched.
@@ -380,6 +442,18 @@ impl<'a, 'l> Builder<'a, 'l> {
             if let Some(overlay) = overlay {
                 let (origin_x, origin_y) = camera.map_or((0.0, 0.0), |camera| (camera.x, camera.y));
                 self.weather(overlay, tick, origin_x, origin_y, view_width, view_height, world_rect);
+            }
+        }
+
+        // Cutscene emotes (M2), above the atmosphere like the pops: a bubble over the head.
+        if let Some(emotes) = &snapshot.emotes {
+            for emote in emotes {
+                let (cx, top) = if emote.player {
+                    (player_x + (ts / 2.0), player_y)
+                } else {
+                    (padding + (emote.x * pitch), padding + ((emote.y - 0.5) * pitch))
+                };
+                self.emote_bubble(emote, cx, top);
             }
         }
 
@@ -434,10 +508,10 @@ impl<'a, 'l> Builder<'a, 'l> {
                 let py = padding + (f64::from(y) * pitch);
                 let tile_rect = rect(px, py, ts, ts);
 
-                self.fill_rect(tile_rect, canvas2d::tile_color(Some(&tile.background), "grass"));
+                self.fill_rect(tile_rect, self.terrain_color(&tile.background, "grass"));
                 if !self.draw_sprite(tile.art_layer(0), px, py, ts, ts, 1.0) {
                     if let Some(art) = art {
-                        if tile.background == "soil" {
+                        if self.plantable(&tile.background) {
                             // Farmable soil is drawn tilled; wet after watering, speckled when fertilized.
                             self.draw_builtin(art.soil(tile.watered, x, y), px, py, 1.0, false, true);
                             if tile.fertilized {
@@ -462,7 +536,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                             self.draw_builtin(art.tile(Some(overlay), None, x, y, tick), px, py, 1.0, false, true)
                         })
                     {
-                        self.fill_rect(tile_rect, canvas2d::tile_color(Some(overlay), "path").with_opacity(0.7));
+                        self.fill_rect(tile_rect, self.terrain_color(overlay, "path").with_opacity(0.7));
                     }
                 }
 
@@ -472,7 +546,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                             self.draw_builtin(art.tile(Some(object), None, x, y, tick), px, py, 1.0, false, true)
                         })
                     {
-                        self.fill_rect(tile_rect, canvas2d::tile_color(Some(object), "wall"));
+                        self.fill_rect(tile_rect, self.terrain_color(object, "wall"));
                     }
                 }
 
@@ -644,6 +718,46 @@ impl<'a, 'l> Builder<'a, 'l> {
         });
     }
 
+    /// A cutscene emote: a rounded bubble with the emote's glyph, centred on `cx` above a
+    /// character whose tile starts at `top` (built-in characters stand half a tile taller). It
+    /// pops in over the first eighth of its time and fades over the last.
+    fn emote_bubble(&mut self, emote: &SnapshotEmote, cx: f64, top: f64) {
+        let ts = self.ts;
+        let progress = cs_clamp(emote.progress, 0.0, 1.0);
+        let scale = 0.6 + (0.4 * cs_min(1.0, progress * 8.0));
+        let opacity = cs_min(1.0, (1.0 - progress) * 8.0);
+        let (glyph, color) = emote_glyph(&emote.emote);
+        let size = (ts * 0.62).floor() * scale;
+        let bottom = top - (ts * 0.55);
+        let bubble = rect(cx - (size / 2.0), bottom - size, size, size);
+        let radius = (size * 0.3) as f32;
+        self.push(DrawCmd::FillCircle {
+            cx: cx as f32,
+            cy: (bottom + (ts * 0.04)) as f32,
+            radius: (ts * 0.06 * scale) as f32,
+            color: parse("#ffffff").with_opacity(opacity),
+        });
+        self.push(DrawCmd::FillRoundRect { rect: bubble, radius, color: parse("#ffffff").with_opacity(opacity) });
+        self.push(DrawCmd::StrokeRoundRect {
+            rect: bubble,
+            radius,
+            color: parse("#00000070").with_opacity(opacity),
+            width: 1.0,
+        });
+        let text_size = (size * 0.7) as f32;
+        self.push(DrawCmd::Text {
+            text: glyph.to_owned(),
+            x: cx as f32,
+            // Baseline: the glyph's cap height centred in the bubble.
+            y: ((bottom - (size / 2.0)) + (f64::from(text_size) * 0.36)) as f32,
+            font: FontId::Bold,
+            size: text_size,
+            color: parse(color).with_opacity(opacity),
+            stroke: None,
+            align: TextAlign::Center,
+        });
+    }
+
     fn player(&mut self, d: &Drawable<'_>) {
         let Some(player) = d.entity else { return };
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
@@ -675,12 +789,13 @@ impl<'a, 'l> Builder<'a, 'l> {
         });
     }
 
-    /// Rain streaks or snow flakes: every particle's position is a pure function of the tick and
-    /// its index (hash), so frames are reproducible and nothing is stored.
+    /// Rain streaks, snow flakes or dust specks: every particle's position is a pure function of
+    /// the tick and its index (hash), so frames are reproducible and nothing is stored. The
+    /// look's density scales the particle count and its speed the clock they move by.
     #[allow(clippy::too_many_arguments)]
     fn weather(
         &mut self,
-        overlay: WeatherOverlay,
+        overlay: WeatherLook,
         tick: f64,
         origin_x: f64,
         origin_y: f64,
@@ -688,13 +803,23 @@ impl<'a, 'l> Builder<'a, 'l> {
         view_height: f64,
         world_rect: Rect,
     ) {
+        if overlay.style == WeatherOverlay::TintOnly {
+            return;
+        }
         let count = atmosphere::particle_count(view_width, view_height);
-        let t = cs_max(0.0, tick);
+        // Built-in density and speed (1) leave the count and the clock exactly as they were.
+        let count = if overlay.density == 1.0 {
+            count
+        } else {
+            to_int(cs_clamp(round_half_even(f64::from(count) * overlay.density), 0.0, 4800.0))
+        };
+        let t = cs_max(0.0, tick) * overlay.speed;
+        let color = overlay.color;
         self.push(DrawCmd::Save);
         self.push(DrawCmd::ClipRect { rect: world_rect });
         for i in 0..count.max(0) as u32 {
             let unit = |salt: u32| atmosphere::unit(i, salt);
-            match overlay {
+            match overlay.style {
                 WeatherOverlay::Rain => {
                     let speed = 9.0 + (unit(3) * 4.0);
                     let x = origin_x + ((((unit(1) * view_width) - (t * 2.5)) % view_width + view_width) % view_width);
@@ -704,7 +829,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                         y0: y as f32,
                         x1: (x - 2.0) as f32,
                         y1: (y - 9.0) as f32,
-                        color: RAIN_DROP,
+                        color,
                         width: 1.0,
                     });
                 }
@@ -719,9 +844,22 @@ impl<'a, 'l> Builder<'a, 'l> {
                         cx: x as f32,
                         cy: y as f32,
                         radius: (1.0 + (unit(5) * 1.2)) as f32,
-                        color: SNOW_FLAKE,
+                        color,
                     });
                 }
+                WeatherOverlay::Dust => {
+                    // Blown sideways, bobbing a little, sinking slowly.
+                    let drift = 1.2 + (unit(3) * 1.6);
+                    #[allow(clippy::approx_constant)]
+                    let bob = ((t / 18.0) + (unit(4) * 6.283)).sin() * 3.0;
+                    let x =
+                        origin_x + ((((unit(1) * view_width) + (t * drift)) % view_width + view_width) % view_width);
+                    let y = origin_y
+                        + ((((unit(2) * view_height) + (t * 0.25) + bob) % view_height + view_height) % view_height);
+                    let size = (1.0 + (unit(5) * 1.5)).floor();
+                    self.fill_rect(rect(x, y, size, size), color);
+                }
+                WeatherOverlay::TintOnly => {}
             }
         }
         self.push(DrawCmd::Restore);

@@ -41,9 +41,14 @@ fn non_empty(value: Option<&str>) -> Option<&str> {
     value.filter(|s| !s.is_empty())
 }
 
-/// Absolute game time since day 1, 00:00, in micro-minutes.
+/// Absolute game time since day 1, 00:00, in micro-minutes (24-hour days).
 pub fn absolute_minute(state: &GameState) -> i64 {
-    (i64::from(state.clock.day) - 1) * i64::from(units::MINUTES_PER_DAY) * i64::from(units::MINUTE)
+    absolute_minute_in(units::MINUTES_PER_DAY, state)
+}
+
+/// [`absolute_minute`] in days of `day_minutes` minutes (M1).
+pub fn absolute_minute_in(day_minutes: u32, state: &GameState) -> i64 {
+    (i64::from(state.clock.day) - 1) * i64::from(day_minutes) * i64::from(units::MINUTE)
         + i64::from(state.clock.time_minutes)
 }
 
@@ -298,7 +303,7 @@ pub fn handle_place_machine(ctx: &EngineContext, state: &mut GameState, machine_
 /// Tiles a placed machine would make unusable, because the player has to walk onto them or
 /// interact with them: a door's tile, a door's arrival tile, the mine entrance, and the exit tile
 /// of a mine floor.
-fn keeps_clear(ctx: &EngineContext, state: &GameState, scene_id: &str, x: i32, y: i32) -> bool {
+pub(crate) fn keeps_clear(ctx: &EngineContext, state: &GameState, scene_id: &str, x: i32, y: i32) -> bool {
     let world = state.world.scenes.iter();
     // Pack scenes join the world on first visit; their doors count already.
     let unvisited = ctx.content.scenes.iter().filter(|scene| world_movement::find_scene(state, &scene.id).is_none());
@@ -397,7 +402,8 @@ pub fn handle_machine_load(ctx: &EngineContext, state: &mut GameState, recipe_id
     let Some(scene_index) = state.world.scenes.iter().position(|s| s.id == scene_id) else {
         return Vec::new();
     };
-    let completes_at_minute = absolute_minute(state) + i64::from(recipe.processing_minutes) * i64::from(units::MINUTE);
+    let completes_at_minute = absolute_minute_in(ctx.content.settings.time.minutes_per_day(), state)
+        + i64::from(recipe.processing_minutes) * i64::from(units::MINUTE);
     if let Some(machine) = state.world.scenes[scene_index].tile_mut(x, y).and_then(|tile| tile.machine.as_mut()) {
         machine.processing = Some(MachineProcessing { recipe_id: recipe_id.to_owned(), completes_at_minute });
     }
@@ -411,7 +417,7 @@ pub fn handle_machine_load(ctx: &EngineContext, state: &mut GameState, recipe_id
 ///
 /// C# `SettleMachines` returned a new state; here it settles in place.
 pub fn settle_machines(ctx: &EngineContext, state: &mut GameState) {
-    let now = absolute_minute(state);
+    let now = absolute_minute_in(ctx.content.settings.time.minutes_per_day(), state);
 
     for scene in &mut state.world.scenes {
         for row in &mut scene.tiles {

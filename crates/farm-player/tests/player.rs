@@ -637,6 +637,100 @@ fn music_follows_the_screen_the_clock_the_weather_and_the_volume() {
     assert_eq!(player.music_cue(), farm_player::MusicCue::default());
 }
 
+/// A `data:` URL of a short mono 16-bit WAV file.
+fn wav_data_url(rate: u32) -> String {
+    let spec =
+        hound::WavSpec { channels: 1, sample_rate: rate, bits_per_sample: 16, sample_format: hound::SampleFormat::Int };
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    let mut writer = hound::WavWriter::new(&mut bytes, spec).unwrap();
+    for i in 0..rate / 10 {
+        writer.write_sample(((i % 50) as i16 - 25) * 400).unwrap();
+    }
+    writer.finalize().unwrap();
+    let mut table = farm_cart::AssetTable::default();
+    table.insert("wav", "audio/wav", bytes.into_inner());
+    let mut url = serde_json::Value::from("asset:wav");
+    farm_cart::cartridge::inline_assets(&mut url, &table);
+    url.as_str().unwrap().to_owned()
+}
+
+#[test]
+fn the_games_own_sounds_and_music_play_instead_of_the_built_in_ones() {
+    use farm_sim::schema::{custom_asset_types, CustomAsset, EventOutcome, GameEvent};
+    let asset = |id: &str, kind: &str, data_url: String| CustomAsset {
+        id: id.to_owned(),
+        name: id.to_owned(),
+        r#type: kind.to_owned(),
+        data_url,
+        ..CustomAsset::default()
+    };
+    let mut project = common::starter();
+    project.custom_assets.extend([
+        asset("chime", custom_asset_types::SOUND, wav_data_url(22_050)),
+        asset("theme", custom_asset_types::MUSIC, wav_data_url(44_100)),
+        asset("event-song", custom_asset_types::MUSIC, wav_data_url(8000)),
+        asset("broken", custom_asset_types::MUSIC, "data:audio/ogg;base64,T2dnUw==".to_owned()),
+    ]);
+    project.scenes[0].music = Some("theme".to_owned());
+    let outcome = |kind: &str, sound: &str| EventOutcome {
+        r#type: kind.to_owned(),
+        sound_id: Some(sound.to_owned()),
+        ..EventOutcome::default()
+    };
+    project.events.push(GameEvent {
+        id: "welcome".to_owned(),
+        name: "Welcome".to_owned(),
+        trigger: "tick".to_owned(),
+        outcomes: vec![outcome("playSound", "chime"), outcome("playSound", "coin")],
+        active: true,
+        ..GameEvent::default()
+    });
+    let stores = Stores::new();
+    let mut player = Player::from_project(project, stores.options(PlayerMode::Embedded)).unwrap();
+    let audio = player.audio_assets();
+    assert!(audio.sound("chime").is_some() && audio.music("theme").is_some());
+    assert_eq!(audio.failed().iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(), ["broken"]);
+
+    // playSound (tick events run once a game minute): the sound asset carries its samples; a
+    // built-in cue does not.
+    let mut sounds = Vec::new();
+    for _ in 0..600 {
+        sounds.extend(player.step(FRAME, &[], SIZE.0, SIZE.1).unwrap().sounds);
+        if !sounds.is_empty() {
+            break;
+        }
+    }
+    let chime = sounds.iter().find(|sound| sound.cue == "chime").expect("the chime played");
+    assert_eq!(chime.clip.as_ref().map(|clip| clip.sample_rate), Some(22_050));
+    assert!(sounds.iter().any(|sound| sound.cue == "coin" && sound.clip.is_none()));
+
+    // The scene's music plays instead of the built-in day music, which stays the fallback.
+    let cue = player.music_cue();
+    assert_eq!(cue.asset.as_ref().map(|asset| &*asset.id), Some("theme"));
+    assert_eq!((cue.music, cue.ambience), (Some("day"), Some("birds")));
+    // Music an event chose comes first.
+    let mut state = player.state().unwrap().clone();
+    state.music = Some("event-song".to_owned());
+    player.replace_state(state).unwrap();
+    assert_eq!(player.music_cue().asset.map(|asset| asset.id), Some("event-song".into()));
+    // Music that did not decode (or does not exist) leaves the built-in music playing.
+    for missing in ["broken", "chime", "nowhere"] {
+        let mut state = player.state().unwrap().clone();
+        state.music = Some(missing.to_owned());
+        player.replace_state(state).unwrap();
+        let cue = player.music_cue();
+        assert!(cue.asset.is_none() && cue.music == Some("day"), "{missing}");
+    }
+    // Muted: nothing plays.
+    let mut state = player.state().unwrap().clone();
+    state.music = None;
+    player.replace_state(state).unwrap();
+    let mut settings = player.settings().clone();
+    settings.audio.muted = true;
+    player.set_settings(settings);
+    assert_eq!(player.music_cue(), farm_player::MusicCue::default());
+}
+
 #[test]
 fn spanish_confirmations_and_toasts() {
     let stores = Stores::new();

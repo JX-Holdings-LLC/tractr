@@ -69,6 +69,12 @@ public static class EditorNavigation
         "fishTable" => "Fish tables",
         "action" => "Actions",
         "minigame" => "Minigames",
+        "cutscene" => "Cutscenes",
+        "terrain" => "Terrains",
+        "tool" => "Tools",
+        "itemCategory" => "Item kinds",
+        "cropQuality" => "Crop qualities",
+        "cropMutation" => "Crop mutations",
         _ => null,
     };
 }

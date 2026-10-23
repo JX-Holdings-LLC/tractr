@@ -166,16 +166,28 @@ module internal Proj =
         match project.CustomCrops with
         | None -> ()
         | Some crops -> add (crops |> Seq.map (fun c -> c.Id))
+        let own (list: 'T list option) (id: 'T -> string) = add (defaultArg list [] |> Seq.map id)
+        own project.Terrains (fun t -> t.Id)
+        own project.Tools (fun t -> t.Id)
+        own project.ItemCategories (fun c -> c.Id)
+        own project.CropQualities (fun q -> q.Id)
+        own project.CropMutations (fun m -> m.Id)
+        own project.Cutscenes (fun c -> c.Id)
         ids
 
 /// Tile-layer rules shared by the paint edits (web `game-helpers.ts` `setTileLayer`, `classifyTileType`).
 module TileRules =
-    /// The layer a tile type naturally lives on (web `classifyTileType`).
-    let layerOf (tileType: string) : TileLayer =
-        match AuthoringTiles.ClassifyTileType tileType with
+    let private ofName (layer: string) : TileLayer =
+        match layer with
         | "overlay" -> Overlay
         | "object" -> Object
         | _ -> Background
+
+    /// The layer a built-in tile type naturally lives on (web `classifyTileType`).
+    let layerOf (tileType: string) : TileLayer = ofName (AuthoringTiles.ClassifyTileType tileType)
+
+    /// The layer a terrain of the game lives on (M1).
+    let layerIn (terrains: TerrainDefinition list) (tileType: string) : TileLayer = ofName (AuthoringTiles.ClassifyIn(terrains, tileType))
 
     /// The per-layer art override on a tile, if any.
     let visualOf (layer: TileLayer) (tile: Tile) : VisualRef option =
@@ -201,18 +213,21 @@ module TileRules =
     /// Paint `tileType` onto `layer`. On its natural layer this is exactly the web brush
     /// (`setTileLayer` + no crop, no node). On another layer the type is written there and still
     /// becomes the tile's effective `Type`, so the eyedropper picks up what was painted last.
-    let paint (layer: TileLayer) (tileType: string) (visual: VisualRef option) (tile: Tile) : Tile =
+    let paintIn (terrains: TerrainDefinition list) (layer: TileLayer) (tileType: string) (visual: VisualRef option) (tile: Tile) : Tile =
         let painted =
-            if layerOf tileType = layer then
-                AuthoringTiles.SetTileLayer(tile, tileType, visual)
+            if layerIn terrains tileType = layer then
+                AuthoringTiles.SetTileLayerIn(terrains, tile, tileType, visual)
             else
                 let byLayer =
                     match layer with
                     | Background -> { tile with Type = tileType; Background = tileType }
                     | Overlay -> { tile with Type = tileType; Overlay = Some tileType }
-                    | Object -> { tile with Type = tileType; Object = Some tileType; Collision = (tileType = TileTypes.Wall) }
+                    | Object -> { tile with Type = tileType; Object = Some tileType; Collision = not (AuthoringTiles.WalkableIn(terrains, tileType)) }
                 withVisual layer visual byLayer
         { painted with Crop = None; Node = None }
+
+    /// `paintIn` with the built-in terrains.
+    let paint (layer: TileLayer) (tileType: string) (visual: VisualRef option) (tile: Tile) : Tile = paintIn [] layer tileType visual tile
 
     /// The effective type once a layer is cleared: topmost remaining layer.
     let private effectiveType (tile: Tile) =

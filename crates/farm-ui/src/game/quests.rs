@@ -2,7 +2,7 @@
 //! their objectives, progress bars and rewards.
 
 use super::{item_name, GameAction, GameView};
-use crate::format::{money, num};
+use crate::format::num;
 use crate::i18n::Lang;
 use crate::icons::Icon;
 use crate::layout::Align;
@@ -44,7 +44,7 @@ fn rewards_line(view: &GameView<'_>, quest: &Quest, completed: bool, lang: Lang)
     let rewards = &quest.rewards;
     let mut parts = Vec::new();
     if let Some(amount) = rewards.money.filter(|amount| *amount > 0) {
-        parts.push(money(amount));
+        parts.push(view.money(lang, amount));
     }
     for reward in rewards.items.iter().flatten() {
         parts.push(format!("{}\u{00d7} {}", num(reward.quantity), item_name(view.content, &reward.item_id)));

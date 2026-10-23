@@ -69,7 +69,7 @@ public sealed class ProjectStoreTests
         Assert.Equal("Second", Assert.Single(store.List()).Name);
         // Project JSON: camelCase, indented, at the current schema version.
         var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a.json"));
-        Assert.Contains("\n  \"schemaVersion\": 1", text, StringComparison.Ordinal);
+        Assert.Contains($"\n  \"schemaVersion\": {ProjectSchema.CurrentProjectSchemaVersion}", text, StringComparison.Ordinal);
     }
 
     [Fact]

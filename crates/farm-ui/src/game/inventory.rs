@@ -4,14 +4,13 @@
 //! inventory's value.
 
 use super::{draw_item_art, right_aligned, GameAction, GameView};
-use crate::format::{money, num};
+use crate::format::num;
 use crate::icons::Icon;
 use crate::layout::{Align, RectExt};
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::{Button, ModalSpec};
 use farm_render::{FontId, ImageStore, Rect};
-use farm_sim::schema::item_types;
 use farm_sim::Command;
 
 pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {
@@ -58,11 +57,19 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             } else {
                 Button::new(lang.tr("inventory.hold")).size(12.0)
             };
-            let use_button = Button::new(lang.tr("inventory.use")).size(12.0);
+            let use_label = if item.use_action_id.as_deref().is_some_and(|id| !id.is_empty()) {
+                lang.tr("inventory.use")
+            } else {
+                lang.tr("inventory.eat")
+            };
+            let use_button = Button::new(use_label).size(12.0);
             let gift_button = Button::new(lang.tr("inventory.gift")).size(12.0);
-            let can_hold = item.r#type == item_types::SEED || item.r#type == item_types::FERTILIZER;
-            let can_use = item.use_action_id.as_deref().is_some_and(|id| !id.is_empty());
-            let can_gift = item.r#type != item_types::TOOL;
+            let kind = super::category(view.content, item);
+            let can_hold = kind.is_some_and(|kind| kind.plantable || kind.fertilizer);
+            let has_action = item.use_action_id.as_deref().is_some_and(|id| !id.is_empty());
+            // An edible item (M1) is eaten with Use.
+            let can_use = has_action || kind.is_some_and(|kind| kind.edible);
+            let can_gift = kind.is_none_or(|kind| kind.giftable);
             let mut widths = Vec::new();
             if can_hold {
                 widths.push(ui.button_width(&hold_button));
@@ -108,7 +115,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             let top = inner.y + (inner.height - title - description - meta) / 2.0;
             ui.label(
                 Rect::new(inner.x, top, inner.width, title),
-                &super::slot_name(&item.name, slot.quality.as_deref()),
+                &super::slot_name(view.content, &item.name, slot.quality.as_deref()),
                 14.0,
                 FontId::Bold,
                 colors.text,
@@ -135,8 +142,9 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
                 );
                 meta_row.cut_left(width + 8.0);
             }
-            let mut meta_text = money(farm_sim::economy::quality_value(item, slot.quality.as_deref()));
-            if item.r#type == item_types::TOOL {
+            let mut meta_text =
+                view.money(lang, farm_sim::economy::quality_value(view.content, item, slot.quality.as_deref()));
+            if kind.is_some_and(|kind| kind.equippable) {
                 if let (Some(durability), Some(max)) = (item.durability, item.max_durability) {
                     meta_text.push_str(&format!("  {}/{}", num(durability), num(max)));
                 }
@@ -153,7 +161,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             .inventory
             .iter()
             .map(|slot| {
-                farm_sim::economy::quality_value(&slot.item, slot.quality.as_deref())
+                farm_sim::economy::quality_value(view.content, &slot.item, slot.quality.as_deref())
                     .saturating_mul(i64::from(slot.quantity))
             })
             .sum();
@@ -161,7 +169,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         let close = Button::new(lang.tr("common.close")).primary();
         let width = ui.button_width(&close);
         let close_rect = footer.cut_right(width).centered(width, ui.button_height(13.0));
-        let text = lang.format("inventory.totalValue", &[&money(total)]);
+        let text = lang.format("inventory.totalValue", &[&view.money(lang, total)]);
         ui.label(footer, &text, 13.5, FontId::Regular, colors.muted, Align::Start);
         if ui.button(WidgetId::new("inventory-close"), close_rect, close) {
             actions.push(GameAction::ClosePanel);

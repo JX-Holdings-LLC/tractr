@@ -3,14 +3,14 @@
 //! from `farm_sim::overlay`); the purchase itself is an engine command that checks again.
 
 use super::{right_aligned, row, GameAction, GameView, ShopTab};
-use crate::format::{money, num};
+use crate::format::num;
 use crate::icons::Icon;
 use crate::layout::{Align, RectExt};
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::{Button, ButtonKind, ModalSpec};
 use farm_render::{FontId, Rect};
 use farm_sim::economy;
-use farm_sim::schema::{crop_qualities, item_types, InventorySlot};
+use farm_sim::schema::{crop_qualities, InventorySlot};
 use farm_sim::{tools, Command};
 
 const ROW_GAP: f32 = 8.0;
@@ -73,7 +73,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
         *tab = tabs[next];
     }
 
-    let subtitle = lang.format("shop.yourMoney", &[&money(player.money)]);
+    let subtitle = lang.format("shop.yourMoney", &[&view.money(lang, player.money)]);
     let modal = ui.begin_modal(ModalSpec {
         id: WidgetId::new("shop"),
         icon: Icon::Store,
@@ -111,7 +111,11 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
         ShopTab::Sell => {
             // One row per item and quality, totalled across the slots holding it.
             let mut sellable: Vec<(&InventorySlot, u32)> = Vec::new();
-            for slot in player.inventory.iter().filter(|slot| slot.item.r#type != item_types::QUEST) {
+            for slot in player
+                .inventory
+                .iter()
+                .filter(|slot| super::category(view.content, &slot.item).is_none_or(|kind| kind.sellable))
+            {
                 match sellable
                     .iter_mut()
                     .find(|(first, _)| first.item.id == slot.item.id && first.quality == slot.quality)
@@ -130,7 +134,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
                 );
             }
             for (slot, held) in sellable {
-                let unit = economy::sell_unit_price_with_quality(&slot.item, slot.quality.as_deref(), shop);
+                let unit =
+                    economy::sell_unit_price_with_quality(view.content, &slot.item, slot.quality.as_deref(), shop);
                 let sell_one = Button::new(lang.tr("shop.sellOne")).primary().size(12.5);
                 let sell_all = Button::new(lang.tr("shop.sellAll")).size(12.5);
                 let mut widths = vec![ui.button_width(&sell_one)];
@@ -140,8 +145,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
                 let actions_width = widths.iter().sum::<f32>() + 6.0 * (widths.len() - 1) as f32;
                 let (content, buttons) = row(ui, area, y, row_height, actions_width);
                 let quantity = slot.item.stackable.then(|| format!("\u{00d7}{}", num(held)));
-                let each = lang.format("shop.each", &[&money(unit)]);
-                let name = super::slot_name(&slot.item.name, slot.quality.as_deref());
+                let each = lang.format("shop.each", &[&view.money(lang, unit)]);
+                let name = super::slot_name(view.content, &slot.item.name, slot.quality.as_deref());
                 two_lines(ui, content, &name, quantity.as_deref(), &each, false);
                 let rects = right_aligned(buttons, &widths, small, 6.0);
                 let mut id = WidgetId::new("shop-sell").with(&slot.item.id);
@@ -149,7 +154,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
                     id = id.with(quality);
                 }
                 // The row's own quality (normal included), never another quality's units.
-                let quality = slot.quality.clone().unwrap_or_else(|| crop_qualities::NORMAL.to_owned());
+                let plain = farm_sim::vocabulary::crop_qualities(view.content).first().map(|tier| tier.id.clone());
+                let quality = slot.quality.clone().or(plain).unwrap_or_else(|| crop_qualities::NORMAL.to_owned());
                 let sell = |quantity| {
                     GameAction::Command(Command::SellItem {
                         item_id: slot.item.id.clone(),
@@ -170,7 +176,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
             let damaged: Vec<_> = player
                 .inventory
                 .iter()
-                .filter(|slot| slot.item.r#type == item_types::TOOL)
+                .filter(|slot| super::category(view.content, &slot.item).is_some_and(|kind| kind.equippable))
                 .filter(|slot| matches!((slot.item.durability, slot.item.max_durability), (Some(d), Some(m)) if d < m))
                 .collect();
             if damaged.is_empty() {
@@ -180,7 +186,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
                 let (durability, max) = (slot.item.durability.unwrap_or(0), slot.item.max_durability.unwrap_or(0));
                 let cost = economy::repair_cost(i64::from(max) - i64::from(durability), shop);
                 let broken = tools::is_tool_broken(&slot.item);
-                let label = lang.format("shop.repairFor", &[&money(cost)]);
+                let label = lang.format("shop.repairFor", &[&view.money(lang, cost)]);
                 let button = Button::new(&label).primary().size(12.5).enabled(player.money >= cost);
                 let width = ui.button_width(&button);
                 let (content, buttons) = row(ui, area, y, row_height, width);
@@ -222,7 +228,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
                     let left = remaining.map_or_else(|| "Infinity".to_owned(), num);
                     detail.push_str(&lang.format("shop.leftToday", &[&left, &num(limit)]));
                 }
-                let price_text = money(price);
+                let price_text = view.money(lang, price);
                 let price_width = ui.measure(&price_text, 14.0, farm_render::FontId::Bold).ceil();
                 let buy = Button::new(lang.tr("shop.buy"))
                     .primary()

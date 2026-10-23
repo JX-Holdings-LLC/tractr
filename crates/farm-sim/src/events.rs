@@ -9,8 +9,8 @@ use crate::farming::farming_actions;
 use crate::hooks::{ActionHookPayload, HookEvent, RelationshipChangeHookPayload};
 use crate::messages;
 use crate::schema::{
-    event_fired_flag, DialogueState, EventCondition, EventOutcome, GameEvent, GameState, MinigameSession,
-    NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
+    event_fired_flag, CutsceneState, DialogueState, EventCondition, EventOutcome, GameEvent, GameState,
+    MinigameSession, NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
 };
 use crate::text;
 use crate::units;
@@ -130,9 +130,12 @@ pub fn condition_met(
             }
             true
         }
-        EventCondition::TimeOfDay { min_minute, max_minute } => {
-            time_of_day_matches(state.clock.time_minutes, *min_minute, *max_minute)
-        }
+        EventCondition::TimeOfDay { min_minute, max_minute } => time_of_day_matches_in(
+            ctx.content.settings.time.minutes_per_day(),
+            state.clock.time_minutes,
+            *min_minute,
+            *max_minute,
+        ),
         EventCondition::QuestStatus { quest_id, status } => {
             state.quests.get(quest_id).map_or(QUEST_STATUS_NOT_STARTED, |progress| progress.status.as_str()) == status
         }
@@ -152,7 +155,13 @@ pub fn condition_met(
 /// matches the clock as it counts or as it is shown: "0:00–2:00" matches 24:00–26:00. A range
 /// whose start is after its end wraps past midnight: "22:00–2:00" matches 22:00 to 2:00 (#37).
 pub fn time_of_day_matches(time: u32, min: u32, max: u32) -> bool {
-    let day = units::MINUTES_PER_DAY * units::MINUTE;
+    time_of_day_matches_in(units::MINUTES_PER_DAY, time, min, max)
+}
+
+/// [`time_of_day_matches`] in a day of `day_minutes` minutes (M1: games choose their day's
+/// length; 1440 is 24 hours).
+pub fn time_of_day_matches_in(day_minutes: u32, time: u32, min: u32, max: u32) -> bool {
+    let day = day_minutes.max(1).saturating_mul(units::MINUTE);
     let shown = time % day;
     if min <= max {
         (min..=max).contains(&time) || (min..=max).contains(&shown)
@@ -212,7 +221,7 @@ fn apply_outcome(
             state.npcs.shift_remove(npc_id);
             vec![]
         }
-        OutcomeKind::ChangeTile => outcome_change_tile(state, outcome),
+        OutcomeKind::ChangeTile => outcome_change_tile(ctx, state, outcome),
         OutcomeKind::WarpPlayer => outcome_warp_player(ctx, state, outcome),
         OutcomeKind::StartDialogue => outcome_start_dialogue(ctx, state, outcome),
         OutcomeKind::LockTransition | OutcomeKind::UnlockTransition => {
@@ -222,6 +231,20 @@ fn apply_outcome(
             Some(sound_id) => vec![Effect::Sound { id: sound_id.to_owned() }],
             None => vec![],
         },
+        OutcomeKind::PlayMusic => {
+            // M2: a music asset until the scene changes; empty: back to the music the place picks.
+            state.music = non_empty(outcome.sound_id.as_deref()).map(str::to_owned);
+            vec![]
+        }
+        OutcomeKind::StartCutscene => {
+            // M2: the cutscene runner plays it from the next tick; one at a time.
+            let Some(cutscene_id) = non_empty(outcome.cutscene_id.as_deref()) else { return vec![] };
+            if state.cutscene.is_none() && ctx.content.cutscenes.iter().any(|cutscene| cutscene.id == cutscene_id) {
+                state.cutscene =
+                    Some(CutsceneState { cutscene_id: cutscene_id.to_owned(), ..CutsceneState::default() });
+            }
+            vec![]
+        }
         OutcomeKind::PerformAction => {
             let Some(action_id) = non_empty(outcome.action_id.as_deref()) else { return vec![] };
             perform_action_detailed(ctx, state, action_id, depth + 1, budget).effects
@@ -331,7 +354,7 @@ fn outcome_spawn_npc(ctx: &EngineContext, state: &mut GameState, outcome: &Event
     vec![]
 }
 
-fn outcome_change_tile(state: &mut GameState, outcome: &EventOutcome) -> Effects {
+fn outcome_change_tile(ctx: &EngineContext, state: &mut GameState, outcome: &EventOutcome) -> Effects {
     let (Some(tile_x), Some(tile_y)) = (outcome.tile_x, outcome.tile_y) else { return vec![] };
     let Some(new_tile_type) = non_empty(outcome.new_tile_type.as_deref()) else { return vec![] };
     let scene_id = non_empty(outcome.scene_id.as_deref()).unwrap_or(&state.player.scene_id).to_owned();
@@ -341,7 +364,7 @@ fn outcome_change_tile(state: &mut GameState, outcome: &EventOutcome) -> Effects
         return vec![];
     }
     if let Some(tile) = scene.tiles.get_mut(tile_y as usize).and_then(|row| row.get_mut(tile_x as usize)) {
-        *tile = tiles::set_tile_layer(tile, new_tile_type, None);
+        *tile = tiles::set_tile_layer_in(ctx.terrains(), tile, new_tile_type, None);
     }
     vec![]
 }
@@ -352,6 +375,10 @@ fn outcome_warp_player(ctx: &EngineContext, state: &mut GameState, outcome: &Eve
     // A scene of an enabled content pack joins the world on first visit.
     if world_movement::ensure_scene(ctx, state, scene_id).is_none() {
         return vec![];
+    }
+    // Music an event chose (M2) ends when the player leaves the scene.
+    if state.player.scene_id != scene_id {
+        state.music = None;
     }
     // Warp targets are authored as tile coordinates; land on the center, or on the nearest
     // walkable tile when the target is outside the scene or blocked.

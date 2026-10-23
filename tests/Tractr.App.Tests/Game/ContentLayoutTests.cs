@@ -82,7 +82,7 @@ public sealed class ContentLayoutTests
         OpenCategory(host, "Crops");
         Press(host, "AddContentButton");
         var tabs = FindByName<TabControl>(host.Window, "ContentTabs");
-        Assert.Equal(["Basic", "Growth", "Asset"], tabs.Items.OfType<TabItem>().Select(tab => (string)tab.Header!));
+        Assert.Equal(["Basic", "Growth", "Requirements", "Asset"], tabs.Items.OfType<TabItem>().Select(tab => (string)tab.Header!));
         Assert.Equal("Growth", AccessibleName(host, "ContentTab_Growth"));
         Assert.Equal(0, tabs.SelectedIndex);
 
@@ -91,13 +91,14 @@ public sealed class ContentLayoutTests
         Assert.True(InTab(host, "ContentTab_Basic", "ContentGroup_Seasons"));
         Assert.True(InTab(host, "ContentTab_Growth", "ContentField_Stages"));
         Assert.True(InTab(host, "ContentTab_Growth", "ContentGroup_MultiTile"));
+        Assert.True(InTab(host, "ContentTab_Requirements", "ContentGroup_Requirements"));
         Assert.True(InTab(host, "ContentTab_Asset", "ContentGroup_Visual"));
         Assert.False(InTab(host, "ContentTab_Basic", "ContentField_Stages"));
 
         // Every field is on exactly one tab.
         foreach (var property in FSharpType.GetRecordFields(typeof(CustomCropDefinition), null).Where(property => property.Name != "Extra"))
         {
-            var homes = new[] { "ContentTab_Basic", "ContentTab_Growth", "ContentTab_Asset" }
+            var homes = new[] { "ContentTab_Basic", "ContentTab_Growth", "ContentTab_Requirements", "ContentTab_Asset" }
                 .Count(tab => InTab(host, tab, "ContentField_" + property.Name) || InTab(host, tab, "ContentGroup_" + property.Name));
             Assert.True(homes == 1, $"{property.Name} is on {homes} tabs");
         }

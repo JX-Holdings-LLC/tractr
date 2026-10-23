@@ -20,9 +20,11 @@ use crate::content_index::{self as ids, ContentIndex};
 use crate::effects::Effect;
 use crate::hooks::{HookBus, HookEvent, WeatherRollHookPayload};
 use crate::schema::{
-    ActionDef, AnimalSpeciesDefinition, Dialogue, GameContent, Item, MachineTypeDefinition, MinigameDef,
-    NodeTypeDefinition, Npc, Quest, RecipeDefinition, Scene, ShopDefinition,
+    ActionDef, AnimalSpeciesDefinition, CropMutationDefinition, CropQualityDefinition, Dialogue, GameContent, Item,
+    ItemCategoryDefinition, MachineTypeDefinition, MinigameDef, NodeTypeDefinition, Npc, Quest, RecipeDefinition,
+    Scene, ShopDefinition, TerrainDefinition, ToolDefinition,
 };
+use crate::vocabulary;
 use std::cell::RefCell;
 
 /// The effects a step produced, in order (host-facing: toasts, sounds, camera snaps).
@@ -137,6 +139,54 @@ impl EngineContext {
     /// The declared minigame `id`.
     pub fn minigame(&self, id: &str) -> Option<&MinigameDef> {
         self.index.minigames.find(&self.content.minigames, id, ids::minigame_id)
+    }
+
+    /// The game's terrains ([`vocabulary::terrains`]).
+    pub fn terrains(&self) -> &[TerrainDefinition] {
+        vocabulary::terrains(&self.content)
+    }
+
+    /// The terrain `id`.
+    pub fn terrain(&self, id: &str) -> Option<&TerrainDefinition> {
+        self.index.terrains.find(vocabulary::terrains(&self.content), id, ids::terrain_id)
+    }
+
+    /// The tool `id`.
+    pub fn tool(&self, id: &str) -> Option<&ToolDefinition> {
+        self.index.tools.find(vocabulary::tools(&self.content), id, ids::tool_id)
+    }
+
+    /// The game's tools ([`vocabulary::tools`]).
+    pub fn tools(&self) -> &[ToolDefinition] {
+        vocabulary::tools(&self.content)
+    }
+
+    /// The item category `id`.
+    pub fn item_category(&self, id: &str) -> Option<&ItemCategoryDefinition> {
+        self.index.item_categories.find(vocabulary::item_categories(&self.content), id, ids::item_category_id)
+    }
+
+    /// The game's crop quality tiers, ranked ([`vocabulary::crop_qualities`]).
+    pub fn crop_qualities(&self) -> &[CropQualityDefinition] {
+        vocabulary::crop_qualities(&self.content)
+    }
+
+    /// The game's crop mutations, in roll order ([`vocabulary::crop_mutations`]).
+    pub fn crop_mutations(&self) -> &[CropMutationDefinition] {
+        vocabulary::crop_mutations(&self.content)
+    }
+
+    /// The quality a slot records for a crop `quality`: `None` for the game's plain tier, for no
+    /// quality and for a tier the game does not have.
+    pub fn slot_quality(&self, quality: Option<&str>) -> Option<String> {
+        let tiers = self.crop_qualities();
+        let quality = quality.filter(|q| tiers.iter().skip(1).any(|tier| tier.id == *q))?;
+        crate::inventory::slot_quality(Some(quality))
+    }
+
+    /// Whether the tile's background terrain takes crops (soil).
+    pub fn plantable(&self, terrain_id: &str) -> bool {
+        self.terrain(terrain_id).is_some_and(|terrain| terrain.plantable)
     }
 
     /// The authored scene `id` (the template; the running world is in the state).

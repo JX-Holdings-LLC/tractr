@@ -18,8 +18,12 @@ pub struct WeatherTypeDefinition {
     pub crop_damage_chance: u64,
     /// NPCs with schedules stay home (skip schedule walking).
     pub npcs_stay_inside: bool,
-    /// Renderer overlay hint: 'rain' | 'snow' | null (present-as-null).
+    /// The overlay it shows: a [`WeatherOverlayDefinition`] id (`rain`, `snow` or the game's
+    /// own) or null (present-as-null).
     pub overlay: Option<String>,
+    /// A music asset that plays in this weather, outdoors (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -39,8 +43,86 @@ pub struct WeatherConfig {
     pub types: Vec<WeatherTypeDefinition>,
     /// Per-season weighted roll tables (rolled at each day start).
     pub table: IndexMap<String, Vec<WeatherTableEntry>>,
+    /// The game's own overlays (M1), beside and over the built-in rain and snow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overlays: Option<Vec<WeatherOverlayDefinition>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+/// How a weather overlay draws (F# `OverlayStyles`).
+pub mod overlay_styles {
+    pub const RAIN: &str = "rain";
+    pub const SNOW: &str = "snow";
+    pub const DUST: &str = "dust";
+    pub const NONE: &str = "none";
+
+    pub const ALL: &[&str] = &[RAIN, SNOW, DUST, NONE];
+}
+
+/// How a weather looks on screen (M1): particles and a tint.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WeatherOverlayDefinition {
+    pub id: String,
+    /// One of [`overlay_styles`].
+    pub style: String,
+    /// `#rrggbb` (or `#rrggbbaa`) of the particles.
+    pub color: String,
+    /// Particles relative to the built-in amount.
+    #[serde(with = "crate::units::screen")]
+    pub density: f64,
+    /// Speed relative to the built-in style.
+    #[serde(with = "crate::units::screen")]
+    pub speed: f64,
+    /// `#rrggbb` multiplied over the scene while it falls.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tint: Option<String>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+impl Default for WeatherOverlayDefinition {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            style: overlay_styles::RAIN.to_owned(),
+            color: String::new(),
+            density: 1.0,
+            speed: 1.0,
+            tint: None,
+            extra: Map::new(),
+        }
+    }
+}
+
+/// The built-in overlays: rain and snow.
+pub fn builtin_weather_overlays() -> Vec<WeatherOverlayDefinition> {
+    vec![
+        WeatherOverlayDefinition {
+            id: overlay_styles::RAIN.to_owned(),
+            style: overlay_styles::RAIN.to_owned(),
+            color: "#d8ecff9a".to_owned(),
+            tint: Some("#c8d2e6".to_owned()),
+            ..WeatherOverlayDefinition::default()
+        },
+        WeatherOverlayDefinition {
+            id: overlay_styles::SNOW.to_owned(),
+            style: overlay_styles::SNOW.to_owned(),
+            color: "#ffffffdc".to_owned(),
+            ..WeatherOverlayDefinition::default()
+        },
+    ]
+}
+
+impl WeatherConfig {
+    /// The overlay `id` names: the game's own, else a built-in one.
+    pub fn overlay(&self, id: &str) -> Option<WeatherOverlayDefinition> {
+        self.overlays
+            .as_deref()
+            .and_then(|own| own.iter().find(|overlay| overlay.id == id).cloned())
+            .or_else(|| builtin_weather_overlays().into_iter().find(|overlay| overlay.id == id))
+    }
 }
 
 fn weather_type(
@@ -58,6 +140,7 @@ fn weather_type(
         crop_damage_chance: units::from_authoring::<units::Probability>(damage),
         npcs_stay_inside: inside,
         overlay: overlay.map(str::to_owned),
+        music: None,
         extra: Map::new(),
     }
 }
@@ -82,6 +165,7 @@ pub fn default_weather_config() -> WeatherConfig {
             weather_type("snow", "Snow", false, 0.0, false, Some("snow")),
         ],
         table,
+        overlays: None,
         extra: Map::new(),
     }
 }

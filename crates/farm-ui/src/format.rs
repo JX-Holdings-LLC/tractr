@@ -36,6 +36,15 @@ pub fn money(amount: i64) -> String {
     format!("${amount}")
 }
 
+/// Money in a game's words (M1): its money template with `{0}` for the amount, else [`money`].
+pub fn money_in(words: &farm_sim::schema::GameWords, amount: i64) -> String {
+    match words.money.as_deref().filter(|template| !template.is_empty()) {
+        Some(template) if template.contains("{0}") => template.replace("{0}", &amount.to_string()),
+        Some(template) => format!("{amount} {template}"),
+        None => money(amount),
+    }
+}
+
 /// Energy points as the HUD prints them (`97.5`).
 pub fn energy(value: i32) -> String {
     farm_sim::units::text::<farm_sim::units::Energy>(value)

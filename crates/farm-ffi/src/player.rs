@@ -180,7 +180,7 @@ fn run_frame(
 ) -> Result<Vec<u8>, String> {
     let outcome = p.frame(&FrameRequest::parse(request)?)?;
     if let Some(speaker) = speaker {
-        speaker.set_music(outcome.music);
+        speaker.set_music(outcome.music.clone());
         for sound in &outcome.sounds {
             speaker.play(sound.clone());
         }

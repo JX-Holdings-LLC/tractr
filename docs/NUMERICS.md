@@ -1,6 +1,6 @@
 # Native numerics
 
-**Status:** implemented (project schema version 1, save version
+**Status:** implemented (project schema version 2, save version
 5; phase 7's last step, [LANGUAGES.md](LANGUAGES.md#phases)).
 This file is the reference for the unit and integer type of every quantity the
 simulation keeps. Read it before you add a field to `farm-sim`.

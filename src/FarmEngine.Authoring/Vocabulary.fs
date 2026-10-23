@@ -16,7 +16,8 @@ type FieldKind =
 
 /// One field of a condition or outcome form (event-forms.tsx). `Key` is the JSON key. Clearing
 /// an `Optional` field removes it; clearing a required number stores `WhenEmpty` (the web
-/// `n ?? 0` / `n ?? 1`). `Min`/`Max` clamp numbers like the web does.
+/// `n ?? 0` / `n ?? 1`). `Min`/`Max` clamp numbers like the web does. `Empty` labels the
+/// "nothing chosen" entry of an optional reference picker.
 type VocabularyField =
     { Key: string
       Label: string
@@ -25,14 +26,15 @@ type VocabularyField =
       Placeholder: string
       WhenEmpty: float
       Min: float option
-      Max: float option }
+      Max: float option
+      Empty: string option }
 
 /// Port of `event-vocabulary.ts` and the per-type fields of `event-forms.tsx`: the condition and
 /// outcome types events, actions and minigame tiers share, which fields each type shows, and the
 /// defaults a new or re-typed row starts from.
 module Vocabulary =
     let private field key label kind =
-        { Key = key; Label = label; Kind = kind; Optional = false; Placeholder = ""; WhenEmpty = 0.0; Min = None; Max = None }
+        { Key = key; Label = label; Kind = kind; Optional = false; Placeholder = ""; WhenEmpty = 0.0; Min = None; Max = None; Empty = None }
 
     let private integer key label = field key label FieldKind.Integer
     let private optionalInteger key label = { integer key label with Optional = true }
@@ -78,7 +80,9 @@ module Vocabulary =
           EventOutcomeTypes.UnlockTransition, "Unlock transition"
           EventOutcomeTypes.PlaySound, "Play sound"
           EventOutcomeTypes.PerformAction, "Perform action"
-          EventOutcomeTypes.StartMinigame, "Start minigame" ]
+          EventOutcomeTypes.StartMinigame, "Start minigame"
+          EventOutcomeTypes.PlayMusic, "Play music"
+          EventOutcomeTypes.StartCutscene, "Start cutscene" ]
 
     /// The label of a condition type (the type itself when unknown).
     let conditionLabel (kind: string) =
@@ -129,15 +133,16 @@ module Vocabulary =
         | EventOutcomeTypes.SpawnNpc -> [ npc; optionalInteger "x" "X (opt)"; optionalInteger "y" "Y (opt)" ]
         | EventOutcomeTypes.RemoveNpc
         | EventOutcomeTypes.StartDialogue -> [ npc ]
-        | EventOutcomeTypes.ChangeTile ->
-            [ integer "tileX" "X"; integer "tileY" "Y"
-              field "newTileType" "New type" (FieldKind.OneOf(TileTypes.All |> Seq.map (fun t -> t, t) |> List.ofSeq)) ]
+        | EventOutcomeTypes.ChangeTile -> [ integer "tileX" "X"; integer "tileY" "Y"; reference "newTileType" "New terrain" ReferenceKind.Terrain ]
         | EventOutcomeTypes.WarpPlayer -> [ scene; integer "x" "X"; integer "y" "Y" ]
         | EventOutcomeTypes.LockTransition
         | EventOutcomeTypes.UnlockTransition -> [ scene; integer "x" "From X"; integer "y" "From Y" ]
-        | EventOutcomeTypes.PlaySound -> [ text "soundId" "Sound" "sound-id (audio lands in M7)" ]
+        | EventOutcomeTypes.PlaySound -> [ text "soundId" "Sound" "a sound asset id, or coin, quest, success…" ]
         | EventOutcomeTypes.PerformAction -> [ reference "actionId" "Action" ReferenceKind.Action ]
         | EventOutcomeTypes.StartMinigame -> [ reference "minigameId" "Minigame" ReferenceKind.Minigame ]
+        | EventOutcomeTypes.PlayMusic ->
+            [ { reference "soundId" "Music" ReferenceKind.Music with Optional = true; Empty = Some "(the game's own music)" } ]
+        | EventOutcomeTypes.StartCutscene -> [ reference "cutsceneId" "Cutscene" ReferenceKind.Cutscene ]
         | _ -> []
 
     /// `defaultCondition`: a condition of the type with the web's starting values.
@@ -163,13 +168,46 @@ module Vocabulary =
     let private objectiveTargetProperties =
         [ "TargetItemId"; "TargetItemQuantity"; "TargetCropType"; "TargetCropQuantity"; "TargetNpcId"; "TargetSceneId" ]
 
+    /// The fields a cutscene step of each type uses besides its type and label (M2).
+    let stepFields (kind: string) : string list =
+        match kind with
+        | CutsceneStepTypes.Say -> [ "Text"; "Speaker" ]
+        | CutsceneStepTypes.Choice -> [ "Text"; "Options" ]
+        | CutsceneStepTypes.Jump -> [ "Goto"; "Conditions" ]
+        | CutsceneStepTypes.Move -> [ "Actor"; "X"; "Y"; "Wait" ]
+        | CutsceneStepTypes.Face -> [ "Actor"; "Direction" ]
+        | CutsceneStepTypes.Emote -> [ "Actor"; "Emote"; "Seconds" ]
+        | CutsceneStepTypes.Wait -> [ "Seconds" ]
+        | CutsceneStepTypes.Camera -> [ "Actor"; "X"; "Y"; "Seconds" ]
+        | CutsceneStepTypes.Fade -> [ "Mode"; "Color"; "Seconds" ]
+        | CutsceneStepTypes.Music
+        | CutsceneStepTypes.Sound -> [ "SoundId" ]
+        | CutsceneStepTypes.Outcomes -> [ "Outcomes" ]
+        | _ -> []
+
+    let private stepProperties =
+        [ "Actor"; "X"; "Y"; "Direction"; "Emote"; "Seconds"; "Text"; "Speaker"; "Options"; "Goto"; "Conditions"; "Mode"; "Color"
+          "SoundId"; "Outcomes"; "Wait" ]
+
     /// Properties of `owner` a form hides while its `type` discriminator is `kind`.
     let hiddenProperties (owner: string) (kind: string) : string list =
         match owner with
         | "QuestObjective" ->
             let shown = objectiveTargets kind
             objectiveTargetProperties |> List.filter (fun p -> not (List.contains p shown))
+        | "CutsceneStep" ->
+            let shown = stepFields kind
+            stepProperties |> List.filter (fun p -> not (List.contains p shown))
         | _ -> []
+
+    /// What `owner.property` holds while the record's `type` is `kind`, where that differs from
+    /// its declaration: a cutscene step's `SoundId` is a music asset on a music step (empty: back
+    /// to the game's music) and a sound asset on a sound step.
+    let roleFor (owner: string) (property: string) (kind: string) : FieldRole option =
+        match owner, property, kind with
+        | "CutsceneStep", "SoundId", CutsceneStepTypes.Music -> Some(FieldRole.Reference(ReferenceKind.Music, Some "(the game's own music)"))
+        | "CutsceneStep", "SoundId", CutsceneStepTypes.Sound -> Some(FieldRole.Reference(ReferenceKind.Sound, None))
+        | _ -> None
 
     let private some (value: 'T) : obj option = Some(box value |> nonNull)
 
@@ -216,4 +254,8 @@ module Vocabulary =
             | _ -> None
         | "EventCondition" -> some (defaultCondition "enterTile" project)
         | "EventOutcome" -> some (defaultOutcome EventOutcomeTypes.Message)
+        | "CutsceneStep" -> some { CutsceneStep.Default with Type = CutsceneStepTypes.Say; Text = Some "..." }
+        | "CutsceneChoice" -> some { CutsceneChoice.Default with Text = "OK" }
+        | "TerrainTransform" -> some ({ Action = ToolActions.Till; Tool = None; Into = TileTypes.Soil } : TerrainTransform)
+        | "NeighborRequirement" -> some { NeighborRequirement.Default with Kind = NeighborKinds.Water }
         | _ -> None

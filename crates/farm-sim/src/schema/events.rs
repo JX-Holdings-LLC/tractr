@@ -168,6 +168,10 @@ pub mod event_outcome_types {
     pub const PERFORM_ACTION: &str = "performAction";
     /// Open a declared minigame; its score resolves via the command log.
     pub const START_MINIGAME: &str = "startMinigame";
+    /// Play a music asset until the scene changes (`soundId`; empty: the game's music again).
+    pub const PLAY_MUSIC: &str = "playMusic";
+    /// Play a cutscene (`cutsceneId`, M2).
+    pub const START_CUTSCENE: &str = "startCutscene";
 
     pub const ALL: &[&str] = &[
         MESSAGE,
@@ -192,6 +196,8 @@ pub mod event_outcome_types {
         PLAY_SOUND,
         PERFORM_ACTION,
         START_MINIGAME,
+        PLAY_MUSIC,
+        START_CUTSCENE,
     ];
 }
 
@@ -223,11 +229,13 @@ pub enum OutcomeKind {
     PlaySound,
     PerformAction,
     StartMinigame,
+    PlayMusic,
+    StartCutscene,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 22] = [
+    pub const ALL: [OutcomeKind; 24] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -250,6 +258,8 @@ impl OutcomeKind {
         Self::PlaySound,
         Self::PerformAction,
         Self::StartMinigame,
+        Self::PlayMusic,
+        Self::StartCutscene,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -278,6 +288,8 @@ impl OutcomeKind {
             Self::PlaySound => t::PLAY_SOUND,
             Self::PerformAction => t::PERFORM_ACTION,
             Self::StartMinigame => t::START_MINIGAME,
+            Self::PlayMusic => t::PLAY_MUSIC,
+            Self::StartCutscene => t::START_CUTSCENE,
         }
     }
 
@@ -334,6 +346,9 @@ pub struct EventOutcome {
     pub action_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minigame_id: Option<String>,
+    /// The cutscene `startCutscene` plays (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscene_id: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

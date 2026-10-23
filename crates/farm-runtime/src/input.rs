@@ -456,15 +456,24 @@ pub mod bindings {
     /// Keys that interact (talk, harvest, open, …).
     pub const INTERACT_KEYS: &[&str] = &["e", " ", "enter"];
 
-    /// Tool hotkeys → `useTool` tool type, in firing order.
-    pub const TOOL_KEYS: &[(&str, &str)] =
-        &[("q", "watering-can"), ("t", "hoe"), ("r", "axe"), ("f", "pickaxe"), ("c", "scythe")];
+    /// The game's tool hotkeys (lower case) → tool id, in the tools' order.
+    pub fn tool_keys(content: &GameContent) -> Vec<(String, &str)> {
+        farm_sim::vocabulary::tools(content)
+            .iter()
+            .filter_map(|tool| {
+                let key = tool.key.as_deref()?.trim().to_lowercase();
+                (!key.is_empty()).then_some((key, tool.id.as_str()))
+            })
+            .collect()
+    }
 
     pub const SLEEP_KEY: &str = "z";
     pub const INVENTORY_KEY: &str = "i";
     pub const QUESTS_KEY: &str = "j";
     pub const CRAFTING_KEY: &str = "x";
     pub const ESCAPE_KEY: &str = "escape";
+    /// Keys that answer a cutscene's question (1 = the first answer).
+    pub const ANSWER_KEYS: &[&str] = &["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
     /// C# `Math.Max(-1, Math.Min(1, v))` (NaN passes through, as in .NET).
     fn clamp_axis(value: f64) -> f64 {
@@ -476,12 +485,12 @@ pub mod bindings {
     }
 
     fn modal_open(state: &GameState) -> bool {
-        state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some()
+        state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some() || state.cutscene.is_some()
     }
 
     /// The movement intent for this frame: keyboard vector (plus any `extra` touch/D-pad
-    /// vector), clamped per axis, and zero while dialogue, a shop or a minigame is open
-    /// (App.tsx semantics).
+    /// vector), clamped per axis, and zero while dialogue, a shop, a minigame or a cutscene is
+    /// open (App.tsx semantics).
     pub fn move_intent(input: &InputManager, state: &GameState, extra: Option<MoveVector>) -> MoveVector {
         if modal_open(state) {
             return MoveVector::new(0.0, 0.0);
@@ -498,13 +507,17 @@ pub mod bindings {
     /// While an engine modal (dialogue/shop/minigame) or a host modal (`host_modal_open`) is
     /// open, only Escape is handled: it closes the host modal first (reported via
     /// [`PlayFrameInput::escape`]), else cancels the minigame, else closes the shop, else the
-    /// dialogue.
+    /// dialogue. A cutscene by itself takes its own keys ([`cutscene_frame`]).
     pub fn poll_play_frame(
         input: &InputManager,
         state: &GameState,
         content: &GameContent,
         host_modal_open: bool,
     ) -> PlayFrameInput {
+        let engine_modal = state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some();
+        if !host_modal_open && !engine_modal && state.cutscene.is_some() {
+            return cutscene_frame(input, state, content);
+        }
         let mut commands = Vec::new();
         if host_modal_open || modal_open(state) {
             let mut escape = false;
@@ -525,9 +538,9 @@ pub mod bindings {
         if INTERACT_KEYS.iter().any(|key| input.just_pressed(key)) {
             commands.push(Command::Interact);
         }
-        for (key, tool) in TOOL_KEYS {
-            if input.just_pressed(key) {
-                commands.push(Command::UseTool { tool: (*tool).to_owned() });
+        for (key, tool) in tool_keys(content) {
+            if input.just_pressed(&key) {
+                commands.push(Command::UseTool { tool: tool.to_owned() });
             }
         }
         if input.just_pressed(SLEEP_KEY) {
@@ -550,6 +563,33 @@ pub mod bindings {
             toggle_crafting: input.just_pressed(CRAFTING_KEY),
             escape: input.just_pressed(ESCAPE_KEY),
         }
+    }
+
+    /// A play frame's keys while a cutscene shows (nothing else open): Interact, Enter or Space
+    /// moves past a line, 1–9 answer a question, Escape skips the cutscene when it may be skipped
+    /// and otherwise asks for the host menu ([`PlayFrameInput::escape`]). Navigating to an answer
+    /// and accepting it is the game UI's.
+    fn cutscene_frame(input: &InputManager, state: &GameState, content: &GameContent) -> PlayFrameInput {
+        let Some(view) = farm_sim::cutscenes::view(content, state) else { return PlayFrameInput::default() };
+        if input.just_pressed(ESCAPE_KEY) {
+            if view.skippable {
+                return PlayFrameInput { commands: vec![Command::SkipCutscene], ..PlayFrameInput::default() };
+            }
+            return PlayFrameInput { escape: true, ..PlayFrameInput::default() };
+        }
+        let mut commands = Vec::new();
+        if let Some(line) = &view.line {
+            if line.options.is_empty() {
+                if INTERACT_KEYS.iter().any(|key| input.just_pressed(key)) {
+                    commands.push(Command::AdvanceCutscene);
+                }
+            } else if let Some(index) =
+                ANSWER_KEYS.iter().take(line.options.len()).position(|key| input.just_pressed(key))
+            {
+                commands.push(Command::ChooseCutsceneOption { index: index as i32 });
+            }
+        }
+        PlayFrameInput { commands, ..PlayFrameInput::default() }
     }
 }
 

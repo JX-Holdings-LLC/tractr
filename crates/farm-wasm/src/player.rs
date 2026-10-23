@@ -5,7 +5,7 @@ use crate::{bytes_arg, enter, host_error, json_arg, set, FrameResult};
 use farm_host::player::{FrameRequest, PlayerCreate};
 use farm_host::{Guarded, HostPlayer};
 use farm_player::PlayerOptions;
-use js_sys::{Object, Uint8ClampedArray};
+use js_sys::{Float32Array, Object, Uint8ClampedArray};
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -204,6 +204,21 @@ impl WasmPlayer {
             "credits": info.credits,
         });
         js_sys::JSON::parse(&json.to_string())
+    }
+
+    /// The decoded samples of the game's own sound or music asset `id` (a frame's sound with
+    /// `asset: true`, or its `music.asset`): an {@link AudioClip} at the file's own sample rate;
+    /// `undefined` when the game has no such asset or it did not decode (play the built-in sound
+    /// or music then). They never change: cache the `AudioBuffer` per id.
+    #[wasm_bindgen(js_name = audioClip, unchecked_return_type = "AudioClip | undefined")]
+    pub fn audio_clip(&self, id: &str) -> Result<JsValue, JsValue> {
+        let _call = enter()?;
+        let Some(clip) = self.player.get().player().audio_assets().clip(id) else { return Ok(JsValue::UNDEFINED) };
+        let result = Object::new();
+        set(&result, "sampleRate", clip.sample_rate.into());
+        set(&result, "channels", f64::from(clip.channels).into());
+        set(&result, "samples", Float32Array::from(&clip.samples[..]).into());
+        Ok(result.into())
     }
 
     /// The save slots and settings as a {@link StorageDocument} JSON string, for the page to

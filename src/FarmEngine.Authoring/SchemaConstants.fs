@@ -32,6 +32,143 @@ module TileTypes =
 
     let All : string list = [ Grass; Soil; Water; Path; Wall; Door; Floor ]
 
+/// The tile layers a terrain is painted on (`TerrainDefinition.Layer`).
+[<RequireQualifiedAccess>]
+module TileLayers =
+    [<Literal>]
+    let Background = "background"
+
+    [<Literal>]
+    let Overlay = "overlay"
+
+    [<Literal>]
+    let Object = "object"
+
+    let All : string list = [ Background; Overlay; Object ]
+
+/// What a tool does (`ToolDefinition.Action`).
+[<RequireQualifiedAccess>]
+module ToolActions =
+    [<Literal>]
+    let Water = "water"
+
+    [<Literal>]
+    let Till = "till"
+
+    [<Literal>]
+    let Harvest = "harvest"
+
+    [<Literal>]
+    let Fish = "fish"
+
+    [<Literal>]
+    let Break = "break"
+
+    [<Literal>]
+    let Transform = "transform"
+
+    [<Literal>]
+    let Place = "place"
+
+    [<Literal>]
+    let Plant = "plant"
+
+    let All : string list = [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant ]
+
+    /// The actions a terrain transform can name.
+    let Transforming : string list = [ Till; Transform; Break ]
+
+/// The light a crop needs (`GrowthRequirements.Light`).
+[<RequireQualifiedAccess>]
+module LightNeeds =
+    [<Literal>]
+    let Light = "light"
+
+    [<Literal>]
+    let Dark = "dark"
+
+    let All : string list = [ Light; Dark ]
+
+/// What a neighbour requirement counts (`NeighborRequirement.Kind`).
+[<RequireQualifiedAccess>]
+module NeighborKinds =
+    [<Literal>]
+    let Crop = "crop"
+
+    [<Literal>]
+    let Terrain = "terrain"
+
+    [<Literal>]
+    let Water = "water"
+
+    let All : string list = [ Crop; Terrain; Water ]
+
+/// How a weather overlay draws (`WeatherOverlayDefinition.Style`).
+[<RequireQualifiedAccess>]
+module OverlayStyles =
+    [<Literal>]
+    let Rain = "rain"
+
+    [<Literal>]
+    let Snow = "snow"
+
+    [<Literal>]
+    let Dust = "dust"
+
+    [<Literal>]
+    let None = "none"
+
+    let All : string list = [ Rain; Snow; Dust; None ]
+
+/// What a cutscene step does (`CutsceneStep.Type`, M2).
+[<RequireQualifiedAccess>]
+module CutsceneStepTypes =
+    [<Literal>]
+    let Say = "say"
+
+    [<Literal>]
+    let Choice = "choice"
+
+    [<Literal>]
+    let Jump = "jump"
+
+    [<Literal>]
+    let Move = "move"
+
+    [<Literal>]
+    let Face = "face"
+
+    [<Literal>]
+    let Emote = "emote"
+
+    [<Literal>]
+    let Wait = "wait"
+
+    [<Literal>]
+    let Camera = "camera"
+
+    [<Literal>]
+    let Fade = "fade"
+
+    [<Literal>]
+    let Music = "music"
+
+    [<Literal>]
+    let Sound = "sound"
+
+    [<Literal>]
+    let Outcomes = "outcomes"
+
+    [<Literal>]
+    let End = "end"
+
+    let All : string list = [ Say; Choice; Jump; Move; Face; Emote; Wait; Camera; Fade; Music; Sound; Outcomes; End ]
+
+/// The emotes a cutscene can show over a character (`CutsceneStep.Emote`).
+[<RequireQualifiedAccess>]
+module Emotes =
+    let All : string list = [ "exclaim"; "question"; "heart"; "music"; "anger"; "sweat"; "sleep"; "idea" ]
+
 /// TS `DirectionSchema`.
 [<RequireQualifiedAccess>]
 module Directions =
@@ -244,7 +381,15 @@ module CustomAssetTypes =
     [<Literal>]
     let Art = "art"
 
-    let All : string list = [ Tile; Npc; Item; Player; Art ]
+    /// A sound effect (OGG or WAV) that `playSound` plays (M2).
+    [<Literal>]
+    let Sound = "sound"
+
+    /// Music (OGG or WAV) that scenes, seasons, weather, festivals and events pick (M2).
+    [<Literal>]
+    let Music = "music"
+
+    let All : string list = [ Tile; Npc; Item; Player; Art; Sound; Music ]
 
 /// TS `EventOutcomeSchema.type` enum.
 [<RequireQualifiedAccess>]
@@ -317,7 +462,15 @@ module EventOutcomeTypes =
     [<Literal>]
     let StartMinigame = "startMinigame"
 
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame ]
+    /// Play a music asset until the scene changes (`soundId`; empty: back to the game's music).
+    [<Literal>]
+    let PlayMusic = "playMusic"
+
+    /// Play a cutscene (`cutsceneId`, M2).
+    [<Literal>]
+    let StartCutscene = "startCutscene"
+
+    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -397,7 +550,7 @@ module PrimitivesSchema =
 module SettingsSchema =
     let ClassicCalendarSeasons () : CalendarSeason list =
         PrimitivesSchema.ClassicSeasons
-        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0 })
+        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0; Temperature = None; Music = None })
 
     let DefaultProjectSettings : ProjectSettings = ProjectSettings.Default
 
@@ -456,7 +609,7 @@ module ProjectSchema =
     /// The project schema version. Only this version loads (there are no migrations): bump it
     /// when the persisted shape changes, so files of another shape are refused with a message.
     [<Literal>]
-    let CurrentProjectSchemaVersion = 1.0
+    let CurrentProjectSchemaVersion = 2.0
 
 [<RequireQualifiedAccess>]
 module GameContentSchema =
@@ -501,7 +654,7 @@ module MigrationsSchema =
     let private entry (weatherId: string) (weight: float) : WeatherTableEntry = { WeatherId = weatherId; Weight = weight }
 
     let private weather (id: string) (name: string) (waters: bool) (damage: float) (inside: bool) (overlay: string option) : WeatherTypeDefinition =
-        { Id = id; Name = name; WatersOutdoorSoil = waters; CropDamageChance = damage; NpcsStayInside = inside; Overlay = overlay; Extra = [] }
+        { Id = id; Name = name; WatersOutdoorSoil = waters; CropDamageChance = damage; NpcsStayInside = inside; Overlay = overlay; Music = None; Extra = [] }
 
     /// Default weather set every pre-v6 project receives (tunable afterwards).
     let DefaultWeatherConfig () : WeatherConfig =
@@ -515,4 +668,5 @@ module MigrationsSchema =
               "summer", [ entry "sun" 7.0; entry "rain" 1.0; entry "storm" 2.0 ]
               "fall", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
               "winter", [ entry "sun" 5.0; entry "snow" 5.0 ] ]
+          Overlays = None
           Extra = [] }

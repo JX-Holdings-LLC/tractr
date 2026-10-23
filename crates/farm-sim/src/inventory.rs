@@ -45,10 +45,11 @@ pub fn stack_cap(item: &Item) -> u32 {
     }
 }
 
-/// The quality a slot records: `None` for normal quality (and for anything that is not a crop
-/// quality), so normal-quality units stack with slots written before qualities existed.
+/// The quality a slot records: `None` for normal quality (and for no quality), so normal-quality
+/// units stack with slots written before qualities existed. The engine maps a game's own plain
+/// tier and unknown tiers to `None` first ([`crate::EngineContext::slot_quality`]).
 pub fn slot_quality(quality: Option<&str>) -> Option<String> {
-    quality.filter(|q| *q != crop_qualities::NORMAL && crop_qualities::ALL.contains(q)).map(str::to_owned)
+    quality.filter(|q| !q.is_empty() && *q != crop_qualities::NORMAL).map(str::to_owned)
 }
 
 /// Add `quantity` of `item` at normal quality. See [`add_item_with_quality`].

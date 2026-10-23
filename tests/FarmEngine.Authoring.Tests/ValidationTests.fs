@@ -53,7 +53,7 @@ let ``F sharp compiler reproduces the checked-in cartridge and blocks errors`` (
         File.WriteAllBytes(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", "fixture-project.cart"), compiled)
     else
         Assert.Equal<byte>(File.ReadAllBytes(fixture "fixture-project.cart"), compiled)
-    let broken = { imported.Data.Value with SelectedTileType = "lava" }
+    let broken = { imported.Data.Value with Mode = "bogus" }
     Assert.Throws<InvalidOperationException>(fun () -> CartridgeCompiler.Compile broken |> ignore) |> ignore
 
 [<Fact>]
@@ -74,10 +74,11 @@ let ``validateProject reports constraint violations`` () =
     let broken = parse json
     // Parse-level: refuses the file.
     let errors = SchemaChecks.validateProject broken
-    for prefix in [ "mode:"; "scenes.0.height:"; "scenes.0.tiles.0.0.background:"; "quests.0.status:"; "events.0.conditions.0.quantity:"; "events.0.outcomes.0.radius:" ] do
+    for prefix in [ "mode:"; "scenes.0.height:"; "quests.0.status:"; "events.0.conditions.0.quantity:"; "events.0.outcomes.0.radius:" ] do
         Assert.True(startsWith prefix errors, prefix)
-    // Lint-level: a problem the editor shows. Never a parse error.
-    for prefix in [ "scenes.0.tiles.0:"; "events.0.id:"; "events.0.conditions.1:" ] do
+    // Lint-level: a problem the editor shows. Never a parse error. An unknown terrain is a
+    // Problems error since terrains are content (M1).
+    for prefix in [ "scenes.0.tiles.0:"; "scenes.0.tiles.0.0.background:"; "events.0.id:"; "events.0.conditions.1:" ] do
         Assert.False(startsWith prefix errors, prefix)
     let lint = SchemaChecks.lintProject broken
     for prefix in [ "scenes.0.tiles.0:"; "events.0.id:" ] do

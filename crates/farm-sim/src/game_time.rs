@@ -14,14 +14,14 @@ use crate::animals;
 use crate::crafting;
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
-use crate::farming::{crops, multi_tile};
+use crate::farming::{crops, growth, multi_tile};
 use crate::hooks::{DayHookPayload, HookEvent, SeasonChangeHookPayload, WeatherRollHookPayload, YearStartHookPayload};
 use crate::messages;
 use crate::quests;
 use crate::rng::Rng;
 use crate::schema::{
-    classic_calendar_seasons, soil_states, tile_types, CalendarConfig, CalendarFestival, CalendarSeason, ClockState,
-    Crop, CropDefinition, GameContent, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
+    classic_calendar_seasons, soil_states, CalendarConfig, CalendarFestival, CalendarSeason, ClockState, Crop,
+    CropDefinition, GameContent, GameState, NodeTypeDefinition, Tile, TileNode, TimeConfig,
 };
 use crate::units;
 use crate::weather;
@@ -202,6 +202,16 @@ pub fn time_config(time: &TimeConfig) -> &TimeConfig {
 
 /// Format a time of day (micro-minutes) as a clock string, e.g. 810 minutes → "1:30 PM".
 pub fn format_time_of_day(time_minutes: u32) -> String {
+    format_time_of_day_in(units::MINUTES_PER_DAY, time_minutes)
+}
+
+/// [`format_time_of_day`] in a day of `day_minutes` minutes (M1): a 24-hour day reads "1:30 PM",
+/// any other length counts its hours from 0 ("27:15" in a 30-hour day).
+pub fn format_time_of_day_in(day_minutes: u32, time_minutes: u32) -> String {
+    if day_minutes != units::MINUTES_PER_DAY {
+        let total = units::whole_minute(time_minutes) % day_minutes.max(1);
+        return format!("{}:{:0>2}", total / 60, total % 60);
+    }
     let total = units::whole_minute(time_minutes) % units::MINUTES_PER_DAY;
     let hours24 = total / 60;
     let minutes = total % 60;
@@ -259,6 +269,7 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     state.dialogue = None;
     state.shop = None;
     state.minigame = None;
+    crate::cutscenes::stop(state);
     state.shop_purchases_today = IndexMap::new();
 
     // Animals: age, mood, product rolls (M4c). Machines finish overnight jobs automatically
@@ -348,11 +359,24 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
     }
 
     let mut crop_types = CropTypes::new(&ctx.content, &next.season);
+    let mut terrains = TerrainRules::new(ctx);
+    let season_temperature = ctx
+        .content
+        .settings
+        .calendar
+        .seasons
+        .iter()
+        .find(|season| season.id == next.season)
+        .and_then(|season| season.temperature);
     for scene in &mut state.world.scenes {
-        // Weather stays outside indoor scenes (greenhouses, interiors, mine floors).
-        let outdoor = !scene.is_indoor();
-        for row in &mut scene.tiles {
-            for tile in row.iter_mut() {
+        // Crops whose growth requirements (M1) the scene does not meet tonight.
+        let unmet = growth::unmet_tiles(ctx, scene, season_temperature);
+        // Weather stays outside indoor scenes (greenhouses, interiors, mine floors) and off
+        // indoor terrain.
+        let outdoor_scene = !scene.is_indoor();
+        for (y, row) in scene.tiles.iter_mut().enumerate() {
+            for (x, tile) in row.iter_mut().enumerate() {
+                let outdoor = outdoor_scene && !terrains.indoor(tile);
                 // Storm damage rolls before growth (the storm hits overnight). The draw only
                 // happens for a live crop under damaging weather (short-circuit order).
                 if outdoor
@@ -363,12 +387,55 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
                     tile.crop = None;
                 }
                 if let Some(crop) = tile.crop.as_mut() {
-                    grow_crop_overnight(&mut crop_types, crop);
+                    let held_back = !unmet.is_empty() && unmet.contains(&(x, y));
+                    grow_crop_overnight(&mut crop_types, crop, held_back);
                 }
-                settle_soil_overnight(tile, outdoor && night.waters_outdoor_soil, next.day);
+                let plantable = terrains.plantable(&tile.background);
+                settle_soil_overnight(tile, plantable, outdoor && night.waters_outdoor_soil, next.day);
                 respawn_node(tile, &node_types, next.day);
             }
         }
+    }
+}
+
+/// The terrain rules the night pass asks of every tile, remembered by terrain id: a map uses a
+/// handful of terrains on thousands of tiles.
+struct TerrainRules<'c> {
+    ctx: &'c EngineContext,
+    /// Terrain id → (plantable, indoor).
+    known: Vec<(&'c str, bool, bool)>,
+}
+
+impl<'c> TerrainRules<'c> {
+    fn new(ctx: &'c EngineContext) -> Self {
+        Self { ctx, known: Vec::new() }
+    }
+
+    /// (plantable, indoor) of the terrain `id` (an unknown terrain is neither).
+    fn rules(&mut self, id: &str) -> (bool, bool) {
+        if let Some(&(_, plantable, indoor)) = self.known.iter().find(|(known, ..)| *known == id) {
+            return (plantable, indoor);
+        }
+        match self.ctx.terrain(id) {
+            Some(terrain) => {
+                if self.known.len() < 32 {
+                    self.known.push((terrain.id.as_str(), terrain.plantable, terrain.indoor));
+                }
+                (terrain.plantable, terrain.indoor)
+            }
+            None => (false, false),
+        }
+    }
+
+    fn plantable(&mut self, id: &str) -> bool {
+        self.rules(id).0
+    }
+
+    /// Whether a terrain on any of the tile's layers keeps the weather off it.
+    fn indoor(&mut self, tile: &Tile) -> bool {
+        self.rules(&tile.background).1
+            || tile.overlay.as_deref().is_some_and(|id| self.rules(id).1)
+            || tile.object.as_deref().is_some_and(|id| self.rules(id).1)
     }
 }
 
@@ -412,14 +479,17 @@ impl<'c> CropTypes<'c> {
 }
 
 /// One night of growth for a live crop: a watered crop grows a day, a dry one goes a day
-/// without water, and a crop out of the new season withers. A withered crop or one of an
+/// without water, and a crop out of the new season withers. A crop `held_back` by its growth
+/// requirements does neither: it waits for a night that suits it. A withered crop or one of an
 /// unknown type is left alone.
-fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop) {
+fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop, held_back: bool) {
     if crop.withered == Some(true) {
         return;
     }
     let Some((definition, in_season)) = crop_types.get(&crop.r#type) else { return };
-    if crop.watered {
+    if held_back {
+        // No growth tonight; the water is used up all the same.
+    } else if crop.watered {
         crop.days_grown = Some(crop.days_grown.unwrap_or(0).saturating_add(1));
         crop.days_without_water = 0;
     } else {
@@ -434,9 +504,10 @@ fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop) {
 }
 
 /// Unfertilized watered soil dries out overnight — unless the new day's weather waters it
-/// (`rained`: rain or a storm on an outdoor tile, M4), which also waters a live crop.
-fn settle_soil_overnight(tile: &mut Tile, rained: bool, new_day: u32) {
-    if rained && tile.background == tile_types::SOIL {
+/// (`rained`: rain or a storm on an outdoor tile, M4), which also waters a live crop. Only soil
+/// (`plantable` ground) takes the rain.
+fn settle_soil_overnight(tile: &mut Tile, plantable: bool, rained: bool, new_day: u32) {
+    if rained && plantable {
         tile.soil_moisture = 100;
         if tile.soil_state.as_deref() != Some(soil_states::FERTILIZED) {
             set_text(&mut tile.soil_state, soil_states::WATERED);

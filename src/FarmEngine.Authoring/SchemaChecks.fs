@@ -130,47 +130,19 @@ module SchemaChecks =
               match outcome.Amount with
               | Some amount when Double.IsNaN amount || Double.IsInfinity amount -> yield! parse (op + ".amount") "Number must be finite"
               | _ -> ()
-              yield! whenSome outcome.Radius (fun radius -> integer (op + ".radius") radius @ range (op + ".radius") radius 0.0 10.0)
-              yield! optionalOneOf (op + ".newTileType") outcome.NewTileType TileTypes.All ])
+              yield! whenSome outcome.Radius (fun radius -> integer (op + ".radius") radius @ range (op + ".radius") radius 0.0 10.0) ])
 
     // ── Project sections, in the C# order ───────────────────────────────────
 
-    let private tileTypes = System.Collections.Generic.HashSet<string>(TileTypes.All)
     let private soilStates = System.Collections.Generic.HashSet<string>(SoilStates.All)
-    let private cropQualities = System.Collections.Generic.HashSet<string>(CropQualities.All)
-    let private cropMutations = System.Collections.Generic.HashSet<string>(CropMutations.All)
 
-    /// Whether a tile passes every check below: tested first, so the common valid tile costs
-    /// a few set lookups and no path strings (Problems runs this over every tile).
-    let private validTile (tile: Tile) =
-        let optional (allowed: System.Collections.Generic.HashSet<string>) (value: string option) =
-            match value with
-            | None -> true
-            | Some value -> allowed.Contains value
-        tileTypes.Contains tile.Type
-        && tileTypes.Contains tile.Background
-        && optional tileTypes tile.Overlay
-        && optional tileTypes tile.Object
-        && optional soilStates tile.SoilState
-        && (match tile.Crop with
-            | None -> true
-            | Some crop -> cropQualities.Contains crop.Quality && optional cropMutations crop.Mutation)
-
-    /// A tile's checks; `path` builds its path only when one fails.
+    /// A tile's checks; `path` builds its path only when one fails. Its terrains and its crop's
+    /// quality and mutation are the game's own vocabulary since M1: an unknown one is a problem
+    /// (`ChecksVocabulary`), not a reason to refuse the file.
     let private tile (path: unit -> string) (tile: Tile) =
-        if validTile tile then []
-        else
-            let tp = path ()
-            [ yield! oneOf (tp + ".type") tile.Type TileTypes.All
-              yield! oneOf (tp + ".background") tile.Background TileTypes.All
-              yield! optionalOneOf (tp + ".overlay") tile.Overlay TileTypes.All
-              yield! optionalOneOf (tp + ".object") tile.Object TileTypes.All
-              yield! optionalOneOf (tp + ".soilState") tile.SoilState SoilStates.All
-              match tile.Crop with
-              | None -> ()
-              | Some crop ->
-                  yield! oneOf (tp + ".crop.quality") crop.Quality CropQualities.All
-                  yield! optionalOneOf (tp + ".crop.mutation") crop.Mutation CropMutations.All ]
+        match tile.SoilState with
+        | Some state when not (soilStates.Contains state) -> optionalOneOf (path () + ".soilState") tile.SoilState SoilStates.All
+        | _ -> []
 
     let private scene (scenes: Scene list) (s: int) (scene: Scene) =
         let sp = $"scenes.{s}"
@@ -206,9 +178,8 @@ module SchemaChecks =
         each p.Items (fun i item ->
             let ip = $"items.{i}"
             [ yield! nonEmpty (ip + ".id") item.Id
-              yield! oneOf (ip + ".type") item.Type ItemTypes.All
-              yield! optionalOneOf (ip + ".toolType") item.ToolType ToolTypes.All
-              yield! whenSome item.ToolTier (positiveInt (ip + ".toolTier")) ])
+              yield! whenSome item.ToolTier (positiveInt (ip + ".toolTier"))
+              yield! whenSome item.Energy (nonNegative (ip + ".energy")) ])
 
     let private npcs (p: GameProject) =
         each p.Npcs (fun i npc ->
@@ -267,6 +238,104 @@ module SchemaChecks =
                             let tp = $"minigames.{m}.resultTiers.{t}"
                             range (tp + ".minScore") tier.MinScore 0.0 1.0 @ outcomes tp tier.Outcomes) ]) ]
 
+    let private color path (value: string) =
+        let hex = value.Length = 7 || value.Length = 9
+        if value.StartsWith "#" && hex && value |> Seq.skip 1 |> Seq.forall Uri.IsHexDigit then []
+        else parse path $"Expected a colour like #rrggbb, received '{value}'"
+
+    let private optionalColor path (value: string option) =
+        match value with
+        | None -> []
+        | Some value -> color path value
+
+    /// The world vocabulary (M1): terrains, tools, item categories, crop qualities and mutations.
+    let private vocabulary (p: GameProject) =
+        let each' (list: 'T list option) check = each (defaultArg list []) check
+        [ yield!
+              each' p.Terrains (fun t terrain ->
+                  let tp = $"terrains.{t}"
+                  [ yield! nonEmpty (tp + ".id") terrain.Id
+                    yield! oneOf (tp + ".layer") terrain.Layer TileLayers.All
+                    yield! color (tp + ".color") terrain.Color
+                    yield! nonNegative (tp + ".hazardEnergy") terrain.HazardEnergy
+                    yield!
+                        each terrain.Transforms (fun k transform ->
+                            oneOf $"{tp}.transforms.{k}.action" transform.Action ToolActions.Transforming) ])
+          yield!
+              each' p.Tools (fun t tool ->
+                  let tp = $"tools.{t}"
+                  [ yield! nonEmpty (tp + ".id") tool.Id
+                    yield! oneOf (tp + ".action") tool.Action ToolActions.All
+                    yield! nonNegative (tp + ".energyCost") tool.EnergyCost
+                    match tool.Key with
+                    | Some key when key.Length > 1 -> yield! parse (tp + ".key") "String must contain at most 1 character(s)"
+                    | _ -> ()
+                    yield!
+                        each tool.Area (fun k area ->
+                            positiveInt $"{tp}.area.{k}.width" area.Width @ positiveInt $"{tp}.area.{k}.length" area.Length) ])
+          yield!
+              each' p.ItemCategories (fun c category ->
+                  nonEmpty $"itemCategories.{c}.id" category.Id @ nonNegative $"itemCategories.{c}.energy" category.Energy)
+          yield!
+              each' p.CropQualities (fun q quality ->
+                  let qp = $"cropQualities.{q}"
+                  [ yield! nonEmpty (qp + ".id") quality.Id
+                    yield! positive (qp + ".priceMultiplier") quality.PriceMultiplier
+                    yield! positive (qp + ".yieldMultiplier") quality.YieldMultiplier
+                    yield! nonNegative (qp + ".mutationMultiplier") quality.MutationMultiplier
+                    yield! integer (qp + ".stars") quality.Stars
+                    yield! nonNegative (qp + ".stars") quality.Stars ])
+          yield!
+              each' p.CropMutations (fun m mutation ->
+                  let mp = $"cropMutations.{m}"
+                  nonEmpty (mp + ".id") mutation.Id
+                  @ positive (mp + ".yieldMultiplier") mutation.YieldMultiplier
+                  @ range (mp + ".share") mutation.Share 0.0 1.0) ]
+
+    /// What crops need to grow (M1).
+    let private requirements (path: string) (needs: GrowthRequirements option) =
+        match needs with
+        | None -> []
+        | Some needs ->
+            [ yield! optionalOneOf (path + ".light") needs.Light LightNeeds.All
+              yield! whenSome needs.MinTemperature (integer (path + ".minTemperature"))
+              yield! whenSome needs.MaxTemperature (integer (path + ".maxTemperature"))
+              match needs.MinTemperature, needs.MaxTemperature with
+              | Some low, Some high when low > high -> yield! lint (path + ".minTemperature") "minTemperature is greater than maxTemperature"
+              | _ -> ()
+              yield!
+                  each needs.Neighbors (fun k need ->
+                      let np = $"{path}.neighbors.{k}"
+                      oneOf (np + ".kind") need.Kind NeighborKinds.All
+                      @ positiveInt (np + ".radius") need.Radius
+                      @ positiveInt (np + ".min") need.Min) ]
+
+    /// The look of the sky (M1).
+    let private look (path: string) (look: AtmosphereLook) =
+        [ yield!
+              each look.Daylight (fun k key ->
+                  nonNegative $"{path}.daylight.{k}.minute" key.Minute @ color $"{path}.daylight.{k}.color" key.Color)
+          yield! optionalColor (path + ".foliageTint") look.FoliageTint ]
+
+    /// Cutscenes (M2).
+    let private cutscenes (p: GameProject) =
+        each (defaultArg p.Cutscenes []) (fun c cutscene ->
+            let cp = $"cutscenes.{c}"
+            [ yield! nonEmpty (cp + ".id") cutscene.Id
+              yield!
+                  each cutscene.Steps (fun k step ->
+                      let sp = $"{cp}.steps.{k}"
+                      [ yield! oneOf (sp + ".type") step.Type CutsceneStepTypes.All
+                        yield! optionalOneOf (sp + ".direction") step.Direction Directions.All
+                        yield! optionalOneOf (sp + ".emote") step.Emote Emotes.All
+                        yield! optionalOneOf (sp + ".mode") step.Mode [ "out"; "in" ]
+                        yield! optionalColor (sp + ".color") step.Color
+                        yield! whenSome step.Seconds (nonNegative (sp + ".seconds"))
+                        yield! whenSome step.X (integer (sp + ".x"))
+                        yield! whenSome step.Y (integer (sp + ".y"))
+                        yield! conditions sp step.Conditions
+                        yield! outcomes sp step.Outcomes ]) ])
+
     let private definitions (p: GameProject) =
         let idLists =
             [ "shops", p.Shops |> List.map (fun x -> x.Id)
@@ -283,7 +352,6 @@ module SchemaChecks =
                   let np = $"nodeTypes.{n}"
                   [ yield! nonEmpty (np + ".id") node.Id
                     yield! positiveInt (np + ".health") node.Health
-                    yield! oneOf (np + ".requiredTool") node.RequiredTool ToolTypes.All
                     yield! positiveInt (np + ".requiredToolTier") node.RequiredToolTier
                     yield! whenSome (Option.flatten node.RespawnDays) (positiveInt (np + ".respawnDays")) ])
           yield!
@@ -295,6 +363,17 @@ module SchemaChecks =
               each p.Weather.Types (fun w weather ->
                   nonEmpty $"weather.types.{w}.id" weather.Id
                   @ range $"weather.types.{w}.cropDamageChance" weather.CropDamageChance 0.0 1.0)
+          yield!
+              each (defaultArg p.Weather.Overlays []) (fun o overlay ->
+                  let op = $"weather.overlays.{o}"
+                  [ yield! nonEmpty (op + ".id") overlay.Id
+                    yield! oneOf (op + ".style") overlay.Style OverlayStyles.All
+                    if overlay.Style <> OverlayStyles.None then yield! color (op + ".color") overlay.Color
+                    yield! nonNegative (op + ".density") overlay.Density
+                    yield! nonNegative (op + ".speed") overlay.Speed
+                    yield! optionalColor (op + ".tint") overlay.Tint ])
+          yield!
+              each (defaultArg p.CustomCrops []) (fun c crop -> requirements $"customCrops.{c}.requirements" crop.Requirements)
           for season, entries in p.Weather.Table do
               yield! each entries (fun k entry -> positive $"weather.table.{season}.{k}.weight" entry.Weight) ]
 
@@ -327,7 +406,18 @@ module SchemaChecks =
           yield!
               each s.Calendar.Festivals (fun f festival ->
                   nonEmpty $"settings.calendar.festivals.{f}.id" festival.Id
-                  @ positiveInt $"settings.calendar.festivals.{f}.day" festival.Day) ]
+                  @ positiveInt $"settings.calendar.festivals.{f}.day" festival.Day)
+          yield! each s.Calendar.Seasons (fun c season -> whenSome season.Temperature (integer $"settings.calendar.seasons.{c}.temperature"))
+          match s.Time.DayMinutes with
+          | Some minutes when not (isInteger minutes) || minutes < 60.0 ->
+              yield! parse "settings.time.dayMinutes" "Number must be a whole number of at least 60"
+          | _ -> ()
+          match s.Atmosphere with
+          | None -> ()
+          | Some atmosphere ->
+              yield! look "settings.atmosphere.allSeasons" atmosphere.AllSeasons
+              for season, l in atmosphere.Seasons do
+                  yield! look $"settings.atmosphere.seasons.{season}" l ]
 
     let private mine (p: GameProject) =
         let m = p.Mine
@@ -366,9 +456,16 @@ module SchemaChecks =
         [ yield! integer "schemaVersion" p.SchemaVersion
           yield! nonEmpty "id" p.Id
           yield! oneOf "mode" p.Mode EditorModes.All
-          yield! oneOf "selectedTileType" p.SelectedTileType TileTypes.All
           yield! integer "currentYear" p.CurrentYear
           yield! scenes p
+          yield!
+              each p.Scenes (fun s scene ->
+                  [ yield! whenSome scene.Temperature (integer $"scenes.{s}.temperature")
+                    match scene.Atmosphere with
+                    | Some l -> yield! look $"scenes.{s}.atmosphere" l
+                    | None -> () ])
+          yield! vocabulary p
+          yield! cutscenes p
           yield! player p
           yield! items p
           yield! npcs p

@@ -129,6 +129,7 @@ public sealed class ContentEditorViewModel : ObservableObject
         },
         Of("Quests", p => p.Quests, Defaults.NewQuest, Edits.UpsertQuest, Edits.RemoveQuest),
         Of("Events", p => p.Events, Defaults.NewEvent, Edits.UpsertEvent, Edits.RemoveEvent),
+        Of("Cutscenes", p => p.Cutscenes.OrEmpty(), Defaults.NewCutscene, Edits.UpsertCutscene, Edits.RemoveCutscene, Defaults.DuplicateCutscene),
         Of("Shops", p => p.Shops, Defaults.NewShop, Edits.UpsertShop, Edits.RemoveShop),
         Of("Recipes", p => p.Recipes, Defaults.NewRecipe, Edits.UpsertRecipe, Edits.RemoveRecipe) with
         {
@@ -154,7 +155,39 @@ public sealed class ContentEditorViewModel : ObservableObject
         Of("Fish tables", p => p.FishTables, Defaults.NewFishTable, Edits.UpsertFishTable, Edits.RemoveFishTable),
         Of("Actions", p => p.Actions, Defaults.NewAction, Edits.UpsertAction, Edits.RemoveAction, Defaults.DuplicateAction),
         Of("Minigames", p => p.Minigames, Defaults.NewMinigame, Edits.UpsertMinigame, Edits.RemoveMinigame, Defaults.DuplicateMinigame),
+        Of("Terrains", p => p.Terrains.OrEmpty(), Defaults.NewTerrain, Edits.UpsertTerrain, Edits.RemoveTerrain) with
+        {
+            Art = entity => ((TerrainDefinition)entity).Visual.OrNull(),
+            Note = (_, entity, builtin) => ContentReadouts.TerrainListNote((TerrainDefinition)entity, builtin),
+            Builtins = VocabularyBuiltins<TerrainDefinition>("terrain", "terrain", ContentReadouts.BuiltinTerrains, Edits.UpsertTerrain),
+        },
+        Of("Tools", p => p.Tools.OrEmpty(), Defaults.NewTool, Edits.UpsertTool, Edits.RemoveTool) with
+        {
+            Note = (_, entity, builtin) => ContentReadouts.ToolListNote((ToolDefinition)entity, builtin),
+            Builtins = VocabularyBuiltins<ToolDefinition>("tool", "tool", ContentReadouts.BuiltinTools, Edits.UpsertTool),
+        },
+        Of("Item kinds", p => p.ItemCategories.OrEmpty(), Defaults.NewItemCategory, Edits.UpsertItemCategory, Edits.RemoveItemCategory) with
+        {
+            Note = (_, entity, builtin) => ContentReadouts.VocabularyListNote("itemCategory", ((ItemCategoryDefinition)entity).Id, builtin),
+            Builtins = VocabularyBuiltins<ItemCategoryDefinition>("item kind", "itemCategory", ContentReadouts.BuiltinItemCategories, Edits.UpsertItemCategory),
+        },
+        Of("Crop qualities", p => p.CropQualities.OrEmpty(), Defaults.NewCropQuality, Edits.UpsertCropQuality, Edits.RemoveCropQuality) with
+        {
+            Note = (_, entity, builtin) => ContentReadouts.VocabularyListNote("cropQuality", ((CropQualityDefinition)entity).Id, builtin),
+            Builtins = VocabularyBuiltins<CropQualityDefinition>("crop quality", "cropQuality", ContentReadouts.BuiltinCropQualities, Edits.UpsertCropQuality),
+        },
+        Of("Crop mutations", p => p.CropMutations.OrEmpty(), Defaults.NewCropMutation, Edits.UpsertCropMutation, Edits.RemoveCropMutation) with
+        {
+            Note = (_, entity, builtin) => ContentReadouts.VocabularyListNote("cropMutation", ((CropMutationDefinition)entity).Id, builtin),
+            Builtins = VocabularyBuiltins<CropMutationDefinition>("crop mutation", "cropMutation", ContentReadouts.BuiltinCropMutations, Edits.UpsertCropMutation),
+        },
     ];
+
+    /// The built-ins of a world vocabulary list (M1): <paramref name="kind"/> names one in
+    /// messages, <paramref name="builtinKind"/> is the F# kind; customizing copies it as it is.
+    private static ContentBuiltins VocabularyBuiltins<T>(string kind, string builtinKind, Func<GameProject, IEnumerable<T>> entries, Func<T, Edit> upsert)
+        where T : class =>
+        new(kind, project => entries(project).Cast<object>(), id => ContentReadouts.IsBuiltinVocabulary(builtinKind, id), entity => upsert((T)entity));
 
     private const string NothingSelected = "Select an entry to edit it.";
 

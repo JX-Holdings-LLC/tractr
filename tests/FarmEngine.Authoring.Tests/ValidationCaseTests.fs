@@ -181,6 +181,10 @@ let ``every broken project reaches the check it was written for`` (name: string)
             Assert.False(messages |> List.exists (fun m -> m.Contains(text, StringComparison.Ordinal)), sprintf "%s: unexpected %s" name text)
         | BrokenProjects.Decode issue ->
             Assert.Equal(Error issue, BrokenProjects.tryProject case)
+        | BrokenProjects.Problem(code, path) ->
+            let problems = Problems.collect (BrokenProjects.project case)
+            Assert.True(problems |> List.exists (fun p -> p.Code = code && p.Path = path),
+                        sprintf "%s: expected %s at %s in\n%s" name code path (problems |> List.map (fun p -> p.Code + " " + p.Path) |> String.concat "\n"))
 
 [<Fact>]
 let ``the combined broken project hits the 20-error cap`` () =

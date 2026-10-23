@@ -7,8 +7,9 @@
 //! fixture additions (animals, mine config) applied on top. Cases whose coordinates depend on the
 //! C# field (`EngineTests.MakeProject()`, 6x6 with soil at (3,2)) use [`make_csharp_engine`].
 
-use farm_sim::content_builtin::{self, ToolDefinition};
+use farm_sim::content_builtin;
 use farm_sim::hooks::{WeatherRollHookPayload, WeatherRollListener};
+use farm_sim::schema::ToolDefinition;
 use farm_sim::schema::{
     AnimalState, GameProject, GameState, InventorySlot, MineConfig, Scene, SkillState, WeatherConfig,
     WeatherTableEntry, WeatherTypeDefinition,

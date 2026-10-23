@@ -39,6 +39,7 @@ pub fn to_crop_definition(custom: &CustomCropDefinition) -> CropDefinition {
         yield_min: custom.yield_min,
         yield_max: custom.yield_max,
         harvest_item_id: custom.harvest_item_id.clone(),
+        requirements: custom.requirements.clone(),
         extra: custom.extra.clone(),
     }
 }
@@ -61,6 +62,7 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
         yield_min: crop.yield_min,
         yield_max: crop.yield_max,
         harvest_item_id: crop.harvest_item_id.clone(),
+        requirements: crop.requirements.clone(),
         extra: crop.extra.clone(),
     }
 }
@@ -68,7 +70,8 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
 // ─── Growth and harvest math (port of the rest of Farming/Crops.cs) ─────────────────────────
 
 use crate::rng::RandomSource;
-use crate::schema::{crop_mutations, crop_qualities, tile_types, Crop, GameContent, Tile};
+use crate::schema::{crop_qualities, Crop, CropMutationDefinition, CropQualityDefinition, GameContent, Tile};
+use crate::units;
 
 /// Test-only: the engine no longer calls it; the tests pin the reference behaviour.
 #[cfg(test)]
@@ -99,93 +102,52 @@ pub fn calculate_crop_quality(watered: bool, fertilized: bool, days_without_wate
     crop_qualities::NORMAL.to_owned()
 }
 
-/// Returns one of [`crop_mutations`] or `None`. Always draws exactly once when a definition is
-/// given. The chance is scaled by the quality bonus (×1.2 silver, ×1.5 gold, ×2 iridium); a roll
-/// under a tenth of it is ancient, under three tenths golden, under all of it giant.
-pub fn roll_mutation(definition: Option<&CropDefinition>, quality: &str, rng: &mut dyn RandomSource) -> Option<String> {
+/// The mutation a harvest rolls, or `None`. Always draws exactly once when a definition is
+/// given. The crop's chance is scaled by the quality tier's mutation multiplier (×1.2 silver,
+/// ×1.5 gold, ×2 iridium in the built-in tiers) and split between the mutations by their
+/// shares, in list order: with the built-in ones a roll under a tenth of it is ancient, under
+/// three tenths golden, under all of it giant.
+pub fn roll_mutation<'a>(
+    definition: Option<&CropDefinition>,
+    quality: Option<&CropQualityDefinition>,
+    mutations: &'a [CropMutationDefinition],
+    rng: &mut dyn RandomSource,
+) -> Option<&'a CropMutationDefinition> {
     let definition = definition?;
     // `definition.mutationChance || 0`
     let base_chance = definition.mutation_chance.unwrap_or(0);
-    let quality_bonus_milli: u64 = if quality == crop_qualities::IRIDIUM {
-        2000
-    } else if quality == crop_qualities::GOLD {
-        1500
-    } else if quality == crop_qualities::SILVER {
-        1200
-    } else {
-        1000
-    };
+    let quality_bonus_milli = u64::from(quality.map_or(units::MILLI_ONE, |tier| tier.mutation_multiplier));
     // Unclamped like v8 (a chance above 1 still splits into tiers).
     let final_chance = u128::from(base_chance) * u128::from(quality_bonus_milli);
     let roll = u128::from(rng.next_u32()) * 1000;
 
-    if roll * 10 < final_chance {
-        return Some(crop_mutations::ANCIENT.to_owned());
-    }
-    if roll * 10 < final_chance * 3 {
-        return Some(crop_mutations::GOLDEN.to_owned());
-    }
-    if roll < final_chance {
-        return Some(crop_mutations::GIANT.to_owned());
+    let mut share: u128 = 0;
+    for mutation in mutations {
+        share += u128::from(mutation.share);
+        if roll * u128::from(units::MILLI_ONE) < final_chance * share {
+            return Some(mutation);
+        }
     }
     None
 }
 
-/// How many crops a harvest yields: the definition's yield range, plus the quality and mutation
-/// bonuses.
+/// How many crops a harvest yields: the definition's yield range, times the quality tier's and
+/// the mutation's yield multipliers (rounded down).
 pub fn roll_yield(
     definition: Option<&CropDefinition>,
-    quality: &str,
-    mutation: Option<&str>,
+    quality: Option<&CropQualityDefinition>,
+    mutation: Option<&CropMutationDefinition>,
     rng: &mut dyn RandomSource,
 ) -> u32 {
     let Some(definition) = definition else {
         return 1;
     };
     let base_yield = rng.int(i64::from(definition.yield_min), i64::from(definition.yield_max));
-    // Bonuses in thousandths: quality ×1.1/×1.3/×1.5, mutation ×2/×2.5/×3.
-    let quality_bonus: i64 = if quality == crop_qualities::IRIDIUM {
-        1500
-    } else if quality == crop_qualities::GOLD {
-        1300
-    } else if quality == crop_qualities::SILVER {
-        1100
-    } else {
-        1000
-    };
-    let mutation_bonus: i64 = match mutation {
-        Some(crop_mutations::ANCIENT) => 3000,
-        Some(crop_mutations::GOLDEN) => 2500,
-        Some(crop_mutations::GIANT) => 2000,
-        _ => 1000,
-    };
-    let quantity = (base_yield * quality_bonus * mutation_bonus).div_euclid(1_000_000);
+    // Multipliers in thousandths (built-in: quality ×1.1/×1.3/×1.5, mutation ×2/×2.5/×3).
+    let quality_bonus = i64::from(quality.map_or(units::MILLI_ONE, |tier| tier.yield_multiplier));
+    let mutation_bonus = i64::from(mutation.map_or(units::MILLI_ONE, |mutation| mutation.yield_multiplier));
+    let quantity = base_yield.saturating_mul(quality_bonus).saturating_mul(mutation_bonus).div_euclid(1_000_000);
     u32::try_from(quantity.max(0)).unwrap_or(u32::MAX)
-}
-
-/// The value of `quantity` crops of a quality and mutation (`None` for an unknown quality or
-/// mutation, which reads NaN in the reference).
-pub fn calculate_harvest_value(
-    definition: Option<&CropDefinition>,
-    quality: &str,
-    mutation: Option<&str>,
-    quantity: u32,
-) -> Option<i64> {
-    let Some(definition) = definition else {
-        return Some(0);
-    };
-    // Unknown keys read `undefined` in JS: the value is NaN, shown as "NaN" (here `None`).
-    let quality_multiplier = content_builtin::quality_multiplier(quality)?;
-    let mutation_key = match mutation {
-        Some(mutation) if !mutation.is_empty() => mutation,
-        _ => "none",
-    };
-    let mutation_multiplier = content_builtin::mutation_multiplier(mutation_key)?;
-    let value = i128::from(definition.base_harvest_value)
-        * i128::from(quality_multiplier)
-        * i128::from(mutation_multiplier)
-        * i128::from(quantity);
-    Some(i64::try_from(value.div_euclid(1_000_000)).unwrap_or(i64::MAX))
 }
 
 /// Whether a crop grows in `season` (an unknown crop never does).
@@ -280,18 +242,29 @@ pub fn harvest_item<'a>(
         .ok_or_else(|| candidates[0].clone())
 }
 
-/// The quality a harvest comes out at: the quality the crop was planted with (silver when the
-/// soil was fertilized), one tier higher per three farming levels, at most iridium.
-/// Deterministic: it draws nothing from the RNG.
-pub fn harvest_quality(planted_quality: &str, farming_level: u32) -> String {
-    let tiers = crop_qualities::ALL;
-    let planted = tiers.iter().position(|tier| *tier == planted_quality).unwrap_or(0);
+/// The quality a harvest comes out at: the quality the crop was planted with (the second tier,
+/// silver, when the soil was fertilized), one tier higher per three farming levels, at most the
+/// top tier. An unknown quality counts as the first tier. Deterministic: it draws nothing.
+pub fn harvest_quality(tiers: &[CropQualityDefinition], planted_quality: &str, farming_level: u32) -> String {
+    let Some(last) = tiers.len().checked_sub(1) else {
+        return planted_quality.to_owned();
+    };
+    let planted = tiers.iter().position(|tier| tier.id == planted_quality).unwrap_or(0);
     let bonus = usize::try_from(farming_level / 3).unwrap_or(usize::MAX);
-    tiers[planted.saturating_add(bonus).min(tiers.len() - 1)].to_owned()
+    tiers[planted.saturating_add(bonus).min(last)].id.clone()
+}
+
+/// The quality a crop is planted at: the first tier, or the second (silver) on fertilized soil.
+pub fn planted_quality(tiers: &[CropQualityDefinition], fertilized: bool) -> &str {
+    let index = usize::from(fertilized);
+    tiers
+        .get(index)
+        .or_else(|| tiers.first())
+        .map_or(if fertilized { crop_qualities::SILVER } else { crop_qualities::NORMAL }, |tier| tier.id.as_str())
 }
 
 /// Day-based planting (M2+): crops start unwatered — water them or they won't grow.
-pub fn create_planted_crop(crop_type: &str, planted_on_day: u32, fertilized: bool) -> Crop {
+pub fn create_planted_crop(crop_type: &str, planted_on_day: u32, quality: &str) -> Crop {
     Crop {
         r#type: crop_type.to_owned(),
         planted_on_day: Some(planted_on_day),
@@ -299,7 +272,7 @@ pub fn create_planted_crop(crop_type: &str, planted_on_day: u32, fertilized: boo
         stage: 0,
         watered: false,
         last_watered_day: None,
-        quality: if fertilized { crop_qualities::SILVER.to_owned() } else { crop_qualities::NORMAL.to_owned() },
+        quality: quality.to_owned(),
         mutation: None,
         harvest_count: 0,
         days_without_water: 0,
@@ -310,7 +283,14 @@ pub fn create_planted_crop(crop_type: &str, planted_on_day: u32, fertilized: boo
 /// Whether a `width`×`height` crop fits with its top-left corner at (x, y): every covered tile
 /// is open soil, as single-tile planting needs (no crop, machine, dropped item, active gathering
 /// node or collision). Tiles outside the grid (a ragged row too) don't fit.
-pub fn can_place_multi_tile_crop(tiles: &[Vec<Tile>], x: i32, y: i32, width: u32, height: u32) -> bool {
+pub fn can_place_multi_tile_crop(
+    tiles: &[Vec<Tile>],
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    plantable: &dyn Fn(&str) -> bool,
+) -> bool {
     for dy in 0..i64::from(height) {
         for dx in 0..i64::from(width) {
             let check_x = i64::from(x) + dx;
@@ -321,7 +301,7 @@ pub fn can_place_multi_tile_crop(tiles: &[Vec<Tile>], x: i32, y: i32, width: u32
             let Some(tile) = tiles.get(row).and_then(|row| row.get(column)) else {
                 return false;
             };
-            if tile.r#type != tile_types::SOIL
+            if !plantable(&tile.r#type)
                 || tile.crop.is_some()
                 || tile.machine.is_some()
                 || tile.item.is_some()
@@ -443,25 +423,39 @@ mod characterization_tests {
         roll: f64,
         custom_crops: &[CustomCropDefinition],
     ) -> Option<String> {
-        roll_mutation(get_crop_definition(crop_type, custom_crops).as_ref(), quality, &mut PinnedRandom::new(roll))
+        let mutations = content_builtin::crop_mutations();
+        roll_mutation(
+            get_crop_definition(crop_type, custom_crops).as_ref(),
+            tier(quality).as_ref(),
+            &mutations,
+            &mut PinnedRandom::new(roll),
+        )
+        .map(|mutation| mutation.id.clone())
     }
 
-    fn calculate_yield(crop_type: &str, quality: &str, mutation: Option<&str>, roll: f64) -> u32 {
-        roll_yield(get_crop_definition(crop_type, &[]).as_ref(), quality, mutation, &mut PinnedRandom::new(roll))
+    fn tier(quality: &str) -> Option<CropQualityDefinition> {
+        content_builtin::crop_qualities().into_iter().find(|tier| tier.id == quality)
     }
 
-    fn harvest_value(
-        crop_type: &str,
-        quality: &str,
-        mutation: Option<&str>,
-        quantity: u32,
-        custom_crops: &[CustomCropDefinition],
-    ) -> Option<i64> {
-        calculate_harvest_value(get_crop_definition(crop_type, custom_crops).as_ref(), quality, mutation, quantity)
+    fn mutation(id: Option<&str>) -> Option<CropMutationDefinition> {
+        content_builtin::crop_mutations().into_iter().find(|mutation| Some(mutation.id.as_str()) == id)
+    }
+
+    fn calculate_yield(crop_type: &str, quality: &str, mutation_id: Option<&str>, roll: f64) -> u32 {
+        roll_yield(
+            get_crop_definition(crop_type, &[]).as_ref(),
+            tier(quality).as_ref(),
+            mutation(mutation_id).as_ref(),
+            &mut PinnedRandom::new(roll),
+        )
     }
 
     fn grows_in_season(crop_type: &str, season: &str, custom_crops: &[CustomCropDefinition]) -> bool {
         can_grow_in_season(get_crop_definition(crop_type, custom_crops).as_ref(), season)
+    }
+
+    fn soil_only(terrain: &str) -> bool {
+        terrain == "soil"
     }
 
     /// h rows by w cols grid of empty soil tiles.
@@ -472,23 +466,30 @@ mod characterization_tests {
     // --- exported constants ---
 
     #[test]
-    fn quality_multipliers_values() {
-        let actual: Vec<(String, u32)> = content_builtin::quality_multipliers().into_iter().collect();
-        let expected: Vec<(String, u32)> = [("normal", 1000), ("silver", 1250), ("gold", 1500), ("iridium", 2000)]
+    fn built_in_quality_and_mutation_multipliers() {
+        let qualities: Vec<(String, u32, u32, u32)> = content_builtin::crop_qualities()
             .into_iter()
-            .map(|(k, v)| (k.to_owned(), v))
+            .map(|tier| (tier.id, tier.price_multiplier, tier.yield_multiplier, tier.mutation_multiplier))
             .collect();
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn mutation_multipliers_values() {
-        let actual: Vec<(String, u32)> = content_builtin::mutation_multipliers().into_iter().collect();
-        let expected: Vec<(String, u32)> = [("none", 1000), ("giant", 2500), ("golden", 3000), ("ancient", 4000)]
+        let expected: Vec<(String, u32, u32, u32)> = [
+            ("normal", 1000, 1000, 1000),
+            ("silver", 1250, 1100, 1200),
+            ("gold", 1500, 1300, 1500),
+            ("iridium", 2000, 1500, 2000),
+        ]
+        .into_iter()
+        .map(|(id, price, yields, mutation)| (id.to_owned(), price, yields, mutation))
+        .collect();
+        assert_eq!(qualities, expected);
+        let mutations: Vec<(String, u32, u32)> = content_builtin::crop_mutations()
             .into_iter()
-            .map(|(k, v)| (k.to_owned(), v))
+            .map(|mutation| (mutation.id, mutation.yield_multiplier, mutation.share))
             .collect();
-        assert_eq!(actual, expected);
+        let expected: Vec<(String, u32, u32)> = [("ancient", 3000, 100), ("golden", 2500, 200), ("giant", 2000, 700)]
+            .into_iter()
+            .map(|(id, yields, share)| (id.to_owned(), yields, share))
+            .collect();
+        assert_eq!(mutations, expected);
     }
 
     #[test]
@@ -640,7 +641,11 @@ mod characterization_tests {
     #[test]
     fn unknown_crop_type_mutation_returns_null_without_consuming_a_random_roll() {
         let mut rng = PinnedRandom::new(0.0);
-        assert_eq!(roll_mutation(get_crop_definition("nope", &[]).as_ref(), "iridium", &mut rng), None);
+        let mutations = content_builtin::crop_mutations();
+        assert_eq!(
+            roll_mutation(get_crop_definition("nope", &[]).as_ref(), tier("iridium").as_ref(), &mutations, &mut rng),
+            None
+        );
         assert_eq!(rng.draws, 0);
     }
 
@@ -682,31 +687,12 @@ mod characterization_tests {
     #[test]
     fn unknown_crop_type_yield_returns_1_without_consuming_a_random_roll() {
         let mut rng = PinnedRandom::new(0.9999);
-        assert_eq!(roll_yield(get_crop_definition("nope", &[]).as_ref(), "iridium", Some("ancient"), &mut rng), 1);
+        let (quality, ancient) = (tier("iridium"), mutation(Some("ancient")));
+        assert_eq!(
+            roll_yield(get_crop_definition("nope", &[]).as_ref(), quality.as_ref(), ancient.as_ref(), &mut rng),
+            1
+        );
         assert_eq!(rng.draws, 0);
-    }
-
-    // --- calculateHarvestValue ---
-
-    #[test]
-    fn calculate_harvest_value_pins_its_behavior() {
-        assert_eq!(harvest_value("wheat", "normal", None, 1, &[]), Some(25));
-        assert_eq!(harvest_value("wheat", "silver", None, 1, &[]), Some(31));
-        assert_eq!(harvest_value("wheat", "gold", None, 1, &[]), Some(37));
-        assert_eq!(harvest_value("wheat", "iridium", None, 1, &[]), Some(50));
-        assert_eq!(harvest_value("wheat", "normal", Some("giant"), 1, &[]), Some(62));
-        assert_eq!(harvest_value("wheat", "normal", Some("golden"), 1, &[]), Some(75));
-        assert_eq!(harvest_value("wheat", "normal", Some("ancient"), 1, &[]), Some(100));
-        assert_eq!(harvest_value("wheat", "iridium", Some("ancient"), 3, &[]), Some(600));
-        assert_eq!(harvest_value("wheat", "iridium", Some("ancient"), 0, &[]), Some(0));
-        assert_eq!(harvest_value("nope", "iridium", Some("ancient"), 5, &[]), Some(0));
-        assert_eq!(harvest_value("wheat", "normal", None, 1, &[with_value("wheat", "Custom", 1000)]), Some(1000));
-    }
-
-    #[test]
-    fn unknown_quality_or_mutation_keys_read_nan_like_javascript() {
-        assert!(harvest_value("wheat", "legendary", None, 1, &[]).is_none());
-        assert!(harvest_value("wheat", "normal", Some("cursed"), 1, &[]).is_none());
     }
 
     // --- canGrowInSeason ---
@@ -760,10 +746,11 @@ mod characterization_tests {
     #[test]
     fn planted_crop_starts_unwatered_on_its_planting_day() {
         assert_eq!(
-            stable_json::stringify(&create_planted_crop("wheat", 3, false)),
+            stable_json::stringify(&create_planted_crop("wheat", 3, "normal")),
             r#"{"daysGrown":0,"daysWithoutWater":0,"harvestCount":0,"mutation":null,"plantedOnDay":3,"quality":"normal","stage":0,"type":"wheat","watered":false}"#
         );
-        assert_eq!(create_planted_crop("wheat", 3, true).quality, "silver");
+        assert_eq!(planted_quality(&content_builtin::crop_qualities(), true), "silver");
+        assert_eq!(planted_quality(&content_builtin::crop_qualities(), false), "normal");
     }
 
     #[test]
@@ -781,7 +768,7 @@ mod characterization_tests {
     #[test]
     fn stage_and_maturity_follow_watered_days() {
         let wheat = &content_builtin::crop_definitions()["wheat"];
-        let mut crop = create_planted_crop("wheat", 1, false);
+        let mut crop = create_planted_crop("wheat", 1, "normal");
         assert_eq!(compute_crop_stage(&crop, wheat), 0);
         assert!(!is_crop_mature_by_days(&crop, wheat));
         crop.days_grown = Some(2);
@@ -800,24 +787,24 @@ mod characterization_tests {
 
     #[test]
     fn can_place_multi_tile_crop_pins_its_behavior() {
-        assert!(can_place_multi_tile_crop(&soil_grid(4, 4), 0, 0, 2, 2));
-        assert!(can_place_multi_tile_crop(&soil_grid(4, 4), 2, 2, 2, 2)); // flush with edge
-        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 3, 0, 2, 2)); // off right edge
-        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 0, 3, 2, 2)); // off bottom edge
-        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), -1, 0, 2, 2));
-        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 0, -1, 2, 2));
+        assert!(can_place_multi_tile_crop(&soil_grid(4, 4), 0, 0, 2, 2, &soil_only));
+        assert!(can_place_multi_tile_crop(&soil_grid(4, 4), 2, 2, 2, 2, &soil_only)); // flush with edge
+        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 3, 0, 2, 2, &soil_only)); // off right edge
+        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 0, 3, 2, 2, &soil_only)); // off bottom edge
+        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), -1, 0, 2, 2, &soil_only));
+        assert!(!can_place_multi_tile_crop(&soil_grid(4, 4), 0, -1, 2, 2, &soil_only));
 
         let mut occupied = soil_grid(4, 4);
         occupied[1][1].crop = Some(Crop { r#type: "wheat".to_owned(), ..Crop::default() });
-        assert!(!can_place_multi_tile_crop(&occupied, 0, 0, 2, 2));
-        assert!(can_place_multi_tile_crop(&occupied, 2, 2, 2, 2)); // clear region still fine
+        assert!(!can_place_multi_tile_crop(&occupied, 0, 0, 2, 2, &soil_only));
+        assert!(can_place_multi_tile_crop(&occupied, 2, 2, 2, 2, &soil_only)); // clear region still fine
 
         let mut grass = soil_grid(4, 4);
         grass[0][1].r#type = "grass".to_owned();
-        assert!(!can_place_multi_tile_crop(&grass, 0, 0, 2, 2));
+        assert!(!can_place_multi_tile_crop(&grass, 0, 0, 2, 2, &soil_only));
 
         // QUIRK: zero-sized footprint is always placeable, even out of bounds
-        assert!(can_place_multi_tile_crop(&soil_grid(2, 2), 99, 99, 0, 0));
+        assert!(can_place_multi_tile_crop(&soil_grid(2, 2), 99, 99, 0, 0, &soil_only));
     }
 
     #[test]
@@ -825,7 +812,7 @@ mod characterization_tests {
         let blocked = |edit: &dyn Fn(&mut Tile)| {
             let mut grid = soil_grid(3, 3);
             edit(&mut grid[1][1]);
-            !can_place_multi_tile_crop(&grid, 0, 0, 2, 2)
+            !can_place_multi_tile_crop(&grid, 0, 0, 2, 2, &soil_only)
         };
         assert!(blocked(&|tile| tile.machine = Some(crate::schema::TileMachine::default())));
         assert!(blocked(&|tile| tile.item = Some(crate::schema::Item::default())));
@@ -841,18 +828,18 @@ mod characterization_tests {
     fn ragged_grids_do_not_fit_a_multi_tile_crop() {
         let soil = || Tile { r#type: "soil".to_owned(), ..Tile::default() };
         let ragged = vec![vec![soil(), soil()], vec![soil()]];
-        assert!(!can_place_multi_tile_crop(&ragged, 0, 0, 2, 2));
+        assert!(!can_place_multi_tile_crop(&ragged, 0, 0, 2, 2, &soil_only));
     }
 
     #[test]
     fn harvest_quality_starts_at_the_planted_quality_and_rises_with_farming_skill() {
-        assert_eq!(harvest_quality("normal", 0), "normal");
-        assert_eq!(harvest_quality("silver", 2), "silver");
-        assert_eq!(harvest_quality("normal", 3), "silver");
-        assert_eq!(harvest_quality("silver", 3), "gold");
-        assert_eq!(harvest_quality("normal", 6), "gold");
-        assert_eq!(harvest_quality("silver", 9), "iridium");
-        assert_eq!(harvest_quality("bogus", 0), "normal");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "normal", 0), "normal");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "silver", 2), "silver");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "normal", 3), "silver");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "silver", 3), "gold");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "normal", 6), "gold");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "silver", 9), "iridium");
+        assert_eq!(harvest_quality(&content_builtin::crop_qualities(), "bogus", 0), "normal");
     }
 
     #[test]
@@ -860,7 +847,7 @@ mod characterization_tests {
         // The TS threw here (it took the width from the first row).
         let soil = || Tile { r#type: "soil".to_owned(), ..Tile::default() };
         let ragged = vec![vec![soil(), soil()], vec![soil()]];
-        assert!(!can_place_multi_tile_crop(&ragged, 0, 0, 2, 2));
-        assert!(can_place_multi_tile_crop(&ragged, 0, 0, 1, 2));
+        assert!(!can_place_multi_tile_crop(&ragged, 0, 0, 2, 2, &soil_only));
+        assert!(can_place_multi_tile_crop(&ragged, 0, 0, 1, 2, &soil_only));
     }
 }

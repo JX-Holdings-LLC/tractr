@@ -239,6 +239,45 @@ module Defaults =
             Id = nextId "node-custom" (allIds project); Name = "New Node"; Health = 3.0; RequiredTool = ToolTypes.Axe
             RequiredToolTier = 1.0; RespawnDays = Some None; Color = "#7a5a3a"; BlocksMovement = true }
 
+    /// A new terrain (M1): walkable ground the hoe can't till, drawn in a sandy colour.
+    let newTerrain (project: GameProject) : TerrainDefinition =
+        let used = Seq.append (allIds project) (Builtin.terrains () |> Seq.map (fun t -> t.Id))
+        { TerrainDefinition.Default with Id = nextId "terrain" used; Name = "New Terrain"; Layer = TileLayers.Background; Color = "#c2a878" }
+
+    /// A new tool (M1): breaks gathering nodes for 4 energy, no key yet.
+    let newTool (project: GameProject) : ToolDefinition =
+        let used = Seq.append (allIds project) (Builtin.tools () |> Seq.map (fun t -> t.Id))
+        { ToolDefinition.Default with
+            Id = nextId "tool" used; Name = "New Tool"; Action = ToolActions.Break; EnergyCost = 4.0
+            Area = [ { Width = 1.0; Length = 1.0 } ] }
+
+    /// A new item category (M1): giftable and sellable, with no other behaviour.
+    let newItemCategory (project: GameProject) : ItemCategoryDefinition =
+        let used = Seq.append (allIds project) (Builtin.itemCategories () |> Seq.map (fun c -> c.Id))
+        { ItemCategoryDefinition.Default with Id = nextId "category" used; Name = "New Category" }
+
+    /// A new crop quality tier (M1), ranked after the others: worth three times the base price.
+    let newCropQuality (project: GameProject) : CropQualityDefinition =
+        let used = Seq.append (allIds project) (Builtin.cropQualities () |> Seq.map (fun q -> q.Id))
+        { CropQualityDefinition.Default with
+            Id = nextId "quality" used; Name = "New Quality"; PriceMultiplier = 3.0; YieldMultiplier = 1.5
+            MutationMultiplier = 2.0; Stars = 4.0; Color = "#40b0c0" }
+
+    /// A new crop mutation (M1) with no share of the chance until one is given.
+    let newCropMutation (project: GameProject) : CropMutationDefinition =
+        let used = Seq.append (allIds project) (Builtin.cropMutations () |> Seq.map (fun m -> m.Id))
+        { CropMutationDefinition.Default with Id = nextId "mutation" used; Name = "New Mutation"; YieldMultiplier = 2.0; Color = "#c05080" }
+
+    /// A new cutscene (M2): a fade in, one line, a fade out.
+    let newCutscene (project: GameProject) : Cutscene =
+        let step kind = { CutsceneStep.Default with Type = kind }
+        { Cutscene.Default with
+            Id = nextId "cutscene" (allIds project); Name = "New Cutscene"
+            Steps =
+                [ { step CutsceneStepTypes.Fade with Mode = Some "in"; Seconds = Some 0.5 }
+                  { step CutsceneStepTypes.Say with Text = Some "..." }
+                  { step CutsceneStepTypes.Fade with Mode = Some "out"; Seconds = Some 0.5 } ] }
+
     /// NodeTypeEditor drop "+": the first item, 1..1, weight 1.
     let newDrop (project: GameProject) : NodeDrop =
         { ItemId = firstItemId project; Min = 1.0; Max = 1.0; Weight = 1.0; Extra = [] }
@@ -297,6 +336,10 @@ module Defaults =
     let duplicateMinigame (project: GameProject) (minigame: MinigameDef) : MinigameDef =
         { minigame with Id = slugId (sprintf "%s copy" minigame.Name) (allIds project) "minigame"; Name = sprintf "%s (copy)" minigame.Name }
 
+    /// A copy of a cutscene (M2): "(copy)" with a fresh slug id.
+    let duplicateCutscene (project: GameProject) (cutscene: Cutscene) : Cutscene =
+        { cutscene with Id = slugId (sprintf "%s copy" cutscene.Name) (allIds project) "cutscene"; Name = sprintf "%s (copy)" cutscene.Name }
+
     /// MinigameEditor `addTier`.
     let newResultTier () : MinigameResultTier = { MinScore = 0.0; Outcomes = [] }
 
@@ -323,7 +366,7 @@ module Defaults =
 
     /// ProjectSettingsEditor `addSeason`: 28 days, id from the name.
     let newSeason (calendar: CalendarConfig) : CalendarSeason =
-        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0 }
+        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0; Temperature = None; Music = None }
 
     /// ProjectSettingsEditor `addFestival`: day 1 of the first season (none without seasons).
     let newFestival (project: GameProject) (calendar: CalendarConfig) : CalendarFestival option =
@@ -332,7 +375,7 @@ module Defaults =
         | Some season ->
             Some
                 { Id = nextId "festival" (allIds project |> Seq.append (calendar.Festivals |> Seq.map (fun f -> f.Id)))
-                  Name = "New Festival"; SeasonId = season.Id; Day = 1.0 }
+                  Name = "New Festival"; SeasonId = season.Id; Day = 1.0; Music = None }
 
     /// ProjectSettingsEditor mine toggle: switching on fills in the default entrance (the start
     /// scene at 1,1) and depth bands where they are missing; switching off only clears the flag,

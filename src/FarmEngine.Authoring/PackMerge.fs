@@ -238,7 +238,7 @@ module PackMerge =
           RegrowthDays = crop.RegrowthDays
           CanRegrow = crop.CanRegrow; MultiTile = crop.MultiTile
           MutationChance = crop.MutationChance; YieldMin = crop.YieldMin
-          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Extra = crop.Extra }
+          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Requirements = crop.Requirements; Extra = crop.Extra }
 
     /// A pack's art (`PackRules.packAssets`) added to the project's custom assets: assets with an
     /// id the project lacks are appended in pack order. An id the project already has keeps the

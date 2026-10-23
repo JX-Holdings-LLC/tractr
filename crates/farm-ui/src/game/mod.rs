@@ -7,6 +7,7 @@
 //! `farm_sim::overlay`) and returns [`GameAction`]s; every gameplay action is an engine command.
 
 mod crafting;
+mod cutscene;
 mod dialogue;
 mod hud;
 mod inventory;
@@ -19,6 +20,7 @@ pub use toasts::{
     toast_lifetime, Toast, ToastKind, Toasts, MAX_TOAST_LIFETIME, MAX_VISIBLE as MAX_TOASTS, TOAST_LIFETIME,
 };
 
+use crate::i18n::Lang;
 use crate::icons::{self, Icon};
 use crate::layout::RectExt;
 use crate::settings::Bindings;
@@ -28,7 +30,7 @@ use farm_render::{resolve_visual, BuiltinArt, DrawCmd, ImageStore, Rect, Samplin
 use farm_runtime::host::{CalendarView, MinigameInput, MinigameView};
 use farm_runtime::panels::PanelView;
 use farm_sim::overlay::OverlayView;
-use farm_sim::schema::{item_types, GameContent, GameState, Item};
+use farm_sim::schema::{GameContent, GameState, GameWords, Item, ItemCategoryDefinition};
 use farm_sim::Command;
 
 /// A host panel over the game (web `showInventory` / `showQuests` / `showCrafting`).
@@ -60,6 +62,8 @@ pub enum GameAction {
     OpenMenu,
     /// Input for the running minigame.
     Minigame(MinigameInput),
+    /// The pointer over a pack minigame's canvas (`PlaySession::minigame_pointer`).
+    MinigamePointer(farm_runtime::canvas::CanvasPointer),
     /// Hold this seed or fertilizer for planting, or put it away when it is held.
     Hold(String),
 }
@@ -77,10 +81,13 @@ impl Planting {
     /// Holds `item_id` (a seed or a fertilizer), or puts it away when it is already held.
     pub fn toggle(&mut self, content: &GameContent, item_id: &str) {
         let Some(item) = content.items.iter().find(|item| item.id == item_id) else { return };
-        let hand = match item.r#type.as_str() {
-            item_types::SEED => &mut self.seed,
-            item_types::FERTILIZER => &mut self.fertilizer,
-            _ => return,
+        let Some(kind) = category(content, item) else { return };
+        let hand = if kind.plantable {
+            &mut self.seed
+        } else if kind.fertilizer {
+            &mut self.fertilizer
+        } else {
+            return;
         };
         *hand = if hand.as_deref() == Some(item_id) { None } else { Some(item_id.to_owned()) };
     }
@@ -160,6 +167,8 @@ impl GameUi {
             Some(Panel::Crafting) => crafting::draw(ui, view, &mut actions),
             None => {}
         }
+        // Under the dialogue, shop or minigame a cutscene step opened.
+        cutscene::draw(ui, view, &mut actions);
         shop::draw(ui, view, &mut self.shop_tab, &mut actions);
         dialogue::draw(ui, view, images, &mut actions);
         minigame::draw(ui, view, images, &mut actions);
@@ -266,19 +275,33 @@ pub(crate) fn held(state: &GameState, item_id: &str) -> u64 {
     state.player.inventory.iter().filter(|slot| slot.item.id == item_id).map(|slot| u64::from(slot.quantity)).sum()
 }
 
-/// A slot's display name: the item name with one star per crop quality tier above normal
-/// (silver ★, gold ★★, iridium ★★★).
-pub(crate) fn slot_name(name: &str, quality: Option<&str>) -> String {
-    let stars = match quality {
-        Some(farm_sim::schema::crop_qualities::SILVER) => 1,
-        Some(farm_sim::schema::crop_qualities::GOLD) => 2,
-        Some(farm_sim::schema::crop_qualities::IRIDIUM) => 3,
-        _ => 0,
-    };
+/// A slot's display name: the item name with its quality tier's stars (in the built-in tiers
+/// silver ★, gold ★★, iridium ★★★).
+pub(crate) fn slot_name(content: &GameContent, name: &str, quality: Option<&str>) -> String {
+    let stars = quality
+        .and_then(|quality| farm_sim::vocabulary::crop_qualities(content).iter().find(|tier| tier.id == quality))
+        .map_or(0, |tier| tier.stars.min(10) as usize);
     if stars == 0 {
         name.to_owned()
     } else {
         format!("{name} {}", "\u{2605}".repeat(stars))
+    }
+}
+
+/// The category (kind) of `item` in the game (M1).
+pub(crate) fn category<'a>(content: &'a GameContent, item: &Item) -> Option<&'a ItemCategoryDefinition> {
+    farm_sim::vocabulary::item_categories(content).iter().find(|category| category.id == item.r#type)
+}
+
+impl GameView<'_> {
+    /// The game's words (M1) in `lang`.
+    pub(crate) fn words(&self, lang: Lang) -> GameWords {
+        self.content.settings.words.as_ref().map(|words| words.for_locale(lang.code())).unwrap_or_default()
+    }
+
+    /// An amount of money in the game's words.
+    pub(crate) fn money(&self, lang: Lang, amount: i64) -> String {
+        crate::format::money_in(&self.words(lang), amount)
     }
 }
 

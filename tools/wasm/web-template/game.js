@@ -123,21 +123,44 @@ async function main() {
   let pending = [];
   const send = (event) => pending.push(event);
 
-  // Sounds are synthesized presets, rendered once per cue. Browsers start audio after a gesture.
+  // Sounds are synthesized presets, rendered once per cue, or the game's own sound assets
+  // (decoded by the engine, player.audioClip). Browsers start audio after a gesture.
   let audio = null;
   const buffers = new Map();
   const unlockAudio = () => {
     if (!audio && typeof AudioContext !== "undefined") audio = new AudioContext();
     if (audio && audio.state === "suspended") audio.resume();
   };
-  const play = (cue, gain) => {
+  // The game's sound or music asset as an AudioBuffer at the file's own rate (WebAudio
+  // resamples it); null when there is none or the browser cannot hold its rate.
+  const clipBuffer = (id) => {
+    const clip = player.audioClip(id);
+    if (!clip) return null;
+    const frames = clip.samples.length / clip.channels;
+    try {
+      const buffer = audio.createBuffer(clip.channels, frames, clip.sampleRate);
+      for (let channel = 0; channel < clip.channels; channel++) {
+        const data = buffer.getChannelData(channel);
+        for (let i = 0; i < frames; i++) data[i] = clip.samples[i * clip.channels + channel];
+      }
+      return buffer;
+    } catch {
+      return null;
+    }
+  };
+  const play = (cue, gain, asset) => {
     if (!audio || audio.state !== "running") return;
-    let buffer = buffers.get(cue);
+    const key = (asset ? "asset:" : "cue:") + cue;
+    let buffer = buffers.get(key);
     if (buffer === undefined) {
-      const samples = sfxSamples(cue, audio.sampleRate);
-      buffer = samples ? audio.createBuffer(1, samples.length, audio.sampleRate) : null;
-      if (buffer) buffer.copyToChannel(samples, 0);
-      buffers.set(cue, buffer);
+      if (asset) {
+        buffer = clipBuffer(cue);
+      } else {
+        const samples = sfxSamples(cue, audio.sampleRate);
+        buffer = samples ? audio.createBuffer(1, samples.length, audio.sampleRate) : null;
+        if (buffer) buffer.copyToChannel(samples, 0);
+      }
+      buffers.set(key, buffer);
     }
     if (!buffer) return;
     const source = new AudioBufferSourceNode(audio, { buffer });
@@ -146,17 +169,22 @@ async function main() {
   };
 
   // Music and ambience: built-in loops the game names each frame (info.music), rendered once
-  // per name, looped, and faded when the loop or its volume changes.
+  // per name, or the game's own music asset ("asset:<id>"); looped, and faded when the loop or
+  // its volume changes.
   const FADE = 1.2;
   const loops = new Map();
   const slots = [{ name: null, gain: 0, node: null }, { name: null, gain: 0, node: null }];
   const loopBuffer = (name) => {
     if (!loops.has(name)) {
-      const samples = musicSamples(name, audio.sampleRate);
       let buffer = null;
-      if (samples) {
-        buffer = audio.createBuffer(1, samples.length, audio.sampleRate);
-        buffer.copyToChannel(samples, 0);
+      if (name.startsWith("asset:")) {
+        buffer = clipBuffer(name.slice("asset:".length));
+      } else {
+        const samples = musicSamples(name, audio.sampleRate);
+        if (samples) {
+          buffer = audio.createBuffer(1, samples.length, audio.sampleRate);
+          buffer.copyToChannel(samples, 0);
+        }
       }
       loops.set(name, buffer);
     }
@@ -168,8 +196,9 @@ async function main() {
     node.gain.gain.setValueAtTime(node.gain.gain.value, now);
     node.gain.gain.linearRampToValueAtTime(gain, now + FADE);
   };
-  const setLoop = (slot, name, gain) => {
+  const setLoop = (slot, name, gain, fallback = null) => {
     if (!audio || audio.state !== "running") return;
+    if (name && !loopBuffer(name)) name = fallback;
     const playing = slots[slot];
     if (playing.name === name) {
       if (playing.node && playing.gain !== gain) fadeTo(playing.node, gain);
@@ -344,10 +373,11 @@ async function main() {
       pixels = frame.pixels;
       context.putImageData(new ImageData(frame.pixels, frame.width, frame.height), 0, 0);
     }
-    for (const sound of frame.info.sounds) play(sound.cue, sound.gain);
+    for (const sound of frame.info.sounds) play(sound.cue, sound.gain, sound.asset === true);
     const music = frame.info.music;
     if (music) {
-      setLoop(0, music.music, music.musicGain);
+      if (music.asset) setLoop(0, "asset:" + music.asset, music.musicGain, music.music);
+      else setLoop(0, music.music, music.musicGain);
       setLoop(1, music.ambience, music.ambienceGain);
     }
     for (const request of frame.info.requests) handleRequest(request);

@@ -8,6 +8,7 @@ use farm_sim::schema::{
     AnimationClip, ArtFrame, CustomAsset, CustomCropDefinition, GameContent, GameProject, GameState, GraphicsSettings,
     Scene, SpriteSheet, VisualRef,
 };
+use farm_sim::vocabulary;
 use farm_sim::Presentation;
 use std::sync::Arc;
 
@@ -77,7 +78,7 @@ pub struct CropArt {
 }
 
 /// The subset of a game the graphics pipeline reads (TS `GraphicsSource`): custom assets, player
-/// art, and the definitions that carry [`VisualRef`]s.
+/// art, and the definitions that carry [`VisualRef`]s (terrains among them, M1).
 ///
 /// In play, build it once from the game's [`Presentation`] (a cartridge or
 /// `Presentation::from_project`) with [`GraphicsSource::from_state`], then refresh the live parts
@@ -95,6 +96,8 @@ pub struct GraphicsSource {
     pub node_types: Vec<DefinitionArt>,
     pub machine_types: Vec<DefinitionArt>,
     pub custom_crops: Vec<CropArt>,
+    /// Terrain art: a layer of a tile without its own visual draws its terrain's.
+    pub terrains: Vec<DefinitionArt>,
 }
 
 fn definitions<'a>(items: impl IntoIterator<Item = (&'a String, &'a Option<VisualRef>)>) -> Vec<DefinitionArt> {
@@ -129,6 +132,7 @@ impl GraphicsSource {
             node_types: Vec::new(),
             machine_types: Vec::new(),
             custom_crops: crop_art(custom_crops),
+            terrains: Vec::new(),
         }
     }
 
@@ -168,6 +172,7 @@ impl GraphicsSource {
         source.animals = animal_art(&project.animals);
         source.node_types = definitions(project.node_types.iter().map(|d| (&d.id, &d.visual)));
         source.machine_types = definitions(project.machine_types.iter().map(|d| (&d.id, &d.visual)));
+        source.terrains = definitions(project.terrains.iter().flatten().map(|d| (&d.id, &d.visual)));
         source
     }
 
@@ -185,6 +190,7 @@ impl GraphicsSource {
         self.node_types = definitions(content.node_types.iter().map(|d| (&d.id, &d.visual)));
         self.machine_types = definitions(content.machine_types.iter().map(|d| (&d.id, &d.visual)));
         self.animal_species = definitions(content.animal_species.iter().map(|d| (&d.id, &d.visual)));
+        self.terrains = definitions(vocabulary::terrains(content).iter().map(|d| (&d.id, &d.visual)));
         self.animals = animal_art(&state.animals);
     }
 
@@ -196,7 +202,8 @@ impl GraphicsSource {
         let same_shape = self.npcs.len() == content.npcs.len()
             && self.node_types.len() == content.node_types.len()
             && self.machine_types.len() == content.machine_types.len()
-            && self.animal_species.len() == content.animal_species.len();
+            && self.animal_species.len() == content.animal_species.len()
+            && self.terrains.len() == vocabulary::terrains(content).len();
         if !same_shape {
             self.set_live_state(content, state);
             return;
@@ -342,6 +349,9 @@ pub fn resolve_visual(
 /// Decorates a simulation snapshot with the project's art, in place (`Graphics.ApplyGraphics`):
 /// pixel-art mode, player art, NPC and animal sprites (matched by order within the scene),
 /// per-layer tile art, crop growth frames, node, machine and item art. Nothing else changes.
+///
+/// A tile layer draws the tile's own visual, else its terrain's (M1), else a `tile` asset bound
+/// to the terrain id.
 pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, scene: &Scene, tick: f64, moving: bool) {
     let assets = &source.assets;
     let art = |visual: Option<&VisualRef>| resolve_visual(assets, visual, tick, "down", true);
@@ -372,7 +382,8 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
                         .find(|asset| asset.asset_type == "tile" && asset.tile_type.as_deref() == Some(tile_type))
                 });
                 let fallback = fallback.map(|asset| VisualRef { asset_id: asset.id.clone(), ..VisualRef::default() });
-                art(visual.or(fallback.as_ref()))
+                let terrain = tile_type.and_then(|id| GraphicsSource::visual_of(&source.terrains, Some(id)));
+                art(visual.or(terrain).or(fallback.as_ref()))
             };
             let visuals = tile.visuals.as_ref();
             target.art_layers = Some(vec![

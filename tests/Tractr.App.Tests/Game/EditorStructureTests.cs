@@ -51,6 +51,12 @@ public sealed class EditorStructureTests
     [InlineData("npc", "NPCs")]
     [InlineData("fishTable", "Fish tables")]
     [InlineData("minigame", "Minigames")]
+    [InlineData("terrain", "Terrains")]
+    [InlineData("tool", "Tools")]
+    [InlineData("itemCategory", "Item kinds")]
+    [InlineData("cropQuality", "Crop qualities")]
+    [InlineData("cropMutation", "Crop mutations")]
+    [InlineData("cutscene", "Cutscenes")]
     [InlineData("scene", null)]
     [InlineData("settings", null)]
     public void ProblemKindsMapToContentCategories(string kind, string? category) =>

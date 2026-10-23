@@ -16,6 +16,7 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::fmt;
 use std::rc::Rc;
+use std::sync::Arc;
 
 /// Persisted volume settings (TS `AudioSettings`).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -180,6 +181,49 @@ pub fn sfx_for_effect(effect: &Effect) -> Option<&str> {
         Effect::DayStarted { .. } => Some("sleep"),
         Effect::SceneChanged { .. } => Some("ui"),
         Effect::PlayerMoved { .. } => None,
+    }
+}
+
+/// Decoded audio: a game's own sound and music assets (M2), as interleaved PCM in [-1, 1] at the
+/// file's sample rate. The player decodes them when a game loads; hosts resample them to their
+/// output rate. Clones share the samples, and clips compare by identity (the same decoded
+/// buffer), so comparing what plays from frame to frame never walks the samples.
+#[derive(Clone)]
+pub struct Clip {
+    pub sample_rate: u32,
+    /// 1 (mono) or 2 (stereo, left then right).
+    pub channels: u16,
+    pub samples: Arc<[f32]>,
+}
+
+impl Clip {
+    /// Sample frames (one sample per channel each).
+    pub fn frames(&self) -> usize {
+        self.samples.len() / usize::from(self.channels.max(1))
+    }
+
+    /// The length in seconds.
+    pub fn seconds(&self) -> f64 {
+        self.frames() as f64 / f64::from(self.sample_rate.max(1))
+    }
+}
+
+impl fmt::Debug for Clip {
+    /// The format and length, not the samples.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Clip")
+            .field("sample_rate", &self.sample_rate)
+            .field("channels", &self.channels)
+            .field("frames", &self.frames())
+            .finish()
+    }
+}
+
+impl PartialEq for Clip {
+    fn eq(&self, other: &Self) -> bool {
+        self.sample_rate == other.sample_rate
+            && self.channels == other.channels
+            && Arc::ptr_eq(&self.samples, &other.samples)
     }
 }
 

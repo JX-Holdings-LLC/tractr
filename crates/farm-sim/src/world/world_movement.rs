@@ -10,6 +10,7 @@
 
 use crate::content_index::ContentIndex;
 use crate::effects::{message_levels, Effect};
+use crate::energy;
 use crate::engine_types::{Effects, EngineContext};
 use crate::events::{self, EventPosition};
 use crate::inventory::{self, AddItemOptions};
@@ -407,6 +408,8 @@ fn settle_tile_entry(
             let target_name = state.world.scenes[target_index].name.clone();
             let (landed, landing_effects) = land_player(ctx, state, &to_scene_id, to_x, to_y);
             changed_scene = true;
+            // Music an event chose (M2) ends with the scene.
+            state.music = None;
             effects.push(Effect::SceneChanged { scene_id: to_scene_id, x: landed.x, y: landed.y });
             effects.push(Effect::say("success", messages::ENTERED.with(&[&target_name])));
             effects.extend(landing_effects);
@@ -444,6 +447,26 @@ fn settle_tile_entry(
         let to_floor = state.mine.current_floor.saturating_add(1);
         effects.extend(mines::descend_mine(ctx, state, to_floor));
         return SettleResult { effects, aborted: false };
+    }
+
+    // Hazardous terrain (M1) saps energy on stepping onto it; collapsing ends the step.
+    let hazard = find_scene(state, &state.player.scene_id)
+        .and_then(|landed_scene| landed_scene.tile(final_tile.x, final_tile.y))
+        .and_then(|landed_tile| {
+            [Some(landed_tile.background.as_str()), landed_tile.overlay.as_deref(), landed_tile.object.as_deref()]
+                .into_iter()
+                .flatten()
+                .filter_map(|id| ctx.terrain(id))
+                .find(|terrain| terrain.hazard_energy > 0)
+        })
+        .map(|terrain| (terrain.name.clone(), terrain.hazard_energy));
+    if let Some((name, amount)) = hazard {
+        effects.push(Effect::say(message_levels::ERROR, messages::HAZARD.with(&[&name])));
+        let spent = energy::spend_energy(ctx, state, amount);
+        effects.extend(spent.effects);
+        if spent.collapsed {
+            return SettleResult { effects, aborted: false };
+        }
     }
 
     // Enter-triggered events fire at the final position (M3)
