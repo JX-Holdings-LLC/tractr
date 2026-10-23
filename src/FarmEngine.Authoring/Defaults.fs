@@ -323,7 +323,7 @@ module Defaults =
 
     /// ProjectSettingsEditor `addSeason`: 28 days, id from the name.
     let newSeason (calendar: CalendarConfig) : CalendarSeason =
-        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0; Temperature = None }
+        { Id = slugId "New Season" (calendar.Seasons |> Seq.map (fun s -> s.Id)) "season"; Name = "New Season"; Days = 28.0; Temperature = None; Music = None }
 
     /// ProjectSettingsEditor `addFestival`: day 1 of the first season (none without seasons).
     let newFestival (project: GameProject) (calendar: CalendarConfig) : CalendarFestival option =
@@ -332,7 +332,7 @@ module Defaults =
         | Some season ->
             Some
                 { Id = nextId "festival" (allIds project |> Seq.append (calendar.Festivals |> Seq.map (fun f -> f.Id)))
-                  Name = "New Festival"; SeasonId = season.Id; Day = 1.0 }
+                  Name = "New Festival"; SeasonId = season.Id; Day = 1.0; Music = None }
 
     /// ProjectSettingsEditor mine toggle: switching on fills in the default entrance (the start
     /// scene at 1,1) and depth bands where they are missing; switching off only clears the flag,

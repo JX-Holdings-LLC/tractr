@@ -21,6 +21,9 @@ pub struct WeatherTypeDefinition {
     /// The overlay it shows: a [`WeatherOverlayDefinition`] id (`rain`, `snow` or the game's
     /// own) or null (present-as-null).
     pub overlay: Option<String>,
+    /// A music asset that plays in this weather, outdoors (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -137,6 +140,7 @@ fn weather_type(
         crop_damage_chance: units::from_authoring::<units::Probability>(damage),
         npcs_stay_inside: inside,
         overlay: overlay.map(str::to_owned),
+        music: None,
         extra: Map::new(),
     }
 }

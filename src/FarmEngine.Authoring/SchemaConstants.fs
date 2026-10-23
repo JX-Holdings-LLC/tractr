@@ -120,6 +120,55 @@ module OverlayStyles =
 
     let All : string list = [ Rain; Snow; Dust; None ]
 
+/// What a cutscene step does (`CutsceneStep.Type`, M2).
+[<RequireQualifiedAccess>]
+module CutsceneStepTypes =
+    [<Literal>]
+    let Say = "say"
+
+    [<Literal>]
+    let Choice = "choice"
+
+    [<Literal>]
+    let Jump = "jump"
+
+    [<Literal>]
+    let Move = "move"
+
+    [<Literal>]
+    let Face = "face"
+
+    [<Literal>]
+    let Emote = "emote"
+
+    [<Literal>]
+    let Wait = "wait"
+
+    [<Literal>]
+    let Camera = "camera"
+
+    [<Literal>]
+    let Fade = "fade"
+
+    [<Literal>]
+    let Music = "music"
+
+    [<Literal>]
+    let Sound = "sound"
+
+    [<Literal>]
+    let Outcomes = "outcomes"
+
+    [<Literal>]
+    let End = "end"
+
+    let All : string list = [ Say; Choice; Jump; Move; Face; Emote; Wait; Camera; Fade; Music; Sound; Outcomes; End ]
+
+/// The emotes a cutscene can show over a character (`CutsceneStep.Emote`).
+[<RequireQualifiedAccess>]
+module Emotes =
+    let All : string list = [ "exclaim"; "question"; "heart"; "music"; "anger"; "sweat"; "sleep"; "idea" ]
+
 /// TS `DirectionSchema`.
 [<RequireQualifiedAccess>]
 module Directions =
@@ -332,7 +381,15 @@ module CustomAssetTypes =
     [<Literal>]
     let Art = "art"
 
-    let All : string list = [ Tile; Npc; Item; Player; Art ]
+    /// A sound effect (OGG or WAV) that `playSound` plays (M2).
+    [<Literal>]
+    let Sound = "sound"
+
+    /// Music (OGG or WAV) that scenes, seasons, weather, festivals and events pick (M2).
+    [<Literal>]
+    let Music = "music"
+
+    let All : string list = [ Tile; Npc; Item; Player; Art; Sound; Music ]
 
 /// TS `EventOutcomeSchema.type` enum.
 [<RequireQualifiedAccess>]
@@ -405,7 +462,15 @@ module EventOutcomeTypes =
     [<Literal>]
     let StartMinigame = "startMinigame"
 
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame ]
+    /// Play a music asset until the scene changes (`soundId`; empty: back to the game's music).
+    [<Literal>]
+    let PlayMusic = "playMusic"
+
+    /// Play a cutscene (`cutsceneId`, M2).
+    [<Literal>]
+    let StartCutscene = "startCutscene"
+
+    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -485,7 +550,7 @@ module PrimitivesSchema =
 module SettingsSchema =
     let ClassicCalendarSeasons () : CalendarSeason list =
         PrimitivesSchema.ClassicSeasons
-        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0; Temperature = None })
+        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0; Temperature = None; Music = None })
 
     let DefaultProjectSettings : ProjectSettings = ProjectSettings.Default
 
@@ -589,7 +654,7 @@ module MigrationsSchema =
     let private entry (weatherId: string) (weight: float) : WeatherTableEntry = { WeatherId = weatherId; Weight = weight }
 
     let private weather (id: string) (name: string) (waters: bool) (damage: float) (inside: bool) (overlay: string option) : WeatherTypeDefinition =
-        { Id = id; Name = name; WatersOutdoorSoil = waters; CropDamageChance = damage; NpcsStayInside = inside; Overlay = overlay; Extra = [] }
+        { Id = id; Name = name; WatersOutdoorSoil = waters; CropDamageChance = damage; NpcsStayInside = inside; Overlay = overlay; Music = None; Extra = [] }
 
     /// Default weather set every pre-v6 project receives (tunable afterwards).
     let DefaultWeatherConfig () : WeatherConfig =

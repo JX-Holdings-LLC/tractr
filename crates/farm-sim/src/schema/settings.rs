@@ -19,6 +19,9 @@ pub struct CalendarSeason {
     /// How warm the season is, for crops with a temperature range (M1).
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
     pub temperature: Option<i32>,
+    /// A music asset that plays in the season instead of the game's own music (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -31,6 +34,9 @@ pub struct CalendarFestival {
     /// 1-based day within that season. int, positive.
     #[serde(with = "crate::units::count")]
     pub day: u32,
+    /// A music asset that plays all festival day (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -263,7 +269,7 @@ pub fn classic_calendar_seasons() -> Vec<CalendarSeason> {
                 Some(first) => first.to_uppercase().chain(chars).collect(),
                 None => String::new(),
             };
-            CalendarSeason { id: (*id).to_owned(), name, days: 28, temperature: None }
+            CalendarSeason { id: (*id).to_owned(), name, days: 28, temperature: None, music: None }
         })
         .collect()
 }

@@ -8,6 +8,7 @@ use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
+use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
@@ -63,6 +64,8 @@ pub struct GameContent {
     pub crop_qualities: Vec<CropQualityDefinition>,
     /// Crop mutations, in roll order (built-in merged with the project's).
     pub crop_mutations: Vec<CropMutationDefinition>,
+    /// Cutscenes (M2).
+    pub cutscenes: Vec<Cutscene>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

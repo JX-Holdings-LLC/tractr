@@ -9,7 +9,7 @@ use crate::farming::farming_actions;
 use crate::hooks::{ActionHookPayload, HookEvent, RelationshipChangeHookPayload};
 use crate::messages;
 use crate::schema::{
-    event_fired_flag, DialogueState, EventCondition, EventOutcome, GameEvent, GameState, MinigameSession,
+    event_fired_flag, CutsceneState, DialogueState, EventCondition, EventOutcome, GameEvent, GameState, MinigameSession,
     NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
 };
 use crate::text;
@@ -233,6 +233,19 @@ fn apply_outcome(
             Some(sound_id) => vec![Effect::Sound { id: sound_id.to_owned() }],
             None => vec![],
         },
+        OutcomeKind::PlayMusic => {
+            // M2: a music asset until the scene changes; empty: back to the music the place picks.
+            state.music = non_empty(outcome.sound_id.as_deref()).map(str::to_owned);
+            vec![]
+        }
+        OutcomeKind::StartCutscene => {
+            // M2: the cutscene runner plays it from the next tick; one at a time.
+            let Some(cutscene_id) = non_empty(outcome.cutscene_id.as_deref()) else { return vec![] };
+            if state.cutscene.is_none() && ctx.content.cutscenes.iter().any(|cutscene| cutscene.id == cutscene_id) {
+                state.cutscene = Some(CutsceneState { cutscene_id: cutscene_id.to_owned(), ..CutsceneState::default() });
+            }
+            vec![]
+        }
         OutcomeKind::PerformAction => {
             let Some(action_id) = non_empty(outcome.action_id.as_deref()) else { return vec![] };
             perform_action_detailed(ctx, state, action_id, depth + 1, budget).effects

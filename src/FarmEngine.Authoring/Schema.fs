@@ -190,7 +190,7 @@ and CalendarConfig =
 
     /// A `CalendarConfig` with every field at its schema default.
     static member Default : CalendarConfig =
-        { Seasons = [ ({ Id = "spring"; Name = "Spring"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "summer"; Name = "Summer"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "fall"; Name = "Fall"; Days = 28.0; Temperature = None } : CalendarSeason); ({ Id = "winter"; Name = "Winter"; Days = 28.0; Temperature = None } : CalendarSeason) ]; Festivals = [] }
+        { Seasons = [ ({ Id = "spring"; Name = "Spring"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "summer"; Name = "Summer"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "fall"; Name = "Fall"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "winter"; Name = "Winter"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason) ]; Festivals = [] }
 
 and CalendarFestival =
     {
@@ -200,11 +200,13 @@ and CalendarFestival =
         SeasonId: string
         /// 1-based day within that season. int, positive.
         Day: float
+        /// A music asset that plays all festival day (M2).
+        Music: string option
     }
 
     /// A `CalendarFestival` with every field at its schema default.
     static member Default : CalendarFestival =
-        { Id = ""; Name = ""; SeasonId = ""; Day = 0.0 }
+        { Id = ""; Name = ""; SeasonId = ""; Day = 0.0; Music = None }
 
 and CalendarSeason =
     {
@@ -214,11 +216,13 @@ and CalendarSeason =
         Days: float
         /// How warm the season is, for crops with a temperature range (M1).
         Temperature: float option
+        /// A music asset that plays in the season instead of the game's own music (M2).
+        Music: string option
     }
 
     /// A `CalendarSeason` with every field at its schema default.
     static member Default : CalendarSeason =
-        { Id = ""; Name = ""; Days = 0.0; Temperature = None }
+        { Id = ""; Name = ""; Days = 0.0; Temperature = None; Music = None }
 
 and ContentPack =
     {
@@ -420,6 +424,83 @@ and DaylightKey =
     static member Default : DaylightKey =
         { Minute = 0.0; Color = "" }
 
+/// A cutscene (M2): steps that run over time — characters move, face and emote, the camera pans,
+/// the screen fades, music changes, lines are said and choices branch. Events start one with the
+/// `startCutscene` outcome.
+and Cutscene =
+    {
+        Id: string
+        Name: string
+        Steps: CutsceneStep list
+        /// The player may skip it (Escape); the steps it skips do nothing, except `outcomes` steps,
+        /// which still run.
+        Skippable: bool
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `Cutscene` with every field at its schema default.
+    static member Default : Cutscene =
+        { Id = ""; Name = ""; Steps = []; Skippable = true; Extra = [] }
+
+/// One answer of a cutscene `choice` step: its text and the step label it jumps to.
+and CutsceneChoice =
+    {
+        Text: string
+        /// The label of the step to go on from; empty: the next step.
+        Goto: string
+    }
+
+    /// A `CutsceneChoice` with every field at its schema default.
+    static member Default : CutsceneChoice =
+        { Text = ""; Goto = "" }
+
+/// One step of a cutscene. Like an outcome, one flat object whose `type` (one of
+/// `CutsceneStepTypes`) says which fields apply.
+and CutsceneStep =
+    {
+        /// One of `CutsceneStepTypes`.
+        Type: string
+        /// A name `jump` steps and choices go to.
+        Label: string option
+        /// Who acts: `player` or an NPC id (move, face, emote; camera follows them).
+        Actor: string option
+        /// Tile column (move, camera).
+        X: float option
+        /// Tile row (move, camera).
+        Y: float option
+        /// One of `Directions` (face).
+        Direction: string option
+        /// One of `Emotes` (emote).
+        Emote: string option
+        /// How long it takes, in seconds (wait, emote, camera, fade). nonnegative.
+        Seconds: float option
+        /// The line (say) or the question (choice).
+        Text: string option
+        /// Who says it: `player`, an NPC id, or absent for a narrator.
+        Speaker: string option
+        /// The answers (choice).
+        Options: CutsceneChoice list
+        /// The label to go to (jump).
+        Goto: string option
+        /// A jump is taken only when all of these hold (absent: always).
+        Conditions: EventCondition list
+        /// `out` or `in` (fade).
+        Mode: string option
+        /// `#rrggbb` (fade; black by default).
+        Color: string option
+        /// A sound asset (sound) or music asset (music; empty: back to the game's music).
+        SoundId: string option
+        /// Run in order (outcomes), from the outcome vocabulary.
+        Outcomes: EventOutcome list
+        /// A move waits for the actor to arrive before the next step (absent: it waits).
+        Wait: bool option
+    }
+
+    /// A `CutsceneStep` with every field at its schema default.
+    static member Default : CutsceneStep =
+        { Type = ""; Label = None; Actor = None; X = None; Y = None; Direction = None; Emote = None; Seconds = None; Text = None; Speaker = None; Options = []; Goto = None; Conditions = []; Mode = None; Color = None; SoundId = None; Outcomes = []; Wait = None }
+
 and Dialogue =
     {
         Id: string
@@ -493,13 +574,15 @@ and EventOutcome =
         SoundId: string option
         ActionId: string option
         MinigameId: string option
+        /// The cutscene `startCutscene` plays (M2).
+        CutsceneId: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `EventOutcome` with every field at its schema default.
     static member Default : EventOutcome =
-        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; Extra = [] }
+        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Extra = [] }
 
 /// The project's export settings (Export Game).
 and ExportSettings =
@@ -606,11 +689,13 @@ and GameContent =
         CropQualities: CropQualityDefinition list
         /// Crop mutations, in roll order (built-in merged with the project's).
         CropMutations: CropMutationDefinition list
+        /// Cutscenes (M2).
+        Cutscenes: Cutscene list
     }
 
     /// A `GameContent` with every field at its schema default.
     static member Default : GameContent =
-        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = [] }
+        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = [] }
 
 and GameEvent =
     {
@@ -727,6 +812,8 @@ and GameProject =
         CropQualities: (CropQualityDefinition list) option
         /// The project's crop mutations (M1), beside and over the built-in ones.
         CropMutations: (CropMutationDefinition list) option
+        /// Cutscenes (M2).
+        Cutscenes: (Cutscene list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -748,7 +835,7 @@ and GameProject =
 
     /// A `GameProject` with every field at its schema default.
     static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -1547,13 +1634,15 @@ and Scene =
         Tags: (string list) option
         /// Its own day/night and foliage tints (M1).
         Atmosphere: AtmosphereLook option
+        /// A music asset that plays in the scene (M2).
+        Music: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Scene` with every field at its schema default.
     static member Default : Scene =
-        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Extra = [] }
+        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; Extra = [] }
 
 and SceneTransition =
     {
@@ -1904,13 +1993,15 @@ and WeatherTypeDefinition =
         /// The overlay it shows (a `WeatherOverlayDefinition` id: `rain`, `snow` or the game's own) or null.
         [<JsonNull>]
         Overlay: string option
+        /// A music asset that plays in this weather, outdoors (M2).
+        Music: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `WeatherTypeDefinition` with every field at its schema default.
     static member Default : WeatherTypeDefinition =
-        { Id = ""; Name = ""; WatersOutdoorSoil = false; CropDamageChance = 0.0; NpcsStayInside = false; Overlay = None; Extra = [] }
+        { Id = ""; Name = ""; WatersOutdoorSoil = false; CropDamageChance = 0.0; NpcsStayInside = false; Overlay = None; Music = None; Extra = [] }
 
 /// Player entered a tile (or region when x2/y2 present).
 and EnterTileCondition =

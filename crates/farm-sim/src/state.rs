@@ -80,6 +80,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         ),
         crop_qualities: over_builtins(content_builtin::crop_qualities(), project.crop_qualities.as_deref(), |d| &d.id),
         crop_mutations: over_builtins(content_builtin::crop_mutations(), project.crop_mutations.as_deref(), |d| &d.id),
+        cutscenes: project.cutscenes.clone().unwrap_or_default(),
     }
 }
 
@@ -190,6 +191,8 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
             .clone()
             .filter(|rng| !rng.is_degenerate())
             .unwrap_or_else(|| rng::create_rng_state(&engine_seed)),
+        music: None,
+        cutscene: None,
     };
 
     // Grids that don't match their scene's size (a hand-edited project, an import) are fixed
@@ -543,7 +546,7 @@ mod tests {
         assert!(!is_valid_settings(&settings));
 
         let mut settings = ProjectSettings::default();
-        settings.calendar.seasons.push(CalendarSeason { id: "mud".to_owned(), name: "Mud".to_owned(), days: 0, temperature: None });
+        settings.calendar.seasons.push(CalendarSeason { id: "mud".to_owned(), name: "Mud".to_owned(), days: 0, temperature: None, music: None });
         assert!(!is_valid_settings(&settings));
 
         let settings = ProjectSettings { max_energy: i32::MAX, ..ProjectSettings::default() };

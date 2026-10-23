@@ -119,6 +119,9 @@ pub struct Scene {
     /// Its own day/night and foliage tints (M1).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub atmosphere: Option<AtmosphereLook>,
+    /// A music asset that plays in the scene (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

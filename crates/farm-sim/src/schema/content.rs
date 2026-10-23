@@ -245,8 +245,12 @@ pub mod custom_asset_types {
     pub const ITEM: &str = "item";
     pub const PLAYER: &str = "player";
     pub const ART: &str = "art";
+    /// A sound effect (OGG or WAV) that `playSound` plays (M2).
+    pub const SOUND: &str = "sound";
+    /// Music (OGG or WAV) that scenes, seasons, weather, festivals and events pick (M2).
+    pub const MUSIC: &str = "music";
 
-    pub const ALL: &[&str] = &[TILE, NPC, ITEM, PLAYER, ART];
+    pub const ALL: &[&str] = &[TILE, NPC, ITEM, PLAYER, ART, SOUND, MUSIC];
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]

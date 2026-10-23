@@ -18,7 +18,7 @@ use indexmap::IndexMap;
 use std::path::PathBuf;
 
 fn season(id: &str, name: &str, days: u32) -> CalendarSeason {
-    CalendarSeason { id: id.to_owned(), name: name.to_owned(), days, temperature: None }
+    CalendarSeason { id: id.to_owned(), name: name.to_owned(), days, temperature: None, music: None }
 }
 
 fn custom_calendar() -> CalendarConfig {
@@ -36,6 +36,7 @@ fn calendar_with_festival() -> CalendarConfig {
             name: "Harvest Festival".to_owned(),
             season_id: "a".to_owned(),
             day: 5,
+            music: None,
         }],
     }
 }
@@ -406,6 +407,7 @@ fn issue_calendar() -> CalendarConfig {
             name: "Summer Fest".to_owned(),
             season_id: "summer".to_owned(),
             day: 3,
+            music: None,
         }],
     }
 }
@@ -530,6 +532,7 @@ proptest::proptest! {
                 name: "Fest".to_owned(),
                 season_id: seasons[festival_season].id.clone(),
                 day: festival_day,
+                music: None,
             }],
             seasons: seasons.clone(),
         };

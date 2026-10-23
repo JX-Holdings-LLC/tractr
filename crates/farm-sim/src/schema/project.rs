@@ -4,6 +4,7 @@ use super::actors::{Dialogue, Npc, Player};
 use super::animals::{AnimalSpeciesDefinition, AnimalState};
 use super::content::{CustomAsset, CustomCropDefinition, InventorySlot, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
+use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
@@ -112,6 +113,9 @@ pub struct GameProject {
     /// The project's crop mutations (M1), beside and over the built-in ones.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub crop_mutations: Option<Vec<CropMutationDefinition>>,
+    /// Cutscenes (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscenes: Option<Vec<Cutscene>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,

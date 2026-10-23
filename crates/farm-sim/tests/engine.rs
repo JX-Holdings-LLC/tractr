@@ -618,8 +618,8 @@ fn one_invalid_setting_no_longer_resets_every_setting() {
     settings.locale = "fr".to_owned();
     settings.max_energy = units::points(250);
     settings.calendar.festivals = vec![
-        CalendarFestival { id: "bad".to_owned(), name: "Bad".to_owned(), season_id: "spring".to_owned(), day: 0 },
-        CalendarFestival { id: "good".to_owned(), name: "Good".to_owned(), season_id: "spring".to_owned(), day: 4 },
+        CalendarFestival { id: "bad".to_owned(), name: "Bad".to_owned(), season_id: "spring".to_owned(), day: 0, music: None },
+        CalendarFestival { id: "good".to_owned(), name: "Good".to_owned(), season_id: "spring".to_owned(), day: 4, music: None },
     ];
     assert!(!state::is_valid_settings(&settings));
     assert_eq!(state::settings_fallbacks(&settings), vec!["settings.calendar.festivals.0".to_owned()]);
