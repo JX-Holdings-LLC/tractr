@@ -239,9 +239,11 @@ until it ends, and the clock follows the **pause in modals** setting.
 - **outcomes** runs outcomes (give items, set flags, start quests).
 - **end** stops the cutscene.
 
-A skippable cutscene ends when the player presses Escape: the outcomes steps
-it skips still run, music steps apply, and moved characters arrive where they
-were going.
+A skippable cutscene skips ahead when the player presses Escape: the
+outcomes steps it passes still run, music and face steps apply, and moved
+characters arrive where they were going. Skipping stops at a choice, so the
+player still picks the branch. In play, Interact, Enter or Space advances a
+line, the number keys pick an answer, and a click works too.
 
 ### Problems
 
