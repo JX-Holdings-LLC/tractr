@@ -20,6 +20,7 @@ pub use toasts::{
     toast_lifetime, Toast, ToastKind, Toasts, MAX_TOAST_LIFETIME, MAX_VISIBLE as MAX_TOASTS, TOAST_LIFETIME,
 };
 
+use crate::i18n::Lang;
 use crate::icons::{self, Icon};
 use crate::layout::RectExt;
 use crate::settings::Bindings;
@@ -29,7 +30,6 @@ use farm_render::{resolve_visual, BuiltinArt, DrawCmd, ImageStore, Rect, Samplin
 use farm_runtime::host::{CalendarView, MinigameInput, MinigameView};
 use farm_runtime::panels::PanelView;
 use farm_sim::overlay::OverlayView;
-use crate::i18n::Lang;
 use farm_sim::schema::{GameContent, GameState, GameWords, Item, ItemCategoryDefinition};
 use farm_sim::Command;
 
