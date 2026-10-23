@@ -18,7 +18,7 @@ for software.
 - **Headlines sell the feeling, body text gives the facts.** "Grow your own worlds!" up top; "Plant crops · Raise
   critters · Ship to every platform" underneath. Technical details go in body copy, not headlines.
 - **Exclamation marks only in the script voice** (section 3), and at most one per piece.
-- Catalog details are welcome as flavour: "EST. 2026", "SEED No. 01", "No. 1 Quality", "Free to Start".
+- Catalog details are welcome as flavour: "EST. 2026", "SEED No. 01", "No. 1 Quality", "No Code Needed".
 
 ## 2. Colour
 
