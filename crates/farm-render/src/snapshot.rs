@@ -10,6 +10,7 @@
 //! The JSON form (camelCase) is what the C# host deserializes into its `WorldSnapshot`
 //! classes, so field names must stay as they are. `None` fields are omitted.
 
+use farm_sim::schema::{DaylightKey, WeatherOverlayDefinition};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -233,6 +234,10 @@ pub struct SnapshotCamera {
 
 /// Time of day, weather and season for the atmosphere pass (day/night tint, seasonal foliage,
 /// rain and snow). `None` on a snapshot means no atmosphere (Edit Mode).
+///
+/// The game's own look (M1) rides along already resolved, so the renderer never reads content:
+/// the daylight keyframes and foliage tint of the scene and season, the day length and today's
+/// overlay definition. Each is `None` for the built-in look.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct SnapshotAtmosphere {
@@ -247,6 +252,31 @@ pub struct SnapshotAtmosphere {
     /// Overlay hint from the weather definition (`rain` | `snow`), when known.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weather_overlay: Option<String>,
+    /// Minutes in the game's day: the tint wraps there. `None`: 1440.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub day_minutes: Option<f64>,
+    /// Day/night keyframes (minute of day, `#rrggbb` multiply colour). `None` or empty: the
+    /// built-in curve, stretched over the day.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub daylight: Option<Vec<DaylightKey>>,
+    /// Foliage multiply tint (`#rrggbb`). `None`: the built-in tint of the season.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub foliage_tint: Option<String>,
+    /// Today's overlay, resolved from the weather's `overlay` id. `None`: the overlay is guessed
+    /// from [`SnapshotAtmosphere::weather_overlay`] and the weather id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overlay: Option<WeatherOverlayDefinition>,
+}
+
+/// A terrain as the renderer reads it (M1): the colour of a tile of it without art (and under
+/// transparent art), and whether it is farmable ground, drawn tilled, wet and fertilized.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotTerrain {
+    pub id: String,
+    /// `#rrggbb`; empty or unparseable: the built-in colour of the id.
+    pub color: String,
+    pub plantable: bool,
 }
 
 /// The tiles a snapshot holds: columns `x0..=x1` of rows `y0..=y1`. Rows outside are empty, and
@@ -304,6 +334,11 @@ pub struct WorldSnapshot {
     pub tick: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub atmosphere: Option<SnapshotAtmosphere>,
+    /// The game's terrains (M1). `None`: the built-in palette, with `soil` the only farmable
+    /// ground. Terrain art is resolved into [`SnapshotTile::art_layers`] by
+    /// [`crate::apply_graphics`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terrains: Option<Vec<SnapshotTerrain>>,
     /// Rows of tiles: `tiles[y][x]`.
     pub tiles: Vec<Vec<SnapshotTile>>,
     pub npcs: Vec<SnapshotEntity>,
@@ -330,6 +365,7 @@ impl Default for WorldSnapshot {
             grid_overlay: false,
             tick: 0.0,
             atmosphere: None,
+            terrains: None,
             tiles: Vec::new(),
             npcs: Vec::new(),
             player: SnapshotEntity::default(),

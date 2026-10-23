@@ -19,7 +19,7 @@
 //!
 //! [`text`] has the embedded Inter fonts and the measurement a UI layout needs.
 //!
-//! Supporting modules: [`atmosphere`] (day/night tint, seasons, weather particles), [`canvas2d`]
+//! Supporting modules: [`atmosphere`] (day/night tint, seasons, weather overlays), [`canvas2d`]
 //! (tile colors, the follow camera, entity positions) and [`css_color`] (CSS color parsing).
 #![forbid(unsafe_code)]
 
@@ -51,7 +51,7 @@ pub use raster::{encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
 pub use shell::{editor_snapshot, shell_snapshot, SnapshotOptions};
 pub use snapshot::{
     SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEntity, SnapshotItem, SnapshotMachine, SnapshotNode,
-    SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
 };
 #[cfg(feature = "raster")]
 pub use tiny_skia;

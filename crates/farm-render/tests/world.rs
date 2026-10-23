@@ -301,7 +301,7 @@ fn atmosphere(minutes: f64, weather: &str, season: &str) -> Option<SnapshotAtmos
         time_minutes: minutes,
         weather_id: Some(weather.into()),
         season: Some(season.into()),
-        weather_overlay: None,
+        ..SnapshotAtmosphere::default()
     })
 }
 
@@ -618,4 +618,271 @@ fn a_windowed_snapshot_draws_exactly_what_the_whole_scene_draws() {
             );
         }
     }
+}
+
+// ---- the world vocabulary as content (M1) ----------------------------------------------------
+
+/// The draw list of `snapshot`, with built-in art or as colored shapes.
+fn commands(snapshot: &WorldSnapshot, art: bool) -> Vec<DrawCmd> {
+    build_world(snapshot, art.then(BuiltinArt::embedded), &mut ImageStore::default()).commands
+}
+
+/// `snapshot` without what M1 added: the built-in terrains, look and overlays as the renderer
+/// knew them before they were content.
+fn without_vocabulary(snapshot: &WorldSnapshot) -> WorldSnapshot {
+    let mut old = snapshot.clone();
+    old.terrains = None;
+    if let Some(atmosphere) = old.atmosphere.as_mut() {
+        atmosphere.overlay = None;
+        atmosphere.daylight = None;
+        atmosphere.day_minutes = None;
+        atmosphere.foliage_tint = None;
+    }
+    old
+}
+
+#[test]
+fn built_in_vocabulary_draws_exactly_what_the_built_in_renderer_drew() {
+    let project = starter();
+    let content = farm_sim::create_content_from_project(&project);
+    let mut state = farm_sim::create_game_state(&project, None);
+    let scene = state.world.scenes.iter().find(|scene| scene.id == state.player.scene_id).unwrap().clone();
+    let source = GraphicsSource::from_state(&farm_sim::Presentation::from_project(&project), &content, &state);
+    let camera = SnapshotCamera { x: 40.0, y: 20.0, width: 300.0, height: 200.0 };
+    for (weather, season, minute) in [
+        ("sun", "spring", 7 * 60 + 15),
+        ("rain", "summer", 19 * 60),
+        ("storm", "fall", 2 * 60),
+        ("snow", "winter", 720),
+    ] {
+        state.clock.weather_id = weather.into();
+        state.clock.season = season.into();
+        state.clock.time_minutes = minute * farm_sim::units::MINUTE;
+        state.clock.tick = 37;
+        let options = SnapshotOptions { tile_size: 32.0, padding: 12.0, camera: Some(camera), ..Default::default() };
+        let mut snapshot = shell_snapshot(&content, &state, &scene, &options);
+        apply_graphics(&mut snapshot, &source, &scene, 37.0, false);
+        assert!(snapshot.terrains.is_some());
+        let atmosphere = snapshot.atmosphere.as_ref().unwrap();
+        assert_eq!(atmosphere.overlay.is_some(), weather != "sun", "{weather}: the built-in overlay rides along");
+        assert_eq!((atmosphere.day_minutes, &atmosphere.daylight, &atmosphere.foliage_tint), (None, &None, &None));
+        for art in [true, false] {
+            assert_eq!(
+                commands(&snapshot, art),
+                commands(&without_vocabulary(&snapshot), art),
+                "{weather} in {season} (art {art})"
+            );
+        }
+    }
+}
+
+fn magenta_asset(id: &str, color: Color) -> (farm_sim::schema::CustomAsset, String) {
+    let url = data_url(1, 1, &[color]);
+    let asset = farm_sim::schema::CustomAsset {
+        id: id.into(),
+        name: id.into(),
+        r#type: "art".into(),
+        data_url: url.clone(),
+        width: Some(1.0),
+        height: Some(1.0),
+        ..Default::default()
+    };
+    (asset, url)
+}
+
+#[test]
+fn a_custom_terrain_draws_in_its_colour_with_its_art_and_farms_like_soil() {
+    use farm_sim::schema::{TerrainDefinition, TileVisuals, VisualRef};
+    let mut project = starter();
+    let (moss_asset, moss_url) = magenta_asset("moss-art", Color::rgb(255, 0, 255));
+    let (own_asset, own_url) = magenta_asset("own-art", Color::rgb(0, 255, 255));
+    project.custom_assets.extend([moss_asset, own_asset]);
+    let terrain = |id: &str, color: &str| TerrainDefinition {
+        id: id.into(),
+        name: id.into(),
+        color: color.into(),
+        ..TerrainDefinition::default()
+    };
+    project.terrains = Some(vec![
+        TerrainDefinition { plantable: true, ..terrain("clay", "#c04020") },
+        TerrainDefinition {
+            visual: Some(VisualRef { asset_id: "moss-art".into(), ..VisualRef::default() }),
+            ..terrain("moss", "#20c040")
+        },
+    ]);
+    let tiles = &mut project.scenes[0].tiles;
+    for (x, id) in [(0, "clay"), (1, "moss"), (2, "moss")] {
+        tiles[0][x].r#type = id.into();
+        tiles[0][x].background = id.into();
+        (tiles[0][x].overlay, tiles[0][x].object, tiles[0][x].node, tiles[0][x].item) = (None, None, None, None);
+        (tiles[0][x].crop, tiles[0][x].machine, tiles[0][x].visuals) = (None, None, None);
+    }
+    tiles[0][2].visuals = Some(TileVisuals {
+        background: Some(VisualRef { asset_id: "own-art".into(), ..VisualRef::default() }),
+        ..TileVisuals::default()
+    });
+    let content = farm_sim::create_content_from_project(&project);
+    let state = farm_sim::create_game_state(&project, None);
+    let scene = &state.world.scenes[0];
+    let mut snapshot =
+        shell_snapshot(&content, &state, scene, &SnapshotOptions { tile_size: 32.0, ..Default::default() });
+    snapshot.atmosphere = None;
+    assert!(snapshot.tiles[0][0].tilled, "a plantable terrain is farmable ground");
+    assert!(!snapshot.tiles[0][1].tilled);
+
+    // Without art: the terrain's colour.
+    let bitmap = color_blocks().render(&snapshot, 1.0);
+    assert_color("#c04020", pixel(&bitmap, 16.0, 16.0), 3);
+    assert_color("#20c040", pixel(&bitmap, 48.0, 16.0), 3);
+
+    // With art: the terrain's visual, unless the tile has its own.
+    let source = GraphicsSource::from_state(&farm_sim::Presentation::from_project(&project), &content, &state);
+    apply_graphics(&mut snapshot, &source, scene, 0.0, false);
+    assert_eq!(snapshot.tiles[0][1].art_layer(0).map(|s| s.image_url.to_string()), Some(moss_url));
+    assert_eq!(snapshot.tiles[0][2].art_layer(0).map(|s| s.image_url.to_string()), Some(own_url));
+    assert!(snapshot.tiles[0][0].art_layer(0).is_none());
+    let bitmap = with_art().render(&snapshot, 1.0);
+    assert_color("#ff00ff", pixel(&bitmap, 48.0, 16.0), 3);
+    assert_color("#00ffff", pixel(&bitmap, 80.0, 16.0), 3);
+    // Edit Mode reads the project's own terrains for the same art.
+    let editor = GraphicsSource::from_project(&project);
+    let mut edit = editor_snapshot(&project, &content, &project.scenes[0], 28.0, 12.0);
+    apply_graphics(&mut edit, &editor, &project.scenes[0], 0.0, false);
+    assert!(edit.tiles[0][1].art_layer(0).is_some());
+}
+
+#[test]
+fn plantable_terrains_draw_built_in_soil_and_unknown_ones_fall_back() {
+    let terrain = |id: &str, color: &str, plantable: bool| farm_render::SnapshotTerrain {
+        id: id.into(),
+        color: color.into(),
+        plantable,
+    };
+    // A plantable terrain draws exactly what soil draws (tilled, wet, fertilized).
+    let mut clay = scene(&[&["clay", "clay"]]);
+    clay.tiles[0][1].watered = true;
+    clay.terrains = Some(vec![terrain("clay", "#7a6545", true)]);
+    let mut soil = scene(&[&["soil", "soil"]]);
+    soil.tiles[0][1].watered = true;
+    assert_eq!(commands(&clay, true), commands(&soil, true));
+    // An id the terrains don't name keeps the built-in colour (grass for unknown ids); soil
+    // isn't farmable once a game's terrains leave it out.
+    let mut built_in = scene(&[&["water", "lava", "soil"]]);
+    built_in.tiles[0][2].watered = true;
+    let mut other = built_in.clone();
+    other.terrains = Some(vec![terrain("water", "not a colour", false)]);
+    let bitmap = color_blocks().render(&other, 1.0);
+    assert_color("#3075b0", pixel(&bitmap, 16.0, 16.0), 3);
+    assert_color("#5b9a4a", pixel(&bitmap, 48.0, 16.0), 3);
+    assert_ne!(commands(&other, true), commands(&built_in, true), "dry: not drawn as wet soil");
+}
+
+#[test]
+fn custom_daylight_keys_and_day_length_set_the_tint() {
+    use farm_sim::schema::DaylightKey;
+    let mut snapshot = scene(&[&["grass"]]);
+    let key = |minute: f64, color: &str| DaylightKey { minute, color: color.into() };
+    let look = |minutes: f64| {
+        Some(SnapshotAtmosphere {
+            time_minutes: minutes,
+            day_minutes: Some(600.0),
+            daylight: Some(vec![key(0.0, "#ffffff"), key(300.0, "#8080ff")]),
+            ..SnapshotAtmosphere::default()
+        })
+    };
+    let modulate = |snapshot: &WorldSnapshot| {
+        commands(snapshot, false).into_iter().find_map(|command| match command {
+            DrawCmd::ModulateRect { color, .. } => Some(color),
+            _ => None,
+        })
+    };
+    snapshot.atmosphere = look(0.0);
+    assert_eq!(modulate(&snapshot), None, "white: no tint");
+    snapshot.atmosphere = look(300.0);
+    assert_eq!(modulate(&snapshot), Some(Color::rgb(0x80, 0x80, 0xff)));
+    // Halfway back to the first key across the end of the 600-minute day, and the next day.
+    snapshot.atmosphere = look(450.0);
+    assert_eq!(modulate(&snapshot), Some(Color::rgb(0xc0, 0xc0, 0xff)));
+    snapshot.atmosphere = look(1050.0);
+    assert_eq!(modulate(&snapshot), Some(Color::rgb(0xc0, 0xc0, 0xff)));
+    // Without keys a short day stretches the built-in curve: midnight at the day's end.
+    snapshot.atmosphere =
+        Some(SnapshotAtmosphere { time_minutes: 599.0, day_minutes: Some(600.0), ..SnapshotAtmosphere::default() });
+    let night = farm_render::atmosphere::daylight_tint(0.0);
+    let late = modulate(&snapshot).unwrap();
+    assert!(late.r <= night.r + 2 && late.b >= night.b - 2, "{late} should be night ({night})");
+    // A game's foliage tint replaces the season's.
+    snapshot.atmosphere = Some(SnapshotAtmosphere {
+        time_minutes: 720.0,
+        season: Some("spring".into()),
+        foliage_tint: Some("#ff0000".into()),
+        ..SnapshotAtmosphere::default()
+    });
+    snapshot.tiles[0][0].node = Some(SnapshotNode { type_id: Some("node-tree".into()), ..SnapshotNode::default() });
+    let tints: Vec<Option<Color>> = commands(&snapshot, true)
+        .into_iter()
+        .filter_map(|command| match command {
+            DrawCmd::Image { tint, .. } => Some(tint),
+            _ => None,
+        })
+        .collect();
+    assert!(tints.contains(&Some(Color::rgb(255, 0, 0))), "{tints:?}");
+}
+
+#[test]
+fn custom_overlays_draw_dust_and_tints() {
+    use farm_sim::schema::WeatherOverlayDefinition;
+    let mut snapshot = scene(&[&["grass", "grass", "grass"], &["grass", "grass", "grass"]]);
+    snapshot.tick = 12.0;
+    let overlay = |style: &str, color: &str, density: f64, tint: Option<&str>| {
+        Some(SnapshotAtmosphere {
+            time_minutes: 720.0,
+            weather_id: Some("whatever".into()),
+            overlay: Some(WeatherOverlayDefinition {
+                id: "custom".into(),
+                style: style.into(),
+                color: color.into(),
+                density,
+                tint: tint.map(str::to_owned),
+                ..WeatherOverlayDefinition::default()
+            }),
+            ..SnapshotAtmosphere::default()
+        })
+    };
+    let red = Color::rgb(255, 0, 0);
+    let specks = |snapshot: &WorldSnapshot| {
+        commands(snapshot, false)
+            .into_iter()
+            .filter(|command| matches!(command, DrawCmd::FillRect { color, .. } if *color == red))
+            .count()
+    };
+    let (width, height) = snapshot.viewport_size();
+    let base = farm_render::atmosphere::particle_count(width, height) as usize;
+    snapshot.atmosphere = overlay("dust", "#ff0000", 1.0, None);
+    assert_eq!(specks(&snapshot), base);
+    let first = commands(&snapshot, false);
+    snapshot.atmosphere = overlay("dust", "#ff0000", 2.0, None);
+    assert_eq!(specks(&snapshot), base * 2, "density scales the count");
+    snapshot.tick = 13.0;
+    snapshot.atmosphere = overlay("dust", "#ff0000", 1.0, None);
+    assert_ne!(commands(&snapshot, false), first, "dust drifts with the tick");
+
+    // `none`: the tint only, multiplied into the (neutral) daylight.
+    snapshot.atmosphere = overlay("none", "#ff0000", 1.0, Some("#a0b0c0"));
+    let list = commands(&snapshot, false);
+    assert!(list.contains(&DrawCmd::ModulateRect {
+        rect: farm_render::Rect::new(0.0, 0.0, 96.0, 64.0),
+        color: Color::rgb(0xa0, 0xb0, 0xc0)
+    }));
+    assert_eq!(specks(&snapshot), 0);
+    assert_eq!(list.iter().filter(|command| matches!(command, DrawCmd::Save)).count(), 1, "no particle pass");
+    // A tinted snow overlay: flakes in its colour under its tint.
+    snapshot.atmosphere = overlay("snow", "#00ff00", 1.0, Some("#808080"));
+    let list = commands(&snapshot, false);
+    assert!(list.iter().any(
+        |command| matches!(command, DrawCmd::ModulateRect { color, .. } if *color == Color::rgb(0x80, 0x80, 0x80))
+    ));
+    assert!(list
+        .iter()
+        .any(|command| matches!(command, DrawCmd::FillCircle { color, .. } if *color == Color::rgb(0, 255, 0))));
 }
