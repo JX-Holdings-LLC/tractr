@@ -1,7 +1,7 @@
 //! The inventory (web PlayerInventory, C# `PlayOverlays.Inventory`): every slot with its art,
 //! quantity, value and durability; Hold picks the seed and fertilizer to plant with, Use runs the
-//! item's bound action, Gift gives it to the NPC the player faces; the footer totals the
-//! inventory's value.
+//! item's bound action, Wear puts on clothing (M4; what is worn is listed first, with Take off),
+//! Gift gives it to the NPC the player faces; the footer totals the inventory's value.
 
 use super::{draw_item_art, right_aligned, GameAction, GameView};
 use crate::format::num;
@@ -34,6 +34,21 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     }
     let area = modal.body;
     let mut y = modal.top;
+    // What the player wears (M4), each with Take off.
+    for worn in &player.worn {
+        let Some(slot) = worn.item.wear.as_ref().map(|wear| wear.slot.as_str()) else { continue };
+        let row = Rect::new(area.x, y, area.width, ui.button_height(12.0) + 8.0);
+        let take_off = Button::new(lang.tr("inventory.takeOff")).size(12.0);
+        let mut inner = row;
+        let width = ui.button_width(&take_off);
+        let button = inner.cut_right(width).centered(width, ui.button_height(12.0));
+        if ui.button(WidgetId::new("inventory-take-off").with(slot), button, take_off) {
+            actions.push(GameAction::Command(Command::TakeOff { slot: slot.to_owned() }));
+        }
+        let text = lang.format("inventory.wearing", &[&worn.item.name]);
+        ui.label(inner, &text, 13.0, FontId::Regular, colors.text, Align::Start);
+        y += row.height + 4.0;
+    }
     if player.inventory.is_empty() {
         y += ui.empty_state(area, y, Icon::Package, lang.tr("inventory.empty"), lang.tr("inventory.emptyDetail"));
     } else {
@@ -64,6 +79,9 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             };
             let use_button = Button::new(use_label).size(12.0);
             let gift_button = Button::new(lang.tr("inventory.gift")).size(12.0);
+            let wear_button = Button::new(lang.tr("inventory.wear")).size(12.0);
+            // Clothing (M4) is put on with Wear.
+            let can_wear = item.wear.is_some();
             let kind = super::category(view.content, item);
             let can_hold = kind.is_some_and(|kind| kind.plantable || kind.fertilizer);
             let has_action = item.use_action_id.as_deref().is_some_and(|id| !id.is_empty());
@@ -76,6 +94,9 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             }
             if can_use {
                 widths.push(ui.button_width(&use_button));
+            }
+            if can_wear {
+                widths.push(ui.button_width(&wear_button));
             }
             if can_gift {
                 widths.push(ui.button_width(&gift_button));
@@ -95,6 +116,12 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
                 if ui.button(id.with("use"), rects[next], use_button) {
                     actions.push(GameAction::ClosePanel);
                     actions.push(GameAction::Command(Command::UseItem { item_id: item.id.clone() }));
+                }
+                next += 1;
+            }
+            if can_wear {
+                if ui.button(id.with("wear"), rects[next], wear_button) {
+                    actions.push(GameAction::Command(Command::WearItem { item_id: item.id.clone() }));
                 }
                 next += 1;
             }

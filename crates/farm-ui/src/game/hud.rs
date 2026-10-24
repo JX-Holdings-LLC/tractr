@@ -274,7 +274,22 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     }
 
     // ── Creator game panels ──
-    let visible: Vec<_> = view.panels.iter().filter(|panel| !panel.hidden).collect();
+    // Their texts may carry placeholders (M4: `{player}`, `{var:name}`…).
+    let fill = |text: &str| farm_sim::substitution::fill(view.content, view.state, text).into_owned();
+    let filled: Vec<_> = view
+        .panels
+        .iter()
+        .filter(|panel| !panel.hidden)
+        .map(|panel| {
+            let mut panel = panel.clone();
+            panel.title = fill(&panel.title);
+            for entry in &mut panel.entries {
+                entry.text = fill(&entry.text);
+            }
+            panel
+        })
+        .collect();
+    let visible: Vec<_> = filled.iter().collect();
     if !visible.is_empty() {
         let mut cards = Vec::new();
         for panel in &visible {

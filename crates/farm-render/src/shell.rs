@@ -13,12 +13,15 @@ use crate::snapshot::{
 use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
 use farm_sim::schema::{
-    directions, soil_states, tile_types, AtmosphereSettings, GameContent, GameProject, GameState, Scene,
+    directions, soil_states, tile_types, wear_slots, AtmosphereSettings, GameContent, GameProject, GameState, Scene,
 };
 use farm_sim::units::{self, MicroMinutes};
 use farm_sim::vocabulary;
 use farm_sim::world::tiles;
 use serde::{Deserialize, Serialize};
+
+/// How big a child is next to a grown-up (M4).
+pub const CHILD_SCALE: f64 = 0.7;
 
 /// Options of [`shell_snapshot`] (C# `ShellSnapshotOptions`).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -270,6 +273,25 @@ pub fn shell_snapshot(
         });
     }
 
+    // The player's children live with the spouse (M4): small villagers beside them.
+    let spouse = farm_sim::relationships::spouse(state).and_then(|id| state.npcs.get(id));
+    if let Some(spouse) = spouse.filter(|spouse| spouse.scene_id == scene.id) {
+        for (index, _) in state.children.iter().enumerate() {
+            let offset = i32::try_from(index).unwrap_or(0).saturating_add(1);
+            let x = units::tile_of(spouse.x).saturating_add(offset).min(scene.width - 1).max(0);
+            npcs.push(SnapshotEntity {
+                x: f64::from(x),
+                y: tiles_of(spouse.y),
+                appearance: Some("villager".to_owned()),
+                scale: Some(CHILD_SCALE),
+                ..SnapshotEntity::default()
+            });
+        }
+    }
+
+    let hat_visual = farm_sim::wardrobe::worn_in(state, wear_slots::HAT)
+        .and_then(|worn| worn.item.wear.as_ref())
+        .and_then(|wear| wear.visual.clone());
     let clock = &state.clock;
     WorldSnapshot {
         width: scene.width,
@@ -294,6 +316,8 @@ pub fn shell_snapshot(
             moving: state.player.move_intent.dx != 0
                 || state.player.move_intent.dy != 0
                 || directed(cutscenes::PLAYER).is_some_and(|(_, moving)| moving),
+            look: crate::look::look_key(state.player.look.as_ref(), &state.player.worn),
+            hat_visual,
             ..SnapshotEntity::default()
         },
         pops: None,

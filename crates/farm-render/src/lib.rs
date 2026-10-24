@@ -31,6 +31,7 @@ pub mod css_color;
 pub mod draw;
 pub mod graphics;
 pub mod images;
+pub mod look;
 mod num;
 #[cfg(feature = "raster")]
 pub mod raster;

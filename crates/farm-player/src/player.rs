@@ -159,6 +159,8 @@ pub enum ScreenKind {
     SaveSlots,
     NewGameSlots,
     Confirm,
+    /// The character creator of a new game (M4).
+    Creator,
 }
 
 /// How a player is set up.
@@ -246,6 +248,8 @@ enum Screen {
     Credits,
     Slots(SlotsMode),
     Confirm(Confirmation),
+    /// The character creator of a new game (M4).
+    Creator,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -290,6 +294,8 @@ pub struct Player {
     game_ui: GameUi,
     settings: Settings,
     settings_screen: SettingsScreen,
+    /// The character creator's answers while it is open (M4).
+    creator: shell::CreatorScreen,
     settings_store: Box<dyn SettingsStore>,
     saves: Box<dyn SaveStore>,
     slots: Vec<SlotInfo>,
@@ -426,6 +432,7 @@ impl Player {
             game_ui: GameUi::new(),
             settings,
             settings_screen: SettingsScreen::default(),
+            creator: shell::CreatorScreen::default(),
             settings_store: options.settings,
             saves: options.saves,
             slots: Vec::new(),
@@ -663,6 +670,11 @@ impl Player {
         if playing && !game_modal {
             ui_input.nav.clear();
             ui_input.keys_pressed.clear();
+            ui_input.accept_held = false;
+        }
+        // While a creator's name field takes typing (M4), letters are letters, not navigation.
+        if self.screens.last() == Some(&Screen::Creator) && self.creator.editing.is_some() {
+            ui_input.nav.clear();
             ui_input.accept_held = false;
         }
         self.build_world(width, height);
@@ -1041,6 +1053,7 @@ impl Player {
                 let view = confirm_view(kind, self.ui.lang());
                 shell::confirm(&mut self.ui, &view)
             }
+            Some(Screen::Creator) => shell::creator(&mut self.ui, &mut self.creator, &mut self.renderer.ui_images),
         };
         self.game_ui.draw_toasts(&mut self.ui);
         self.ui_list = self.ui.end_frame();
@@ -1240,6 +1253,18 @@ impl Player {
             }
             ShellAction::SettingsChanged => self.apply_settings(),
             ShellAction::StartCapture(_) | ShellAction::CancelCapture => {}
+            ShellAction::FinishCreator => {
+                let command = farm_sim::Command::SetPlayerLook {
+                    name: self.creator.name.clone(),
+                    farm_name: self.creator.farm.clone(),
+                    look: self.creator.look(),
+                };
+                if let Some(game) = self.game.as_mut() {
+                    game.session.run_command(&command);
+                }
+                self.screens.retain(|screen| *screen != Screen::Creator);
+                self.drain_session_events();
+            }
         }
     }
 
@@ -1287,6 +1312,15 @@ impl Player {
     fn start_game(&mut self, slot: u32) {
         let session = PlaySession::new_game(self.def.content.clone(), &self.def.start, self.seed.as_deref());
         self.attach(session, slot, 0.0);
+        // A game that asks for its player's name and colours (M4) waits behind the creator.
+        if self.def.content.settings.character_creator == Some(true) {
+            let player = &self.def.start.player;
+            self.creator = shell::CreatorScreen::new(
+                player.name.as_deref().unwrap_or_default(),
+                player.farm_name.as_deref().unwrap_or_default(),
+            );
+            self.screens.push(Screen::Creator);
+        }
     }
 
     fn quit_to_title(&mut self) {
@@ -1485,6 +1519,7 @@ impl Player {
             Some(Screen::Slots(SlotsMode::Save)) => ScreenKind::SaveSlots,
             Some(Screen::Slots(SlotsMode::NewGame)) => ScreenKind::NewGameSlots,
             Some(Screen::Confirm(_)) => ScreenKind::Confirm,
+            Some(Screen::Creator) => ScreenKind::Creator,
         }
     }
 

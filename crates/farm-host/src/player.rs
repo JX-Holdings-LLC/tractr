@@ -195,6 +195,7 @@ pub fn screen_name(screen: ScreenKind) -> &'static str {
         ScreenKind::SaveSlots => "saveSlots",
         ScreenKind::NewGameSlots => "newGameSlots",
         ScreenKind::Confirm => "confirm",
+        ScreenKind::Creator => "creator",
     }
 }
 

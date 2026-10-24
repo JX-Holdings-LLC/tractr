@@ -359,6 +359,9 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
     snapshot.pixel_art = Some(source.pixel_art);
     snapshot.player.sprite =
         resolve_visual(assets, source.player_visual.as_ref(), tick, &snapshot.player.direction, moving);
+    // A worn hat's art (M4) faces like the player.
+    snapshot.player.hat =
+        resolve_visual(assets, snapshot.player.hat_visual.as_ref(), tick, &snapshot.player.direction, false);
 
     let npcs: Vec<&NpcArt> = source.npcs.iter().filter(|npc| npc.scene_id == scene.id).collect();
     for (target, npc) in snapshot.npcs.iter_mut().zip(&npcs) {

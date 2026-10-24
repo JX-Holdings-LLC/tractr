@@ -89,7 +89,7 @@ export interface FrameInfo {
   sounds: { cue: string; gain: number; asset?: boolean }[];
   /** `quit`, `fullscreen:on`, `fullscreen:off`, `title:<text>`. */
   requests: string[];
-  screen: "title" | "playing" | "pause" | "settings" | "credits" | "loadSlots" | "saveSlots" | "newGameSlots" | "confirm";
+  screen: "title" | "playing" | "pause" | "settings" | "credits" | "loadSlots" | "saveSlots" | "newGameSlots" | "confirm" | "creator";
   /** An in-game panel or an engine modal is open. */
   modal: boolean;
   /**
