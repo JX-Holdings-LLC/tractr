@@ -148,6 +148,8 @@ type Edits =
     static member BindMachineTypeVisual(machineTypeId: string, visual: VisualRef | null) : Edit = BindVisual(MachineTypeVisual machineTypeId, Edits.Visual visual)
     static member UpsertAsset(asset: CustomAsset) : Edit = UpsertAsset asset
     static member RemoveAsset(assetId: string) : Edit = RemoveAsset assetId
+    /// An asset's display name (trimmed; blank is a no-op); its id, and so what uses it, stays.
+    static member RenameAsset(assetId: string, name: string) : Edit = RenameAsset(assetId, name)
     /// One frame's duration in ticks (20 ticks = 1 second).
     static member SetFrameTicks(assetId: string, clip: string, frame: int, ticks: int) : Edit = SetFrameTicks(assetId, clip, Some frame, ticks)
     /// Every frame of a clip gets the same duration.

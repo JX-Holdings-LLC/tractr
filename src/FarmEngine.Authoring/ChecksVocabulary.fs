@@ -219,8 +219,17 @@ module internal ChecksVocabulary =
             if asset.Type = CustomAssetTypes.Sound || asset.Type = CustomAssetTypes.Music then
                 let url = asset.DataUrl.ToLowerInvariant()
                 let audio = [ "data:audio/ogg"; "data:audio/vorbis"; "data:audio/wav"; "data:audio/x-wav"; "data:audio/wave"; "data:audio/vnd.wave" ] |> List.exists url.StartsWith
+                let what = if asset.Type = CustomAssetTypes.Music then "Music" else "Sound"
+                let path = sprintf "customAssets[%d].dataUrl" a
                 if not audio then
-                    sink.Error("asset.notAudio", sprintf "customAssets[%d].dataUrl" a, sprintf "%s \"%s\" is not an OGG or WAV file" (if asset.Type = CustomAssetTypes.Music then "Music" else "Sound") asset.Name, Some(NavigationTarget.Asset asset.Id)))
+                    sink.Error("asset.notAudio", path, sprintf "%s \"%s\" is not an OGG or WAV file" what asset.Name, Some(NavigationTarget.Asset asset.Id))
+                else
+                    // The player leaves out a file it cannot decode, silently, and plays the
+                    // built-in sound or music instead: an error, so a game never ships one.
+                    match AudioFiles.checkDataUrl asset.DataUrl with
+                    | Ok _ -> ()
+                    | Error reason ->
+                        sink.Error("asset.audioUnreadable", path, sprintf "%s \"%s\" won't play: %s" what asset.Name reason, Some(NavigationTarget.Asset asset.Id)))
 
     /// `playMusic` and `startCutscene` outcomes (M2), wherever outcomes are.
     let private outcomeChecks (context: Context) (sink: Sink) (path: string) (label: string) (target: NavigationTarget option) (outcomes: EventOutcome list) =

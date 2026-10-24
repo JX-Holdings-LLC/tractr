@@ -34,6 +34,7 @@
     <Compile Include="References.fs" />
     <Compile Include="Vocabulary.fs" />
     <Compile Include="Readouts.fs" />
+    <Compile Include="AudioFiles.fs" />
     <Compile Include="Problem.fs" />
     <Compile Include="SchemaChecks.fs" />
     <Compile Include="ContentLints.fs" />

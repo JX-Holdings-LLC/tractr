@@ -21,6 +21,7 @@
     <Compile Include="ProjectCatalogTests.fs" />
     <Compile Include="DefaultsTests.fs" />
     <Compile Include="ProblemsTests.fs" />
+    <Compile Include="AudioFilesTests.fs" />
     <Compile Include="ReferencesTests.fs" />
     <Compile Include="PatternsTests.fs" />
     <Compile Include="ReadoutsTests.fs" />
@@ -37,6 +38,7 @@
     <None Include="../../fixtures/golden/content/*.json" Link="Golden/content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../fixtures/golden/cartridges/*.cart" Link="Fixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../fixtures/golden/replays/*.json" Link="Golden/replays/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../fixtures/audio/*.ogg" Link="Fixtures/audio/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../fixtures/projects/*.json" Link="Fixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../fixtures/authoring/*.json" Link="Snapshots/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
