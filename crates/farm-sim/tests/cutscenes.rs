@@ -539,7 +539,10 @@ fn a_dialogue_opened_by_an_outcome_holds_the_cutscene_until_it_closes() {
         {"type": "say", "text": "After the talk."},
     ]));
     tick(&ctx, &mut state, 1);
-    assert_eq!(state.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned() }));
+    assert_eq!(
+        state.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned(), line: None })
+    );
     let shown = view(&ctx, &state);
     assert!(shown.line.is_none() && !shown.skippable);
     // The dialogue's commands apply, the cutscene's wait.

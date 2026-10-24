@@ -151,8 +151,11 @@ fn opens_a_shop_from_a_dialogue_option() {
         project.npcs[0].dialogue[0].options.push(option.clone());
         project.dialogues[0].options.push(option);
     });
-    state.dialogue =
-        Some(DialogueState { npc_id: "npc-farmer".to_owned(), dialogue_id: "dialogue-farmer-greeting".to_owned() });
+    state.dialogue = Some(DialogueState {
+        npc_id: "npc-farmer".to_owned(),
+        dialogue_id: "dialogue-farmer-greeting".to_owned(),
+        line: None,
+    });
     let effects = farm_sim::dialogue_system::handle_choose_dialogue_option(&ctx, &mut state, 2);
     assert!(effects.is_empty());
     assert_eq!(state.shop, Some(ShopSession { shop_id: "shop-test".to_owned() }));
@@ -216,8 +219,11 @@ fn remaining_daily_stock_treats_missing_zero_and_nan_limits_as_unlimited() {
 #[test]
 fn open_shop_rejects_unknown_shops_and_closes_an_open_dialogue() {
     let (ctx, mut state) = make_m2_engine(|_| {});
-    state.dialogue =
-        Some(DialogueState { npc_id: "npc-farmer".to_owned(), dialogue_id: "dialogue-farmer-greeting".to_owned() });
+    state.dialogue = Some(DialogueState {
+        npc_id: "npc-farmer".to_owned(),
+        dialogue_id: "dialogue-farmer-greeting".to_owned(),
+        line: None,
+    });
     let missing = handle_open_shop(&ctx, &mut state, "shop-nope");
     assert_eq!(missing, vec![Effect::message("error", "That shop does not exist.")]);
     assert_eq!(state.shop, None);

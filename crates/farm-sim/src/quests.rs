@@ -74,7 +74,17 @@ fn complete_quest(ctx: &EngineContext, state: &mut GameState, quest_id: &str) ->
 
     let mut all = vec![Effect::QuestCompleted { quest_id: quest_id.to_owned() }];
     all.extend(effects);
+    all.extend(quest_changed(ctx, state, quest_id));
     all
+}
+
+/// The `quest` trigger (M3) for a quest that started or was completed.
+fn quest_changed(ctx: &EngineContext, state: &mut GameState, quest_id: &str) -> Effects {
+    crate::events::fire_trigger(
+        ctx,
+        state,
+        &crate::events::Trigger::about(crate::schema::event_triggers::QUEST, &[quest_id]),
+    )
 }
 
 /// Progress matching objectives of active quests.
@@ -206,7 +216,9 @@ pub fn start_quest_by_id(ctx: &EngineContext, state: &mut GameState, quest_id: &
         return vec![];
     }
     activate(state, quest);
-    vec![Effect::say(message_levels::INFO, messages::NEW_QUEST.with(&[&quest.name]))]
+    let mut effects = vec![Effect::say(message_levels::INFO, messages::NEW_QUEST.with(&[&quest.name]))];
+    effects.extend(quest_changed(ctx, state, quest_id));
+    effects
 }
 
 /// TS `{ ...(quests[id] ?? { objectives: {} }), status: 'active' }`.

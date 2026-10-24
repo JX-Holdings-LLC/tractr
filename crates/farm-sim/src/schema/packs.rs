@@ -9,12 +9,17 @@ use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
+use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
 use super::fishing::FishTable;
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
+use super::relationships::HeartEvent;
+use super::vocabulary::{
+    CropMutationDefinition, CropQualityDefinition, ItemCategoryDefinition, TerrainDefinition, ToolDefinition,
+};
 use super::weather::WeatherTypeDefinition;
 use super::world::Scene;
 use indexmap::IndexMap;
@@ -182,6 +187,27 @@ pub struct PackContent {
     pub minigames: Vec<MinigameDef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_start: Option<PackPlayerStart>,
+    /// Terrains the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub terrains: Option<Vec<TerrainDefinition>>,
+    /// Tools the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<ToolDefinition>>,
+    /// Item categories the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_categories: Option<Vec<ItemCategoryDefinition>>,
+    /// Crop quality tiers the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crop_qualities: Option<Vec<CropQualityDefinition>>,
+    /// Crop mutations the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crop_mutations: Option<Vec<CropMutationDefinition>>,
+    /// Cutscenes the pack adds or replaces (M11).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscenes: Option<Vec<Cutscene>>,
+    /// Heart events the pack adds or replaces (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heart_events: Option<Vec<HeartEvent>>,
     /// Per-locale string tables for game text (M7 i18n). Keys address content fields:
     /// `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`,
     /// `quest:{id}:description`. The authored text is the fallback locale.

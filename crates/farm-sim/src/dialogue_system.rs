@@ -135,7 +135,8 @@ pub fn handle_choose_dialogue_option(ctx: &EngineContext, state: &mut GameState,
     let mut next_dialogue: Option<DialogueState> = None;
     if let Some(next_dialogue_id) = non_empty(option.next_dialogue_id.as_deref()) {
         if let Some(next) = find_dialogue(ctx, &dialogue_ref.npc_id, next_dialogue_id) {
-            next_dialogue = Some(DialogueState { npc_id: dialogue_ref.npc_id.clone(), dialogue_id: next.id.clone() });
+            next_dialogue =
+                Some(DialogueState { npc_id: dialogue_ref.npc_id.clone(), dialogue_id: next.id.clone(), line: None });
         }
     }
 

@@ -141,8 +141,11 @@ pub fn scene(name: &str) -> Player {
         "dialogue" => {
             let mut player = new_game(&stores);
             let mut state = player.state().unwrap().clone();
-            state.dialogue =
-                Some(DialogueState { npc_id: "npc-merchant".into(), dialogue_id: "dialogue-merchant-greeting".into() });
+            state.dialogue = Some(DialogueState {
+                npc_id: "npc-merchant".into(),
+                dialogue_id: "dialogue-merchant-greeting".into(),
+                line: None,
+            });
             player.replace_state(state).unwrap();
             player
         }

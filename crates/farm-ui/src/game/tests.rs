@@ -19,7 +19,7 @@ fn command(actions: &[GameAction]) -> Option<&Command> {
 }
 
 fn with_dialogue(fixture: &mut Fixture, npc: &str, dialogue: &str) {
-    fixture.state.dialogue = Some(DialogueState { npc_id: npc.into(), dialogue_id: dialogue.into() });
+    fixture.state.dialogue = Some(DialogueState { npc_id: npc.into(), dialogue_id: dialogue.into(), line: None });
     fixture.idle();
 }
 

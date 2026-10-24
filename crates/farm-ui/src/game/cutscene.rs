@@ -7,20 +7,20 @@
 //! past a line, 1–9 answer, Escape skips), so the line box takes clicks and taps only and its
 //! answers are reached by navigation; nothing here answers a key a second time.
 
-use super::{hud, GameAction, GameView};
+use super::{dialogue, hud, GameAction, GameView};
 use crate::input::InputDevice;
 use crate::layout::{Align, RectExt};
 use crate::settings::BindAction;
 use crate::ui::{HitKind, Ui, WidgetId};
 use crate::widgets::Button;
-use farm_render::{Color, FontId, Rect, TextAlign};
+use farm_render::{Color, FontId, ImageStore, Rect, TextAlign};
 use farm_sim::cutscenes::{self, CutsceneLine, PLAYER};
 use farm_sim::Command;
 
 const TEXT_SIZE: f32 = 15.0;
 const OPTION_SIZE: f32 = 14.0;
 
-pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameAction>) {
+pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {
     let Some(cutscene) = cutscenes::view(view.content, view.state) else { return };
     ui.push_layer();
     let screen = ui.screen();
@@ -34,7 +34,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     if open {
         ui.blocker(screen);
         if let Some(line) = &cutscene.line {
-            draw_line(ui, view, line, &cutscene.cutscene_id, cutscene.step, actions);
+            draw_line(ui, view, images, line, &cutscene.cutscene_id, cutscene.step, actions);
         }
         if cutscene.skippable {
             draw_skip(ui, actions);
@@ -63,6 +63,7 @@ fn draw_skip(ui: &mut Ui, actions: &mut Vec<GameAction>) {
 fn draw_line(
     ui: &mut Ui,
     view: &GameView<'_>,
+    images: &mut ImageStore,
     line: &CutsceneLine,
     cutscene_id: &str,
     step: u32,
@@ -74,8 +75,16 @@ fn draw_line(
         Some(PLAYER) => Some(ui.tr("cutscene.you").to_owned()),
         _ => line.speaker_name.clone(),
     };
+    // An NPC with portraits (M4) shows the one for the line's expression.
+    let portrait = line
+        .speaker
+        .as_deref()
+        .and_then(|speaker| view.content.npcs.iter().find(|npc| npc.id == speaker))
+        .filter(|npc| npc.portraits.as_ref().is_some_and(|portraits| !portraits.is_empty()))
+        .and_then(|npc| dialogue::portrait_sprite(view, npc, line.expression.as_deref()));
+    let indent = if portrait.is_some() { 56.0 + 16.0 } else { 0.0 };
     let width = 680.0f32.min(screen.width - 32.0);
-    let text_width = width - 40.0;
+    let text_width = width - 40.0 - indent;
     let name_height = if speaker.is_some() { ui.line_height(16.5) + 4.0 } else { 0.0 };
     let text_height = ui.paragraph_height(&line.text, TEXT_SIZE, FontId::Regular, text_width);
     let option_heights: Vec<f32> = line
@@ -93,7 +102,8 @@ fn draw_line(
     } else {
         option_heights.iter().sum::<f32>() + 8.0 * (option_heights.len() - 1) as f32
     };
-    let content_height = 20.0 + name_height + text_height + 14.0 + footer_height + 20.0;
+    let header_height = (name_height + text_height).max(if portrait.is_some() { 56.0 } else { 0.0 });
+    let content_height = 20.0 + header_height + 14.0 + footer_height + 20.0;
     let bottom_margin = 24.0 + (screen.height * 0.04).min(40.0);
     let bottom = ui.safe_area().bottom();
     let height = content_height.min((bottom - bottom_margin - 12.0).max(120.0));
@@ -110,7 +120,13 @@ fn draw_line(
         ui.blocker(card);
     }
 
-    let left = card.x + 20.0;
+    if let Some(sprite) = &portrait {
+        let frame = Rect::new(card.x + 20.0, card.y + 20.0, 56.0, 56.0);
+        ui.list_mut().fill_circle(frame.x + 28.0, frame.y + 28.0, 28.0, colors.secondary);
+        ui.list_mut().fill_circle(frame.x + 28.0, frame.y + 28.0, 25.0, colors.row);
+        super::draw_sprite(ui, images, sprite, frame.centered(48.0, 48.0), view.art.pixel_art);
+    }
+    let left = card.x + 20.0 + indent;
     let mut y = card.y + 20.0;
     if let Some(speaker) = &speaker {
         ui.label(
@@ -124,7 +140,7 @@ fn draw_line(
         y += name_height;
     }
     ui.paragraph(left, y, text_width, &line.text, TEXT_SIZE, FontId::Regular, colors.text, TextAlign::Left);
-    y += text_height + 14.0;
+    y = card.y + 20.0 + header_height + 14.0;
 
     if line.options.is_empty() {
         // "Next" with the interact key, right-aligned.

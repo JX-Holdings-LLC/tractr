@@ -137,6 +137,10 @@ pub fn advance_npcs(ctx: &EngineContext, state: &mut GameState, minutes: u32) {
         if directed.contains(&def.id) {
             continue;
         }
+        // A spouse who moved in stays home (M4).
+        if crate::relationships::lives_at_home(ctx, state, &def.id) {
+            continue;
+        }
         let Some(npc) = state.npcs.get(&def.id).cloned() else {
             continue;
         };

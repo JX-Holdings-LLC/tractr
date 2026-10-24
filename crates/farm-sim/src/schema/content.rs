@@ -143,8 +143,34 @@ pub struct Item {
     /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::energy::opt")]
     pub energy: Option<i32>,
+    /// The item is clothing the player can wear (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wear: Option<WearDefinition>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+/// Where and how a piece of clothing is worn (M4).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WearDefinition {
+    /// One of [`wear_slots`].
+    pub slot: String,
+    /// The colour it gives the shirt, the trousers or the hat (`#rrggbb`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// Art drawn over the player (a hat), facing like the player.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visual: Option<VisualRef>,
+}
+
+/// The places clothing is worn (M4).
+pub mod wear_slots {
+    pub const HAT: &str = "hat";
+    pub const SHIRT: &str = "shirt";
+    pub const PANTS: &str = "pants";
+
+    pub const ALL: &[&str] = &[HAT, SHIRT, PANTS];
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]

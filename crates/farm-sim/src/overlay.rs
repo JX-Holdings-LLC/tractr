@@ -11,8 +11,9 @@ use crate::crafting::{self, CraftableStatus};
 use crate::engine_types::EngineContext;
 use crate::schema::{Dialogue, DialogueOption, GameState, ShopDefinition, Tile};
 use crate::world::world_movement;
-use crate::{dialogue_system, economy, social};
+use crate::{dialogue_system, economy, social, substitution};
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 /// A tile coordinate (the facing tile). May lie outside the scene.
@@ -29,11 +30,18 @@ pub struct FacingTile {
 #[serde(rename_all = "camelCase")]
 pub struct OverlayView<'a> {
     pub dialogue: Option<&'a Dialogue>,
+    /// What the open conversation says: today's line of the NPC (M4) or the dialogue's text,
+    /// with its placeholders filled in (see [`crate::substitution`]).
+    pub dialogue_text: Option<String>,
+    /// The portrait expression of the line or dialogue (M4).
+    pub dialogue_expression: Option<String>,
     /// The options the player may pick, in order: `chooseDialogueOption` indexes this list.
+    /// Their texts have their placeholders filled in.
     pub visible_dialogue_options: Vec<DialogueOption>,
-    pub shop: Option<&'a ShopDefinition>,
+    /// The open shop as it is today (stock events applied, M3).
+    pub shop: Option<Cow<'a, ShopDefinition>>,
     /// Stock left today per item id of the open shop (`None`: unlimited).
-    pub stock_remaining: BTreeMap<&'a str, Option<u32>>,
+    pub stock_remaining: BTreeMap<String, Option<u32>>,
     pub facing: FacingTile,
     /// Hand and machine recipes by id.
     pub craftable: BTreeMap<&'a str, CraftableStatus>,
@@ -47,14 +55,27 @@ pub fn overlay_view<'a>(ctx: &'a EngineContext, state: &GameState) -> OverlayVie
         .dialogue
         .as_ref()
         .and_then(|active| dialogue_system::find_dialogue(ctx, &active.npc_id, &active.dialogue_id));
-    let visible_dialogue_options =
+    let mut visible_dialogue_options =
         dialogue.map(|dialogue| social::visible_dialogue_options(ctx, state, dialogue)).unwrap_or_default();
-    let shop = state.shop.as_ref().and_then(|active| economy::find_shop(ctx, &active.shop_id));
+    for option in &mut visible_dialogue_options {
+        option.text = substitution::fill(&ctx.content, state, &option.text).into_owned();
+    }
+    let line = state.dialogue.as_ref().and_then(|active| {
+        let index = usize::try_from(active.line?).ok()?;
+        ctx.npc(&active.npc_id)?.lines.as_ref()?.get(index)
+    });
+    let (dialogue_text, dialogue_expression) = match (line, dialogue) {
+        (Some(line), _) => (Some(line.text.as_str()), line.expression.clone()),
+        (None, Some(dialogue)) => (Some(dialogue.text.as_str()), dialogue.expression.clone()),
+        (None, None) => (None, None),
+    };
+    let dialogue_text = dialogue_text.map(|text| substitution::fill(&ctx.content, state, text).into_owned());
+    let shop = state.shop.as_ref().and_then(|active| economy::find_shop(ctx, state, &active.shop_id));
     let mut stock_remaining = BTreeMap::new();
-    if let Some(shop) = shop {
+    if let Some(shop) = &shop {
         for entry in &shop.stock {
             let remaining = economy::remaining_daily_stock(state, &shop.id, &entry.item_id, entry.daily_limit);
-            stock_remaining.insert(entry.item_id.as_str(), remaining);
+            stock_remaining.insert(entry.item_id.clone(), remaining);
         }
     }
     let facing = world_movement::facing_target(state);
@@ -66,6 +87,8 @@ pub fn overlay_view<'a>(ctx: &'a EngineContext, state: &GameState) -> OverlayVie
     }
     OverlayView {
         dialogue,
+        dialogue_text,
+        dialogue_expression,
         visible_dialogue_options,
         shop,
         stock_remaining,
@@ -117,13 +140,14 @@ mod tests {
         let ctx = EngineContext::new(crate::create_content_from_project(&project));
         let mut state = crate::create_game_state(&project, Some("overlay"));
         let npc = ctx.content.npcs.iter().find(|npc| !npc.dialogue.is_empty()).unwrap();
-        state.dialogue = Some(DialogueState { npc_id: npc.id.clone(), dialogue_id: npc.dialogue[0].id.clone() });
+        state.dialogue =
+            Some(DialogueState { npc_id: npc.id.clone(), dialogue_id: npc.dialogue[0].id.clone(), line: None });
         let shop = ctx.content.shops[0].clone();
         state.shop = Some(ShopSession { shop_id: shop.id.clone() });
         let view = overlay_view(&ctx, &state);
         assert_eq!(view.dialogue.map(|d| d.id.as_str()), Some(npc.dialogue[0].id.as_str()));
         assert_eq!(view.visible_dialogue_options, social::visible_dialogue_options(&ctx, &state, &npc.dialogue[0]));
-        assert_eq!(view.shop.map(|s| s.id.as_str()), Some(shop.id.as_str()));
+        assert_eq!(view.shop.as_ref().map(|s| s.id.as_str()), Some(shop.id.as_str()));
         assert_eq!(view.stock_remaining.len(), shop.stock.len());
         assert_eq!(view.craftable.len(), ctx.content.recipes.len());
         assert_eq!(view.remaining("no-such-item"), None);

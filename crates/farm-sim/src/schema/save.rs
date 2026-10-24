@@ -15,10 +15,13 @@
 //!   intent
 
 use super::actors::GridPoint;
+use super::actors::PlayerLook;
 use super::animals::AnimalState;
 use super::content::InventorySlot;
 use super::cutscenes::CutsceneState;
+use super::economy::ShopStockEntry;
 use super::extensibility::MinigameSession;
+use super::relationships::ChildState;
 use super::social::NpcSocialState;
 use super::world::Scene;
 use crate::units;
@@ -122,6 +125,18 @@ pub struct PlayerState {
     pub completed_quests: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equipped_tool: Option<String>,
+    /// The player's name (M4).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    /// The farm's name (M4).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub farm_name: String,
+    /// How the player looks (M4); absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<PlayerLook>,
+    /// The clothes the player wears (M4), at most one per slot, in the order put on.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub worn: Vec<InventorySlot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -168,6 +183,10 @@ pub struct QuestProgress {
 pub struct DialogueState {
     pub npc_id: String,
     pub dialogue_id: String,
+    /// The NPC's daily line shown in place of the dialogue's text (M4: an index into its
+    /// `lines`). With an empty `dialogueId` the line is all there is.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub line: Option<u32>,
 }
 
 /// An open shop session.
@@ -254,6 +273,24 @@ pub struct GameState {
     /// The cutscene being played (M2), a modal like dialogue.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cutscene: Option<CutsceneState>,
+    /// The player's children (M4).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<ChildState>,
+    /// Stock events added to or removed from shops (M3), by shop id.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_changes: IndexMap<String, ShopChanges>,
+}
+
+/// What events changed in a shop's stock (M3).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ShopChanges {
+    /// Lines added (an item already stocked is replaced).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub added: Vec<ShopStockEntry>,
+    /// Item ids no longer sold.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<String>,
 }
 
 /// What "Keep changes" carries from a playtest into the next one beyond the project's own

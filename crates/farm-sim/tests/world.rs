@@ -632,7 +632,7 @@ fn is_blocked_by_npc_occupied_tiles_via_engine() {
 fn freezes_while_a_dialogue_is_open() {
     let (ctx, mut state) = make_engine("free-move-test");
     with_intent(&ctx, &mut state, 0, -1);
-    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     advance_tick(&ctx, &mut state, 10);
     assert_eq!(state.player.y, units::pos(4.5));
 }

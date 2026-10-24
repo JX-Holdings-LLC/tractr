@@ -16,6 +16,7 @@ use super::fishing::FishTable;
 use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
+use super::relationships::HeartEvent;
 use super::settings::ProjectSettings;
 use super::vocabulary::{
     CropMutationDefinition, CropQualityDefinition, ItemCategoryDefinition, TerrainDefinition, ToolDefinition,
@@ -66,6 +67,8 @@ pub struct GameContent {
     pub crop_mutations: Vec<CropMutationDefinition>,
     /// Cutscenes (M2).
     pub cutscenes: Vec<Cutscene>,
+    /// Heart events (M4).
+    pub heart_events: Vec<HeartEvent>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

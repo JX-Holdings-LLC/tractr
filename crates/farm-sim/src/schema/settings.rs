@@ -4,6 +4,7 @@
 //! cozy configs stay cozy).
 
 use super::primitives::CLASSIC_SEASONS;
+use super::relationships::RelationshipSettings;
 use crate::units;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -150,6 +151,12 @@ pub struct ProjectSettings {
     /// The day/night and foliage tints (M1); absent: the built-in look.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub atmosphere: Option<AtmosphereSettings>,
+    /// Friendship decay, dating, marriage and children (M4); absent: none of them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relationships: Option<RelationshipSettings>,
+    /// A new game asks for the player's name, the farm's name and the player's colours (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub character_creator: Option<bool>,
 }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
@@ -263,6 +270,8 @@ impl Default for ProjectSettings {
             show_made_with_credit: false,
             words: None,
             atmosphere: None,
+            relationships: None,
+            character_creator: None,
         }
     }
 }

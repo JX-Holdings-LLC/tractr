@@ -16,16 +16,28 @@ use farm_sim::Command;
 const TEXT_SIZE: f32 = 15.0;
 const OPTION_SIZE: f32 = 14.0;
 
-/// The NPC's art facing the player, as the map resolves it: the creator's visual, then the
-/// built-in art for its appearance.
-fn portrait_sprite(view: &GameView<'_>, npc: &Npc) -> Option<SnapshotSprite> {
-    resolve_visual(view.art.assets, npc.visual.as_ref(), 0.0, "down", false)
+/// The NPC's portrait for `expression` (M4: one of its `portraits`, else its first), else its
+/// art facing the player as the map resolves it: the creator's visual, then the built-in art
+/// for its appearance.
+pub(crate) fn portrait_sprite(view: &GameView<'_>, npc: &Npc, expression: Option<&str>) -> Option<SnapshotSprite> {
+    let portraits = npc.portraits.as_deref().unwrap_or_default();
+    let portrait = expression
+        .and_then(|expression| portraits.iter().find(|portrait| portrait.expression == expression))
+        .or_else(|| portraits.first());
+    portrait
+        .and_then(|portrait| resolve_visual(view.art.assets, Some(&portrait.visual), 0.0, "down", false))
+        .or_else(|| resolve_visual(view.art.assets, npc.visual.as_ref(), 0.0, "down", false))
         .or_else(|| view.art.builtin.and_then(|art| art.npc(Some(npc.appearance.as_str()), Some("down"), 0.0, false)))
 }
 
 pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {
     let Some(active) = view.state.dialogue.as_ref() else { return };
-    let Some(dialogue) = view.overlay.dialogue else { return };
+    let Some(text) = view.overlay.dialogue_text.as_deref() else { return };
+    // Widget ids: the dialogue, or the NPC's line of the day (M4).
+    let dialogue_key = match active.line {
+        Some(line) => format!("{}#line{line}", active.dialogue_id),
+        None => active.dialogue_id.clone(),
+    };
     let colors = ui.theme().colors;
     let npc = view.content.npcs.iter().find(|npc| npc.id == active.npc_id);
     let npc_name = npc.map_or(active.npc_id.as_str(), |npc| npc.name.as_str());
@@ -52,7 +64,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     let text_x = 20.0 + 56.0 + 16.0;
     let text_width = width - text_x - 20.0;
     let name_height = ui.line_height(16.5);
-    let text_height = ui.paragraph_height(&dialogue.text, TEXT_SIZE, FontId::Regular, text_width);
+    let text_height = ui.paragraph_height(text, TEXT_SIZE, FontId::Regular, text_width);
     let header_height = (name_height + 4.0 + text_height).max(56.0);
     let option_width = width - 40.0;
     let option_heights: Vec<f32> = if options.is_empty() {
@@ -82,7 +94,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     let scrolls = content_height > height + 0.5;
     let top = if scrolls {
         let view = Rect::new(card.x, card.y + 8.0, card.width, card.height - 16.0);
-        ui.begin_scroll(WidgetId::new("dialogue-scroll").with(&dialogue.id), view) + 12.0
+        ui.begin_scroll(WidgetId::new("dialogue-scroll").with(&dialogue_key), view) + 12.0
     } else {
         card.y + 20.0
     };
@@ -90,7 +102,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     // Portrait and text.
     let portrait = Rect::new(card.x + 20.0, top, 56.0, 56.0);
     ui.list_mut().fill_circle(portrait.x + 28.0, portrait.y + 28.0, 28.0, colors.secondary);
-    let sprite = npc.and_then(|npc| portrait_sprite(view, npc));
+    let sprite = npc.and_then(|npc| portrait_sprite(view, npc, view.overlay.dialogue_expression.as_deref()));
     let drawn = sprite.is_some_and(|sprite| {
         ui.list_mut().fill_circle(portrait.x + 28.0, portrait.y + 28.0, 25.0, colors.row);
         // 48 px: the built-in 32×48 characters draw 1:1, crisp.
@@ -112,7 +124,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         card.x + text_x,
         name_rect.bottom() + 4.0,
         text_width,
-        &dialogue.text,
+        text,
         TEXT_SIZE,
         FontId::Regular,
         colors.text,
@@ -135,7 +147,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     }
     for (index, (option, height)) in options.iter().zip(&option_heights).enumerate() {
         let rect = Rect::new(x, y, option_width, *height);
-        let id = WidgetId::new("dialogue-option").with(&dialogue.id).with(index);
+        let id = WidgetId::new("dialogue-option").with(&dialogue_key).with(index);
         let state = if index == 0 {
             ui.interact_default(id, rect, HitKind::Button)
         } else {

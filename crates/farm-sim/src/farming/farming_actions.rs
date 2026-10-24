@@ -10,14 +10,14 @@ use crate::hooks::{CropHarvestHookPayload, HookEvent, NpcInteractHookPayload};
 use crate::messages;
 use crate::rng::Rng;
 use crate::schema::{
-    soil_states, tile_layers, tool_actions, Crop, CropDefinition, DialogueState, GameState, Item, TerrainTransform,
-    Tile, ToolArea, ToolDefinition, FISHING_MINIGAME_ID,
+    event_triggers, soil_states, tile_layers, tool_actions, Crop, CropDefinition, DialogueState, GameState, Item,
+    TerrainTransform, Tile, ToolArea, ToolDefinition, FISHING_MINIGAME_ID,
 };
 use crate::world::tiles;
 use crate::world::world_movement;
 use crate::{
-    animals, crafting, economy, energy, events, fishing, gathering, inventory, mines, quests, skills, social, tools,
-    units,
+    animals, crafting, economy, energy, events, fishing, gathering, inventory, mines, quests, relationships, skills,
+    social, tools, units,
 };
 use indexmap::IndexMap;
 use serde_json::Value;
@@ -557,10 +557,18 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
     if let Some(npc_entry_id) = social::npc_on_tile(ctx, state, target_x, target_y) {
         let npc_def = ctx.npc(&npc_entry_id);
         if let Some(npc_def) = npc_def {
-            if !npc_def.dialogue.is_empty() {
+            // A heart event due here plays in place of the conversation (M4).
+            if relationships::start_heart_event(ctx, state, relationships::Place::Talk(&npc_def.id)) {
+                relationships::note_talk(ctx, state, &npc_def.id);
+                return Vec::new();
+            }
+            // Today's line (M4) is said in place of the first dialogue's text.
+            let line = relationships::pick_line(ctx, state, npc_def);
+            if !npc_def.dialogue.is_empty() || line.is_some() {
                 ctx.emit(HookEvent::NpcInteract(NpcInteractHookPayload { npc_id: npc_def.id.clone() }));
-                state.dialogue =
-                    Some(DialogueState { npc_id: npc_def.id.clone(), dialogue_id: npc_def.dialogue[0].id.clone() });
+                let dialogue_id = npc_def.dialogue.first().map(|dialogue| dialogue.id.clone()).unwrap_or_default();
+                state.dialogue = Some(DialogueState { npc_id: npc_def.id.clone(), dialogue_id, line });
+                relationships::note_talk(ctx, state, &npc_def.id);
                 return quests::progress_quests(ctx, state, "talk", &npc_def.id, 1);
             }
         }
@@ -731,6 +739,11 @@ fn harvest_crop(ctx: &EngineContext, state: &mut GameState, scene_id: &str, x: i
 
     effects.extend(skills::grant_xp(ctx, state, "farming", 8));
     effects.extend(quests::progress_quests(ctx, state, "harvest", &crop.r#type, quantity));
+    effects.extend(events::fire_trigger(
+        ctx,
+        state,
+        &events::Trigger::about(event_triggers::HARVEST, &[crop.r#type.as_str(), crop_item.id.as_str()]),
+    ));
     effects
 }
 

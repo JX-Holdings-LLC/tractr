@@ -49,6 +49,7 @@ use crate::schema::{
     cutscene_step_types as steps, directions, emotes, Cutscene, CutsceneCamera, CutsceneEmote, CutsceneFade,
     CutsceneStep, CutsceneWalk, GameContent, GameState, GridPoint,
 };
+use crate::substitution;
 use crate::units;
 use crate::world::pathfinding::{self, PathPoint, Walkability};
 use crate::world::world_movement;
@@ -763,6 +764,9 @@ pub struct CutsceneLine {
     /// narrator.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub speaker_name: Option<String>,
+    /// The speaker's portrait expression (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expression: Option<String>,
     /// The answers, in order: `chooseCutsceneOption` indexes this list. Empty: a line that
     /// `advanceCutscene` moves on from.
     pub options: Vec<String>,
@@ -844,7 +848,8 @@ pub fn view(content: &GameContent, state: &GameState) -> Option<CutsceneView> {
         .map(|step| {
             let speaker = non_empty(step.speaker.as_deref());
             CutsceneLine {
-                text: step.text.clone().unwrap_or_default(),
+                text: substitution::fill(content, state, step.text.as_deref().unwrap_or_default()).into_owned(),
+                expression: non_empty(step.expression.as_deref()).map(str::to_owned),
                 speaker: speaker.map(str::to_owned),
                 speaker_name: speaker.filter(|speaker| *speaker != PLAYER).map(|speaker| {
                     content
@@ -854,7 +859,11 @@ pub fn view(content: &GameContent, state: &GameState) -> Option<CutsceneView> {
                         .map_or(speaker, |npc| npc.name.as_str())
                         .to_owned()
                 }),
-                options: step.options.iter().map(|option| option.text.clone()).collect(),
+                options: step
+                    .options
+                    .iter()
+                    .map(|option| substitution::fill(content, state, &option.text).into_owned())
+                    .collect(),
             }
         });
     let camera = running.camera.as_ref().map(|camera| {

@@ -79,6 +79,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         crop_qualities: over_builtins(content_builtin::crop_qualities(), project.crop_qualities.as_deref(), |d| &d.id),
         crop_mutations: over_builtins(content_builtin::crop_mutations(), project.crop_mutations.as_deref(), |d| &d.id),
         cutscenes: project.cutscenes.clone().unwrap_or_default(),
+        heart_events: project.heart_events.clone().unwrap_or_default(),
     }
 }
 
@@ -171,6 +172,10 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
             active_quests: start.player.active_quests.clone(),
             completed_quests: start.player.completed_quests.clone(),
             equipped_tool: start.player.equipped_tool.clone(),
+            name: start.player.name.clone().unwrap_or_default(),
+            farm_name: start.player.farm_name.clone().unwrap_or_default(),
+            look: start.player.look.clone(),
+            worn: start.player.worn.clone().unwrap_or_default(),
         },
         npcs,
         quests,
@@ -191,6 +196,8 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
             .unwrap_or_else(|| rng::create_rng_state(&engine_seed)),
         music: None,
         cutscene: None,
+        children: Vec::new(),
+        shop_changes: IndexMap::new(),
     };
 
     // Grids that don't match their scene's size (a hand-edited project, an import) are fixed

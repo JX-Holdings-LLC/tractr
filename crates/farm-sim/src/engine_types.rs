@@ -25,7 +25,7 @@ use crate::schema::{
     Scene, ShopDefinition, TerrainDefinition, ToolDefinition,
 };
 use crate::vocabulary;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 /// The effects a step produced, in order (host-facing: toasts, sounds, camera snaps).
 pub type Effects = Vec<Effect>;
@@ -60,19 +60,28 @@ pub struct EngineContext {
     /// Id tables over `content`, built with the context (see [`ContentIndex`]). The lookup
     /// methods below use them; call [`Self::reindex`] after editing `content` in place.
     index: ContentIndex,
+    /// How deep events fired by triggers are nested (M3): an event whose outcomes set off its
+    /// own trigger stops at [`crate::events::MAX_TRIGGER_DEPTH`].
+    pub(crate) trigger_depth: Cell<u32>,
 }
 
 impl EngineContext {
     /// A context over `content` under [`CommandRules::Player`], without a hook bus.
     pub fn new(content: GameContent) -> Self {
         let index = ContentIndex::build(&content);
-        Self { content, hooks: None, rules: CommandRules::Player, index }
+        Self { content, hooks: None, rules: CommandRules::Player, index, trigger_depth: Cell::new(0) }
     }
 
     /// A context over `content` whose handlers emit into `hooks`.
     pub fn with_hooks(content: GameContent, hooks: HookBus) -> Self {
         let index = ContentIndex::build(&content);
-        Self { content, hooks: Some(RefCell::new(hooks)), rules: CommandRules::Player, index }
+        Self {
+            content,
+            hooks: Some(RefCell::new(hooks)),
+            rules: CommandRules::Player,
+            index,
+            trigger_depth: Cell::new(0),
+        }
     }
 
     /// Rebuild the id tables after `content` was edited in place (lookups stay correct without

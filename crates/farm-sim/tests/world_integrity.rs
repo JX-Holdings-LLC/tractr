@@ -484,7 +484,7 @@ fn the_start_minigame_command_is_refused_so_rewards_are_not_on_demand() {
 fn an_open_dialogue_blocks_everything_but_its_own_commands() {
     let ctx = EngineContext::with_hooks(state::create_content_from_project(&make_project()), HookBus::new());
     let mut state = state::create_game_state(&make_project(), Some("modal"));
-    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     let before = state.clone();
     for command in [
         Command::Interact,

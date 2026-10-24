@@ -232,6 +232,13 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         actions: rewrite_collection(&source.actions, pack_id, &local_ids),
         minigames: rewrite_collection(&source.minigames, pack_id, &local_ids),
         player_start: source.player_start.as_ref().map(|start| rewrite_definition(start, pack_id, &local_ids, false)),
+        terrains: source.terrains.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        tools: source.tools.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        item_categories: source.item_categories.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        crop_qualities: source.crop_qualities.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        crop_mutations: source.crop_mutations.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        cutscenes: source.cutscenes.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        heart_events: source.heart_events.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         strings: source.strings.clone(),
         extra: source.extra.clone(),
     };

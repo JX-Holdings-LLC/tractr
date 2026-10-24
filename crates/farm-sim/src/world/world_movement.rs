@@ -433,9 +433,16 @@ fn settle_tile_entry(
 
     if let Some(item_id) = &picked_up_item_id {
         effects.extend(quests::progress_quests(ctx, state, "collect", item_id, 1));
+        effects.extend(events::fire_trigger(
+            ctx,
+            state,
+            &events::Trigger::about(crate::schema::event_triggers::PICK_UP, &[item_id.as_str()]),
+        ));
     }
     if changed_scene {
         effects.extend(quests::progress_quests(ctx, state, "visit", &landed_scene_id, 1));
+        // A heart event of the scene entered (M4).
+        crate::relationships::start_heart_event(ctx, state, crate::relationships::Place::Scene(&landed_scene_id));
     }
 
     // Mine ladders (M4): stepping onto a revealed ladder descends a floor.

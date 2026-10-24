@@ -39,8 +39,11 @@ fn a_phone_lays_out_in_css_pixels_above_the_touch_controls() {
 
     // A dialogue sits above the controls.
     let mut state = player.state().unwrap().clone();
-    state.dialogue =
-        Some(DialogueState { npc_id: "npc-merchant".into(), dialogue_id: "dialogue-merchant-greeting".into() });
+    state.dialogue = Some(DialogueState {
+        npc_id: "npc-merchant".into(),
+        dialogue_id: "dialogue-merchant-greeting".into(),
+        line: None,
+    });
     player.replace_state(state).unwrap();
     for _ in 0..3 {
         player.step(FRAME, &[], PHONE.0, PHONE.1).unwrap();

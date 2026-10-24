@@ -438,7 +438,8 @@ fn a_player_descends_only_at_the_mine_and_only_as_deep_as_they_have_been() {
     assert_eq!(current.mine.deepest_floor, 2);
 
     // A dialogue open: refused without a word.
-    current.dialogue = Some(farm_sim::schema::DialogueState { npc_id: "n".to_owned(), dialogue_id: "d".to_owned() });
+    current.dialogue =
+        Some(farm_sim::schema::DialogueState { npc_id: "n".to_owned(), dialogue_id: "d".to_owned(), line: None });
     let before = current.clone();
     assert!(farm_sim::apply_command(&ctx, &mut current, &Command::DescendMine { floor: 3 }).is_empty());
     assert_eq!(current, before);
