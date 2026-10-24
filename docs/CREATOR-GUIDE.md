@@ -144,6 +144,13 @@ to:
   [Cutscenes](#cutscenes) below).
 - **Heart events**: cutscenes that play once at a number of hearts with an
   NPC (see [People and relationships](#people-and-relationships) below).
+- **Buildings**: barns, coops, sheds, greenhouses and house upgrades a
+  builder puts up (see [Building the farm](#building-the-farm) below).
+- **Collections**, **Bundles**, **Achievements** and **Mail**: goals that
+  last a whole game, and letters (see [Long-term goals](#long-term-goals)
+  below).
+- **Monsters**: what the player fights when combat is on (see
+  [Combat and adventure](#combat-and-adventure) below).
 
 Every nested field also has an **Edit as JSON** box, for pasting or bulk
 changes.
@@ -273,9 +280,11 @@ scene.
 The triggers: entering a tile, interacting with one, time passing (`tick`),
 the start of a day, a time of day (`time`, at the event's **Minute**), and
 harvesting, selling, crafting, catching a fish, picking up an item, a
-friendship change and a quest changing. The last seven can name a
-**subject** (the crop or item, the NPC or the quest); without one the event
-fires for any.
+friendship change, a quest changing, a building finished (`build`), a bundle
+completed, an achievement unlocked and a monster slain (`slay`). All but the
+first five can name a **subject** (the crop or item, the NPC, the quest, the
+building kind, the bundle, the achievement or the monster); without one the
+event fires for any.
 
 **Conditions** check tiles, items, flags, the day, the season, the year, the
 time, quests, friendship and the weather, and also:
@@ -288,6 +297,12 @@ time, quests, friendship and the weather, and also:
   game's seed and the moment, so a replay rolls the same.
 - **scene**, **hearts** (at least and at most), `dayOfSeason` and
   **relationship** (single, dating, engaged, married).
+- **money** (at least), **skillLevel**, **mineFloor** (the deepest floor
+  reached), **building** (standing buildings of a kind, its upgrades
+  counting), **collection** (items it holds, or all of them), **bundle**
+  (complete), **achievement** (unlocked), **shipped** (units shipped of an
+  item, or of everything), **slain** (monsters of a kind, or of any) and
+  **birthday** (today is an NPC's birthday, or anyone's).
 
 Variables are flags that hold a number or a text as well as true or false:
 **setVariable** sets one, **addVariable** adds to a number (a missing one
@@ -299,8 +314,10 @@ sounds and music, change tiles and warp the player, and also: **moveNpc**
 (to a scene and tile), **setWeather**, **giveExperience** (in a skill),
 **addShopStock** and **removeShopStock** (a shop keeps the change for the
 rest of the game), **placeNode** and **removeNode**, **placeMachine** and
-**removeMachine**, and **setRelationship**. An outcome that triggers events
-of its own (a harvest, a sale) runs them too, four levels deep at most.
+**removeMachine**, **setRelationship**, **sendMail** (a letter that arrives
+the next morning) and **modifyHealth** (with combat on). An outcome that
+triggers events of its own (a harvest, a sale) runs them too, four levels
+deep at most.
 
 ### People and relationships
 
@@ -362,6 +379,127 @@ a name, a farm name and the colours of skin, hair, shirt, trousers and an
 accent, or **Random**. Items with a **Wear** slot (hat, shirt, trousers) are
 clothes: the inventory's **Wear** button puts one on, and the player is drawn
 with its colour or, for a hat, its art.
+
+### Building the farm
+
+#### Placed objects
+
+A **machine type** is anything the player places on a tile, picks back up
+and walks around (or through, without **Blocks movement**). Beside machines
+that process recipes it can be:
+
+- **Storage**: a chest with that many slots. Interacting opens it; items go in
+  and out, and it can't be picked up until it is empty.
+- **Shipping**: a shipping bin. What it holds is sold overnight at the item's
+  value for its quality (see [Long-term goals](#long-term-goals)); only
+  items of a sellable kind go in.
+- **Gate**: interacting opens and closes it; an open gate never blocks. A
+  fence is just a machine type that blocks movement.
+- **Area effects**: what it does to the square of tiles **radius** around
+  it. **water** (a sprinkler) waters the soil there each morning; **protect**
+  (a scarecrow) keeps storms and pests off the crops there overnight. Pests
+  are off until **Settings → Farm → Pest chance** is above 0: each night an
+  outdoor crop no object protects is eaten with that chance.
+- **Furniture and decoration**: a machine type with none of these.
+
+Placeable objects appear in the game's crafting menu with **Place** (an item
+the type names is used up, as for machines).
+
+#### Buildings
+
+A **building** has a footprint (**Width** × **Height** tiles, up to 16), a
+**Door** in it (the middle of the bottom row by default) and an **Interior
+scene**: each building of the kind gets its own copy of that scene, entered
+through the door; the interior's **Interior door** (the middle of its bottom
+row by default) leads back out. It costs **Cost** money and its
+**Materials**, takes **Build days** nights to stand, may only go in its
+**Scenes** (empty: the farm scene of **Settings → Farm**, else the start
+scene), and houses **Capacity** animals.
+
+A shop whose **Buildings** list names it is a builder: its **Build** tab
+places a new building on a free spot (no blocked tile, crop, node, object,
+item, door, NPC, animal or player under it) and shows each upgrade of a
+standing building. A building with **Upgrade of** set is never built new: it
+is what that building becomes, with its own interior, cost and nights; what
+stood inside stays where the new floor has room. The player's house
+upgrades the same way: add it under **Content → Placed buildings** (its kind,
+scene, top-left tile, with **Pick on map**, and its authored interior
+scene), and its upgrade replaces that scene's floor.
+
+Tick **All seasons (greenhouse)** in a scene's panel (a greenhouse's
+interior) and crops are planted and grow there in any season.
+
+#### Animals and their buildings
+
+An animal species lists the buildings that **house** it (an upgrade of one
+of them counts too). A shop whose **Animals** list names it sells it into a
+standing building that houses it and has room; the animal lives inside.
+Beside its **Product**, a species can have more **Products**, each on its
+own interval and needing a mood. **Mood qualities** give a product's quality
+by the animal's mood (the best one it reaches: 90 for gold, say), and
+**Breeding** gives adults in a building with room a chance each night of
+young.
+
+#### Farm layouts
+
+**Settings → Farm** names the farm scene and lists **Layouts**: farm maps a
+new game picks from. With two or more, a new game asks the player to choose
+(with the character creator, or on its own screen), and the chosen layout's
+scene takes the farm scene's place; doors and events that lead to the farm
+lead to the chosen map.
+
+### Long-term goals
+
+- **Shipping log**: the game counts every unit its shipping bins sold, and
+  shows last night's shipment.
+- **Collections**: lists of items to **find** (the first time the player
+  holds one), to **ship**, or to **donate** (handed in from the Goals screen,
+  in the collection's **Scene** when it names one: a museum). **Rewards**
+  are given once each, when the collection holds their **count** of items: a
+  message and outcomes.
+- **Bundles**: lines of items to hand in, a **quantity** of each, of a
+  **quality** or better, in the bundle's **Scene** when it names one. A
+  bundle is complete when **Required** lines are full (all of them by
+  default); then it shows its message and runs its outcomes (unlock a door,
+  set a flag, place nodes: the world fixed). The game lists bundles by their
+  **Group** (a room or a board).
+- **Achievements** unlock the moment their conditions hold (the same
+  conditions as events; an achievement without any never unlocks). A
+  **hidden** one shows as ??? until then. **Steam id** is kept for exports
+  with Steamworks (see [Later](../ROADMAP.md#later)).
+- **Mail**: a letter has a subject, a sender (an NPC), a text (with
+  [text substitution](#text-substitution)), attachments, money and outcomes
+  that run when it is first read. It arrives in the morning: after a
+  **sendMail** outcome (from an event, an action, a dialogue option or a
+  cutscene), after a quest whose rewards name it (**Mail**), or by itself on
+  a morning its **conditions** hold (an NPC at some hearts, a
+  **birthday**). Without **Repeat** a letter comes once; with it, every
+  morning its conditions hold. The player reads letters on the Mail screen,
+  taking what they hold.
+
+### Combat and adventure
+
+Combat is off until you tick **Combat** in **Settings → Combat**. Then:
+
+- The player has **health** beside energy (**Max health**). Monsters that
+  touch them and terrain with **Damage** take it (a hit leaves the player
+  unharmed for **Hurt ticks**); food with **Health** and a night's sleep
+  restore it. At 0 the player faints and comes to at the **faint** scene and
+  tile (the start scene's middle by default) with half their health, paying
+  the **Faint penalty**.
+- **Monsters** have health, the damage they do, defense, speed, how they
+  move (**chase** a player within **Sight**, **wander**, or stay **still**),
+  drops and the combat experience they give. A scene's **Monsters** (in the
+  scene panel, one spawn per line: `slime 3`, `bat 2 at 4,4`,
+  `slime 3 in 2,2-10,8`) spawns them each morning; a mine depth band's
+  **Monsters** and **Monster count** (Settings → Mine, a form per band) put
+  them on its floors.
+- A **weapon** is a tool whose action is **attack** (Content → Tools): it
+  hits the monsters on the tiles it covers for its item's **Tool power**,
+  plus the player's combat level, less the monster's defense.
+- Mine depth bands also scatter **Hazards** (a terrain with damage or
+  hazard energy, on the overlay layer, by density) and leave **Treasure**
+  (weighted items, **Treasure count** of them) on their floors.
 
 ### Problems
 

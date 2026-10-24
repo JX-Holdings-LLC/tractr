@@ -4,8 +4,8 @@
 //! Floors are transient world scenes that are NOT synced back to the project — leaving and
 //! re-entering regenerates the identical layout (state on a floor resets when you leave,
 //! genre-standard and deliberate). Ladders down are revealed by breaking rocks; elevator
-//! checkpoints every N floors let you skip ahead. Hazards v1 = the energy cost of swinging your
-//! pickaxe (combat is an explicit non-goal until demanded).
+//! checkpoints every N floors let you skip ahead. A depth band may also scatter hazard terrain
+//! and leave treasure on its floors, and (with combat on) put monsters there (M7).
 
 use crate::effects::Effect;
 use crate::engine_types::{Effects, EngineContext};
