@@ -853,6 +853,17 @@ fn play_music_lasts_until_a_warp_leaves_the_scene() {
 }
 
 #[test]
+fn a_plugin_warp_to_another_scene_ends_the_music() {
+    let (ctx, mut state) = bare(GameContent::default());
+    let warp = |scene: &str| PluginMutation::WarpPlayer { scene_id: scene.to_owned(), x: 1, y: 1 };
+    state.music = Some("song".to_owned());
+    mutate(&ctx, &mut state, warp("scene-a"));
+    assert_eq!(state.music.as_deref(), Some("song"), "a warp inside the scene keeps it");
+    mutate(&ctx, &mut state, warp("scene-b"));
+    assert_eq!((state.player.scene_id.as_str(), state.music), ("scene-b", None));
+}
+
+#[test]
 fn events_fire_once_in_content_order_and_later_events_see_earlier_flags() {
     use farm_sim::schema::GameEvent;
     let first = GameEvent {

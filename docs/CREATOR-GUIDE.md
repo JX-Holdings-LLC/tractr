@@ -212,7 +212,8 @@ Import sound effects and music as **OGG** or **WAV** files in the Art tab
 `playSound` outcome plays a sound asset (or a built-in sound by name). Music
 can be set per **scene**, **season**, **weather** (outdoors) and **festival**,
 and the `playMusic` outcome (or a cutscene's music step) plays a music asset
-until the player changes scene. What plays, first match wins: the music an
+until the player changes scene, however they get there (a door, a warp, a
+mine ladder, a debug teleport). What plays, first match wins: the music an
 event or cutscene chose, today's festival, the weather, the scene, the
 season. With none of those, the built-in music plays as before.
 
@@ -307,7 +308,11 @@ from separate images (**Add image frame** adds another picture as a frame, so
 one animation can use several files). The preview plays the clip; **Pause
 preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
-machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
+machine. Mark pixel art as **Crisp pixel art** so it stays sharp. Art for the
+player or an NPC turns and walks when its clips are named by direction
+(`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle` and `walk`
+for any direction): walking, a schedule and a cutscene's **face** and
+**move** steps pick the clip.
 
 ### Workshop
 
@@ -351,8 +356,8 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 - **Restart**: start the playtest over from that moment.
 - **Keep changes**: keep what happened in the playtest when you return: the
   world, the player, flags, the date, and what was open or under way (a
-  dialogue or shop, today's purchases, walking NPCs, the mine floor), so the
-  next playtest starts right there.
+  dialogue or shop, a cutscene that was playing, today's purchases, walking
+  NPCs, the mine floor), so the next playtest starts right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
 

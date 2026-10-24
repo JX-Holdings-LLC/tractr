@@ -705,6 +705,37 @@ fn music_an_event_chose_ends_with_the_scene() {
 }
 
 #[test]
+fn a_door_back_into_the_same_scene_keeps_the_music() {
+    let (ctx, mut state) = make_engine_with("transition-same-scene-music", |mut project| {
+        project.scenes[0].transitions = vec![SceneTransition {
+            from_x: 3,
+            from_y: 2,
+            to_scene_id: "scene-test".to_owned(),
+            to_x: 1,
+            to_y: 1,
+            ..SceneTransition::default()
+        }];
+        project
+    });
+    state.music = Some("song".to_owned());
+    with_intent(&ctx, &mut state, 0, -1);
+    advance_tick(&ctx, &mut state, 7);
+    assert_eq!(player_tile(&state), world_movement::TilePoint { x: 1, y: 1 }, "the door fired");
+    assert_eq!(state.music.as_deref(), Some("song"), "the player never left the scene");
+}
+
+#[test]
+fn putting_the_player_in_another_scene_ends_the_music() {
+    let (_, mut state) = make_engine_with("put-player-music", |project| project);
+    state.music = Some("song".to_owned());
+    world_movement::put_player(&mut state, "scene-test", units::pos(1.5), units::pos(1.5));
+    assert_eq!(state.music.as_deref(), Some("song"));
+    world_movement::put_player(&mut state, "scene-cave", units::pos(2.5), units::pos(2.5));
+    assert_eq!((state.player.scene_id.as_str(), state.music), ("scene-cave", None));
+    assert_eq!((state.player.x, state.player.y), (units::pos(2.5), units::pos(2.5)));
+}
+
+#[test]
 fn locked_transitions_do_not_fire() {
     let (ctx, mut state) = make_engine_with("locked", |mut project| {
         project.scenes[0].transitions = vec![SceneTransition {

@@ -621,12 +621,9 @@ fn outcome_warp_player(ctx: &EngineContext, state: &mut GameState, outcome: &Eve
     if world_movement::ensure_scene(ctx, state, scene_id).is_none() {
         return vec![];
     }
-    // Music an event chose (M2) ends when the player leaves the scene.
-    if state.player.scene_id != scene_id {
-        state.music = None;
-    }
     // Warp targets are authored as tile coordinates; land on the center, or on the nearest
-    // walkable tile when the target is outside the scene or blocked.
+    // walkable tile when the target is outside the scene or blocked. Music an event chose ends
+    // when the player leaves the scene (`land_player`).
     let changed_scene = state.player.scene_id != scene_id;
     let (landed, landing_effects) = world_movement::land_player(ctx, state, scene_id, x, y);
     let mut effects = vec![Effect::SceneChanged { scene_id: scene_id.to_owned(), x: landed.x, y: landed.y }];

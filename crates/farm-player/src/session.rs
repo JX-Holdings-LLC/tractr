@@ -28,6 +28,7 @@ use farm_sim::effects::message_levels;
 use farm_sim::hooks::{EffectHookPayload, HookBus, HookEvent};
 use farm_sim::messages::{self, Message};
 use farm_sim::schema::{GameContent, GameState, Scene};
+use farm_sim::world::world_movement;
 use farm_sim::{engine, game_time, inventory, quests, state, units, Command, Effect, EngineContext, StartState};
 use serde_json::Value;
 
@@ -223,6 +224,9 @@ pub struct PlaySession {
     input: InputManager,
     last_intent: MoveVector,
     prev_player: Option<(f64, f64, String)>,
+    /// Where the camera looked at the tick before (tile units): a cutscene's camera, else the
+    /// player. A cutscene's pan is drawn between it and the tick's camera.
+    prev_camera: Option<(f64, f64)>,
     pops: Vec<(Pop, f64)>,
     elapsed_ms: f64,
     alpha: f64,
@@ -270,6 +274,7 @@ impl PlaySession {
             input: InputManager::new(),
             last_intent: held,
             prev_player: None,
+            prev_camera: None,
             pops: Vec::new(),
             elapsed_ms: 0.0,
             alpha: 0.0,
@@ -460,6 +465,7 @@ impl PlaySession {
             if tick == 0 {
                 let (x, y) = (tiles(self.state.player.x), tiles(self.state.player.y));
                 self.prev_player = Some((x, y, self.state.player.scene_id.clone()));
+                self.prev_camera = Some(self.camera_now().unwrap_or((x, y)));
             }
             let effects = engine::advance_tick(&self.ctx, &mut self.state, 1);
             self.after_step(effects, 0);
@@ -511,6 +517,22 @@ impl PlaySession {
             Some((x, y, scene)) if *scene == player.scene_id => (x + (px - x) * self.alpha, y + (py - y) * self.alpha),
             _ => (px, py),
         }
+    }
+
+    /// The running cutscene's camera now (tile units); `None` while the camera follows the player.
+    fn camera_now(&self) -> Option<(f64, f64)> {
+        farm_sim::cutscenes::camera(&self.state).map(|(x, y)| (tiles(x), tiles(y)))
+    }
+
+    /// Where a cutscene's camera looks between the last two tick states (tile units), for
+    /// rendering; `None` while the camera follows the player ([`Self::interpolated_player`]).
+    /// A pan moves smoothly between ticks, as the player does.
+    pub fn interpolated_camera(&self) -> Option<(f64, f64)> {
+        let (cx, cy) = self.camera_now()?;
+        Some(match self.prev_camera {
+            Some((x, y)) => (x + (cx - x) * self.alpha, y + (cy - y) * self.alpha),
+            None => (cx, cy),
+        })
     }
 
     /// World size of the current scene in pixels (contiguous tiles, padding on every side).
@@ -609,9 +631,8 @@ impl PlaySession {
                 // Free movement: land on the center tile's center.
                 let (x, y) =
                     (units::tile_center(scene.width.div_euclid(2)), units::tile_center(scene.height.div_euclid(2)));
-                self.state.player.scene_id.clone_from(scene_id);
-                self.state.player.x = x;
-                self.state.player.y = y;
+                // The same move to another scene as a door's: music an event chose ends.
+                world_movement::put_player(&mut self.state, scene_id, x, y);
             }
             DebugAction::SetFlag { flag } => {
                 let flag = flag.trim();
@@ -626,6 +647,7 @@ impl PlaySession {
             DebugAction::AddMoney { .. } | DebugAction::AddMinutes { .. } => {}
         }
         self.prev_player = None;
+        self.prev_camera = None;
         self.sync_minigame();
     }
 
@@ -634,6 +656,7 @@ impl PlaySession {
     pub fn replace_state(&mut self, state: GameState) {
         self.state = state;
         self.prev_player = None;
+        self.prev_camera = None;
         self.minigame = None;
         self.timestep.reset();
         self.input.clear();
@@ -673,6 +696,7 @@ impl PlaySession {
                 Effect::SceneChanged { scene_id, .. } => {
                     // Teleports/transitions never interpolate across scenes.
                     self.prev_player = None;
+                    self.prev_camera = None;
                     self.events.push(SessionEvent::SceneChanged { scene_id: scene_id.clone() });
                 }
                 Effect::DayStarted { day, season, year } => {

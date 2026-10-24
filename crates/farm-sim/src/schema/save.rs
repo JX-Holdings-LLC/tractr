@@ -295,8 +295,8 @@ pub struct ShopChanges {
 
 /// What "Keep changes" carries from a playtest into the next one beyond the project's own
 /// fields (the project's `keptState`), so the next playtest starts where the last one ended
-/// (#36). Absent when there is nothing to carry (tick 0, nothing open, no NPC mid-walk, on the
-/// surface).
+/// (#36). Absent when there is nothing to carry (tick 0, nothing open, no cutscene playing, no
+/// NPC mid-walk, on the surface).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct KeptState {
@@ -312,6 +312,9 @@ pub struct KeptState {
     pub shop: Option<ShopSession>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minigame: Option<MinigameSession>,
+    /// [`GameState::cutscene`]: a cutscene that was playing goes on where it was (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscene: Option<CutsceneState>,
     /// Walking NPCs by id: their remaining path and patrol waypoint (positions are the
     /// project's NPC fields).
     pub npcs: IndexMap<String, KeptNpc>,
@@ -345,6 +348,7 @@ impl KeptState {
             dialogue: state.dialogue.clone(),
             shop: state.shop.clone(),
             minigame: state.minigame.clone(),
+            cutscene: state.cutscene.clone(),
             npcs,
             mine_current_floor: state.mine.current_floor,
         };
@@ -358,6 +362,7 @@ impl KeptState {
         state.dialogue.clone_from(&self.dialogue);
         state.shop.clone_from(&self.shop);
         state.minigame.clone_from(&self.minigame);
+        state.cutscene.clone_from(&self.cutscene);
         for (id, kept) in &self.npcs {
             if let Some(npc) = state.npcs.get_mut(id) {
                 npc.path.clone_from(&kept.path);

@@ -173,8 +173,9 @@ shipped in the cartridge's asset table like its images.
 - **Music.** The music is chosen every frame
   (`farm_runtime::music::chosen_music`); the first that applies wins:
   1. the music an event or cutscene chose (`playMusic`), until the player
-     changes scene through a transition or a warp to another scene (an empty
-     id goes back to the place's music);
+     is in another scene, however they got there: a transition, a warp, the
+     mine's ladders and exit, or the debug drawer's teleport (an empty id
+     goes back to the place's music);
   2. today's festival's music;
   3. the weather's music, outdoors only (not in an indoor scene);
   4. the scene's music;
@@ -372,7 +373,9 @@ under one lock, so plugin hooks never block the editor. Editor shortcuts
 
 1. Input is routed: bound keys become the engine's keys, and the UI gets
    navigation, pointer and raw keys.
-2. The session steps (fixed timestep) unless a menu pauses the game.
+2. The session steps (fixed timestep) unless a menu pauses the game. The
+   camera centres on the player as drawn between the last two ticks, or on
+   where a cutscene's camera looks, which pans between ticks the same way.
 3. `farm-render` builds the world snapshot of the tiles the camera shows (a
    tile window, one tile of margin and the row below for tall objects), so a
    256×256 farm costs about what a small one does; image URLs are shared

@@ -68,8 +68,8 @@ module Playtest =
         if natural.Id <> season || naturalDay <> kept then Some(JNumber kept) else None
 
     /// What the project's own fields do not hold (Rust `KeptState::of_state`): the tick, today's
-    /// shop purchases, an open dialogue, shop or minigame, NPC walks and the mine floor; absent
-    /// when there is nothing to carry.
+    /// shop purchases, an open dialogue, shop or minigame, a cutscene that is playing, NPC walks
+    /// and the mine floor; absent when there is nothing to carry.
     let private keptState (state: Json) : Json option =
         let present (key: string) (value: Json) = if Json.isNullish value then [] else [ key, value ]
         let npcs =
@@ -87,7 +87,8 @@ module Playtest =
             | _ -> JObject []
         let tick = Json.get "tick" (Json.get "clock" state) |> Json.orElse (JNumber 0.0)
         let floor = Json.get "currentFloor" (Json.get "mine" state) |> Json.orElse (JNumber 0.0)
-        let sessions = present "dialogue" (Json.get "dialogue" state) @ present "shop" (Json.get "shop" state) @ present "minigame" (Json.get "minigame" state)
+        let sessions =
+            [ "dialogue"; "shop"; "minigame"; "cutscene" ] |> List.collect (fun key -> present key (Json.get key state))
         if tick = JNumber 0.0 && purchases = JObject [] && sessions.IsEmpty && npcs.IsEmpty && floor = JNumber 0.0 then
             None
         else

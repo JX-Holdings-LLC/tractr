@@ -2,9 +2,13 @@
 //! cutscene, and emote bubbles over characters. Without a cutscene nothing changes (the render
 //! goldens pin that).
 
-use farm_render::{build_world, shell_snapshot, DrawCmd, ImageStore, SnapshotOptions, WorldSnapshot};
-use farm_sim::schema::{CutsceneEmote, CutsceneState, CutsceneWalk, GameState, GridPoint};
-use farm_sim::{units, GameContent, GameProject};
+use farm_render::{
+    apply_graphics, build_world, shell_snapshot, DrawCmd, GraphicsSource, ImageStore, SnapshotOptions, WorldSnapshot,
+};
+use farm_sim::schema::{
+    AnimationClip, ArtFrame, CustomAsset, CutsceneEmote, CutsceneState, CutsceneWalk, GameState, GridPoint, VisualRef,
+};
+use farm_sim::{units, GameContent, GameProject, Presentation};
 
 const TS: f64 = 32.0;
 
@@ -67,6 +71,53 @@ fn a_cutscene_turns_and_walks_npcs() {
     assert_eq!((entity.direction.as_str(), entity.moving), ("right", true));
     // Drawn from its tile corner, not read as a centre.
     assert_eq!((entity.pixel_x, entity.pixel_y), (Some(x * TS), Some(y * TS)));
+}
+
+#[test]
+fn creator_art_npcs_turn_and_walk_like_the_player() {
+    // One sheet whose clips sit side by side: idle down at x 0, idle left at 16, walk right at 32.
+    let clip = |name: &str, x: f64| AnimationClip {
+        name: name.into(),
+        r#loop: true,
+        frames: vec![ArtFrame { asset_id: None, x, y: 0.0, width: 16.0, height: 16.0, ticks: 1.0 }],
+    };
+    let mut project = starter();
+    project.custom_assets.push(CustomAsset {
+        id: "npc-art".into(),
+        name: "NPC".into(),
+        r#type: "art".into(),
+        data_url: "data:image/png;base64,a".into(),
+        animations: Some(vec![clip("idle-down", 0.0), clip("idle-left", 16.0), clip("walk-right", 32.0)]),
+        ..CustomAsset::default()
+    });
+    let (mut content, mut state, npc) = game();
+    let visual = Some(VisualRef { asset_id: "npc-art".into(), ..VisualRef::default() });
+    for definition in project.npcs.iter_mut().filter(|definition| definition.id == npc) {
+        definition.visual.clone_from(&visual);
+    }
+    for definition in content.npcs.iter_mut().filter(|definition| definition.id == npc) {
+        definition.visual.clone_from(&visual);
+    }
+    let source = GraphicsSource::from_state(&Presentation::from_project(&project), &content, &state);
+    let scene = state.world.scenes.iter().find(|scene| scene.id == state.player.scene_id).unwrap().clone();
+    let drawn_x = |state: &GameState| {
+        let mut shown = snapshot(&content, state);
+        apply_graphics(&mut shown, &source, &scene, 0.0, false);
+        let at = shown.npcs.iter().position(|entity| entity.kind == "npc").unwrap();
+        shown.npcs[at].sprite.as_ref().and_then(|sprite| sprite.source_x)
+    };
+    assert_eq!(drawn_x(&state), Some(0.0), "standing, facing down");
+    playing(&mut state).facing.insert(npc.clone(), "left".to_owned());
+    assert_eq!(drawn_x(&state), Some(16.0), "turned left by a face step");
+    let target = {
+        let live = &state.npcs[&npc];
+        GridPoint { x: units::tile_of(live.x) + 1, y: units::tile_of(live.y) }
+    };
+    let scene_id = state.player.scene_id.clone();
+    let running = playing(&mut state);
+    running.facing.insert(npc.clone(), "right".to_owned());
+    running.walks = vec![CutsceneWalk { actor: npc.clone(), scene_id, path: vec![target] }];
+    assert_eq!(drawn_x(&state), Some(32.0), "walking right");
 }
 
 #[test]

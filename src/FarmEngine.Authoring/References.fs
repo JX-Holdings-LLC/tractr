@@ -43,6 +43,8 @@ type ReferenceKind =
     | Sound
     | Music
     | Cutscene
+    /// Who acts or speaks in a cutscene step (M2): the player or an NPC.
+    | Actor
 
 module ReferenceKind =
     let all =
@@ -52,7 +54,8 @@ module ReferenceKind =
           ReferenceKind.Minigame; ReferenceKind.Event; ReferenceKind.Weather; ReferenceKind.Season; ReferenceKind.Festival
           ReferenceKind.Skill; ReferenceKind.Asset; ReferenceKind.Pack; ReferenceKind.StationCategory
           ReferenceKind.Terrain; ReferenceKind.Tool; ReferenceKind.ItemCategory; ReferenceKind.CropQuality
-          ReferenceKind.CropMutation; ReferenceKind.Overlay; ReferenceKind.Sound; ReferenceKind.Music; ReferenceKind.Cutscene ]
+          ReferenceKind.CropMutation; ReferenceKind.Overlay; ReferenceKind.Sound; ReferenceKind.Music; ReferenceKind.Cutscene
+          ReferenceKind.Actor ]
 
     /// The name C# uses ("item", "npc", "nodeType", …).
     let name (kind: ReferenceKind) =
@@ -89,6 +92,7 @@ module ReferenceKind =
         | ReferenceKind.Sound -> "sound"
         | ReferenceKind.Music -> "music"
         | ReferenceKind.Cutscene -> "cutscene"
+        | ReferenceKind.Actor -> "actor"
 
     let tryParse (text: string) = all |> List.tryFind (fun kind -> name kind = text)
 
@@ -310,8 +314,8 @@ module References =
           // Cutscenes (M2)
           oneOf "CutsceneStep" "Type" (same CutsceneStepTypes.All)
           plain "CutsceneStep" "Label" "a step label jumps and choices go to"
-          plain "CutsceneStep" "Actor" "player or an NPC id"
-          plain "CutsceneStep" "Speaker" "player, an NPC id, or none for a narrator"
+          optional "CutsceneStep" "Actor" ReferenceKind.Actor
+          optionalAs "CutsceneStep" "Speaker" ReferenceKind.Actor "(narrator)"
           optionalOneOf "CutsceneStep" "Direction" (same Directions.All)
           optionalOneOf "CutsceneStep" "Emote" (same Emotes.All)
           plain "CutsceneStep" "Goto" "a step label of the cutscene"
@@ -432,6 +436,8 @@ module References =
         | ReferenceKind.Music ->
             project.CustomAssets |> List.filter (fun a -> a.Type = CustomAssetTypes.Music) |> entries (fun a -> a.Id) (fun a -> named a.Name)
         | ReferenceKind.Cutscene -> defaultArg project.Cutscenes [] |> entries (fun c -> c.Id) (fun c -> named c.Name)
+        | ReferenceKind.Actor ->
+            ("player", "Player") :: (project.Npcs |> List.map (fun n -> n.Id, n.Name)) |> entries fst (snd >> named)
 
     /// A picker's entries: the "nothing chosen" entry when `empty` allows it, a "(missing: id)"
     /// entry when `current` names something that is not among `available`, then `available`.
