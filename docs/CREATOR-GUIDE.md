@@ -212,7 +212,8 @@ Import sound effects and music as **OGG** or **WAV** files in the Art tab
 `playSound` outcome plays a sound asset (or a built-in sound by name). Music
 can be set per **scene**, **season**, **weather** (outdoors) and **festival**,
 and the `playMusic` outcome (or a cutscene's music step) plays a music asset
-until the player changes scene. What plays, first match wins: the music an
+until the player changes scene, however they get there (a door, a warp, a
+mine ladder, a debug teleport). What plays, first match wins: the music an
 event or cutscene chose, today's festival, the weather, the scene, the
 season. With none of those, the built-in music plays as before.
 

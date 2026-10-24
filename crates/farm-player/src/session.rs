@@ -28,6 +28,7 @@ use farm_sim::effects::message_levels;
 use farm_sim::hooks::{EffectHookPayload, HookBus, HookEvent};
 use farm_sim::messages::{self, Message};
 use farm_sim::schema::{GameContent, GameState, Scene};
+use farm_sim::world::world_movement;
 use farm_sim::{engine, game_time, inventory, quests, state, units, Command, Effect, EngineContext, StartState};
 use serde_json::Value;
 
@@ -609,9 +610,8 @@ impl PlaySession {
                 // Free movement: land on the center tile's center.
                 let (x, y) =
                     (units::tile_center(scene.width.div_euclid(2)), units::tile_center(scene.height.div_euclid(2)));
-                self.state.player.scene_id.clone_from(scene_id);
-                self.state.player.x = x;
-                self.state.player.y = y;
+                // The same move to another scene as a door's: music an event chose ends.
+                world_movement::put_player(&mut self.state, scene_id, x, y);
             }
             DebugAction::SetFlag { flag } => {
                 let flag = flag.trim();

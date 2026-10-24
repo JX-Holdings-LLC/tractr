@@ -168,8 +168,9 @@ shipped in the cartridge's asset table like its images.
 - **Music.** The music is chosen every frame
   (`farm_runtime::music::chosen_music`); the first that applies wins:
   1. the music an event or cutscene chose (`playMusic`), until the player
-     changes scene through a transition or a warp to another scene (an empty
-     id goes back to the place's music);
+     is in another scene, however they got there: a transition, a warp, the
+     mine's ladders and exit, or the debug drawer's teleport (an empty id
+     goes back to the place's music);
   2. today's festival's music;
   3. the weather's music, outdoors only (not in an indoor scene);
   4. the scene's music;

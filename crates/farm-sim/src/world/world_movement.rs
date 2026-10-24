@@ -205,10 +205,21 @@ pub fn land_player(ctx: &EngineContext, state: &mut GameState, scene_id: &str, x
             ),
         },
     };
-    state.player.scene_id = scene_id.to_owned();
-    state.player.x = units::tile_center(landed.x);
-    state.player.y = units::tile_center(landed.y);
+    put_player(state, scene_id, units::tile_center(landed.x), units::tile_center(landed.y));
     (landed, effects)
+}
+
+/// Puts the player at `(x, y)` (position units) in `scene_id`. Every move of the player to
+/// another scene goes through here (doors, warps, the mine, the debug drawer's teleport), so the
+/// rules of leaving a scene hold on every path: music an event or cutscene chose
+/// (`state.music`, M2) ends with the scene.
+pub fn put_player(state: &mut GameState, scene_id: &str, x: i32, y: i32) {
+    if state.player.scene_id != scene_id {
+        state.music = None;
+        scene_id.clone_into(&mut state.player.scene_id);
+    }
+    state.player.x = x;
+    state.player.y = y;
 }
 
 /// The scene `scene_id` of the running world.
@@ -408,8 +419,6 @@ fn settle_tile_entry(
             let target_name = state.world.scenes[target_index].name.clone();
             let (landed, landing_effects) = land_player(ctx, state, &to_scene_id, to_x, to_y);
             changed_scene = true;
-            // Music an event chose (M2) ends with the scene.
-            state.music = None;
             effects.push(Effect::SceneChanged { scene_id: to_scene_id, x: landed.x, y: landed.y });
             effects.push(Effect::say("success", messages::ENTERED.with(&[&target_name])));
             effects.extend(landing_effects);

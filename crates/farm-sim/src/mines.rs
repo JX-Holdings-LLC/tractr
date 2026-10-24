@@ -146,9 +146,7 @@ pub fn descend_mine(ctx: &EngineContext, state: &mut GameState, to_floor: u32) -
     }
 
     let (entry_x, entry_y) = FLOOR_ENTRY;
-    state.player.scene_id = scene_id.clone();
-    state.player.x = units::tile_center(entry_x);
-    state.player.y = units::tile_center(entry_y);
+    world_movement::put_player(state, &scene_id, units::tile_center(entry_x), units::tile_center(entry_y));
     state.mine = MineProgress { current_floor: floor, deepest_floor: state.mine.deepest_floor.max(floor) };
 
     // `floor % 0` is NaN in JS: never a checkpoint.
@@ -224,9 +222,7 @@ pub fn exit_mine(ctx: &EngineContext, state: &mut GameState) -> Effects {
     // Drop generated floors so they regenerate fresh next visit. Authored scenes stay, whatever
     // their id.
     state.world.scenes.retain(|scene| !(scene.is_generated() && is_mine_scene(&scene.id)));
-    state.player.scene_id = target_scene_id.clone();
-    state.player.x = units::tile_center(x);
-    state.player.y = units::tile_center(y);
+    world_movement::put_player(state, &target_scene_id, units::tile_center(x), units::tile_center(y));
     state.mine.current_floor = 0;
 
     vec![Effect::SceneChanged { scene_id: target_scene_id, x, y }, Effect::say("info", &messages::MINE_CLIMB_BACK)]
