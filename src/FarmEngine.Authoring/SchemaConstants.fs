@@ -854,7 +854,7 @@ module GameContentSchema =
 [<RequireQualifiedAccess>]
 module SaveSchema =
     /// TS `SKILL_NAMES`.
-    let SkillNames : string list = [ "farming"; "foraging"; "fishing"; "mining"; "social" ]
+    let SkillNames : string list = [ "farming"; "foraging"; "fishing"; "mining"; "social"; "combat" ]
 
     /// Tile index → tile center; already-fractional coordinates pass through.
     let CenterCoordinate (value: float) : float = if value = System.Math.Floor value then value + 0.5 else value

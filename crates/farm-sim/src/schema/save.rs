@@ -532,7 +532,7 @@ pub struct SaveLoadResult {
 pub const CURRENT_SAVE_VERSION: u32 = 5;
 
 /// TS `SKILL_NAMES`.
-pub const SKILL_NAMES: &[&str] = &["farming", "foraging", "fishing", "mining", "social"];
+pub const SKILL_NAMES: &[&str] = &["farming", "foraging", "fishing", "mining", "social", "combat"];
 
 /// Tile index → tile center; positions already inside a tile pass through (projects may store
 /// either).

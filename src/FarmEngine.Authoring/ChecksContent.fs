@@ -23,7 +23,7 @@ module internal ChecksContent =
     let private text (value: string option) = defaultArg value ""
 
     /// The skills experience can go to: the built-in ones and combat (M7).
-    let private knownSkills = HashSet<string>(SaveSchema.SkillNames @ [ "combat" ])
+    let private knownSkills = HashSet<string>(SaveSchema.SkillNames)
 
     let private duplicates (context: Context) (sink: Sink) =
         let check (family: string) (path: string) (ids: seq<string>) (target: string -> NavigationTarget option) =
