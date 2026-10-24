@@ -3,6 +3,10 @@
 //! preview, and Start. The game waits behind it (its clock does not run while a shell screen is
 //! open); Start sends the answers as the `setPlayerLook` command, before the first tick.
 //!
+//! A game with two or more farm layouts (M5) asks for the farm map here too, by name and
+//! description; Start then also sends `chooseFarmLayout`. A game with layouts but without the
+//! character creator shows only that choice.
+//!
 //! A name field takes typed letters once chosen (click it, or Accept on it): Backspace erases,
 //! Enter or Escape is done. Without a keyboard, Random picks a name.
 
@@ -60,12 +64,31 @@ pub struct CreatorScreen {
     pub colors: [usize; 4],
     /// How many times Random was pressed (it steps through the names).
     pub randoms: usize,
+    /// Ask for the name, farm name and colours (the game's `characterCreator`); without it only
+    /// the farm layout is asked for.
+    pub look: bool,
+    /// The farm layouts to pick from (M5): (id, name, description); empty: no choice.
+    pub layouts: Vec<(String, String, String)>,
+    /// The index of the chosen layout.
+    pub layout: usize,
 }
 
 impl CreatorScreen {
     /// A creator starting from the game's own name and farm name.
     pub fn new(name: &str, farm: &str) -> Self {
-        Self { name: name.to_owned(), farm: farm.to_owned(), ..Self::default() }
+        Self { name: name.to_owned(), farm: farm.to_owned(), look: true, ..Self::default() }
+    }
+
+    /// The farm layouts of a game to choose from (M5); fewer than two are no choice.
+    pub fn with_layouts(mut self, layouts: Vec<(String, String, String)>) -> Self {
+        self.layouts = if layouts.len() >= 2 { layouts } else { Vec::new() };
+        self.layout = 0;
+        self
+    }
+
+    /// The farm layout chosen, when the game offers a choice.
+    pub fn chosen_layout(&self) -> Option<&str> {
+        self.layouts.get(self.layout).map(|(id, _, _)| id.as_str())
     }
 
     /// The colours chosen.
@@ -119,16 +142,20 @@ impl CreatorScreen {
 
 /// Draws the creator; returns [`ShellAction::FinishCreator`] when Start is chosen.
 pub fn creator(ui: &mut Ui, screen: &mut CreatorScreen, images: &mut ImageStore) -> Option<ShellAction> {
-    let colors = ui.theme().colors;
     let lang = ui.lang();
     let keys = ui.input().keys_pressed.clone();
     let closed = screen.type_keys(&keys);
     let footer_height = ui.button_height(14.0) + 20.0;
+    let (title, subtitle) = if screen.look {
+        (lang.tr("creator.title"), lang.tr("creator.subtitle"))
+    } else {
+        (lang.tr("creator.layoutTitle"), lang.tr("creator.layoutSubtitle"))
+    };
     let modal = ui.begin_modal(ModalSpec {
         id: WidgetId::new("creator"),
         icon: Icon::Person,
-        title: lang.tr("creator.title"),
-        subtitle: Some(lang.tr("creator.subtitle")),
+        title,
+        subtitle: Some(subtitle),
         width: 560.0,
         max_height: 640.0,
         footer: footer_height,
@@ -136,6 +163,93 @@ pub fn creator(ui: &mut Ui, screen: &mut CreatorScreen, images: &mut ImageStore)
     });
     let area = modal.body;
     let mut y = modal.top;
+    if screen.look {
+        y = look(ui, screen, images, area, y, closed);
+    }
+    if !screen.layouts.is_empty() {
+        y = layouts(ui, screen, area, y);
+    }
+    ui.end_modal_body(y);
+
+    let mut action = None;
+    if let Some(footer) = modal.footer {
+        let mut footer = footer;
+        let start = Button::new(lang.tr("creator.start")).primary().default_focus();
+        let width = ui.button_width(&start);
+        let rect = footer.cut_right(width).centered(width, ui.button_height(14.0));
+        if ui.button(WidgetId::new("creator-start"), rect, start) {
+            action = Some(ShellAction::FinishCreator);
+        }
+    }
+    ui.close_modal();
+    action
+}
+
+/// The farm layouts (M5), one card each, from `top`; returns where they end.
+fn layouts(ui: &mut Ui, screen: &mut CreatorScreen, area: Rect, top: f32) -> f32 {
+    let colors = ui.theme().colors;
+    let lang = ui.lang();
+    let mut y = top;
+    let label_height = ui.line_height(13.0);
+    ui.label(
+        Rect::new(area.x, y, area.width, label_height),
+        lang.tr("creator.layout"),
+        13.0,
+        FontId::Bold,
+        colors.text,
+        Align::Start,
+    );
+    y += label_height + 4.0;
+    for (index, (_, name, description)) in screen.layouts.iter().enumerate() {
+        let text_width = area.width - 24.0;
+        let description_height = if description.is_empty() {
+            0.0
+        } else {
+            ui.paragraph_height(description, 12.5, FontId::Regular, text_width)
+        };
+        let height = ui.line_height(14.0) + description_height + 16.0;
+        let rect = Rect::new(area.x, y, area.width, height);
+        let state = ui.interact(WidgetId::new("creator-layout").with(index), rect, HitKind::Button, true);
+        let chosen = screen.layout == index;
+        let fill = if chosen { fade(colors.primary, 0.14) } else { colors.row };
+        ui.list_mut().fill_round_rect(rect, 8.0, fill);
+        ui.list_mut().stroke_round_rect(
+            rect.inset(0.5),
+            8.0,
+            if chosen { colors.primary } else { colors.row_border },
+            if chosen { 2.0 } else { 1.0 },
+        );
+        if state.focus_visible {
+            ui.focus_ring(rect, 8.0);
+        }
+        let inner = rect.inset_xy(12.0, 8.0);
+        let title = Rect::new(inner.x, inner.y, inner.width, ui.line_height(14.0));
+        ui.label(title, name, 14.0, FontId::Bold, colors.text, Align::Start);
+        if !description.is_empty() {
+            ui.paragraph(
+                inner.x,
+                title.bottom(),
+                text_width,
+                description,
+                12.5,
+                FontId::Regular,
+                colors.muted,
+                farm_render::TextAlign::Left,
+            );
+        }
+        if state.clicked {
+            screen.layout = index;
+        }
+        y += height + 8.0;
+    }
+    y + 4.0
+}
+
+/// The name fields, the preview and the colour swatches from `top`; returns where they end.
+fn look(ui: &mut Ui, screen: &mut CreatorScreen, images: &mut ImageStore, area: Rect, top: f32, closed: bool) -> f32 {
+    let colors = ui.theme().colors;
+    let lang = ui.lang();
+    let mut y = top;
 
     // The preview on the right, the fields on the left.
     let preview_width = 120.0f32.min(area.width * 0.3);
@@ -248,18 +362,5 @@ pub fn creator(ui: &mut Ui, screen: &mut CreatorScreen, images: &mut ImageStore)
         }
         y += size + 12.0;
     }
-    ui.end_modal_body(y);
-
-    let mut action = None;
-    if let Some(footer) = modal.footer {
-        let mut footer = footer;
-        let start = Button::new(lang.tr("creator.start")).primary().default_focus();
-        let width = ui.button_width(&start);
-        let rect = footer.cut_right(width).centered(width, ui.button_height(14.0));
-        if ui.button(WidgetId::new("creator-start"), rect, start) {
-            action = Some(ShellAction::FinishCreator);
-        }
-    }
-    ui.close_modal();
-    action
+    y
 }

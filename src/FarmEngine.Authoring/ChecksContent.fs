@@ -22,6 +22,9 @@ module internal ChecksContent =
     /// An optional reference as the message prints it.
     let private text (value: string option) = defaultArg value ""
 
+    /// The skills experience can go to: the built-in ones and combat (M7).
+    let private knownSkills = HashSet<string>(SaveSchema.SkillNames)
+
     let private duplicates (context: Context) (sink: Sink) =
         let check (family: string) (path: string) (ids: seq<string>) (target: string -> NavigationTarget option) =
             let seen = HashSet<string>()
@@ -46,6 +49,13 @@ module internal ChecksContent =
         check "minigame" "minigames" (p.Minigames |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Minigame id))
         check "asset" "customAssets" (p.CustomAssets |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Asset id))
         check "heartEvent" "heartEvents" (defaultArg p.HeartEvents [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.HeartEvent id))
+        check "building" "buildingTypes" (defaultArg p.BuildingTypes [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Building id))
+        check "placedBuilding" "buildings" (defaultArg p.Buildings [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.PlacedBuilding id))
+        check "monster" "monsters" (defaultArg p.Monsters [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Monster id))
+        check "collection" "collections" (defaultArg p.Collections [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Collection id))
+        check "bundle" "bundles" (defaultArg p.Bundles [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Bundle id))
+        check "achievement" "achievements" (defaultArg p.Achievements [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Achievement id))
+        check "mail" "mail" (defaultArg p.Mail [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Mail id))
         match p.CustomCrops with
         | None -> ()
         | Some crops -> check "crop" "customCrops" (crops |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Crop id))
@@ -153,6 +163,8 @@ module internal ChecksContent =
             | Some skill when skill.Length > 0 && not (SaveSchema.SkillNames |> List.contains skill) ->
                 sink.Warning("quest.unknownSkill", path + ".rewards.skill", sprintf "Quest \"%s\" gives experience to unknown skill \"%s\"" quest.Name skill, target)
             | _ -> ()
+            if missing context.MailIds quest.Rewards.MailId then
+                sink.Error("quest.unknownMail", path + ".rewards.mailId", sprintf "Quest \"%s\" sends missing letter \"%s\"" quest.Name (text quest.Rewards.MailId), target)
             match quest.AvailableFromDay, quest.AvailableToDay with
             | Some fromDay, Some toDay when fromDay > toDay ->
                 sink.Warning("quest.availableWindow", path + ".availableFromDay", sprintf "Quest \"%s\" is available from day %g until day %g, which never happens" quest.Name fromDay toDay, target)
@@ -234,6 +246,36 @@ module internal ChecksContent =
                         sink.Warning(sprintf "%s.conditionUnknownScene" family, sprintf "%s.sceneIds[%d]" cpath k, sprintf "%s checks missing scene \"%s\"" label id, target))
             | EventCondition.Hearts h -> unknownNpc h.NpcId "hearts"
             | EventCondition.Relationship r -> unknownNpc r.NpcId "the relationship"
+            // M5–M7: what the new conditions name must exist.
+            | EventCondition.Birthday b -> unknownNpc b.NpcId "the birthday"
+            | EventCondition.SkillLevel s ->
+                if s.Skill.Length > 0 && not (knownSkills.Contains s.Skill) then
+                    sink.Warning(sprintf "%s.conditionUnknownSkill" family, cpath + ".skill", sprintf "%s checks unknown skill \"%s\"" label s.Skill, target)
+            | EventCondition.Collection k ->
+                match defaultArg context.Project.Collections [] |> List.tryFind (fun c -> c.Id = k.CollectionId) with
+                | None ->
+                    if k.CollectionId.Length > 0 then
+                        sink.Error(sprintf "%s.conditionUnknownCollection" family, cpath + ".collectionId", sprintf "%s checks missing collection \"%s\"" label k.CollectionId, target)
+                | Some collection ->
+                    match k.Min with
+                    | Some min when min > float collection.Items.Length ->
+                        sink.Warning(sprintf "%s.conditionCollectionMin" family, cpath + ".min", sprintf "%s waits for %g items of \"%s\", which only has %d, so it never holds" label min collection.Name collection.Items.Length, target)
+                    | _ -> ()
+            | EventCondition.Bundle b ->
+                if missingText context.BundleIds b.BundleId then
+                    sink.Error(sprintf "%s.conditionUnknownBundle" family, cpath + ".bundleId", sprintf "%s checks missing bundle \"%s\"" label b.BundleId, target)
+            | EventCondition.Achievement a ->
+                if missingText context.AchievementIds a.AchievementId then
+                    sink.Error(sprintf "%s.conditionUnknownAchievement" family, cpath + ".achievementId", sprintf "%s checks missing achievement \"%s\"" label a.AchievementId, target)
+            | EventCondition.Shipped s ->
+                if missingText context.ItemIds s.ItemId then
+                    sink.Error(sprintf "%s.conditionUnknownItem" family, cpath + ".itemId", sprintf "%s counts shipments of missing item \"%s\"" label s.ItemId, target)
+            | EventCondition.Building b ->
+                if missingText context.BuildingIds b.BuildingId then
+                    sink.Error(sprintf "%s.conditionUnknownBuilding" family, cpath + ".buildingId", sprintf "%s checks missing building \"%s\"" label b.BuildingId, target)
+            | EventCondition.Slain s ->
+                if missingText context.MonsterIds s.MonsterId then
+                    sink.Error(sprintf "%s.conditionUnknownMonster" family, cpath + ".monsterId", sprintf "%s counts slain missing monster \"%s\"" label s.MonsterId, target)
             | _ -> ())
 
     let private outcomes (context: Context) (sink: Sink) (family: string) (path: string) (label: string) (sceneId: string) (target: NavigationTarget option) (outcomes: EventOutcome list) =
@@ -363,6 +405,12 @@ module internal ChecksContent =
                 let y = defaultArg outcome.TileY 0.0
                 if scene.Length > 0 && context.Scenes.ContainsKey scene && not (Context.tileInScene context scene x y) then
                     sink.Error(sprintf "%s.outcomeTileOutOfBounds" family, opath + ".tileX", sprintf "%s uses tile (%g,%g), outside the scene" label x y, target)
+            // M6 and M7 outcomes.
+            | EventOutcomeTypes.SendMail ->
+                needs "mailId" (hasValue outcome.MailId)
+                if missing context.MailIds outcome.MailId then
+                    sink.Error(sprintf "%s.outcomeUnknownMail" family, opath + ".mailId", sprintf "%s sends missing letter \"%s\"" label (text outcome.MailId), target)
+            | EventOutcomeTypes.ModifyHealth -> needs "amount" outcome.Amount.IsSome
             | _ -> ())
 
     let private events (context: Context) (sink: Sink) =
@@ -396,6 +444,10 @@ module internal ChecksContent =
                     | EventTriggers.Harvest -> context.ItemIds.Contains subject || context.CropIds.Contains subject
                     | EventTriggers.Craft -> context.ItemIds.Contains subject || context.Project.Recipes |> List.exists (fun r -> r.Id = subject)
                     | EventTriggers.Sell | EventTriggers.Catch | EventTriggers.PickUp -> context.ItemIds.Contains subject
+                    | EventTriggers.Build -> context.BuildingIds.Contains subject
+                    | EventTriggers.Bundle -> context.BundleIds.Contains subject
+                    | EventTriggers.Achievement -> context.AchievementIds.Contains subject
+                    | EventTriggers.Slay -> context.MonsterIds.Contains subject
                     | _ -> true
                 if not known then
                     sink.Warning("event.unknownSubject", path + ".subject", sprintf "%s waits for \"%s\", which the game does not have" label subject, target)
@@ -449,6 +501,110 @@ module internal ChecksContent =
                 sink.Warning("relationships.noProposal", "settings.relationships.proposalItemId", "Marriage is on but no item proposes, so no one can marry", target)
             if (rules.Dating || rules.Marriage) && not (context.Project.Npcs |> List.exists (fun n -> n.Romanceable = Some true)) then
                 sink.Warning("relationships.noRomanceable", "settings.relationships", "Dating or marriage is on but no NPC is romanceable", target)
+
+    /// Collections (M6): their items and donation scene exist, the kind is one of
+    /// `CollectionKinds`, and each reward can be reached; reward outcomes are the events'.
+    let private collections (context: Context) (sink: Sink) =
+        defaultArg context.Project.Collections []
+        |> List.iteri (fun i collection ->
+            let path = sprintf "collections[%d]" i
+            let label = sprintf "Collection \"%s\"" collection.Name
+            let target = Some(NavigationTarget.Collection collection.Id)
+            if collection.Items.IsEmpty then
+                sink.Warning("collection.noItems", path + ".items", sprintf "%s holds no items" label, target)
+            collection.Items
+            |> List.iteri (fun k id ->
+                if not (context.ItemIds.Contains id) then
+                    sink.Error("collection.unknownItem", sprintf "%s.items[%d]" path k, sprintf "%s lists missing item \"%s\"" label id, target))
+            if not (List.contains collection.Kind CollectionKinds.All) then
+                sink.Error("collection.unknownKind", path + ".kind", sprintf "%s has unknown kind \"%s\" (found, shipped or donated)" label collection.Kind, target)
+            if missing (HashSet<string>(context.Scenes.Keys)) collection.SceneId then
+                sink.Error("collection.unknownScene", path + ".sceneId", sprintf "%s takes donations in missing scene \"%s\"" label (text collection.SceneId), target)
+            collection.Rewards
+            |> List.iteri (fun k reward ->
+                let rp = sprintf "%s.rewards[%d]" path k
+                if reward.Count > float collection.Items.Length then
+                    sink.Warning("collection.rewardUnreachable", rp + ".count", sprintf "%s rewards %g items but only has %d, so the reward never comes" label reward.Count collection.Items.Length, target)
+                outcomes context sink "collection" rp (sprintf "%s reward %d" label (k + 1)) "" target reward.Outcomes))
+
+    /// Bundles (M6): their lines name items and qualities the game has, `required` is within the
+    /// lines, and their outcomes are the events'.
+    let private bundles (context: Context) (sink: Sink) =
+        defaultArg context.Project.Bundles []
+        |> List.iteri (fun i bundle ->
+            let path = sprintf "bundles[%d]" i
+            let label = sprintf "Bundle \"%s\"" bundle.Name
+            let target = Some(NavigationTarget.Bundle bundle.Id)
+            if bundle.Items.IsEmpty then
+                sink.Warning("bundle.noItems", path + ".items", sprintf "%s asks for nothing, so it can never be handed in" label, target)
+            bundle.Items
+            |> List.iteri (fun k line ->
+                let lp = sprintf "%s.items[%d]" path k
+                if not (context.ItemIds.Contains line.ItemId) then
+                    sink.Error("bundle.unknownItem", lp + ".itemId", sprintf "%s asks for missing item \"%s\"" label line.ItemId, target)
+                if missing context.QualityIds line.Quality then
+                    sink.Error("bundle.unknownQuality", lp + ".quality", sprintf "%s asks for missing crop quality \"%s\"" label (text line.Quality), target)
+                if line.Quantity < 1.0 then
+                    sink.Error("bundle.quantity", lp + ".quantity", sprintf "%s line %d asks for %g items; at least 1" label (k + 1) line.Quantity, target))
+            match bundle.Required with
+            | Some required when required < 1.0 || required > float bundle.Items.Length ->
+                sink.Error("bundle.required", path + ".required", sprintf "%s needs %g lines but has %d; the game counts 1 to %d" label required bundle.Items.Length (max 1 bundle.Items.Length), target)
+            | _ -> ()
+            if missing (HashSet<string>(context.Scenes.Keys)) bundle.SceneId then
+                sink.Error("bundle.unknownScene", path + ".sceneId", sprintf "%s is handed in in missing scene \"%s\"" label (text bundle.SceneId), target)
+            outcomes context sink "bundle" path label "" target bundle.Outcomes)
+
+    /// Achievements (M6): their conditions are the events'.
+    let private achievements (context: Context) (sink: Sink) =
+        defaultArg context.Project.Achievements []
+        |> List.iteri (fun i achievement ->
+            let path = sprintf "achievements[%d]" i
+            let label = sprintf "Achievement \"%s\"" achievement.Name
+            let target = Some(NavigationTarget.Achievement achievement.Id)
+            if achievement.Conditions.IsEmpty then
+                sink.Warning("achievement.noConditions", path + ".conditions", sprintf "%s has no conditions, so it unlocks at once" label, target)
+            conditions context sink "achievement" path label "" target achievement.Conditions)
+
+    /// Letters (M6): the sender and attachments exist; outcomes and conditions are the events'.
+    let private mail (context: Context) (sink: Sink) =
+        defaultArg context.Project.Mail []
+        |> List.iteri (fun i letter ->
+            let path = sprintf "mail[%d]" i
+            let label = sprintf "Letter \"%s\"" letter.Subject
+            let target = Some(NavigationTarget.Mail letter.Id)
+            if missingText context.NpcIds letter.From then
+                sink.Error("mail.unknownNpc", path + ".from", sprintf "%s is from missing NPC \"%s\"" label letter.From, target)
+            letter.Attachments
+            |> List.iteri (fun k attachment ->
+                if not (context.ItemIds.Contains attachment.ItemId) then
+                    sink.Error("mail.unknownItem", sprintf "%s.attachments[%d].itemId" path k, sprintf "%s holds missing item \"%s\"" label attachment.ItemId, target))
+            if letter.Money < 0.0 then
+                sink.Error("mail.money", path + ".money", sprintf "%s holds %g money; a letter can only give money" label letter.Money, target)
+            conditions context sink "mail" path label "" target letter.Conditions
+            outcomes context sink "mail" path label "" target letter.Outcomes)
+
+    /// Monsters (M7): positive health, a movement the game knows and drops it has.
+    let private monsters (context: Context) (sink: Sink) =
+        defaultArg context.Project.Monsters []
+        |> List.iteri (fun i monster ->
+            let path = sprintf "monsters[%d]" i
+            let label = sprintf "Monster \"%s\"" monster.Name
+            let target = Some(NavigationTarget.Monster monster.Id)
+            if monster.Health < 1.0 then
+                sink.Error("monster.health", path + ".health", sprintf "%s has %g health; it needs at least 1" label monster.Health, target)
+            if monster.Damage < 0.0 then
+                sink.Error("monster.damage", path + ".damage", sprintf "%s does %g damage; damage cannot be negative" label monster.Damage, target)
+            if monster.Defense < 0.0 then
+                sink.Error("monster.defense", path + ".defense", sprintf "%s has %g defense; defense cannot be negative" label monster.Defense, target)
+            if not (List.contains monster.Movement MonsterMovements.All) then
+                sink.Error("monster.unknownMovement", path + ".movement", sprintf "%s moves by unknown \"%s\" (chase, wander or still)" label monster.Movement, target)
+            monster.Drops
+            |> List.iteri (fun k drop ->
+                let dp = sprintf "%s.drops[%d]" path k
+                if not (context.ItemIds.Contains drop.ItemId) then
+                    sink.Error("monster.unknownDrop", dp + ".itemId", sprintf "%s drops missing item \"%s\"" label drop.ItemId, target)
+                if drop.Min > drop.Max then
+                    sink.Error("monster.dropRange", dp + ".min", sprintf "%s drop %d has min %g above max %g" label (k + 1) drop.Min drop.Max, target)))
 
     /// reserved-keys.ts: gameplay keys creator hotkeys may never claim.
     let reservedActionKeys =
@@ -616,7 +772,16 @@ module internal ChecksContent =
                     seasons
                     |> Seq.iteri (fun s season ->
                         if not (context.SeasonIds.Contains season) then
-                            sink.Warning("shop.unknownSeason", sprintf "%s.stock[%d].seasons[%d]" path k s, sprintf "Shop \"%s\" sells \"%s\" in season \"%s\", which is not in the calendar" shop.Name entry.ItemId season, target))))
+                            sink.Warning("shop.unknownSeason", sprintf "%s.stock[%d].seasons[%d]" path k s, sprintf "Shop \"%s\" sells \"%s\" in season \"%s\", which is not in the calendar" shop.Name entry.ItemId season, target)))
+            // A builder and an animal shop (M5).
+            defaultArg shop.Buildings []
+            |> List.iteri (fun k id ->
+                if not (context.BuildingIds.Contains id) then
+                    sink.Error("shop.unknownBuilding", sprintf "%s.buildings[%d]" path k, sprintf "Shop \"%s\" builds missing building \"%s\"" shop.Name id, target))
+            defaultArg shop.Animals []
+            |> List.iteri (fun k id ->
+                if not (context.SpeciesIds.Contains id) then
+                    sink.Error("shop.unknownSpecies", sprintf "%s.animals[%d]" path k, sprintf "Shop \"%s\" sells missing animal species \"%s\"" shop.Name id, target)))
 
     let private recipes (context: Context) (sink: Sink) =
         let stations = HashSet<string>(context.Project.MachineTypes |> Seq.collect (fun m -> m.StationCategories))
@@ -666,7 +831,19 @@ module internal ChecksContent =
             | None -> sink.Warning("machineType.noItem", path + ".itemId", sprintf "Machine \"%s\" has no item, so players cannot place it" machine.Name, target)
             | Some id when id.Length = 0 -> sink.Warning("machineType.noItem", path + ".itemId", sprintf "Machine \"%s\" has no item, so players cannot place it" machine.Name, target)
             | Some id when not (context.ItemIds.Contains id) -> sink.Error("machineType.unknownItem", path + ".itemId", sprintf "Machine \"%s\" is placed with missing item \"%s\"" machine.Name id, target)
-            | _ -> ())
+            | _ -> ()
+            // Placed objects (M5): storage and area effects within what the engine applies.
+            match machine.Storage with
+            | Some slots when slots < 0.0 || slots > FarmSchema.MaxStorageSlots ->
+                sink.Warning("machineType.storage", path + ".storage", sprintf "Machine \"%s\" stores %g slots; the game keeps 0 to %g" machine.Name slots FarmSchema.MaxStorageSlots, target)
+            | _ -> ()
+            defaultArg machine.AreaEffects []
+            |> List.iteri (fun k effect ->
+                let ep = sprintf "%s.areaEffects[%d]" path k
+                if not (List.contains effect.Effect AreaEffects.All) then
+                    sink.Error("machineType.unknownAreaEffect", ep + ".effect", sprintf "Machine \"%s\" has unknown area effect \"%s\" (water or protect)" machine.Name effect.Effect, target)
+                if effect.Radius < 0.0 || effect.Radius > FarmSchema.MaxAreaRadius then
+                    sink.Warning("machineType.areaRadius", ep + ".radius", sprintf "Machine \"%s\" reaches %g tiles; the game reaches 0 to %g" machine.Name effect.Radius FarmSchema.MaxAreaRadius, target)))
 
     let private nodeTypes (context: Context) (sink: Sink) =
         context.Project.NodeTypes
@@ -690,7 +867,27 @@ module internal ChecksContent =
             elif not (context.ItemIds.Contains species.ProductItemId) then
                 sink.Error("species.unknownProduct", path + ".productItemId", sprintf "Species \"%s\" produces missing item \"%s\"" species.Name species.ProductItemId, target)
             if missing context.ItemIds species.FeedItemId then
-                sink.Error("species.unknownFeed", path + ".feedItemId", sprintf "Species \"%s\" eats missing item \"%s\"" species.Name (text species.FeedItemId), target))
+                sink.Error("species.unknownFeed", path + ".feedItemId", sprintf "Species \"%s\" eats missing item \"%s\"" species.Name (text species.FeedItemId), target)
+            // Housing, more products, mood qualities and breeding (M5).
+            defaultArg species.Housing []
+            |> List.iteri (fun k id ->
+                if not (context.BuildingIds.Contains id) then
+                    sink.Error("species.unknownHousing", sprintf "%s.housing[%d]" path k, sprintf "Species \"%s\" lives in missing building \"%s\"" species.Name id, target))
+            defaultArg species.Products []
+            |> List.iteri (fun k product ->
+                let pp = sprintf "%s.products[%d]" path k
+                if not (context.ItemIds.Contains product.ItemId) then
+                    sink.Error("species.unknownProduct", pp + ".itemId", sprintf "Species \"%s\" produces missing item \"%s\"" species.Name product.ItemId, target)
+                if product.IntervalDays < 1.0 then
+                    sink.Error("species.productInterval", pp + ".intervalDays", sprintf "Species \"%s\" product %d needs at least 1 day between products" species.Name (k + 1), target))
+            defaultArg species.MoodQualities []
+            |> List.iteri (fun k tier ->
+                if not (context.QualityIds.Contains tier.Quality) then
+                    sink.Error("species.unknownMoodQuality", sprintf "%s.moodQualities[%d].quality" path k, sprintf "Species \"%s\" earns missing crop quality \"%s\"" species.Name tier.Quality, target))
+            match species.Breeding with
+            | Some breeding when breeding.Chance < 0.0 || breeding.Chance > 1.0 ->
+                sink.Error("species.breedingChance", path + ".breeding.chance", sprintf "Species \"%s\" breeds with chance %g; a chance is 0 to 1" species.Name breeding.Chance, target)
+            | _ -> ())
         context.Project.Animals
         |> Seq.iteri (fun i animal ->
             let path = sprintf "animals[%d]" i
@@ -700,7 +897,9 @@ module internal ChecksContent =
             if not (context.Scenes.ContainsKey animal.SceneId) then
                 sink.Error("animal.unknownScene", path + ".sceneId", sprintf "Animal \"%s\" lives in missing scene \"%s\"" animal.Name animal.SceneId, target)
             elif not (Context.tileInScene context animal.SceneId animal.X animal.Y) then
-                sink.Error("animal.outOfBounds", path + ".x", sprintf "Animal \"%s\" stands at (%g,%g), outside its scene" animal.Name animal.X animal.Y, Some(NavigationTarget.Scene(animal.SceneId, 0, 0))))
+                sink.Error("animal.outOfBounds", path + ".x", sprintf "Animal \"%s\" stands at (%g,%g), outside its scene" animal.Name animal.X animal.Y, Some(NavigationTarget.Scene(animal.SceneId, 0, 0)))
+            if missing context.PlacedBuildingIds animal.BuildingId then
+                sink.Error("animal.unknownBuilding", path + ".buildingId", sprintf "Animal \"%s\" lives in missing building \"%s\"" animal.Name (text animal.BuildingId), target))
         context.Project.FishTables
         |> Seq.iteri (fun i table ->
             let path = sprintf "fishTables[%d]" i
@@ -987,6 +1186,11 @@ module internal ChecksContent =
         heartEvents context sink
         lines context sink
         relationships context sink
+        collections context sink
+        bundles context sink
+        achievements context sink
+        mail context sink
+        monsters context sink
         actions context sink
         actionCycles context sink
         minigames context sink

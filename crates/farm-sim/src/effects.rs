@@ -57,6 +57,15 @@ pub enum Effect {
         #[serde(with = "crate::units::count")]
         year: u32,
     },
+    /// An achievement was unlocked (M6): hosts with a platform (Steam) report it there.
+    #[serde(rename = "achievementUnlocked")]
+    AchievementUnlocked { achievement_id: String },
+    /// The player lost health (M7): hosts flash the screen or play a sound.
+    #[serde(rename = "playerHurt")]
+    PlayerHurt {
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
 }
 
 impl Effect {
@@ -83,6 +92,8 @@ impl Effect {
             Self::QuestCompleted { .. } => "questCompleted",
             Self::CropHarvested { .. } => "cropHarvested",
             Self::DayStarted { .. } => "dayStarted",
+            Self::AchievementUnlocked { .. } => "achievementUnlocked",
+            Self::PlayerHurt { .. } => "playerHurt",
         }
     }
 }

@@ -66,7 +66,17 @@ module Vocabulary =
           "scene", "Player is in scene"
           "hearts", "Hearts with NPC"
           "dayOfSeason", "Day of the season"
-          "relationship", "Relationship" ]
+          "relationship", "Relationship"
+          "money", "Has money ≥ n"
+          "skillLevel", "Skill level ≥ n"
+          "mineFloor", "Reached mine floor"
+          "collection", "Collection holds items"
+          "bundle", "Bundle is complete"
+          "achievement", "Achievement unlocked"
+          "shipped", "Shipped ≥ n"
+          "building", "Has building"
+          "slain", "Monsters slain ≥ n"
+          "birthday", "Today is a birthday" ]
 
     /// How a `variable` condition compares, with the editor's labels.
     let comparisons =
@@ -116,7 +126,9 @@ module Vocabulary =
           EventOutcomeTypes.RemoveNode, "Remove node"
           EventOutcomeTypes.PlaceMachine, "Place machine"
           EventOutcomeTypes.RemoveMachine, "Remove machine"
-          EventOutcomeTypes.SetRelationship, "Set relationship" ]
+          EventOutcomeTypes.SetRelationship, "Set relationship"
+          EventOutcomeTypes.SendMail, "Send a letter"
+          EventOutcomeTypes.ModifyHealth, "Restore / take health" ]
 
     /// The label of a condition type (the type itself when unknown).
     let conditionLabel (kind: string) =
@@ -161,6 +173,23 @@ module Vocabulary =
         | "relationship" ->
             [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(the NPC speaking, or anyone)" }
               field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
+        // M5–M7
+        | "money" -> [ integer "min" "At least (money)" ]
+        | "skillLevel" -> [ reference "skill" "Skill" ReferenceKind.Skill; { integer "min" "Level ≥" with WhenEmpty = 1.0 } ]
+        | "mineFloor" -> [ { integer "min" "Floor ≥" with WhenEmpty = 1.0 } ]
+        | "collection" ->
+            [ reference "collectionId" "Collection" ReferenceKind.Collection
+              { optionalInteger "min" "At least (items)" with Placeholder = "all of them" } ]
+        | "bundle" -> [ reference "bundleId" "Bundle" ReferenceKind.Bundle ]
+        | "achievement" -> [ reference "achievementId" "Achievement" ReferenceKind.Achievement ]
+        | "shipped" ->
+            [ { reference "itemId" "Item" ReferenceKind.Item with Optional = true; Empty = Some "(everything)" }
+              { integer "min" "At least (units)" with WhenEmpty = 1.0 } ]
+        | "building" -> [ reference "buildingId" "Building" ReferenceKind.Building; { integer "min" "At least" with WhenEmpty = 1.0 } ]
+        | "slain" ->
+            [ { reference "monsterId" "Monster" ReferenceKind.Monster with Optional = true; Empty = Some "(any monster)" }
+              { integer "min" "At least" with WhenEmpty = 1.0 } ]
+        | "birthday" -> [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(anyone's)" } ]
         | _ -> []
 
     /// `OutcomeFields`: the fields each outcome type shows.
@@ -215,6 +244,8 @@ module Vocabulary =
         | EventOutcomeTypes.RemoveNode
         | EventOutcomeTypes.RemoveMachine -> [ hereScene; integer "tileX" "X"; integer "tileY" "Y" ]
         | EventOutcomeTypes.SetRelationship -> [ npc; field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
+        | EventOutcomeTypes.SendMail -> [ reference "mailId" "Letter" ReferenceKind.Mail ]
+        | EventOutcomeTypes.ModifyHealth -> [ integer "amount" "Health change" ]
         | _ -> []
 
     /// `defaultCondition`: a condition of the type with the web's starting values.
@@ -290,6 +321,10 @@ module Vocabulary =
             Some(FieldRole.Reference(ReferenceKind.Item, Some "(any item)"))
         | "GameEvent", "Subject", EventTriggers.Friendship -> Some(FieldRole.Reference(ReferenceKind.Npc, Some "(anyone)"))
         | "GameEvent", "Subject", EventTriggers.Quest -> Some(FieldRole.Reference(ReferenceKind.Quest, Some "(any quest)"))
+        | "GameEvent", "Subject", EventTriggers.Build -> Some(FieldRole.Reference(ReferenceKind.Building, Some "(any building)"))
+        | "GameEvent", "Subject", EventTriggers.Bundle -> Some(FieldRole.Reference(ReferenceKind.Bundle, Some "(any bundle)"))
+        | "GameEvent", "Subject", EventTriggers.Achievement -> Some(FieldRole.Reference(ReferenceKind.Achievement, Some "(any achievement)"))
+        | "GameEvent", "Subject", EventTriggers.Slay -> Some(FieldRole.Reference(ReferenceKind.Monster, Some "(any monster)"))
         | _ -> None
 
     let private some (value: 'T) : obj option = Some(box value |> nonNull)
@@ -343,4 +378,19 @@ module Vocabulary =
         | "NpcPortrait" -> some { NpcPortrait.Default with Expression = "happy" }
         | "TerrainTransform" -> some ({ Action = ToolActions.Till; Tool = None; Into = TileTypes.Soil } : TerrainTransform)
         | "NeighborRequirement" -> some { NeighborRequirement.Default with Kind = NeighborKinds.Water }
+        // M5–M7 lists: the first of what they name.
+        | "AreaEffect" -> some AreaEffect.Default
+        | "AnimalProduct" -> some { AnimalProduct.Default with ItemId = firstItem () }
+        | "MoodQuality" ->
+            let qualities = References.options ReferenceKind.CropQuality project
+            let quality = if qualities |> List.exists (fun q -> q.Id = CropQualities.Silver) then CropQualities.Silver else firstId qualities
+            some { MoodQuality.Default with MinMood = 70.0; Quality = quality }
+        | "FarmLayout" ->
+            some { FarmLayout.Default with Id = Defaults.nextId "layout" siblingIds; Name = "New layout"; SceneId = project.StartSceneId }
+        | "CollectionReward" -> some { CollectionReward.Default with Count = 1.0 }
+        | "BundleItem" -> some { BundleItem.Default with ItemId = firstItem () }
+        | "MonsterSpawn" -> some { MonsterSpawn.Default with MonsterId = firstId (References.options ReferenceKind.Monster project) }
+        | "MineMonsterWeight" -> some { MineMonsterWeight.Default with MonsterId = firstId (References.options ReferenceKind.Monster project); Weight = 1.0 }
+        | "MineHazard" -> some { MineHazard.Default with TerrainId = firstId (References.options ReferenceKind.Terrain project) }
+        | "MineTreasure" -> some { MineTreasure.Default with ItemId = firstItem (); Weight = 1.0 }
         | _ -> None

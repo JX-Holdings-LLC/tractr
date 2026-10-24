@@ -1,7 +1,10 @@
 //! Port of `Crafting.cs` (packages/engine-schemas/src/crafting.ts).
 //! Crafting & machines (M4a) — the "central system".
 
+use super::content::InventorySlot;
+use super::farm::AreaEffect;
 use super::graphics::VisualRef;
+use super::is_false;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -98,8 +101,33 @@ pub struct MachineTypeDefinition {
     /// Station categories a placed machine of this type provides to nearby hand-crafting (e.g. a
     /// Kitchen provides 'cooking').
     pub station_categories: Vec<String>,
+    /// Slots of storage: a chest (M5). Absent: none (a shipping bin has
+    /// [`super::DEFAULT_SHIPPING_SLOTS`]).
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub storage: Option<u32>,
+    /// A shipping bin (M6): what it holds is sold overnight.
+    #[serde(skip_serializing_if = "is_false")]
+    pub shipping: bool,
+    /// A gate (M5): interacting opens and closes it, and an open gate never blocks.
+    #[serde(skip_serializing_if = "is_false")]
+    pub gate: bool,
+    /// What it does to the tiles around it (M5): sprinklers, scarecrows.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub area_effects: Vec<AreaEffect>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+impl MachineTypeDefinition {
+    /// The slots it stores (0: no storage), cut down to [`super::MAX_STORAGE_SLOTS`].
+    pub fn storage_slots(&self) -> u32 {
+        let slots = match self.storage {
+            Some(slots) => slots,
+            None if self.shipping => super::DEFAULT_SHIPPING_SLOTS,
+            None => 0,
+        };
+        slots.min(super::MAX_STORAGE_SLOTS)
+    }
 }
 
 impl Default for MachineTypeDefinition {
@@ -113,6 +141,10 @@ impl Default for MachineTypeDefinition {
             item_id: None,
             blocks_movement: true,
             station_categories: Vec::new(),
+            storage: None,
+            shipping: false,
+            gate: false,
+            area_effects: Vec::new(),
             extra: Map::new(),
         }
     }
@@ -138,6 +170,12 @@ pub struct TileMachine {
     /// Finished output awaiting collection.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<Vec<RecipeIngredient>>,
+    /// What a chest or shipping bin holds (M5).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub contents: Vec<InventorySlot>,
+    /// A gate stands open (M5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open: Option<bool>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

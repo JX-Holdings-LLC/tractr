@@ -10,14 +10,17 @@
 
 pub mod actors;
 pub mod animals;
+pub mod combat;
 pub mod content;
 pub mod crafting;
 pub mod cutscenes;
 pub mod economy;
 pub mod events;
 pub mod extensibility;
+pub mod farm;
 pub mod fishing;
 pub mod game_content;
+pub mod goals;
 pub mod graphics;
 pub mod interface;
 pub mod mining;
@@ -37,14 +40,17 @@ pub mod world;
 
 pub use actors::*;
 pub use animals::*;
+pub use combat::*;
 pub use content::*;
 pub use crafting::*;
 pub use cutscenes::*;
 pub use economy::*;
 pub use events::*;
 pub use extensibility::*;
+pub use farm::*;
 pub use fishing::*;
 pub use game_content::*;
+pub use goals::*;
 pub use graphics::*;
 pub use interface::*;
 pub use mining::*;
@@ -60,3 +66,18 @@ pub use social::*;
 pub use vocabulary::*;
 pub use weather::*;
 pub use world::*;
+
+/// `skip_serializing_if` for a flag that is only written when set.
+pub(crate) fn is_false(value: &bool) -> bool {
+    !*value
+}
+
+/// `skip_serializing_if` for a count that is only written when not zero.
+pub(crate) fn is_zero(value: &u32) -> bool {
+    *value == 0
+}
+
+/// `skip_serializing_if` for a whole number that is only written when not zero.
+pub(crate) fn is_zero_i32(value: &i32) -> bool {
+    *value == 0
+}

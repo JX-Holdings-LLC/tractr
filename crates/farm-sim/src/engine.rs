@@ -13,8 +13,8 @@ use crate::schema::{event_triggers, EventOutcome, GameState, MoveIntent, Outcome
 use crate::units;
 use crate::world::world_movement;
 use crate::{
-    crafting, cutscenes, dialogue_system, economy, energy, events, extensibility, game_time, inventory, mines, skills,
-    social, wardrobe, weather,
+    buildings, combat, crafting, cutscenes, dialogue_system, economy, energy, events, extensibility, farm_layouts,
+    game_time, goals, inventory, mail, mines, objects, skills, social, wardrobe, weather,
 };
 
 /// Simulation runs at a fixed rate; rendering interpolates between ticks.
@@ -29,6 +29,14 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
         }
     }
     ctx.emit(HookEvent::Command(CommandHookPayload { command_type: command.type_name().to_owned() }));
+    let mut effects = run_command(ctx, state, command);
+    objects::forget_gone(ctx, state);
+    // Items found and achievements reached (M6).
+    effects.extend(goals::after_step(ctx, state));
+    effects
+}
+
+fn run_command(ctx: &EngineContext, state: &mut GameState, command: &Command) -> Effects {
     match command {
         Command::SetMoveIntent { dx, dy } => {
             // Read with Math.trunc; clamped to −1..1.
@@ -80,6 +88,22 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
         Command::WearItem { item_id } => wardrobe::handle_wear(ctx, state, item_id),
         Command::TakeOff { slot } => wardrobe::handle_take_off(state, slot),
         Command::SetPlayerLook { name, farm_name, look } => wardrobe::handle_set_look(state, name, farm_name, look),
+        Command::StoreItem { item_id, quantity, quality } => {
+            objects::handle_store(ctx, state, item_id, *quantity, quality.as_deref())
+        }
+        Command::TakeStoredItem { index, quantity } => objects::handle_take(ctx, state, *index, *quantity),
+        Command::CloseStorage => objects::handle_close(state),
+        Command::OrderBuilding { building_id, scene_id, x, y } => {
+            buildings::handle_order(ctx, state, building_id, scene_id, *x, *y)
+        }
+        Command::UpgradeBuilding { id, building_id } => buildings::handle_upgrade(ctx, state, id, building_id),
+        Command::BuyAnimal { species_id, building, name } => {
+            buildings::handle_buy_animal(ctx, state, species_id, building, name)
+        }
+        Command::ChooseFarmLayout { layout_id } => farm_layouts::handle_choose(ctx, state, layout_id),
+        Command::DonateItem { collection_id, item_id } => goals::handle_donate(ctx, state, collection_id, item_id),
+        Command::HandInBundle { bundle_id, line } => goals::handle_hand_in(ctx, state, bundle_id, *line),
+        Command::ReadMail { index } => mail::handle_read(ctx, state, *index),
         Command::PluginMutation { plugin_id, mutation } => apply_plugin_mutation(ctx, state, plugin_id, mutation),
     }
 }
@@ -95,12 +119,22 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
     let shop = state.shop.is_some();
     let minigame = state.minigame.is_some();
     let cutscene = state.cutscene.is_some();
-    if dialogue || shop || minigame || cutscene {
+    let storage = state.storage.is_some();
+    if dialogue || shop || minigame || cutscene || storage {
         let allowed = match command {
             Command::SetMoveIntent { .. } | Command::PluginMutation { .. } => true,
             Command::ChooseDialogueOption { .. } | Command::CloseDialogue => dialogue,
-            Command::BuyItem { .. } | Command::SellItem { .. } | Command::RepairTool { .. } | Command::CloseShop => {
-                shop
+            Command::BuyItem { .. }
+            | Command::SellItem { .. }
+            | Command::RepairTool { .. }
+            | Command::CloseShop
+            | Command::OrderBuilding { .. }
+            | Command::UpgradeBuilding { .. }
+            | Command::BuyAnimal { .. } => shop,
+            Command::StoreItem { .. } | Command::TakeStoredItem { .. } | Command::CloseStorage => storage,
+            // The mailbox and the goals list are menus over any open screen but a minigame.
+            Command::ReadMail { .. } | Command::DonateItem { .. } | Command::HandInBundle { .. } => {
+                !minigame && !cutscene
             }
             Command::ResolveMinigame { .. } | Command::CancelMinigame => minigame,
             Command::AdvanceCutscene | Command::ChooseCutsceneOption { .. } | Command::SkipCutscene => {
@@ -115,6 +149,10 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
     match command {
         Command::DescendMine { floor } => mines::descend_refusal(ctx, state, *floor),
         Command::SetPlayerLook { .. } => wardrobe::set_look_refusal(state),
+        Command::ChooseFarmLayout { .. } => farm_layouts::refusal(state),
+        Command::OrderBuilding { building_id, .. } => buildings::order_refusal(ctx, state, building_id),
+        Command::UpgradeBuilding { building_id, .. } => buildings::order_refusal(ctx, state, building_id),
+        Command::BuyAnimal { species_id, .. } => buildings::animal_refusal(ctx, state, species_id),
         Command::ExitMine => mines::exit_refusal(state),
         Command::AdvanceCutscene => cutscenes::advance_refusal(ctx, state),
         Command::ChooseCutsceneOption { index } => cutscenes::choose_refusal(ctx, state, *index),
@@ -272,7 +310,11 @@ pub fn advance_tick(ctx: &EngineContext, state: &mut GameState, ticks: u64) -> E
 /// Is a dialogue, shop, minigame or cutscene open? The player's body stays put while one is, and
 /// with `time.pauseInModals` the clock does too.
 pub fn modal_open(state: &GameState) -> bool {
-    state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some() || state.cutscene.is_some()
+    state.dialogue.is_some()
+        || state.shop.is_some()
+        || state.minigame.is_some()
+        || state.cutscene.is_some()
+        || state.storage.is_some()
 }
 
 fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
@@ -292,10 +334,15 @@ fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let before_minute = units::whole_minute(state.clock.time_minutes);
     state.clock.time_minutes = state.clock.time_minutes.saturating_add(time.minutes_per_real_second);
 
+    // The first tick of a game brings its scenes' monsters (M7; later mornings bring new ones).
+    if state.clock.tick == 1 {
+        combat::spawn_scenes(ctx, state);
+    }
     // Free movement integrates every tick from the held intent. Frozen while a dialogue, shop or
-    // minigame is open (modal interactions pause the body).
+    // minigame is open (modal interactions pause the body), and so are the monsters.
     if !modal {
         effects.extend(world_movement::integrate_movement(ctx, state));
+        effects.extend(combat::advance_monsters(ctx, state));
     }
 
     // Minute boundary: NPC movement/schedules step and tick-events evaluate once per whole in-game
@@ -317,7 +364,9 @@ fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     if u64::from(state.clock.time_minutes) >= u64::from(time.day_end_minute) * u64::from(units::MINUTE) {
         effects.extend(game_time::perform_sleep(ctx, state, SleepOptions { collapsed: true }));
     }
-
+    objects::forget_gone(ctx, state);
+    // Items found and achievements reached this tick (M6).
+    effects.extend(goals::after_step(ctx, state));
     effects
 }
 

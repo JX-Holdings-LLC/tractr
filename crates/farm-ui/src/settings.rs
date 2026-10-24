@@ -196,11 +196,15 @@ pub enum BindAction {
     Inventory,
     Quests,
     Craft,
+    /// The goals panel (M6): collections, bundles, achievements, the shipping log.
+    Goals,
+    /// The mailbox (M6).
+    Mail,
     Menu,
 }
 
 impl BindAction {
-    pub const ALL: [BindAction; 15] = [
+    pub const ALL: [BindAction; 17] = [
         BindAction::MoveUp,
         BindAction::MoveDown,
         BindAction::MoveLeft,
@@ -215,10 +219,19 @@ impl BindAction {
         BindAction::Inventory,
         BindAction::Quests,
         BindAction::Craft,
+        BindAction::Goals,
+        BindAction::Mail,
         BindAction::Menu,
     ];
 
-    /// The key the engine's bindings (farm-runtime `input::bindings`) know this action by.
+    /// Actions the player itself answers (its own panels), which the engine never hears of:
+    /// their keys reach the game as they are, so a creator's hotkey on the same key still works.
+    pub fn host_only(self) -> bool {
+        matches!(self, BindAction::Goals | BindAction::Mail)
+    }
+
+    /// The key the engine's bindings (farm-runtime `input::bindings`) know this action by; for a
+    /// [`BindAction::host_only`] action, its default key (the engine never gets it).
     pub fn canonical_key(self) -> &'static str {
         match self {
             BindAction::MoveUp => "w",
@@ -235,6 +248,8 @@ impl BindAction {
             BindAction::Inventory => "i",
             BindAction::Quests => "j",
             BindAction::Craft => "x",
+            BindAction::Goals => "g",
+            BindAction::Mail => "m",
             BindAction::Menu => "escape",
         }
     }
@@ -256,6 +271,8 @@ impl BindAction {
             BindAction::Inventory => "bind.inventory",
             BindAction::Quests => "bind.quests",
             BindAction::Craft => "bind.craft",
+            BindAction::Goals => "bind.goals",
+            BindAction::Mail => "bind.mail",
             BindAction::Menu => "bind.menu",
         })
     }
@@ -274,6 +291,8 @@ impl BindAction {
             BindAction::Inventory => "hint.inventory",
             BindAction::Quests => "hint.quests",
             BindAction::Craft => "hint.craft",
+            BindAction::Goals => "hint.goals",
+            BindAction::Mail => "hint.mail",
             BindAction::Menu => "hint.menu",
         })
     }
@@ -295,11 +314,15 @@ impl BindAction {
             BindAction::Inventory => &["i"],
             BindAction::Quests => &["j"],
             BindAction::Craft => &["x"],
+            BindAction::Goals => &["g"],
+            BindAction::Mail => &["m"],
         }
     }
 
     fn default_button(self) -> Option<GamepadButton> {
         Some(match self {
+            // Every button is taken: a pad reaches these through the settings or the toolbar.
+            BindAction::Goals | BindAction::Mail => return None,
             BindAction::Interact => GamepadButton::South,
             BindAction::Menu => GamepadButton::Start,
             BindAction::Water => GamepadButton::West,

@@ -2,6 +2,7 @@ using System.Text.Json;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Mvvm;
 using Tractr.App.Projects;
 
@@ -131,6 +132,13 @@ public sealed class ContentEditorViewModel : ObservableObject
         Of("Events", p => p.Events, Defaults.NewEvent, Edits.UpsertEvent, Edits.RemoveEvent),
         Of("Cutscenes", p => p.Cutscenes.OrEmpty(), Defaults.NewCutscene, Edits.UpsertCutscene, Edits.RemoveCutscene, Defaults.DuplicateCutscene),
         Of("Heart events", p => p.HeartEvents.OrEmpty(), Defaults.NewHeartEvent, Edits.UpsertHeartEvent, Edits.RemoveHeartEvent, Defaults.DuplicateHeartEvent),
+        Of("Mail", p => p.Mail.OrEmpty(), Defaults.NewMail, Edits.UpsertMail, Edits.RemoveMail, Defaults.DuplicateMail),
+        Of("Collections", p => p.Collections.OrEmpty(), Defaults.NewCollection, Edits.UpsertCollection, Edits.RemoveCollection, Defaults.DuplicateCollection),
+        Of("Bundles", p => p.Bundles.OrEmpty(), Defaults.NewBundle, Edits.UpsertBundle, Edits.RemoveBundle, Defaults.DuplicateBundle),
+        Of("Achievements", p => p.Achievements.OrEmpty(), Defaults.NewAchievement, Edits.UpsertAchievement, Edits.RemoveAchievement, Defaults.DuplicateAchievement) with
+        {
+            Art = entity => ((AchievementDefinition)entity).Visual.OrNull(),
+        },
         Of("Shops", p => p.Shops, Defaults.NewShop, Edits.UpsertShop, Edits.RemoveShop),
         Of("Recipes", p => p.Recipes, Defaults.NewRecipe, Edits.UpsertRecipe, Edits.RemoveRecipe) with
         {
@@ -149,9 +157,21 @@ public sealed class ContentEditorViewModel : ObservableObject
         {
             Art = entity => ((MachineTypeDefinition)entity).Visual.OrNull(),
         },
+        Of("Buildings", p => p.BuildingTypes.OrEmpty(), Defaults.NewBuildingType, Edits.UpsertBuildingType, Edits.RemoveBuildingType, Defaults.DuplicateBuildingType) with
+        {
+            Art = entity => ((BuildingDefinition)entity).Visual.OrNull(),
+        },
+        Of("Placed buildings", p => p.Buildings.OrEmpty(), Defaults.NewPlacedBuilding, Edits.UpsertPlacedBuilding, Edits.RemovePlacedBuilding) with
+        {
+            Note = (project, entity, _) => PlacedBuildingNote(project, (BuildingState)entity),
+        },
         Of("Animal species", p => p.AnimalSpecies, Defaults.NewAnimalSpecies, Edits.UpsertAnimalSpecies, Edits.RemoveAnimalSpecies) with
         {
             Art = entity => ((AnimalSpeciesDefinition)entity).Visual.OrNull(),
+        },
+        Of("Monsters", p => p.Monsters.OrEmpty(), Defaults.NewMonster, Edits.UpsertMonster, Edits.RemoveMonster, Defaults.DuplicateMonster) with
+        {
+            Art = entity => ((MonsterDefinition)entity).Visual.OrNull(),
         },
         Of("Fish tables", p => p.FishTables, Defaults.NewFishTable, Edits.UpsertFishTable, Edits.RemoveFishTable),
         Of("Actions", p => p.Actions, Defaults.NewAction, Edits.UpsertAction, Edits.RemoveAction, Defaults.DuplicateAction),
@@ -183,6 +203,14 @@ public sealed class ContentEditorViewModel : ObservableObject
             Builtins = VocabularyBuiltins<CropMutationDefinition>("crop mutation", "cropMutation", ContentReadouts.BuiltinCropMutations, Edits.UpsertCropMutation),
         },
     ];
+
+    /// <summary>"Shed at Farm (4, 6)": what a building on the start map is and where it stands (M5).</summary>
+    private static string PlacedBuildingNote(GameProject project, BuildingState building)
+    {
+        var kind = project.BuildingTypes.OrEmpty().FirstOrDefault(b => b.Id == building.BuildingId)?.Name ?? building.BuildingId;
+        var scene = project.Scenes.FirstOrDefault(s => s.Id == building.SceneId)?.Name ?? building.SceneId;
+        return EditorStrings.Format("content.placedBuildingNote", kind, scene, building.X, building.Y);
+    }
 
     /// The built-ins of a world vocabulary list (M1): <paramref name="kind"/> names one in
     /// messages, <paramref name="builtinKind"/> is the F# kind; customizing copies it as it is.
@@ -430,7 +458,7 @@ public sealed class ContentEditorViewModel : ObservableObject
             foreach (var entity in category.Entries(project).Concat(category.Builtins?.Entries(project) ?? []))
             {
                 var id = IdOf(entity);
-                var name = entity.GetType().GetProperty("Name")?.GetValue(entity) as string ?? "";
+                var name = NameOf(entity) ?? "";
                 var rank = Rank(name, text) is { } byName ? byName : Rank(id, text) is { } byId ? byId + 2 : (int?)null;
                 if (rank is { } r && !found.Any(f => f.Category == category.Name && f.Id == id)) found.Add((category.Name, id, LabelOf(entity), r));
             }
@@ -450,11 +478,15 @@ public sealed class ContentEditorViewModel : ObservableObject
 
     private static string IdOf(object entity) => (string)(entity.GetType().GetProperty("Id")?.GetValue(entity) ?? "");
 
+    /// <summary>An entry's name: its <c>Name</c>, or a letter's <c>Subject</c> (M6).</summary>
+    private static string? NameOf(object entity) =>
+        (entity.GetType().GetProperty("Name") ?? entity.GetType().GetProperty("Subject"))?.GetValue(entity) as string;
+
     /// <summary>"Name  ·  id", or the id of an entry without a name.</summary>
     public static string LabelOf(object entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var name = entity.GetType().GetProperty("Name")?.GetValue(entity) as string;
+        var name = NameOf(entity);
         return string.IsNullOrWhiteSpace(name) ? IdOf(entity) : $"{name}  ·  {IdOf(entity)}";
     }
 

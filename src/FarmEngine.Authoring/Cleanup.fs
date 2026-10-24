@@ -48,6 +48,38 @@ module Cleanup =
     let private mapFishTables f (project: GameProject) = withList project (Lists.mapChanged f project.FishTables) (fun p l -> { p with FishTables = l })
     let private mapAssets f (project: GameProject) = withList project (Lists.mapChanged f project.CustomAssets) (fun p l -> { p with CustomAssets = l })
 
+    /// An optional project list (M5–M7 content) mapped in place; one left empty by `f` is absent.
+    let private mapOptional (get: GameProject -> 'T list option) (set: GameProject -> 'T list option -> GameProject) (f: 'T -> 'T option) (project: GameProject) =
+        match get project with
+        | None -> project
+        | Some items ->
+            match chooseChanged f items with
+            | Some next -> set project (if next.IsEmpty then None else Some next)
+            | None -> project
+
+    let private mapBuildingTypes f = mapOptional (fun p -> p.BuildingTypes) (fun p l -> { p with BuildingTypes = l }) (f >> Some)
+    let private choosePlacedBuildings f = mapOptional (fun p -> p.Buildings) (fun p l -> { p with Buildings = l }) f
+    let private mapCollections f = mapOptional (fun p -> p.Collections) (fun p l -> { p with Collections = l }) (f >> Some)
+    let private mapBundles f = mapOptional (fun p -> p.Bundles) (fun p l -> { p with Bundles = l }) (f >> Some)
+    let private mapAchievements f = mapOptional (fun p -> p.Achievements) (fun p l -> { p with Achievements = l }) (f >> Some)
+    let private mapMail f = mapOptional (fun p -> p.Mail) (fun p l -> { p with Mail = l }) (f >> Some)
+    let private mapMonsters f = mapOptional (fun p -> p.Monsters) (fun p l -> { p with Monsters = l }) (f >> Some)
+
+    /// An optional list filtered: `None` when nothing was dropped, `Some None` when it emptied.
+    let private filterOptional (keep: 'T -> bool) (items: 'T list option) : 'T list option option =
+        match items with
+        | None -> None
+        | Some list ->
+            match Lists.filterChanged keep list with
+            | Some [] -> Some None
+            | Some kept -> Some(Some kept)
+            | None -> None
+
+    let private mapBands (f: MineBand -> MineBand) (project: GameProject) =
+        match Lists.mapChanged f project.Mine.Bands with
+        | Some bands -> { project with Mine = { project.Mine with Bands = bands } }
+        | None -> project
+
     let private mapCustomCrops (f: CustomCropDefinition -> CustomCropDefinition) (project: GameProject) =
         match project.CustomCrops with
         | None -> project
@@ -67,22 +99,30 @@ module Cleanup =
         let project = withList project (Lists.mapChanged mapDialogue project.Dialogues) (fun p l -> { p with Dialogues = l })
         mapNpcs mapNpc project
 
-    /// Outcomes wherever they run: events, actions and minigame result tiers. `None` drops the outcome.
+    /// Outcomes wherever they run: events, actions, minigame result tiers, and the rewards of
+    /// collections, bundles and letters (M6). `None` drops the outcome.
     let private mapOutcomes (f: EventOutcome -> EventOutcome option) (project: GameProject) =
         let mapEvent (e: GameEvent) = withList e (chooseChanged f e.Outcomes) (fun e l -> { e with Outcomes = l })
         let mapAction (a: ActionDef) = withList a (chooseChanged f a.Outcomes) (fun a l -> { a with Outcomes = l })
         let mapTier (t: MinigameResultTier) = withList t (chooseChanged f t.Outcomes) (fun t l -> { t with Outcomes = l })
         let mapMinigame (m: MinigameDef) = withList m (Lists.mapChanged mapTier m.ResultTiers) (fun m l -> { m with ResultTiers = l })
+        let mapReward (r: CollectionReward) = withList r (chooseChanged f r.Outcomes) (fun r l -> { r with Outcomes = l })
         let project = withList project (Lists.mapChanged mapEvent project.Events) (fun p l -> { p with Events = l })
         let project = withList project (Lists.mapChanged mapAction project.Actions) (fun p l -> { p with Actions = l })
         withList project (Lists.mapChanged mapMinigame project.Minigames) (fun p l -> { p with Minigames = l })
+        |> mapCollections (fun c -> withList c (Lists.mapChanged mapReward c.Rewards) (fun c l -> { c with Rewards = l }))
+        |> mapBundles (fun b -> withList b (chooseChanged f b.Outcomes) (fun b l -> { b with Outcomes = l }))
+        |> mapMail (fun m -> withList m (chooseChanged f m.Outcomes) (fun m l -> { m with Outcomes = l }))
 
-    /// Conditions wherever they gate: events and actions. `None` drops the condition.
+    /// Conditions wherever they gate: events, actions, achievements and letters (M6). `None`
+    /// drops the condition.
     let private mapConditions (f: EventCondition -> EventCondition option) (project: GameProject) =
         let mapEvent (e: GameEvent) = withList e (chooseChanged f e.Conditions) (fun e l -> { e with Conditions = l })
         let mapAction (a: ActionDef) = withList a (chooseChanged f a.Conditions) (fun a l -> { a with Conditions = l })
         let project = withList project (Lists.mapChanged mapEvent project.Events) (fun p l -> { p with Events = l })
         withList project (Lists.mapChanged mapAction project.Actions) (fun p l -> { p with Actions = l })
+        |> mapAchievements (fun a -> withList a (chooseChanged f a.Conditions) (fun a l -> { a with Conditions = l }))
+        |> mapMail (fun m -> withList m (chooseChanged f m.Conditions) (fun m l -> { m with Conditions = l }))
 
     let private dropWhen (matches: bool) (value: 'T) : 'T option = if matches then None else Some value
 
@@ -140,6 +180,21 @@ module Cleanup =
                     (Lists.filterChanged (fun (e: GamePanelEntry) -> not (e.Kind = GamePanelEntryKinds.Item && e.Value = itemId)) panel.Entries)
                     (fun p l -> { p with Entries = l })
             ))
+        // M5–M7: building materials, extra animal products, collection and bundle lines, letter
+        // attachments, monster drops and mine treasure.
+        |> mapBuildingTypes (fun b -> withList b (Lists.filterChanged (fun (i: RecipeIngredient) -> i.ItemId <> itemId) b.Materials) (fun b l -> { b with Materials = l }))
+        |> mapSpecies (fun s ->
+            match filterOptional (fun (product: AnimalProduct) -> product.ItemId <> itemId) s.Products with
+            | Some products -> { s with Products = products }
+            | None -> s)
+        |> mapCollections (fun c -> withList c (Lists.filterChanged (fun (id: string) -> id <> itemId) c.Items) (fun c l -> { c with Items = l }))
+        |> mapBundles (fun b -> withList b (Lists.filterChanged (fun (i: BundleItem) -> i.ItemId <> itemId) b.Items) (fun b l -> { b with Items = l }))
+        |> mapMail (fun m -> withList m (Lists.filterChanged (fun (i: RecipeIngredient) -> i.ItemId <> itemId) m.Attachments) (fun m l -> { m with Attachments = l }))
+        |> mapMonsters (fun m -> withList m (Lists.filterChanged (fun (d: NodeDrop) -> d.ItemId <> itemId) m.Drops) (fun m l -> { m with Drops = l }))
+        |> mapBands (fun b ->
+            match filterOptional (fun (t: MineTreasure) -> t.ItemId <> itemId) b.Treasure with
+            | Some treasure -> { b with Treasure = treasure }
+            | None -> b)
 
     /// An NPC is gone: its dialogues, the editor selection, quest givers and talk targets, NPC
     /// outcomes and scene NPC lists. Friendship conditions on it stay: they now never hold.
@@ -166,6 +221,8 @@ module Cleanup =
                 let kept = events |> List.filter (fun h -> h.NpcId <> npcId)
                 { p with HeartEvents = (if kept.IsEmpty then None else Some kept) }
             | _ -> p
+        // Its letters (M6) come from no one.
+        |> mapMail (fun m -> if m.From = npcId then { m with From = "" } else m)
 
     /// A dialogue is gone: chains into it end the conversation; `startDialogue` falls back to the NPC's first.
     let dropDialogue (dialogueId: string) (project: GameProject) : GameProject =
@@ -235,9 +292,62 @@ module Cleanup =
             | Some machine when machine.TypeId = machineTypeId -> { t with Machine = None }
             | _ -> t)
 
-    /// A species is gone: so are its animals (WildlifeEditor).
+    /// A species is gone: so are its animals (WildlifeEditor), and shops no longer sell it (M5).
     let dropAnimalSpecies (speciesId: string) (project: GameProject) : GameProject =
         withList project (Lists.filterChanged (fun (a: AnimalState) -> a.SpeciesId <> speciesId) project.Animals) (fun p l -> { p with Animals = l })
+        |> mapShops (fun s ->
+            match filterOptional (fun (id: string) -> id <> speciesId) s.Animals with
+            | Some animals -> { s with Animals = animals }
+            | None -> s)
+
+    /// A building is gone from the start map (M5): animals housed in it have no home, and its
+    /// interior scene no longer belongs to it.
+    let dropPlacedBuilding (placedBuildingId: string) (project: GameProject) : GameProject =
+        project
+        |> fun p ->
+            withList p
+                (Lists.mapChanged (fun (a: AnimalState) -> if refers a.BuildingId placedBuildingId then { a with BuildingId = None } else a) p.Animals)
+                (fun p l -> { p with Animals = l })
+        |> Proj.mapScenes (fun s -> if refers s.Building placedBuildingId then { s with Building = None } else s)
+
+    /// A building type is gone (M5): buildings of it leave the start map, shops no longer build
+    /// it, housing and upgrades no longer name it.
+    let dropBuildingType (buildingTypeId: string) (project: GameProject) : GameProject =
+        let placed =
+            defaultArg project.Buildings [] |> List.filter (fun b -> b.BuildingId = buildingTypeId) |> List.map (fun b -> b.Id)
+        project
+        |> choosePlacedBuildings (fun b ->
+            if b.BuildingId = buildingTypeId then None
+            elif refers b.UpgradeTo buildingTypeId then Some { b with UpgradeTo = None }
+            else Some b)
+        |> fun p -> placed |> List.fold (fun acc id -> dropPlacedBuilding id acc) p
+        |> mapBuildingTypes (fun b -> if refers b.UpgradeOf buildingTypeId then { b with UpgradeOf = None } else b)
+        |> mapShops (fun s ->
+            match filterOptional (fun (id: string) -> id <> buildingTypeId) s.Buildings with
+            | Some buildings -> { s with Buildings = buildings }
+            | None -> s)
+        |> mapSpecies (fun s ->
+            match filterOptional (fun (id: string) -> id <> buildingTypeId) s.Housing with
+            | Some housing -> { s with Housing = housing }
+            | None -> s)
+
+    /// A monster is gone (M7): scenes and mine depth bands no longer spawn it.
+    let dropMonster (monsterId: string) (project: GameProject) : GameProject =
+        project
+        |> Proj.mapScenes (fun s ->
+            match filterOptional (fun (spawn: MonsterSpawn) -> spawn.MonsterId <> monsterId) s.Monsters with
+            | Some monsters -> { s with Monsters = monsters }
+            | None -> s)
+        |> mapBands (fun b ->
+            match filterOptional (fun (m: MineMonsterWeight) -> m.MonsterId <> monsterId) b.Monsters with
+            | Some monsters -> { b with Monsters = monsters }
+            | None -> b)
+
+    /// A letter is gone (M6): nothing sends it any more.
+    let dropMail (mailId: string) (project: GameProject) : GameProject =
+        project
+        |> mapOutcomes (fun o -> dropWhen (o.Type = EventOutcomeTypes.SendMail && refers o.MailId mailId) o)
+        |> mapQuests (fun q -> if refers q.Rewards.MailId mailId then { q with Rewards = { q.Rewards with MailId = None } } else q)
 
     /// An action is gone: item "use" bindings, dialogue bindings, `performAction` outcomes and interface buttons.
     let dropAction (actionId: string) (project: GameProject) : GameProject =
@@ -345,6 +455,34 @@ module Cleanup =
             | Some ids -> withList t (Lists.filterChanged (fun (id: string) -> id <> sceneId) ids) (fun t l -> { t with SceneIds = Some l }))
         |> mapOutcomes (fun o -> dropWhen (refers o.SceneId sceneId) o)
         |> fun p -> if refers p.Mine.EntranceSceneId sceneId then { p with Mine = { p.Mine with EntranceSceneId = None } } else p
+        // M5–M7: buildings standing in it, interiors and build sites, donation and hand-in
+        // places, farm layouts and the faint spot.
+        |> fun p ->
+            let placed = defaultArg p.Buildings [] |> List.filter (fun b -> b.SceneId = sceneId) |> List.map (fun b -> b.Id)
+            let p =
+                choosePlacedBuildings (fun b ->
+                    if b.SceneId = sceneId then None
+                    elif b.InteriorSceneId = sceneId then Some { b with InteriorSceneId = "" }
+                    else Some b) p
+            placed |> List.fold (fun acc id -> dropPlacedBuilding id acc) p
+        |> mapBuildingTypes (fun b ->
+            let b = if refers b.InteriorSceneId sceneId then { b with InteriorSceneId = None; InteriorDoor = None } else b
+            withList b (Lists.filterChanged (fun (id: string) -> id <> sceneId) b.Scenes) (fun b l -> { b with Scenes = l }))
+        |> mapCollections (fun c -> if refers c.SceneId sceneId then { c with SceneId = None } else c)
+        |> mapBundles (fun b -> if refers b.SceneId sceneId then { b with SceneId = None } else b)
+        |> fun p ->
+            let settings = p.Settings
+            let farm =
+                settings.Farm
+                |> Option.map (fun farm ->
+                    let farm = if farm.SceneId = sceneId then { farm with SceneId = "" } else farm
+                    withList farm (Lists.filterChanged (fun (l: FarmLayout) -> l.SceneId <> sceneId) farm.Layouts) (fun f l -> { f with Layouts = l }))
+            let combat =
+                settings.Combat
+                |> Option.map (fun combat ->
+                    if refers combat.FaintSceneId sceneId then { combat with FaintSceneId = None; FaintX = None; FaintY = None } else combat)
+            if farm = settings.Farm && combat = settings.Combat then p
+            else { p with Settings = { settings with Farm = farm; Combat = combat } }
         |> fun p ->
             if p.Player.SceneId <> sceneId then p
             else

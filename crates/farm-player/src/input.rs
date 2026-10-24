@@ -113,6 +113,9 @@ pub struct FrameInput {
     pub game: Vec<GameKey>,
     /// Canonical keys that went down this frame (panel hotkeys).
     pub game_pressed: Vec<String>,
+    /// Actions the player answers itself ([`BindAction::host_only`]: the goals and mail
+    /// panels) pressed this frame. Their keys still reach the game as they are.
+    pub host_pressed: Vec<BindAction>,
     /// Accept (Enter, Space, Interact, gamepad A) went down / up this frame (minigame hold).
     pub accept_pressed: bool,
     pub accept_released: bool,
@@ -322,6 +325,14 @@ impl InputRouter {
                     out.ui.nav.extend(navs);
                     let accepts = is_accept_key(&key) || route == KeyRoute::Action(BindAction::Interact);
                     let canonical = match route {
+                        // The player's own panels: the game gets the key itself, so a creator's
+                        // hotkey on it still works.
+                        KeyRoute::Action(action) if action.host_only() => {
+                            if !repeat {
+                                out.host_pressed.push(action);
+                            }
+                            Some(key.clone())
+                        }
                         KeyRoute::Action(action) => Some(action.canonical_key().to_owned()),
                         KeyRoute::Pass => Some(key.clone()),
                         KeyRoute::Drop => None,
@@ -476,11 +487,20 @@ impl InputRouter {
                 self.repeat = None;
             }
         }
-        // The game: B always closes; the rest follows the bindings.
+        // The game: B always closes; the rest follows the bindings (the player's own panels
+        // never reach the game).
         let canonical = if button == GamepadButton::East {
             Some(BindAction::Menu.canonical_key().to_owned())
         } else {
-            bindings.gamepad_action(button).map(|action| action.canonical_key().to_owned())
+            match bindings.gamepad_action(button) {
+                Some(action) if action.host_only() => {
+                    if pressed {
+                        out.host_pressed.push(action);
+                    }
+                    None
+                }
+                action => action.map(|action| action.canonical_key().to_owned()),
+            }
         };
         if let Some(canonical) = canonical {
             if pressed {
@@ -513,6 +533,13 @@ impl InputRouter {
         }
         let direction = Direction::of_action(action);
         let canonical = action.canonical_key();
+        // The player's own panels never reach the game.
+        if action.host_only() {
+            if pressed {
+                out.host_pressed.push(action);
+            }
+            return;
+        }
         if pressed {
             out.ui.nav.extend(action_nav(action));
             if action == BindAction::Interact {
@@ -615,6 +642,30 @@ mod tests {
         let frame = router.frame(&[down("k"), down("q"), down("1")], 0.016, &bindings, false);
         assert_eq!(frame.game, vec![GameKey::Down("q".into()), GameKey::Down("1".into())]);
         assert_eq!(frame.ui.keys_pressed, ["k", "q", "1"]);
+    }
+
+    #[test]
+    fn the_players_own_panels_are_host_presses_and_their_keys_pass_to_the_game() {
+        let mut router = InputRouter::new();
+        let mut bindings = Bindings::default();
+        let frame = router.frame(&[down("g"), down("m")], 0.016, &bindings, false);
+        assert_eq!(frame.host_pressed, [BindAction::Goals, BindAction::Mail]);
+        // A creator's hotkey on G or M still gets its key.
+        assert_eq!(frame.game, vec![GameKey::Down("g".into()), GameKey::Down("m".into())]);
+        let frame = router.frame(&[up("g"), up("m")], 0.016, &bindings, false);
+        assert!(frame.host_pressed.is_empty());
+        // Rebound, the new key opens the panel and the game hears that key, never G.
+        bindings.rebind(BindAction::Goals, "k");
+        let frame = router.frame(&[down("k"), down("g")], 0.016, &bindings, false);
+        assert_eq!(frame.host_pressed, [BindAction::Goals]);
+        assert_eq!(frame.game, vec![GameKey::Down("k".into()), GameKey::Down("g".into())]);
+        // A gamepad button bound to one, and the on-screen action, never reach the game.
+        bindings.gamepad.insert(GamepadButton::North, BindAction::Mail);
+        let button = InputEvent::GamepadButton { button: GamepadButton::North, pressed: true };
+        let action = InputEvent::Action { action: BindAction::Goals, pressed: true };
+        let frame = router.frame(&[button, action], 0.016, &bindings, false);
+        assert_eq!(frame.host_pressed, [BindAction::Mail, BindAction::Goals]);
+        assert!(frame.game.is_empty());
     }
 
     #[test]

@@ -64,7 +64,8 @@ pub(crate) fn tile_blocks_indexed(
             Some(index) => index.machine_types.find(machine_types, &machine.type_id, ids::machine_type_id),
             None => machine_types.iter().find(|def| def.id == machine.type_id),
         };
-        if definition.is_none_or(|def| def.blocks_movement) {
+        // An open gate (M5) lets everyone through.
+        if definition.is_none_or(|def| def.blocks_movement && !(def.gate && machine.open == Some(true))) {
             return true;
         }
     }

@@ -669,7 +669,7 @@
   "broken/event trigger unknown": {
     "ok": false,
     "errors": [
-      "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest', received 'sometimes'"
+      "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest' | 'build' | 'bundle' | 'achievement' | 'slay', received 'sometimes'"
     ]
   },
   "broken/event condition null": {
@@ -700,7 +700,7 @@
   "broken/event outcome type unknown": {
     "ok": false,
     "errors": [
-      "events.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship', received 'explode'"
+      "events.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
     ]
   },
   "broken/event outcome type missing": {
@@ -763,14 +763,14 @@
   "broken/action outcome type unknown": {
     "ok": false,
     "errors": [
-      "actions.1.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship', received 'explode'"
+      "actions.1.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
     ]
   },
   "broken/minigame result tier": {
     "ok": false,
     "errors": [
       "minigames.0.resultTiers.0.minScore: Number must be between 0 and 1",
-      "minigames.0.resultTiers.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship', received 'bogus'"
+      "minigames.0.resultTiers.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'bogus'"
     ]
   },
   "broken/node type numbers": {
@@ -1505,11 +1505,11 @@
       "npcs.1.birthday.day: Expected integer, received 3.5",
       "quests.0.status: Invalid enum value. Expected 'not-started' | 'active' | 'completed' | 'failed', received 'maybe'",
       "quests.0.objectives.0.type: Invalid enum value. Expected 'collect' | 'harvest' | 'talk' | 'visit' | 'craft' | 'gift', received 'dance'",
-      "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest', received 'sometimes'",
+      "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest' | 'build' | 'bundle' | 'achievement' | 'slay', received 'sometimes'",
       "events.1.conditions.0.quantity: Expected integer, received 0.5",
       "events.1.conditions.1.quantity: Number must be greater than 0",
       "events.2.conditions.0.status: Invalid enum value. Expected 'not-started' | 'active' | 'completed' | 'failed', received 'zzz'",
-      "events.3.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship', received 'explode'"
+      "events.3.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
     ]
   },
   "code/starter": {

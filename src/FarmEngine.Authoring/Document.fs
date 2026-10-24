@@ -46,6 +46,8 @@ module Document =
         | SetSceneIndoor(sceneId, indoor) -> EditScenes.setSceneIndoor sceneId indoor project
         | SetSceneEnvironment(sceneId, dark, temperature, tags, music, atmosphere) ->
             EditScenes.setSceneEnvironment sceneId dark temperature tags music atmosphere project
+        | SetSceneAllSeasons(sceneId, allSeasons) -> EditScenes.setSceneAllSeasons sceneId allSeasons project
+        | SetSceneMonsters(sceneId, monsters) -> EditScenes.setSceneMonsters sceneId monsters project
         | ResizeScene(sceneId, width, height) -> EditScenes.resizeScene sceneId width height project
         | DuplicateScene(sceneId, newSceneId) -> EditScenes.duplicateScene sceneId newSceneId project
         | SetTransition(sceneId, transition) -> EditScenes.setTransition sceneId transition project
@@ -100,6 +102,20 @@ module Document =
         | RemoveCutscene cutsceneId -> EditContent.removeCutscene cutsceneId project
         | UpsertHeartEvent heartEvent -> EditContent.upsertHeartEvent heartEvent project
         | RemoveHeartEvent heartEventId -> EditContent.removeHeartEvent heartEventId project
+        | UpsertBuildingType building -> EditContent.upsertBuildingType building project
+        | RemoveBuildingType buildingTypeId -> EditContent.removeBuildingType buildingTypeId project
+        | UpsertMonster monster -> EditContent.upsertMonster monster project
+        | RemoveMonster monsterId -> EditContent.removeMonster monsterId project
+        | UpsertCollection collection -> EditContent.upsertCollection collection project
+        | RemoveCollection collectionId -> EditContent.removeCollection collectionId project
+        | UpsertBundle bundle -> EditContent.upsertBundle bundle project
+        | RemoveBundle bundleId -> EditContent.removeBundle bundleId project
+        | UpsertAchievement achievement -> EditContent.upsertAchievement achievement project
+        | RemoveAchievement achievementId -> EditContent.removeAchievement achievementId project
+        | UpsertMail mail -> EditContent.upsertMail mail project
+        | RemoveMail mailId -> EditContent.removeMail mailId project
+        | UpsertPlacedBuilding building -> EditContent.upsertPlacedBuilding building project
+        | RemovePlacedBuilding placedBuildingId -> EditContent.removePlacedBuilding placedBuildingId project
         | SetWeather config -> EditContent.setWeather config project
         | SetWeatherWeight(seasonId, weatherId, weight) -> EditContent.setWeatherWeight seasonId weatherId weight project
         | SetMine config -> EditContent.setMine config project

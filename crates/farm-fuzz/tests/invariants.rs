@@ -165,6 +165,7 @@ proptest! {
         edits in proptest::collection::vec(content_edit(), 0..10),
         scripted in any::<bool>(),
         cutscenes in any::<bool>(),
+        farm in any::<bool>(),
         log in proptest::collection::vec(any::<u8>(), 0..400),
     ) {
         let mut project = PROJECTS[base].clone();
@@ -173,6 +174,9 @@ proptest! {
         }
         if cutscenes {
             input::add_cutscenes(&mut project);
+        }
+        if farm {
+            input::add_farm(&mut project);
         }
         let content = state::create_content_from_project(&project);
         let ids = Ids::of(&content);
@@ -238,4 +242,73 @@ fn generated_games_start_play_and_end_cutscenes() {
     assert_eq!(looping.cutscene, None, "a cutscene that never waits ends");
     farm_fuzz::play_checked(&ctx, &mut looping, &[start(input::UNKNOWN_ID), tick(1)]);
     assert_eq!(looping.cutscene, None);
+}
+
+/// The generator reaches every M5–M7 command, and a game with [`input::add_farm`]'s kit plays
+/// them — storage, building, upgrading, animals, layouts, goals, mail and fights — under the
+/// invariants.
+#[test]
+fn generated_games_build_farms_reach_goals_and_fight() {
+    let mut project = PROJECTS[0].clone();
+    input::add_farm(&mut project);
+    let content = state::create_content_from_project(&project);
+    let ids = Ids::of(&content);
+    let decoded: Vec<Command> = (0..=255u8)
+        .flat_map(|a| (0..=255u8).map(move |b| [a, b]))
+        .map(|bytes| input::command(&ids, &mut Choices::new(&bytes)))
+        .collect();
+    for wanted in [
+        "storeItem",
+        "takeStoredItem",
+        "closeStorage",
+        "orderBuilding",
+        "upgradeBuilding",
+        "buyAnimal",
+        "chooseFarmLayout",
+        "donateItem",
+        "handInBundle",
+        "readMail",
+    ] {
+        assert!(decoded.iter().any(|command| command.type_name() == wanted), "no {wanted} decoded");
+    }
+
+    let ctx = EngineContext::with_hooks(content, HookBus::new()).with_rules(CommandRules::Scripted);
+    let command = |command: Command| ReplayInput::Command { command };
+    let tick = |ticks: u64| ReplayInput::Tick { ticks };
+    let scene = project.player.scene_id.clone();
+    let item = project.items[0].id.clone();
+    let mut game = state::create_game_state(&project, Some("farm"));
+    let log = [
+        command(Command::ChooseFarmLayout { layout_id: "fuzz-other".into() }),
+        tick(1),
+        command(Command::OpenShop { shop_id: "fuzz-builder".into() }),
+        command(Command::OrderBuilding { building_id: "fuzz-coop".into(), scene_id: scene.clone(), x: 4, y: 4 }),
+        command(Command::OrderBuilding { building_id: "fuzz-well".into(), scene_id: scene.clone(), x: 1, y: 6 }),
+        command(Command::BuyAnimal {
+            species_id: "fuzz-hen".into(),
+            building: "fuzz-house".into(),
+            name: String::new(),
+        }),
+        command(Command::UpgradeBuilding { id: "fuzz-house".into(), building_id: "fuzz-big-coop".into() }),
+        command(Command::CloseShop),
+        command(Command::PlaceMachine { machine_type_id: "fuzz-chest".into() }),
+        command(Command::Interact),
+        command(Command::StoreItem { item_id: item.clone(), quantity: 1, quality: None }),
+        command(Command::TakeStoredItem { index: 0, quantity: 5 }),
+        command(Command::CloseStorage),
+        command(Command::UseTool { tool: input::FUZZ_SWORD.into() }),
+        command(Command::PerformAction { action_id: "fuzz-post".into() }),
+        command(Command::DonateItem { collection_id: "fuzz-museum".into(), item_id: item.clone() }),
+        command(Command::HandInBundle { bundle_id: "fuzz-bundle".into(), line: 1 }),
+        tick(400),
+        command(Command::Sleep),
+        command(Command::ReadMail { index: 0 }),
+        command(Command::Sleep),
+        tick(600),
+        command(Command::Sleep),
+    ];
+    farm_fuzz::play_checked(&ctx, &mut game, &log);
+    assert_eq!(game.farm_layout.as_deref(), Some("fuzz-other"));
+    assert!(!game.mailbox.is_empty());
+    assert!(game.achievements.contains_key("fuzz-rich"));
 }

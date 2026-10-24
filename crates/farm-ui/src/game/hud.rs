@@ -1,6 +1,7 @@
 //! The HUD over the world (C# `PlayModeView` HUD bar, toolbar, game panels and controls help):
-//! money, season, day, year, weather, time and energy; toolbar buttons; creator game panels;
-//! the controls hint row; the "Made with" credit.
+//! money, season, day, year, weather, time, energy and (with combat, M7) health; toolbar buttons
+//! (Goals and Mail, M6, only in games that have them, the mail with its unread count); creator
+//! game panels; the controls hint row; the "Made with" credit.
 
 use super::{GameAction, GameView, Panel};
 use crate::format::{num, season_name};
@@ -12,22 +13,32 @@ use crate::settings::BindAction;
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::Button;
-use farm_render::{FontId, Rect};
+use farm_render::{Color, FontId, Rect};
 use farm_sim::Command;
 
 /// Height of one HUD row.
 const ROW: f32 = 30.0;
 /// Space between two stats.
 const STAT_GAP: f32 = 16.0;
-/// Width of the energy bar.
+/// Width of the energy and health bars.
 const ENERGY_BAR: f32 = 96.0;
+/// The health bar's red.
+const HEALTH: Color = Color::rgb(0xe0, 0x4f, 0x4f);
 
 enum StatValue {
     Chip(String),
     Primary(String),
     Secondary(String),
     Plain(String),
-    Energy { ratio: f32, text: String },
+    Energy {
+        ratio: f32,
+        text: String,
+    },
+    /// Health (M7): a bar like energy's, in the health colour.
+    Health {
+        ratio: f32,
+        text: String,
+    },
 }
 
 struct Stat {
@@ -42,7 +53,7 @@ fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
         StatValue::Primary(text) | StatValue::Secondary(text) | StatValue::Plain(text) => {
             ui.measure(text, 13.0, FontId::Bold)
         }
-        StatValue::Energy { text, .. } => {
+        StatValue::Energy { text, .. } | StatValue::Health { text, .. } => {
             ENERGY_BAR + if text.is_empty() { 0.0 } else { 8.0 + ui.measure(text, 12.0, FontId::Regular) }
         }
     };
@@ -71,9 +82,13 @@ fn draw_stat(ui: &mut Ui, rect: Rect, stat: &Stat) {
         StatValue::Plain(text) => {
             ui.label(area, text, 13.0, FontId::Bold, colors.text, Align::Start);
         }
-        StatValue::Energy { ratio, text } => {
+        StatValue::Energy { ratio, text } | StatValue::Health { ratio, text } => {
             let bar = Rect::new(x, cy - 5.0, ENERGY_BAR, 10.0);
-            let color = if *ratio <= 0.2 { colors.error } else { colors.primary };
+            let color = match &stat.value {
+                StatValue::Health { .. } => HEALTH,
+                _ if *ratio <= 0.2 => colors.error,
+                _ => colors.primary,
+            };
             ui.progress(bar, *ratio, color);
             let rest = Rect::new(bar.right() + 8.0, rect.y, area.right() - bar.right() - 8.0, rect.height);
             ui.label(rest, text, 12.0, FontId::Regular, colors.muted, Align::Start);
@@ -107,16 +122,16 @@ pub(crate) fn prompt(view: &GameView<'_>, device: InputDevice, action: BindActio
     }
 }
 
-/// The toolbar buttons (id, icon), left to right.
-const TOOLS: [(&str, Icon); 5] = [
-    ("inventory", Icon::Package),
-    ("quests", Icon::Star),
-    ("craft", Icon::Hammer),
-    ("sleep", Icon::Moon),
-    ("menu", Icon::Menu),
-];
+/// A toolbar button: its id (widget ids), icon and label.
+struct Tool {
+    key: &'static str,
+    icon: Icon,
+    label: String,
+}
 
-fn toolbar_labels(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang) -> Vec<String> {
+/// The toolbar buttons, left to right: Inventory, Quests, Craft, then Goals and Mail when the
+/// game has them (M6), Sleep and Menu.
+fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang) -> Vec<Tool> {
     let player = &view.state.player;
     let inventory = lang.format("toolbar.inventory", &[&player.inventory.len(), &num(player.max_inventory_size)]);
     let with_key = |key: &'static str, action: BindAction| {
@@ -127,13 +142,21 @@ fn toolbar_labels(view: &GameView<'_>, device: InputDevice, compact: bool, lang:
             lang.format("toolbar.withKey", &[&lang.tr(key), &prompt(view, device, action, lang)])
         }
     };
-    vec![
-        inventory,
-        with_key("toolbar.quests", BindAction::Quests),
-        with_key("toolbar.craft", BindAction::Craft),
-        with_key("toolbar.sleep", BindAction::Sleep),
-        with_key("toolbar.menu", BindAction::Menu),
-    ]
+    let tool = |key, icon, label| Tool { key, icon, label };
+    let mut tools = vec![
+        tool("inventory", Icon::Package, inventory),
+        tool("quests", Icon::Star, with_key("toolbar.quests", BindAction::Quests)),
+        tool("craft", Icon::Hammer, with_key("toolbar.craft", BindAction::Craft)),
+    ];
+    if super::has_goals(view.content) {
+        tools.push(tool("goals", Icon::Book, with_key("toolbar.goals", BindAction::Goals)));
+    }
+    if super::has_mail(view.content) {
+        tools.push(tool("mail", Icon::Mail, with_key("toolbar.mail", BindAction::Mail)));
+    }
+    tools.push(tool("sleep", Icon::Moon, with_key("toolbar.sleep", BindAction::Sleep)));
+    tools.push(tool("menu", Icon::Menu, with_key("toolbar.menu", BindAction::Menu)));
+    tools
 }
 
 /// The energy label: the game's word for energy (M1), else the language's.
@@ -188,6 +211,12 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         };
         stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text } });
     }
+    // Health beside energy (M7, with combat on).
+    if let (Some(health), Some(max)) = (state.player.health, farm_sim::combat::max_health(&content.settings)) {
+        let ratio = (f64::from(health.max(0)) / f64::from(max.max(1))).min(1.0) as f32;
+        let text = if compact { String::new() } else { format!("{} / {}", num(health.max(0)), num(max)) };
+        stats.push(Stat { label: lang.tr("hud.health").to_owned(), value: StatValue::Health { ratio, text } });
+    }
     stats
 }
 
@@ -208,12 +237,9 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     for compact in [false, true] {
         let stats = stats(view, compact, lang);
         let stat_sizes: Vec<(f32, f32)> = stats.iter().map(|stat| (stat_width(ui, stat), ROW)).collect();
-        let labels = toolbar_labels(view, device, compact, lang);
-        let widths: Vec<f32> = labels
-            .iter()
-            .zip(TOOLS)
-            .map(|(label, (_, icon))| ui.button_width(&Button::new(label).icon(icon)))
-            .collect();
+        let labels = toolbar(view, device, compact, lang);
+        let widths: Vec<f32> =
+            labels.iter().map(|tool| ui.button_width(&Button::new(&tool.label).icon(tool.icon))).collect();
         let toolbar_width = widths.iter().sum::<f32>() + 6.0 * (widths.len() - 1) as f32;
         let stats_width: f32 =
             stat_sizes.iter().map(|(w, _)| w).sum::<f32>() + STAT_GAP * (stat_sizes.len() - 1) as f32;
@@ -252,16 +278,27 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
         Rect::new(bar.x + 12.0, bar.y + 8.0 + flow.height + 6.0, inner_width, 0.0)
     };
     let toolbar = Flow::layout(toolbar_origin, &sizes, 6.0, 4.0, Align::End);
-    for (((key, icon), label), rect) in TOOLS.iter().zip(&labels).zip(&toolbar.items) {
-        let button = Button::new(label).icon(*icon).focusable(false);
-        if ui.button(WidgetId::new("hud").with(*key), *rect, button) {
-            actions.push(match *key {
+    for (tool, rect) in labels.iter().zip(&toolbar.items) {
+        let button = Button::new(&tool.label).icon(tool.icon).focusable(false);
+        if ui.button(WidgetId::new("hud").with(tool.key), *rect, button) {
+            actions.push(match tool.key {
                 "inventory" => GameAction::TogglePanel(Panel::Inventory),
                 "quests" => GameAction::TogglePanel(Panel::Quests),
                 "craft" => GameAction::TogglePanel(Panel::Crafting),
+                "goals" => GameAction::TogglePanel(Panel::Goals),
+                "mail" => GameAction::TogglePanel(Panel::Mail),
                 "sleep" => GameAction::Command(Command::Sleep),
                 _ => GameAction::OpenMenu,
             });
+        }
+        // The envelope's badge: letters not read yet.
+        if tool.key == "mail" && view.overlay.unread_mail > 0 {
+            let count = num(view.overlay.unread_mail);
+            let radius = (ui.measure(&count, 10.5, FontId::Bold) / 2.0 + 4.0).max(8.0);
+            let (cx, cy) = (rect.right() - 3.0, rect.y + 3.0);
+            let badge = Rect::new(cx - radius, cy - 8.0, radius * 2.0, 16.0);
+            ui.list_mut().fill_round_rect(badge, 8.0, colors.error);
+            ui.label(badge, &count, 10.5, FontId::Bold, Color::rgb(0xff, 0xff, 0xff), Align::Center);
         }
     }
 

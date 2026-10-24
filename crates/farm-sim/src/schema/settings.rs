@@ -3,6 +3,8 @@
 //! Per-project gameplay settings (vision.md: "light vs sim" — heavy systems are toggleable so
 //! cozy configs stay cozy).
 
+use super::combat::CombatSettings;
+use super::farm::FarmSettings;
 use super::primitives::CLASSIC_SEASONS;
 use super::relationships::RelationshipSettings;
 use crate::units;
@@ -157,6 +159,12 @@ pub struct ProjectSettings {
     /// A new game asks for the player's name, the farm's name and the player's colours (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub character_creator: Option<bool>,
+    /// The farm scene, its layouts and pests (M5); absent: no layouts, no pests.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub farm: Option<FarmSettings>,
+    /// Player health, monsters and fainting (M7); absent: no combat.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub combat: Option<CombatSettings>,
 }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
@@ -272,6 +280,8 @@ impl Default for ProjectSettings {
             atmosphere: None,
             relationships: None,
             character_creator: None,
+            farm: None,
+            combat: None,
         }
     }
 }

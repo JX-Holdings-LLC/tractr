@@ -136,7 +136,7 @@ let private parseCases =
       nullCase "npc birthday season missing" "npcs.0.birthday.season: Expected string, received null" [ set "npcs.0.birthday" """{"season":null,"day":3}""" ]
       case "quest status unknown" [ Parse "quests.0.status: Invalid enum value." ] [ set "quests.0.status" "\"maybe\"" ]
       case "quest objective type unknown" [ Parse "quests.0.objectives.0.type: Invalid enum value." ] [ set "quests.0.objectives.0.type" "\"dance\"" ]
-      case "event trigger unknown" [ Parse "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest', received 'sometimes'" ]
+      case "event trigger unknown" [ Parse "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest' | 'build' | 'bundle' | 'achievement' | 'slay', received 'sometimes'" ]
           [ addEvent "" ""; set "events.0.trigger" "\"sometimes\"" ]
       nullCase "event condition null" "events.0.conditions.0: Expected object, received null" [ addEvent "null" "" ]
       case "inventorySpace quantity"

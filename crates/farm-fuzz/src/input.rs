@@ -1,7 +1,9 @@
 //! Fuzz bytes as game input: a replay log of commands (with arguments drawn from the content's
 //! ids, plus an id no content has) and ticks. Every byte string decodes to some log, so the
 //! fuzzer explores play instead of a parser. [`add_cutscenes`] gives a game cutscenes and the
-//! actions that start them, so the cutscene commands have something to answer.
+//! actions that start them, so the cutscene commands have something to answer, and
+//! [`add_farm`] gives it what the M5–M7 commands work on (objects, a builder, animals, goals,
+//! mail and monsters).
 
 use farm_sim::replay::ReplayInput;
 use farm_sim::schema::{tool_types, ActionDef, Cutscene, GameContent, GameProject, PluginMutation, SKILL_NAMES};
@@ -94,6 +96,11 @@ pub struct Ids {
     pub quests: Vec<String>,
     pub scenes: Vec<String>,
     pub cutscenes: Vec<String>,
+    pub buildings: Vec<String>,
+    pub species: Vec<String>,
+    pub collections: Vec<String>,
+    pub bundles: Vec<String>,
+    pub layouts: Vec<String>,
 }
 
 impl Ids {
@@ -114,6 +121,11 @@ impl Ids {
             quests: ids(&content.quests, |d| &d.id),
             scenes: ids(&content.scenes, |d| &d.id),
             cutscenes: ids(&content.cutscenes, |d| &d.id),
+            buildings: ids(&content.building_types, |d| &d.id),
+            species: ids(&content.animal_species, |d| &d.id),
+            collections: ids(&content.collections, |d| &d.id),
+            bundles: ids(&content.bundles, |d| &d.id),
+            layouts: content.settings.farm.as_ref().map_or_else(Vec::new, |farm| ids(&farm.layouts, |d| &d.id)),
         }
     }
 }
@@ -154,12 +166,13 @@ pub fn plugin_mutation(ids: &Ids, c: &mut Choices<'_>) -> PluginMutation {
 
 /// One command with arguments from `ids`.
 pub fn command(ids: &Ids, c: &mut Choices<'_>) -> Command {
-    match c.below(31) {
+    match c.below(36) {
         0..=2 => Command::SetMoveIntent { dx: c.int(-2, 2), dy: c.int(-2, 2) },
         3..=5 => Command::Move { dir: c.pick_str(&DIRECTIONS) },
         6..=8 => {
             let mut tools: Vec<&str> = tool_types::ALL.to_vec();
             tools.push("spoon");
+            tools.push(FUZZ_SWORD);
             Command::UseTool { tool: c.pick_str(&tools) }
         }
         9 | 10 => Command::Interact,
@@ -203,6 +216,39 @@ pub fn command(ids: &Ids, c: &mut Choices<'_>) -> Command {
             0 => Command::AdvanceCutscene,
             1 => Command::ChooseCutsceneOption { index: c.int(-1, 4) },
             _ => Command::SkipCutscene,
+        },
+        29 | 30 => match c.below(3) {
+            0 => {
+                let quality = (c.byte().is_multiple_of(2)).then(|| c.pick_str(&["silver", "gold", "plastic"]));
+                Command::StoreItem { item_id: c.pick(&ids.items), quantity: c.int(0, 200) as u32, quality }
+            }
+            1 => Command::TakeStoredItem { index: c.int(-1, 4), quantity: c.int(0, 200) as u32 },
+            _ => Command::CloseStorage,
+        },
+        31 => match c.below(2) {
+            0 => Command::OrderBuilding {
+                building_id: c.pick(&ids.buildings),
+                scene_id: c.pick(&ids.scenes),
+                x: c.int(-2, 40),
+                y: c.int(-2, 40),
+            },
+            _ => Command::UpgradeBuilding {
+                id: c.pick_str(&["building-1", "building-2", "fuzz-house", UNKNOWN_ID]),
+                building_id: c.pick(&ids.buildings),
+            },
+        },
+        32 => match c.below(2) {
+            0 => Command::BuyAnimal {
+                species_id: c.pick(&ids.species),
+                building: c.pick_str(&["building-1", "building-2", "fuzz-house", UNKNOWN_ID]),
+                name: c.pick_str(&["", "Clucky", "   "]),
+            },
+            _ => Command::ChooseFarmLayout { layout_id: c.pick(&ids.layouts) },
+        },
+        33 => match c.below(3) {
+            0 => Command::DonateItem { collection_id: c.pick(&ids.collections), item_id: c.pick(&ids.items) },
+            1 => Command::HandInBundle { bundle_id: c.pick(&ids.bundles), line: c.int(-1, 3) },
+            _ => Command::ReadMail { index: c.int(-1, 4) },
         },
         _ => Command::PluginMutation {
             plugin_id: c.pick_str(&["plugin-a", "plugin-b"]),
@@ -300,4 +346,147 @@ pub fn add_cutscenes(project: &mut GameProject) {
         project.actions.push(action);
     }
     project.cutscenes.get_or_insert_with(Vec::new).extend(cutscenes);
+}
+
+/// The weapon tool [`add_farm`] gives a game.
+pub const FUZZ_SWORD: &str = "fuzz-sword";
+
+/// Adds what the M5–M7 commands work on to `project`: a chest, a shipping bin, a gate, a
+/// sprinkler and a scarecrow (placed beside the player and placeable from the crafting list), a
+/// builder shop that builds and upgrades a coop (interior: a new small scene) and sells hens, a
+/// pre-placed house, collections of every kind, a bundle, an achievement, letters (one sent by
+/// an action, one by its own conditions), pests, two farm layouts, and combat with a slime in
+/// the player's scene and a sword in the inventory.
+pub fn add_farm(project: &mut GameProject) {
+    let scene = project.player.scene_id.clone();
+    let item = project.items.first().map_or(UNKNOWN_ID, |item| item.id.as_str()).to_owned();
+    let content: Value = json!({
+        "machineTypes": [
+            {"id": "fuzz-chest", "name": "Chest", "storage": 3},
+            {"id": "fuzz-bin", "name": "Bin", "shipping": true},
+            {"id": "fuzz-gate", "name": "Gate", "gate": true},
+            {"id": "fuzz-sprinkler", "name": "Sprinkler", "areaEffects": [{"effect": "water", "radius": 2}]},
+            {"id": "fuzz-scarecrow", "name": "Scarecrow", "blocksMovement": false,
+             "areaEffects": [{"effect": "protect", "radius": 40}, {"effect": "glow", "radius": 1}]},
+        ],
+        "buildingTypes": [
+            {"id": "fuzz-coop", "name": "Coop", "width": 2, "height": 2, "interiorSceneId": "fuzz-coop-inside",
+             "cost": 5, "materials": [{"itemId": item, "quantity": 1}], "buildDays": 1, "capacity": 2,
+             "scenes": [scene]},
+            {"id": "fuzz-big-coop", "name": "Big coop", "width": 3, "height": 2, "interiorSceneId": "fuzz-coop-inside",
+             "interiorDoor": {"x": 40, "y": -3}, "cost": 1, "capacity": 4, "upgradeOf": "fuzz-coop"},
+            {"id": "fuzz-loop", "name": "Loop", "upgradeOf": "fuzz-loop"},
+            {"id": "fuzz-well", "name": "Well", "width": 1, "height": 1, "scenes": [scene]},
+        ],
+        "animalSpecies": [
+            {"id": "fuzz-hen", "name": "Hen", "purchaseCost": 3, "productItemId": item, "daysToAdult": 0,
+             "housing": ["fuzz-coop"], "products": [{"itemId": item, "intervalDays": 1, "minMood": 0},
+             {"itemId": UNKNOWN_ID, "intervalDays": 0}],
+             "moodQualities": [{"minMood": 0, "quality": "gold"}, {"minMood": 50, "quality": "plastic"}],
+             "breeding": {"chance": 0.5, "minMood": 0}},
+        ],
+        "shops": [
+            {"id": "fuzz-builder", "name": "Builder", "stock": [],
+             "buildings": ["fuzz-coop", "fuzz-big-coop", "fuzz-loop", "fuzz-well", UNKNOWN_ID],
+             "animals": ["fuzz-hen", UNKNOWN_ID]},
+        ],
+        "collections": [
+            {"id": "fuzz-found", "name": "Found", "items": [item, UNKNOWN_ID],
+             "rewards": [{"count": 1, "message": "One!", "outcomes": [{"type": "giveMoney", "amount": 5}]},
+                         {"count": 0, "outcomes": []}]},
+            {"id": "fuzz-shipped", "name": "Shipped", "kind": "shipped", "items": [item]},
+            {"id": "fuzz-museum", "name": "Museum", "kind": "donated", "items": [item], "sceneId": scene},
+        ],
+        "bundles": [
+            {"id": "fuzz-bundle", "name": "Bundle", "items": [{"itemId": item, "quantity": 2, "quality": "silver"},
+             {"itemId": item, "quantity": 1}, {"itemId": UNKNOWN_ID, "quantity": 0}], "required": 2,
+             "outcomes": [{"type": "setFlag", "flagName": "flag-b"}, {"type": "sendMail", "mailId": "fuzz-letter"}]},
+        ],
+        "achievements": [
+            {"id": "fuzz-rich", "name": "Rich", "conditions": [{"type": "money", "min": 1}]},
+            {"id": "fuzz-all", "name": "All", "conditions": [{"type": "any", "conditions": [
+                {"type": "bundle", "bundleId": "fuzz-bundle"}, {"type": "collection", "collectionId": "fuzz-found"},
+                {"type": "shipped", "itemId": "", "min": 1}, {"type": "building", "buildingId": "fuzz-coop"},
+                {"type": "slain", "monsterId": "", "min": 1}, {"type": "birthday", "npcId": ""},
+                {"type": "skillLevel", "skill": "combat", "min": 1}, {"type": "mineFloor", "min": 2}]}]},
+            {"id": "fuzz-never", "name": "Never"},
+        ],
+        "mail": [
+            {"id": "fuzz-letter", "subject": "Hi", "text": "Hello {player}", "attachments": [{"itemId": item, "quantity": 3}],
+             "money": 2, "outcomes": [{"type": "sendMail", "mailId": "fuzz-letter"}, {"type": "modifyHealth", "amount": -3}]},
+            {"id": "fuzz-daily", "subject": "Daily", "repeat": true, "conditions": [{"type": "money", "min": 0}]},
+        ],
+        "monsters": [
+            {"id": "fuzz-slime", "name": "Slime", "health": 3, "damage": 2, "speed": 3, "sight": 4,
+             "drops": [{"itemId": item, "min": 1, "max": 2, "weight": 1}], "experience": 2},
+            {"id": "fuzz-rock", "name": "Rock", "movement": "still", "health": 1, "defense": 100},
+            {"id": "fuzz-wisp", "name": "Wisp", "movement": "wander", "speed": 40},
+        ],
+    });
+    let merge = |list: &str| content[list].as_array().cloned().unwrap_or_default();
+    project
+        .machine_types
+        .extend(merge("machineTypes").into_iter().map(|v| serde_json::from_value(v).expect("an object")));
+    project.building_types = Some(serde_json::from_value(content["buildingTypes"].clone()).expect("buildings"));
+    project
+        .animal_species
+        .extend(merge("animalSpecies").into_iter().map(|v| serde_json::from_value(v).expect("a species")));
+    project.shops.extend(merge("shops").into_iter().map(|v| serde_json::from_value(v).expect("a shop")));
+    project.collections = Some(serde_json::from_value(content["collections"].clone()).expect("collections"));
+    project.bundles = Some(serde_json::from_value(content["bundles"].clone()).expect("bundles"));
+    project.achievements = Some(serde_json::from_value(content["achievements"].clone()).expect("achievements"));
+    project.mail = Some(serde_json::from_value(content["mail"].clone()).expect("mail"));
+    project.monsters = Some(serde_json::from_value(content["monsters"].clone()).expect("monsters"));
+    let action: ActionDef = serde_json::from_value(json!({
+        "id": "fuzz-post", "name": "Post",
+        "outcomes": [{"type": "sendMail", "mailId": "fuzz-letter"}, {"type": "sendMail", "mailId": UNKNOWN_ID},
+                     {"type": "modifyHealth", "amount": 5}],
+    }))
+    .expect("an action");
+    project.actions.push(action);
+
+    // The coop's interior, a second farm layout, and the house on the map.
+    let mut inside = farm_sim::world::tiles::create_empty_scene("fuzz-coop-inside", "Coop inside", 4, 3);
+    inside.indoor = Some(true);
+    inside.all_seasons = Some(true);
+    project.scenes.push(inside);
+    let mut layout = farm_sim::world::tiles::create_empty_scene("fuzz-layout", "Other farm", 9, 9);
+    layout.monsters = Some(serde_json::from_value(json!([{"monsterId": "fuzz-wisp", "count": 2}])).expect("spawns"));
+    project.scenes.push(layout);
+    project.buildings = Some(serde_json::from_value(json!([
+        {"id": "fuzz-house", "buildingId": "fuzz-coop", "sceneId": scene, "x": 0, "y": 0, "interiorSceneId": "fuzz-coop-inside"},
+    ])).expect("a house"));
+    if let Some(farm_scene) = project.scenes.iter_mut().find(|candidate| candidate.id == scene) {
+        farm_scene.monsters = Some(
+            serde_json::from_value(json!([{"monsterId": "fuzz-slime", "count": 2}, {"monsterId": "fuzz-rock", "count": 1, "x": 0, "y": 0}]))
+                .expect("spawns"),
+        );
+    }
+    project.settings.farm = Some(
+        serde_json::from_value(json!({
+            "sceneId": scene,
+            "layouts": [{"id": "fuzz-classic", "name": "Classic", "sceneId": scene},
+                        {"id": "fuzz-other", "name": "Other", "sceneId": "fuzz-layout"},
+                        {"id": "fuzz-missing", "name": "Missing", "sceneId": UNKNOWN_ID}],
+            "pestChance": 0.25,
+        }))
+        .expect("farm settings"),
+    );
+    project.settings.combat = Some(serde_json::from_value(json!({
+        "enabled": true, "maxHealth": 10, "faintMoneyPenalty": 7, "faintSceneId": scene, "faintX": -5, "faintY": 900,
+    })).expect("combat"));
+    let tools = project.tools.get_or_insert_with(Vec::new);
+    tools.push(
+        serde_json::from_value(json!({"id": FUZZ_SWORD, "name": "Sword", "action": "attack",
+        "area": [{"width": 3, "length": 2}]}))
+        .expect("a sword"),
+    );
+    let sword: farm_sim::schema::Item = serde_json::from_value(json!({
+        "id": "fuzz-sword-item", "name": "Sword", "type": "tool", "toolType": FUZZ_SWORD, "toolPower": 2,
+        "stackable": false, "maxStack": 1, "value": 1, "health": 4,
+    }))
+    .expect("a sword item");
+    project.items.push(sword.clone());
+    project.player.inventory.push(farm_sim::schema::InventorySlot::new(sword, 1));
+    project.player.money = project.player.money.max(50);
 }

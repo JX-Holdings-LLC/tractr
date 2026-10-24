@@ -5,7 +5,7 @@
 mod common;
 
 use farm_runtime::input::{bindings, key_names, InputManager, Modifiers, MoveVector};
-use farm_sim::schema::{ActionDef, Cutscene, CutsceneState, ShopSession};
+use farm_sim::schema::{ActionDef, Cutscene, CutsceneState, ShopSession, StorageSession};
 use farm_sim::{state, Command, GameContent, GameProject, GameState};
 
 #[test]
@@ -203,6 +203,20 @@ fn poll_play_frame_only_handles_escape_while_a_modal_is_open() {
     let host_modal = bindings::poll_play_frame(&input, &shop_open, &content, true);
     assert!(host_modal.commands.is_empty());
     assert!(host_modal.escape);
+}
+
+#[test]
+fn escape_closes_an_open_chest_and_the_player_stays_put() {
+    let (state, content) = play(|_| {});
+    let storage = Some(StorageSession { scene_id: state.player.scene_id.clone(), x: 1, y: 1 });
+    let chest_open = GameState { storage, ..state };
+    let mut input = InputManager::new();
+    input.key_down("w", Modifiers::NONE);
+    input.key_down("Escape", Modifiers::NONE);
+    let frame = bindings::poll_play_frame(&input, &chest_open, &content, false);
+    assert_eq!(frame.commands, [Command::CloseStorage]);
+    assert!(!frame.escape, "not the pause menu");
+    assert_eq!(bindings::move_intent(&input, &chest_open, None), MoveVector::new(0.0, 0.0));
 }
 
 /// The test project playing a cutscene of these steps (JSON) at step 0.

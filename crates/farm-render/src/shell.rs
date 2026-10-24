@@ -7,8 +7,8 @@
 use crate::builtin_art::BuiltinArt;
 use crate::num::to_int;
 use crate::snapshot::{
-    SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem, SnapshotMachine,
-    SnapshotNode, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem,
+    SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
 };
 use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
@@ -225,6 +225,7 @@ fn build_tiles(
                 working: machine.processing.is_some(),
                 output_ready: machine.output.as_ref().is_some_and(|output| !output.is_empty()),
                 type_id: Some(machine.type_id.clone()),
+                open: machine.open == Some(true),
             });
             let item = tile
                 .item
@@ -328,6 +329,52 @@ pub fn shell_snapshot(
         }
     }
 
+    // Monsters (M7) and buildings (M5) of the scene.
+    let monsters = state
+        .monsters
+        .iter()
+        .filter(|monster| monster.scene_id == scene.id)
+        .map(|monster| {
+            let definition = last_by_id(&content.monsters, &monster.monster_id, |d| &d.id);
+            let max = definition.map_or(monster.health, |d| d.health).max(1);
+            SnapshotMonster {
+                x: tiles_of(monster.x),
+                y: tiles_of(monster.y),
+                visual: definition.and_then(|d| d.visual.clone()),
+                sprite: None,
+                color: definition.map_or_else(|| SnapshotMonster::default().color, |d| d.color.clone()),
+                direction: if monster.direction.is_empty() {
+                    directions::DOWN.to_owned()
+                } else {
+                    monster.direction.clone()
+                },
+                moving: !monster.direction.is_empty() && monster.stunned == 0,
+                health: (monster.health < max).then(|| f64::from(monster.health.max(0)) / f64::from(max)),
+                stunned: monster.stunned > 0,
+            }
+        })
+        .collect();
+    let buildings = state
+        .buildings
+        .iter()
+        .filter(|building| building.scene_id == scene.id)
+        .filter_map(|building| {
+            let definition = last_by_id(&content.building_types, &building.building_id, |d| &d.id)?;
+            let (width, height) = definition.size();
+            Some(SnapshotBuilding {
+                x: building.x,
+                y: building.y,
+                width,
+                height,
+                visual: definition.visual.clone(),
+                sprite: None,
+                color: definition.color.clone(),
+                scaffold: !building.built(),
+                door: definition.interior_scene_id.is_some().then(|| definition.door_offset()),
+            })
+        })
+        .collect();
+
     let hat_visual = farm_sim::wardrobe::worn_in(state, wear_slots::HAT)
         .and_then(|worn| worn.item.wear.as_ref())
         .and_then(|wear| wear.visual.clone());
@@ -346,6 +393,8 @@ pub fn shell_snapshot(
         terrains: Some(snapshot_terrains(content)),
         tiles,
         npcs,
+        monsters,
+        buildings,
         player: SnapshotEntity {
             x: tiles_of(state.player.x),
             y: tiles_of(state.player.y),
@@ -437,6 +486,8 @@ pub fn editor_snapshot(
         terrains: Some(snapshot_terrains(content)),
         tiles,
         npcs,
+        monsters: Vec::new(),
+        buildings: Vec::new(),
         player: SnapshotEntity {
             x: if on_scene { tiles_of(player.x) } else { -1000.0 },
             y: if on_scene { tiles_of(player.y) } else { -1000.0 },

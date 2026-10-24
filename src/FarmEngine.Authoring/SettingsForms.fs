@@ -153,6 +153,82 @@ module SettingsForms =
     let festival (id: string) (name: string) (seasonId: string) (day: float) (music: string | null) : CalendarFestival =
         { Id = id; Name = name; SeasonId = seasonId; Day = day; Music = optionalText music }
 
+    /// A scene's monster spawns (M7) as the editor shows them: one per line, the monster id, how
+    /// many, and optionally the area (`slime 3`, `bat 2 at 4,4`, `slime 3 in 2,2-10,8`).
+    let monsterSpawnsText (spawns: MonsterSpawn list) : string =
+        let n = JsNumber.format
+        spawns
+        |> List.map (fun spawn ->
+            let area =
+                match spawn.X, spawn.Y, spawn.X2, spawn.Y2 with
+                | Some x, Some y, Some x2, Some y2 -> sprintf " in %s,%s-%s,%s" (n x) (n y) (n x2) (n y2)
+                | Some x, Some y, None, None -> sprintf " at %s,%s" (n x) (n y)
+                | None, None, None, None -> ""
+                | x, y, x2, y2 ->
+                    // A partial area, kept as written.
+                    let part (name: string) (v: float option) = v |> Option.map (fun v -> sprintf " %s=%s" name (n v)) |> Option.defaultValue ""
+                    part "x" x + part "y" y + part "x2" x2 + part "y2" y2
+            sprintf "%s %s%s" spawn.MonsterId (n spawn.Count) area)
+        |> String.concat "\n"
+
+    /// A scene's monster spawns from their text (`monsterSpawnsText`). Blank lines are skipped;
+    /// a line without a monster id and a whole count of 1 or more, or with an area that is not
+    /// whole tiles, is refused with a `FormatException` naming the line.
+    let parseMonsterSpawns (text: string | null) : MonsterSpawn list =
+        let whole (value: string) =
+            match Double.TryParse(value, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+            | true, number when finite number && number = Math.Floor number -> Some number
+            | _ -> None
+        let point (value: string) =
+            match value.Split(',') with
+            | [| x; y |] ->
+                match whole (x.Trim()), whole (y.Trim()) with
+                | Some x, Some y -> Some(x, y)
+                | _ -> None
+            | _ -> None
+        (match text with
+         | null -> ""
+         | text -> text).Split('\n')
+        |> Array.mapi (fun i line -> i + 1, line.Trim())
+        |> Array.filter (fun (_, line) -> line.Length > 0)
+        |> Array.map (fun (number, line) ->
+            let fail () =
+                raise (FormatException(sprintf "Monsters line %d needs a monster id and how many, like slime 3, bat 2 at 4,4 or slime 3 in 2,2-10,8." number))
+            let parts = line.Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries)
+            let spawn id count =
+                match whole count with
+                | Some count when count >= 1.0 -> { MonsterSpawn.Default with MonsterId = id; Count = count }
+                | _ -> fail ()
+            // After the id and the count: `at x,y`, `in x,y-x2,y2`, or single ends (`x2=9`).
+            let rec area (spawn: MonsterSpawn) (rest: string list) =
+                match rest with
+                | [] -> spawn
+                | "at" :: at :: rest ->
+                    match point at with
+                    | Some(x, y) -> area { spawn with X = Some x; Y = Some y } rest
+                    | None -> fail ()
+                | "in" :: corners :: rest ->
+                    match corners.Split('-') with
+                    | [| a; b |] ->
+                        match point a, point b with
+                        | Some(x, y), Some(x2, y2) -> area { spawn with X = Some x; Y = Some y; X2 = Some x2; Y2 = Some y2 } rest
+                        | _ -> fail ()
+                    | _ -> fail ()
+                | single :: rest ->
+                    match single.Split('=') with
+                    | [| name; value |] ->
+                        match name, whole value with
+                        | "x", Some v -> area { spawn with X = Some v } rest
+                        | "y", Some v -> area { spawn with Y = Some v } rest
+                        | "x2", Some v -> area { spawn with X2 = Some v } rest
+                        | "y2", Some v -> area { spawn with Y2 = Some v } rest
+                        | _ -> fail ()
+                    | _ -> fail ()
+            match List.ofArray parts with
+            | id :: count :: rest -> area (spawn id count) rest
+            | _ -> fail ())
+        |> List.ofArray
+
     /// A weather overlay from its fields. An empty id, a style that is not one of
     /// `OverlayStyles` or a colour that is not one is refused with a `FormatException` naming it.
     let overlay (id: string) (style: string) (particles: string) (density: float) (speed: float) (tint: string | null) : WeatherOverlayDefinition =

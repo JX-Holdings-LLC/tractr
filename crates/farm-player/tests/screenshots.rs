@@ -232,4 +232,240 @@ fn review_screens() {
     pad.step(FRAME, &[button(true)], 1280, 800).unwrap();
     pad.step(FRAME, &[button(false)], 1280, 800).unwrap();
     write("gamepad-inventory", pad, 1280, 800);
+    // Building the farm, goals and combat (M5–M7).
+    for name in ["farm-world", "storage", "shipping-bin", "builder", "placement", "goals", "mail", "creator-layouts"] {
+        write(name, farm_scene(name), 1280, 800);
+    }
+}
+
+/// The starter farm with a chest, a shipping bin, a gate, a builder (coop, shed), chickens,
+/// collections, a bundle, achievements, letters, combat and a slime (M5–M7).
+fn farm_project() -> farm_sim::GameProject {
+    use farm_sim::schema::*;
+    let mut project = common::starter();
+    let object = |id: &str, name: &str| MachineTypeDefinition {
+        id: id.into(),
+        name: name.into(),
+        color: "#8a5a2b".into(),
+        ..MachineTypeDefinition::default()
+    };
+    project.machine_types.push(MachineTypeDefinition { storage: Some(12), ..object("chest", "Chest") });
+    project.machine_types.push(MachineTypeDefinition { shipping: true, ..object("bin", "Shipping Bin") });
+    project.machine_types.push(MachineTypeDefinition { gate: true, ..object("gate", "Gate") });
+    let mut inside = project.scenes[0].clone();
+    inside.id = "coop-inside".into();
+    inside.name = "Coop".into();
+    project.scenes.push(inside);
+    project.building_types = Some(vec![
+        BuildingDefinition {
+            id: "coop".into(),
+            name: "Coop".into(),
+            description: "Houses chickens.".into(),
+            width: 3,
+            height: 2,
+            color: "#c9a26b".into(),
+            interior_scene_id: Some("coop-inside".into()),
+            cost: 60,
+            materials: vec![RecipeIngredient { item_id: "seed-wheat".into(), quantity: 2 }],
+            capacity: 4,
+            ..BuildingDefinition::default()
+        },
+        BuildingDefinition {
+            id: "shed".into(),
+            name: "Shed".into(),
+            width: 2,
+            height: 2,
+            cost: 40,
+            ..BuildingDefinition::default()
+        },
+    ]);
+    project.animal_species.push(AnimalSpeciesDefinition {
+        id: "chicken".into(),
+        name: "Chicken".into(),
+        purchase_cost: 20,
+        housing: vec!["coop".into()],
+        ..AnimalSpeciesDefinition::default()
+    });
+    project.shops.push(ShopDefinition {
+        id: "builder".into(),
+        name: "Robin's Carpentry".into(),
+        buildings: vec!["coop".into(), "shed".into()],
+        animals: vec!["chicken".into()],
+        ..ShopDefinition::default()
+    });
+    project.collections = Some(vec![CollectionDefinition {
+        id: "museum".into(),
+        name: "Seed Museum".into(),
+        description: "Every seed of the valley.".into(),
+        kind: "donated".into(),
+        items: vec!["seed-wheat".into(), "seed-tomato".into(), "seed-corn".into(), "seed-pumpkin".into()],
+        rewards: vec![CollectionReward {
+            count: 2,
+            message: "A golden watering can!".into(),
+            ..CollectionReward::default()
+        }],
+        ..CollectionDefinition::default()
+    }]);
+    project.bundles = Some(vec![BundleDefinition {
+        id: "spring".into(),
+        name: "Spring Crops".into(),
+        group: "Pantry".into(),
+        items: vec![
+            BundleItem { item_id: "seed-wheat".into(), quantity: 5, quality: None },
+            BundleItem { item_id: "crop-corn".into(), quantity: 2, quality: None },
+        ],
+        ..BundleDefinition::default()
+    }]);
+    project.achievements = Some(vec![
+        AchievementDefinition {
+            id: "first".into(),
+            name: "Green Thumb".into(),
+            description: "Plant a seed.".into(),
+            ..AchievementDefinition::default()
+        },
+        AchievementDefinition {
+            id: "secret".into(),
+            name: "Night Owl".into(),
+            hidden: true,
+            ..AchievementDefinition::default()
+        },
+    ]);
+    project.mail = Some(vec![MailDefinition {
+        id: "welcome".into(),
+        subject: "Welcome to the valley".into(),
+        from: "npc-merchant".into(),
+        text: "Dear {player},\n\nHere are a few seeds to get you started. Come by the shop any time!".into(),
+        attachments: vec![RecipeIngredient { item_id: "seed-corn".into(), quantity: 5 }],
+        money: 50,
+        ..MailDefinition::default()
+    }]);
+    project.settings.combat = Some(CombatSettings { enabled: true, ..CombatSettings::default() });
+    project.monsters =
+        Some(vec![MonsterDefinition { id: "slime".into(), name: "Slime".into(), ..MonsterDefinition::default() }]);
+    project
+}
+
+/// A screen of [`farm_project`] for a look.
+fn farm_scene(name: &str) -> Player {
+    use farm_sim::schema::*;
+    let stores = Stores::new();
+    let project = farm_project();
+    if name == "creator-layouts" {
+        let mut project = project;
+        let mut river = project.scenes[0].clone();
+        river.id = "farm-river".into();
+        project.scenes.push(river);
+        let layout = |id: &str, name: &str, description: &str, scene: &str| FarmLayout {
+            id: id.into(),
+            name: name.into(),
+            description: description.into(),
+            scene_id: scene.into(),
+        };
+        project.settings.farm = Some(FarmSettings {
+            scene_id: project.scenes[0].id.clone(),
+            layouts: vec![
+                layout("classic", "Standard Farm", "Wide open fields for crops.", &project.scenes[0].id),
+                layout("river", "Riverland", "Less room to plant, but great fishing.", "farm-river"),
+            ],
+            ..FarmSettings::default()
+        });
+        let mut player = stores.standalone(&project);
+        common::idle(&mut player, 1);
+        press(&mut player, "enter");
+        return player;
+    }
+    let mut player = common::new_game_of(&stores, &project);
+    let mut state = player.state().unwrap().clone();
+    let scene = state.player.scene_id.clone();
+    let (px, py) = (farm_sim::units::tile_of(state.player.x), farm_sim::units::tile_of(state.player.y));
+    let farm = state.world.scenes.iter_mut().find(|candidate| candidate.id == scene).unwrap();
+    let mut place = |x: i32, y: i32, type_id: &str, open: bool| {
+        if let Some(tile) = farm.tile_mut(x, y) {
+            tile.machine =
+                Some(TileMachine { type_id: type_id.into(), open: open.then_some(true), ..TileMachine::default() });
+        }
+    };
+    place(px - 1, py - 1, "chest", false);
+    place(px + 1, py - 1, "bin", false);
+    place(px - 3, py, "gate", true);
+    place(px - 4, py, "gate", false);
+    state.player.health = Some(64);
+    state.mailbox.push(MailState { mail_id: "welcome".into(), day: 1, read: false, taken: false });
+    state.achievements.insert("first".into(), 1);
+    let item = |id: &str| state.player.inventory.iter().find(|slot| slot.item.id == id).cloned();
+    match name {
+        "farm-world" => {
+            state.buildings.push(BuildingState {
+                id: "building-1".into(),
+                building_id: "coop".into(),
+                scene_id: scene.clone(),
+                x: px - 5,
+                y: py - 5,
+                interior_scene_id: "coop-inside".into(),
+                ..BuildingState::default()
+            });
+            state.buildings.push(BuildingState {
+                id: "building-2".into(),
+                building_id: "shed".into(),
+                scene_id: scene.clone(),
+                x: px + 2,
+                y: py - 5,
+                days_left: 1,
+                ..BuildingState::default()
+            });
+            let tile = farm_sim::units::TILE;
+            for (dx, health, direction) in [(2, 10, "left"), (3, 4, "")] {
+                state.monsters.push(MonsterState {
+                    id: dx as u32,
+                    monster_id: "slime".into(),
+                    scene_id: scene.clone(),
+                    x: (px + dx) * tile + tile / 2,
+                    y: (py + 1) * tile + tile / 2,
+                    health,
+                    direction: direction.into(),
+                    ..MonsterState::default()
+                });
+            }
+        }
+        "storage" | "shipping-bin" => {
+            let (x, y) = if name == "storage" { (px - 1, py - 1) } else { (px + 1, py - 1) };
+            if let Some(machine) = state
+                .world
+                .scenes
+                .iter_mut()
+                .find(|s| s.id == scene)
+                .and_then(|s| s.tile_mut(x, y))
+                .and_then(|t| t.machine.as_mut())
+            {
+                machine.contents.extend(item("seed-tomato"));
+                machine.contents.extend(item("snack-trail-mix"));
+            }
+            state.storage = Some(StorageSession { scene_id: scene.clone(), x, y });
+        }
+        "builder" | "placement" => {
+            state.buildings.push(BuildingState {
+                id: "building-1".into(),
+                building_id: "coop".into(),
+                scene_id: scene.clone(),
+                x: px - 5,
+                y: py - 5,
+                interior_scene_id: "coop-inside".into(),
+                ..BuildingState::default()
+            });
+            state.shop = Some(ShopSession { shop_id: "builder".into() });
+        }
+        _ => {}
+    }
+    player.replace_state(state).unwrap();
+    common::idle(&mut player, 2);
+    match name {
+        "placement" => common::click(&mut player, farm_ui::WidgetId::new("shop-build").with("shed")),
+        "goals" => press(&mut player, "g"),
+        "mail" => {
+            press(&mut player, "m");
+            common::click(&mut player, farm_ui::WidgetId::new("mail-letter").with(0usize));
+        }
+        _ => {}
+    }
+    player
 }

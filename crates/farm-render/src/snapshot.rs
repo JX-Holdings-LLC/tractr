@@ -63,11 +63,21 @@ pub struct SnapshotMachine {
     /// Machine type id (built-in art lookup).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub type_id: Option<String>,
+    /// A gate standing open (M5): drawn as its two posts.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub open: bool,
 }
 
 impl Default for SnapshotMachine {
     fn default() -> Self {
-        Self { sprite: None, color: "#9a7b4f".to_owned(), working: false, output_ready: false, type_id: None }
+        Self {
+            sprite: None,
+            color: "#9a7b4f".to_owned(),
+            working: false,
+            output_ready: false,
+            type_id: None,
+            open: false,
+        }
     }
 }
 
@@ -225,6 +235,86 @@ impl Default for SnapshotEntity {
 /// The player is an entity with an optional pixel position.
 pub type SnapshotPlayer = SnapshotEntity;
 
+/// A monster (M7).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotMonster {
+    /// Its centre, in tiles.
+    pub x: f64,
+    pub y: f64,
+    /// Its kind's art, resolved from `visual` by [`crate::apply_graphics`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visual: Option<VisualRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sprite: Option<SnapshotSprite>,
+    /// `#rrggbb`: the blob drawn without art.
+    pub color: String,
+    /// Facing direction (down/left/right/up): where its eyes look.
+    pub direction: String,
+    pub moving: bool,
+    /// The health it has left, 0..1, once it has been hurt (a small bar over it); `None` at
+    /// full health.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub health: Option<f64>,
+    /// Reeling from a hit: drawn lighter.
+    pub stunned: bool,
+}
+
+impl Default for SnapshotMonster {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+            visual: None,
+            sprite: None,
+            color: "#6a8f3a".to_owned(),
+            direction: "down".to_owned(),
+            moving: false,
+            health: None,
+            stunned: false,
+        }
+    }
+}
+
+/// A building on the map (M5): its footprint in tiles, standing or still being built.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotBuilding {
+    /// The footprint's top-left tile and size.
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+    /// Its kind's art, resolved from `visual` by [`crate::apply_graphics`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visual: Option<VisualRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sprite: Option<SnapshotSprite>,
+    /// `#rrggbb`: the walls drawn without art.
+    pub color: String,
+    /// Still being built: a scaffold on its site.
+    pub scaffold: bool,
+    /// The door's tile within the footprint; `None` without an interior.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub door: Option<(i32, i32)>,
+}
+
+impl Default for SnapshotBuilding {
+    fn default() -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+            visual: None,
+            sprite: None,
+            color: "#b5651d".to_owned(),
+            scaffold: false,
+            door: None,
+        }
+    }
+}
+
 /// Floating feedback text ("juice"): a renderer reaction, never simulation state.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
@@ -374,6 +464,12 @@ pub struct WorldSnapshot {
     /// Rows of tiles: `tiles[y][x]`.
     pub tiles: Vec<Vec<SnapshotTile>>,
     pub npcs: Vec<SnapshotEntity>,
+    /// Monsters in the scene (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub monsters: Vec<SnapshotMonster>,
+    /// Buildings in the scene (M5).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<SnapshotBuilding>,
     pub player: SnapshotPlayer,
     /// Transient overlay effects; omitted under reduced motion.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -403,6 +499,8 @@ impl Default for WorldSnapshot {
             terrains: None,
             tiles: Vec::new(),
             npcs: Vec::new(),
+            monsters: Vec::new(),
+            buildings: Vec::new(),
             player: SnapshotEntity::default(),
             pops: None,
             emotes: None,

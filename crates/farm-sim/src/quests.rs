@@ -60,6 +60,10 @@ fn complete_quest(ctx: &EngineContext, state: &mut GameState, quest_id: &str) ->
         let skill = quest.rewards.skill.as_deref().filter(|skill| !skill.is_empty()).unwrap_or(DEFAULT_REWARD_SKILL);
         effects.extend(skills::grant_xp(ctx, state, skill, experience));
     }
+    // A letter the quest sends (M6), arriving tomorrow.
+    if let Some(mail_id) = quest.rewards.mail_id.as_deref().filter(|id| !id.is_empty()) {
+        crate::mail::send(ctx, state, mail_id);
+    }
 
     // TS: { ...state.quests[questId], status: 'completed' }. A missing entry spreads to nothing,
     // so the completed entry has no `objectives` key (unlike the C#, which wrote an empty map).

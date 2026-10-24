@@ -72,11 +72,15 @@ pub fn handle_use_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
         // An item of an edible kind (M1) is eaten: one is used up for its energy.
         if let Some(category) = ctx.item_category(&slot.item.r#type).filter(|category| category.edible) {
             let energy = slot.item.energy.unwrap_or(category.energy);
+            let health = slot.item.health.unwrap_or(0);
             let name = slot.item.name.clone();
             state.player.inventory = inventory::remove_item(&state.player.inventory, item_id, 1);
             let max = state.player.max_energy;
             state.player.energy = state.player.energy.saturating_add(energy.max(0)).min(max.max(state.player.energy));
-            return vec![Effect::say(message_levels::SUCCESS, messages::ATE.with(&[&name]))];
+            // Food heals too, with combat on (M7).
+            let mut effects = if health > 0 { crate::combat::modify_health(ctx, state, health) } else { Vec::new() };
+            effects.push(Effect::say(message_levels::SUCCESS, messages::ATE.with(&[&name])));
+            return effects;
         }
         return vec![Effect::say(message_levels::INFO, messages::CANT_USE_LIKE_THAT.with(&[&slot.item.name]))];
     };

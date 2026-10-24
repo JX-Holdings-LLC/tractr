@@ -349,6 +349,10 @@ pub fn handle_pick_up_machine(ctx: &EngineContext, state: &mut GameState) -> Eff
     if machine.output.as_ref().is_some_and(|output| !output.is_empty()) {
         return vec![Effect::say(message_levels::INFO, &messages::COLLECT_FIRST)];
     }
+    // A chest or bin is emptied first (M5).
+    if crate::objects::holds_items(machine) {
+        return vec![Effect::say(message_levels::INFO, &messages::EMPTY_IT_FIRST)];
+    }
 
     let scene_id = scene.id.clone();
     let machine_type = ctx.machine_type(&machine.type_id);

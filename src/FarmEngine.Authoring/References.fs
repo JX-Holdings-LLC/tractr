@@ -45,6 +45,16 @@ type ReferenceKind =
     | Cutscene
     /// Who acts or speaks in a cutscene step (M2): the player or an NPC.
     | Actor
+    /// A building type (M5, `BuildingTypes`).
+    | Building
+    /// A building on the start map (M5, `GameProject.Buildings`).
+    | PlacedBuilding
+    /// Monsters (M7), collections, bundles, achievements and letters (M6).
+    | Monster
+    | Collection
+    | Bundle
+    | Achievement
+    | Mail
 
 module ReferenceKind =
     let all =
@@ -55,7 +65,8 @@ module ReferenceKind =
           ReferenceKind.Skill; ReferenceKind.Asset; ReferenceKind.Pack; ReferenceKind.StationCategory
           ReferenceKind.Terrain; ReferenceKind.Tool; ReferenceKind.ItemCategory; ReferenceKind.CropQuality
           ReferenceKind.CropMutation; ReferenceKind.Overlay; ReferenceKind.Sound; ReferenceKind.Music; ReferenceKind.Cutscene
-          ReferenceKind.Actor ]
+          ReferenceKind.Actor; ReferenceKind.Building; ReferenceKind.PlacedBuilding; ReferenceKind.Monster
+          ReferenceKind.Collection; ReferenceKind.Bundle; ReferenceKind.Achievement; ReferenceKind.Mail ]
 
     /// The name C# uses ("item", "npc", "nodeType", …).
     let name (kind: ReferenceKind) =
@@ -93,6 +104,13 @@ module ReferenceKind =
         | ReferenceKind.Music -> "music"
         | ReferenceKind.Cutscene -> "cutscene"
         | ReferenceKind.Actor -> "actor"
+        | ReferenceKind.Building -> "building"
+        | ReferenceKind.PlacedBuilding -> "placedBuilding"
+        | ReferenceKind.Monster -> "monster"
+        | ReferenceKind.Collection -> "collection"
+        | ReferenceKind.Bundle -> "bundle"
+        | ReferenceKind.Achievement -> "achievement"
+        | ReferenceKind.Mail -> "mail"
 
     let tryParse (text: string) = all |> List.tryFind (fun kind -> name kind = text)
 
@@ -167,7 +185,24 @@ module References =
           EventTriggers.Catch, "Catching a fish"
           EventTriggers.PickUp, "Picking up an item"
           EventTriggers.Friendship, "Friendship changes"
-          EventTriggers.Quest, "A quest starts or ends" ]
+          EventTriggers.Quest, "A quest starts or ends"
+          EventTriggers.Build, "A building is finished"
+          EventTriggers.Bundle, "A bundle is completed"
+          EventTriggers.Achievement, "An achievement is unlocked"
+          EventTriggers.Slay, "Slaying a monster" ]
+
+    /// How items join a collection (M6), with the editor's labels.
+    let collectionKinds =
+        [ CollectionKinds.Found, "Found (held once)"; CollectionKinds.Shipped, "Shipped (sold in a bin)"
+          CollectionKinds.Donated, "Donated (handed in)" ]
+
+    /// How monsters move (M7), with the editor's labels.
+    let monsterMovements =
+        [ MonsterMovements.Chase, "Chases the player"; MonsterMovements.Wander, "Wanders"; MonsterMovements.Still, "Stays still" ]
+
+    /// What placed objects do around them (M5), with the editor's labels.
+    let areaEffects =
+        [ AreaEffects.Water, "Waters the soil (sprinkler)"; AreaEffects.Protect, "Protects crops (scarecrow)" ]
 
     /// The relationship stages, with the editor's labels (M4).
     let relationshipStatuses =
@@ -313,6 +348,50 @@ module References =
           plain "Player" "Name" "the player's name (a new game may ask for it)"
           plain "Player" "FarmName" "the farm's name"
           oneOf "NpcSocialState" "Status" relationshipStatuses
+          // Building the farm (M5)
+          optionalAs "BuildingDefinition" "InteriorSceneId" ReferenceKind.Scene "(no interior)"
+          list "BuildingDefinition" "Scenes" ReferenceKind.Scene
+          optionalAs "BuildingDefinition" "UpgradeOf" ReferenceKind.Building "(built new)"
+          reference "BuildingState" "BuildingId" ReferenceKind.Building
+          reference "BuildingState" "SceneId" ReferenceKind.Scene
+          optionalAs "BuildingState" "InteriorSceneId" ReferenceKind.Scene "(made when it is built)"
+          optionalAs "BuildingState" "UpgradeTo" ReferenceKind.Building "(no upgrade under way)"
+          list "ShopDefinition" "Buildings" ReferenceKind.Building
+          list "ShopDefinition" "Animals" ReferenceKind.AnimalSpecies
+          list "AnimalSpeciesDefinition" "Housing" ReferenceKind.Building
+          reference "AnimalProduct" "ItemId" ReferenceKind.Item
+          reference "MoodQuality" "Quality" ReferenceKind.CropQuality
+          optionalAs "AnimalState" "BuildingId" ReferenceKind.PlacedBuilding "(no building)"
+          optionalAs "Scene" "Building" ReferenceKind.PlacedBuilding "(not a building's interior)"
+          oneOf "AreaEffect" "Effect" areaEffects
+          optionalAs "FarmSettings" "SceneId" ReferenceKind.Scene "(the start scene)"
+          reference "FarmLayout" "SceneId" ReferenceKind.Scene
+          // Long-term goals (M6)
+          list "CollectionDefinition" "Items" ReferenceKind.Item
+          oneOf "CollectionDefinition" "Kind" collectionKinds
+          optionalAs "CollectionDefinition" "SceneId" ReferenceKind.Scene "(anywhere)"
+          reference "BundleItem" "ItemId" ReferenceKind.Item
+          optionalAs "BundleItem" "Quality" ReferenceKind.CropQuality "(any quality)"
+          optionalAs "BundleDefinition" "SceneId" ReferenceKind.Scene "(anywhere)"
+          plain "AchievementDefinition" "SteamId" "the achievement's id on Steam, for a Steamworks export"
+          optionalAs "MailDefinition" "From" ReferenceKind.Npc "(no sender)"
+          optional "EventOutcome" "MailId" ReferenceKind.Mail
+          optional "QuestRewards" "MailId" ReferenceKind.Mail
+          reference "SkillLevelCondition" "Skill" ReferenceKind.Skill
+          reference "CollectionCondition" "CollectionId" ReferenceKind.Collection
+          reference "BundleCondition" "BundleId" ReferenceKind.Bundle
+          reference "AchievementCondition" "AchievementId" ReferenceKind.Achievement
+          optionalAs "ShippedCondition" "ItemId" ReferenceKind.Item "(everything)"
+          reference "BuildingCondition" "BuildingId" ReferenceKind.Building
+          optionalAs "SlainCondition" "MonsterId" ReferenceKind.Monster "(any monster)"
+          optionalAs "BirthdayCondition" "NpcId" ReferenceKind.Npc "(anyone's)"
+          // Combat and adventure (M7)
+          optionalAs "CombatSettings" "FaintSceneId" ReferenceKind.Scene "(the start scene)"
+          oneOf "MonsterDefinition" "Movement" monsterMovements
+          reference "MonsterSpawn" "MonsterId" ReferenceKind.Monster
+          reference "MineMonsterWeight" "MonsterId" ReferenceKind.Monster
+          reference "MineHazard" "TerrainId" ReferenceKind.Terrain
+          reference "MineTreasure" "ItemId" ReferenceKind.Item
           // Economy, crafting, gathering
           reference "ShopStockEntry" "ItemId" ReferenceKind.Item
           list "ShopStockEntry" "Seasons" ReferenceKind.Season
@@ -493,6 +572,19 @@ module References =
         | ReferenceKind.Cutscene -> defaultArg project.Cutscenes [] |> entries (fun c -> c.Id) (fun c -> named c.Name)
         | ReferenceKind.Actor ->
             ("player", "Player") :: (project.Npcs |> List.map (fun n -> n.Id, n.Name)) |> entries fst (snd >> named)
+        | ReferenceKind.Building -> defaultArg project.BuildingTypes [] |> entries (fun b -> b.Id) (fun b -> named b.Name)
+        | ReferenceKind.PlacedBuilding ->
+            let names = defaultArg project.BuildingTypes [] |> List.map (fun b -> b.Id, b.Name) |> dict
+            let kind (b: BuildingState) =
+                match names.TryGetValue b.BuildingId with
+                | true, name -> name
+                | _ -> b.BuildingId
+            defaultArg project.Buildings [] |> entries (fun b -> b.Id) (fun b -> named (sprintf "%s at %s (%g,%g)" (kind b) b.SceneId b.X b.Y))
+        | ReferenceKind.Monster -> defaultArg project.Monsters [] |> entries (fun m -> m.Id) (fun m -> named m.Name)
+        | ReferenceKind.Collection -> defaultArg project.Collections [] |> entries (fun c -> c.Id) (fun c -> named c.Name)
+        | ReferenceKind.Bundle -> defaultArg project.Bundles [] |> entries (fun b -> b.Id) (fun b -> named b.Name)
+        | ReferenceKind.Achievement -> defaultArg project.Achievements [] |> entries (fun a -> a.Id) (fun a -> named a.Name)
+        | ReferenceKind.Mail -> defaultArg project.Mail [] |> entries (fun m -> m.Id) (fun m -> named (shorten m.Subject))
 
     /// A picker's entries: the "nothing chosen" entry when `empty` allows it, a "(missing: id)"
     /// entry when `current` names something that is not among `available`, then `available`.

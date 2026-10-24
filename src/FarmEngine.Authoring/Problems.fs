@@ -57,6 +57,13 @@ module Problems =
         | "minigames" :: _ -> item project.Minigames (fun m -> m.Id) NavigationTarget.Minigame
         | "contentPacks" :: _ -> item project.ContentPacks (fun p -> p.Pack.Manifest.Id) NavigationTarget.Pack
         | "customAssets" :: _ -> item project.CustomAssets (fun a -> a.Id) NavigationTarget.Asset
+        | "buildingTypes" :: _ -> item (defaultArg project.BuildingTypes []) (fun b -> b.Id) NavigationTarget.Building
+        | "buildings" :: _ -> item (defaultArg project.Buildings []) (fun b -> b.Id) NavigationTarget.PlacedBuilding
+        | "monsters" :: _ -> item (defaultArg project.Monsters []) (fun m -> m.Id) NavigationTarget.Monster
+        | "collections" :: _ -> item (defaultArg project.Collections []) (fun c -> c.Id) NavigationTarget.Collection
+        | "bundles" :: _ -> item (defaultArg project.Bundles []) (fun b -> b.Id) NavigationTarget.Bundle
+        | "achievements" :: _ -> item (defaultArg project.Achievements []) (fun a -> a.Id) NavigationTarget.Achievement
+        | "mail" :: _ -> item (defaultArg project.Mail []) (fun m -> m.Id) NavigationTarget.Mail
         | "customCrops" :: _ ->
             match project.CustomCrops with
             | None -> None

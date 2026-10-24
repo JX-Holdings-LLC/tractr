@@ -80,6 +80,12 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         crop_mutations: over_builtins(content_builtin::crop_mutations(), project.crop_mutations.as_deref(), |d| &d.id),
         cutscenes: project.cutscenes.clone().unwrap_or_default(),
         heart_events: project.heart_events.clone().unwrap_or_default(),
+        building_types: project.building_types.clone().unwrap_or_default(),
+        collections: project.collections.clone().unwrap_or_default(),
+        bundles: project.bundles.clone().unwrap_or_default(),
+        achievements: project.achievements.clone().unwrap_or_default(),
+        mail: project.mail.clone().unwrap_or_default(),
+        monsters: project.monsters.clone().unwrap_or_default(),
     }
 }
 
@@ -176,6 +182,9 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
             farm_name: start.player.farm_name.clone().unwrap_or_default(),
             look: start.player.look.clone(),
             worn: start.player.worn.clone().unwrap_or_default(),
+            health: crate::combat::max_health(&resolved_settings)
+                .map(|max| start.player.health.unwrap_or(max).clamp(0, max)),
+            hurt: 0,
         },
         npcs,
         quests,
@@ -198,6 +207,19 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
         cutscene: None,
         children: Vec::new(),
         shop_changes: IndexMap::new(),
+        storage: None,
+        buildings: start.buildings.clone(),
+        farm_layout: None,
+        shipped: IndexMap::new(),
+        last_shipment: Vec::new(),
+        collections: IndexMap::new(),
+        bundles: IndexMap::new(),
+        achievements: IndexMap::new(),
+        mailbox: Vec::new(),
+        mail_queue: Vec::new(),
+        monsters: Vec::new(),
+        next_monster: 0,
+        slain: IndexMap::new(),
     };
 
     // Grids that don't match their scene's size (a hand-edited project, an import) are fixed
@@ -327,6 +349,9 @@ pub fn apply_state_to_project(project: &GameProject, state: &GameState) -> GameP
     next.player.farm_name = Some(state.player.farm_name.clone()).filter(|name| !name.is_empty());
     next.player.look.clone_from(&state.player.look);
     next.player.worn = Some(state.player.worn.clone()).filter(|worn| !worn.is_empty());
+    // Health (M7) and the buildings on the map (M5).
+    next.player.health = state.player.health;
+    next.buildings = Some(state.buildings.clone()).filter(|buildings| !buildings.is_empty());
     // Flag values go back as they are: plugins store numbers and strings (#36).
     next.event_flags = state.flags.clone();
     next.animals = state.animals.clone();
@@ -353,8 +378,9 @@ fn kept_day_of_season(calendar: &CalendarConfig, clock: &ClockState) -> Option<u
 }
 
 /// Top-level project keys [`apply_state_to_project`] writes.
-const SYNCED_PROJECT_KEYS: [&str; 14] = [
+const SYNCED_PROJECT_KEYS: [&str; 15] = [
     "scenes",
+    "buildings",
     "animals",
     "eventFlags",
     "socialState",
@@ -371,7 +397,7 @@ const SYNCED_PROJECT_KEYS: [&str; 14] = [
 ];
 
 /// Player keys [`apply_state_to_project`] writes.
-const SYNCED_PLAYER_KEYS: [&str; 17] = [
+const SYNCED_PLAYER_KEYS: [&str; 18] = [
     "x",
     "y",
     "direction",
@@ -389,6 +415,7 @@ const SYNCED_PLAYER_KEYS: [&str; 17] = [
     "farmName",
     "look",
     "worn",
+    "health",
 ];
 
 /// [`apply_state_to_project`] on the project's JSON: the keys the state writes back come from

@@ -190,6 +190,76 @@ pub enum EventCondition {
         #[serde(default)]
         status: String,
     },
+    /// The player has at least `min` money (M6).
+    #[serde(rename = "money")]
+    Money {
+        #[serde(default, with = "crate::units::money")]
+        min: i64,
+    },
+    /// The player's level in a skill is at least `min` (M6).
+    #[serde(rename = "skillLevel")]
+    SkillLevel {
+        #[serde(default)]
+        skill: String,
+        #[serde(default = "one", with = "crate::units::count")]
+        min: u32,
+    },
+    /// The deepest mine floor reached is at least `min` (M6).
+    #[serde(rename = "mineFloor")]
+    MineFloor {
+        #[serde(default = "one", with = "crate::units::count")]
+        min: u32,
+    },
+    /// A collection holds at least `min` items; absent `min`: all of its items (M6).
+    #[serde(rename = "collection")]
+    Collection {
+        #[serde(default)]
+        collection_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+        min: Option<u32>,
+    },
+    /// A bundle is complete (M6).
+    #[serde(rename = "bundle")]
+    Bundle {
+        #[serde(default)]
+        bundle_id: String,
+    },
+    /// An achievement is unlocked (M6).
+    #[serde(rename = "achievement")]
+    Achievement {
+        #[serde(default)]
+        achievement_id: String,
+    },
+    /// At least `min` units shipped of an item; an empty `itemId`: of everything (M6).
+    #[serde(rename = "shipped")]
+    Shipped {
+        #[serde(default)]
+        item_id: String,
+        #[serde(default = "one", with = "crate::units::count")]
+        min: u32,
+    },
+    /// At least `min` standing buildings of a kind, its upgrades counting (M5).
+    #[serde(rename = "building")]
+    Building {
+        #[serde(default)]
+        building_id: String,
+        #[serde(default = "one", with = "crate::units::count")]
+        min: u32,
+    },
+    /// At least `min` monsters slain of a kind; an empty `monsterId`: of any (M7).
+    #[serde(rename = "slain")]
+    Slain {
+        #[serde(default)]
+        monster_id: String,
+        #[serde(default = "one", with = "crate::units::count")]
+        min: u32,
+    },
+    /// Today is an NPC's birthday; an empty `npcId`: anyone's (M6).
+    #[serde(rename = "birthday")]
+    Birthday {
+        #[serde(default)]
+        npc_id: String,
+    },
 }
 
 fn default_compare() -> String {
@@ -244,6 +314,16 @@ impl EventCondition {
             Self::Hearts { .. } => "hearts",
             Self::DayOfSeason { .. } => "dayOfSeason",
             Self::Relationship { .. } => "relationship",
+            Self::Money { .. } => "money",
+            Self::SkillLevel { .. } => "skillLevel",
+            Self::MineFloor { .. } => "mineFloor",
+            Self::Collection { .. } => "collection",
+            Self::Bundle { .. } => "bundle",
+            Self::Achievement { .. } => "achievement",
+            Self::Shipped { .. } => "shipped",
+            Self::Building { .. } => "building",
+            Self::Slain { .. } => "slain",
+            Self::Birthday { .. } => "birthday",
         }
     }
 }
@@ -302,6 +382,10 @@ pub mod event_outcome_types {
     pub const REMOVE_MACHINE: &str = "removeMachine";
     /// Change the player's relationship with an NPC (`status`, M4).
     pub const SET_RELATIONSHIP: &str = "setRelationship";
+    /// Send a letter (`mailId`, M6): it arrives the next morning.
+    pub const SEND_MAIL: &str = "sendMail";
+    /// Restore (or, negative, take) `amount` health (M7).
+    pub const MODIFY_HEALTH: &str = "modifyHealth";
 
     pub const ALL: &[&str] = &[
         MESSAGE,
@@ -340,6 +424,8 @@ pub mod event_outcome_types {
         PLACE_MACHINE,
         REMOVE_MACHINE,
         SET_RELATIONSHIP,
+        SEND_MAIL,
+        MODIFY_HEALTH,
     ];
 }
 
@@ -385,11 +471,13 @@ pub enum OutcomeKind {
     PlaceMachine,
     RemoveMachine,
     SetRelationship,
+    SendMail,
+    ModifyHealth,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 36] = [
+    pub const ALL: [OutcomeKind; 38] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -426,6 +514,8 @@ impl OutcomeKind {
         Self::PlaceMachine,
         Self::RemoveMachine,
         Self::SetRelationship,
+        Self::SendMail,
+        Self::ModifyHealth,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -468,6 +558,8 @@ impl OutcomeKind {
             Self::PlaceMachine => t::PLACE_MACHINE,
             Self::RemoveMachine => t::REMOVE_MACHINE,
             Self::SetRelationship => t::SET_RELATIONSHIP,
+            Self::SendMail => t::SEND_MAIL,
+            Self::ModifyHealth => t::MODIFY_HEALTH,
         }
     }
 
@@ -551,6 +643,9 @@ pub struct EventOutcome {
     /// The relationship `setRelationship` sets (M4), one of [`super::relationship_statuses`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+    /// The letter `sendMail` sends (M6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mail_id: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -591,9 +686,33 @@ pub mod event_triggers {
     pub const FRIENDSHIP: &str = "friendship";
     /// A quest started or was completed (subject: the quest, M3).
     pub const QUEST: &str = "quest";
+    /// A building was finished or upgraded (subject: the building kind, M5).
+    pub const BUILD: &str = "build";
+    /// A bundle was completed (subject: the bundle, M6).
+    pub const BUNDLE: &str = "bundle";
+    /// An achievement was unlocked (subject: the achievement, M6).
+    pub const ACHIEVEMENT: &str = "achievement";
+    /// A monster was slain (subject: the monster kind, M7).
+    pub const SLAY: &str = "slay";
 
-    pub const ALL: &[&str] =
-        &[ENTER, INTERACT, TICK, DAY_START, TIME, HARVEST, SELL, CRAFT, CATCH, PICK_UP, FRIENDSHIP, QUEST];
+    pub const ALL: &[&str] = &[
+        ENTER,
+        INTERACT,
+        TICK,
+        DAY_START,
+        TIME,
+        HARVEST,
+        SELL,
+        CRAFT,
+        CATCH,
+        PICK_UP,
+        FRIENDSHIP,
+        QUEST,
+        BUILD,
+        BUNDLE,
+        ACHIEVEMENT,
+        SLAY,
+    ];
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]

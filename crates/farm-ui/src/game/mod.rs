@@ -1,20 +1,29 @@
 //! The play screens (ports of the editor's Play Mode overlays, `PlayModeView.cs`,
 //! `PlayOverlays.cs`, `MinigameOverlay.cs`, `ToastHost.cs`): the HUD with its toolbar and
 //! controls hints, creator game panels, dialogue, shop, crafting, inventory, quest log,
-//! minigames and toasts.
+//! minigames and toasts; and the farm-building, goals and combat screens (M5–M7): chests and
+//! shipping bins, a builder's shop with its placement map, the goals panel, the mailbox and
+//! the health bar.
 //!
 //! [`GameUi::draw`] reads a [`GameView`] (the live state plus rule queries from
 //! `farm_sim::overlay`) and returns [`GameAction`]s; every gameplay action is an engine command.
 
+mod building;
 mod crafting;
 mod cutscene;
 mod dialogue;
+mod goals;
 mod hud;
 mod inventory;
+mod mail;
 mod minigame;
 mod quests;
 mod shop;
+mod storage;
 mod toasts;
+
+pub use building::Placement;
+pub use goals::GoalsTab;
 
 pub use toasts::{
     toast_lifetime, Toast, ToastKind, Toasts, MAX_TOAST_LIFETIME, MAX_VISIBLE as MAX_TOASTS, TOAST_LIFETIME,
@@ -24,6 +33,7 @@ use crate::i18n::Lang;
 use crate::icons::{self, Icon};
 use crate::layout::RectExt;
 use crate::settings::Bindings;
+use crate::theme;
 use crate::ui::Ui;
 use farm_render::graphics::ArtAsset;
 use farm_render::{resolve_visual, BuiltinArt, DrawCmd, ImageStore, Rect, Sampling, SnapshotSprite};
@@ -31,7 +41,7 @@ use farm_runtime::host::{CalendarView, MinigameInput, MinigameView};
 use farm_runtime::panels::PanelView;
 use farm_sim::overlay::OverlayView;
 use farm_sim::schema::{GameContent, GameState, GameWords, Item, ItemCategoryDefinition};
-use farm_sim::Command;
+use farm_sim::{Command, EngineContext};
 
 /// A host panel over the game (web `showInventory` / `showQuests` / `showCrafting`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +49,10 @@ pub enum Panel {
     Inventory,
     Quests,
     Crafting,
+    /// Collections, bundles, achievements and the shipping log (M6).
+    Goals,
+    /// The mailbox (M6).
+    Mail,
 }
 
 /// The shop dialog's tab.
@@ -48,6 +62,10 @@ pub enum ShopTab {
     Buy,
     Sell,
     Repair,
+    /// A builder's buildings and upgrades (M5).
+    Build,
+    /// The animals a shop sells (M5).
+    Animals,
 }
 
 /// What the player asked for this frame.
@@ -121,6 +139,9 @@ pub struct ItemArt<'a> {
 pub struct GameView<'a> {
     pub state: &'a GameState,
     pub content: &'a GameContent,
+    /// The engine's context (rule queries such as `farm_sim::overlay::site_status`); its
+    /// content is [`GameView::content`].
+    pub ctx: &'a EngineContext,
     pub overlay: &'a OverlayView<'a>,
     pub calendar: &'a CalendarView,
     /// Creator game panels (`farm_runtime::panels::render`).
@@ -145,6 +166,31 @@ pub struct GameUi {
     pub toasts: Toasts,
     /// What the player holds for planting (kept here, sent with each interact by the host).
     pub planting: Planting,
+    /// A building being placed from the open builder's shop (M5): the shop stays open behind
+    /// the placement map, so `orderBuilding` is sent while it is.
+    pub placement: Option<Placement>,
+    /// The goals panel's tab (M6).
+    pub goals_tab: GoalsTab,
+    /// The letter open in the mailbox (M6): its index in `state.mailbox`.
+    pub letter: Option<usize>,
+    /// The player's health last frame (M7): a drop flashes the world red until `hurt_until`
+    /// (UI seconds).
+    pub last_health: Option<i32>,
+    pub hurt_until: f64,
+}
+
+/// How long the screen flashes red after the player is hurt, in seconds.
+const HURT_FLASH: f64 = 0.35;
+
+/// Whether the game has anything for the goals panel (M6): collections, bundles, achievements
+/// or a shipping bin.
+pub fn has_goals(content: &GameContent) -> bool {
+    !goals::tabs(content).is_empty()
+}
+
+/// Whether the game sends letters (M6).
+pub fn has_mail(content: &GameContent) -> bool {
+    !content.mail.is_empty()
 }
 
 impl GameUi {
@@ -157,19 +203,46 @@ impl GameUi {
         let mut actions = Vec::new();
         if view.state.shop.is_none() {
             self.shop_tab = ShopTab::Buy;
+            self.placement = None;
+        }
+        if self.panel != Some(Panel::Mail) {
+            self.letter = None;
         }
         self.planting.retain_held(view.state);
+        // A hit (M7) flashes the world red for a moment.
+        let health = view.state.player.health;
+        if let (Some(now), Some(before)) = (health, self.last_health) {
+            if now < before {
+                self.hurt_until = ui.time() + HURT_FLASH;
+            }
+        }
+        self.last_health = health;
+        let flash = (self.hurt_until - ui.time()) / HURT_FLASH;
+        if flash > 0.0 && !ui.reduced_motion() {
+            let red = theme::fade(farm_render::Color::rgb(0xd0, 0x30, 0x30), 0.35 * flash.min(1.0) as f32);
+            ui.tint_world(red, red);
+        }
         let hud_bottom = hud::draw(ui, view, &mut actions);
         self.toasts.top = hud_bottom + 12.0;
         match self.panel {
             Some(Panel::Inventory) => inventory::draw(ui, view, images, &mut actions),
             Some(Panel::Quests) => quests::draw(ui, view, &mut actions),
             Some(Panel::Crafting) => crafting::draw(ui, view, &mut actions),
+            Some(Panel::Goals) => goals::draw(ui, view, &mut self.goals_tab, &mut actions),
+            Some(Panel::Mail) => mail::draw(ui, view, images, &mut self.letter, &mut actions),
             None => {}
         }
         // Under the dialogue, shop or minigame a cutscene step opened.
         cutscene::draw(ui, view, images, &mut actions);
-        shop::draw(ui, view, &mut self.shop_tab, &mut actions);
+        match &mut self.placement {
+            Some(placement) if view.state.shop.is_some() => {
+                if !building::place(ui, view, placement, &mut actions) {
+                    self.placement = None;
+                }
+            }
+            _ => shop::draw(ui, view, &mut self.shop_tab, &mut self.placement, &mut actions),
+        }
+        storage::draw(ui, view, images, &mut actions);
         dialogue::draw(ui, view, images, &mut actions);
         minigame::draw(ui, view, images, &mut actions);
         actions
@@ -178,6 +251,12 @@ impl GameUi {
     /// Toggles a host panel (the same panel closes it).
     pub fn toggle(&mut self, panel: Panel) {
         self.panel = if self.panel == Some(panel) { None } else { Some(panel) };
+    }
+
+    /// Whether the play screens hold the keys themselves this frame: a host panel, or the
+    /// placement map over a builder's shop (Escape cancels it instead of closing the shop).
+    pub fn host_modal_open(&self) -> bool {
+        self.panel.is_some() || self.placement.is_some()
     }
 
     /// Draws the toasts (call last, above every other layer).
@@ -314,3 +393,5 @@ pub(crate) fn item_name<'a>(content: &'a GameContent, item_id: &'a str) -> &'a s
 pub(crate) mod test_support;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_farm;

@@ -128,6 +128,66 @@ pub enum Command {
         #[serde(default)]
         look: PlayerLook,
     },
+    /// Put items into the open chest or shipping bin (M5); absent `quality`: any, lowest first.
+    #[serde(rename = "storeItem")]
+    StoreItem {
+        item_id: String,
+        #[serde(with = "crate::units::count")]
+        quantity: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        quality: Option<String>,
+    },
+    /// Take items from slot `index` of the open chest or shipping bin back (M5).
+    #[serde(rename = "takeStoredItem")]
+    TakeStoredItem {
+        #[serde(with = "crate::units::index")]
+        index: i32,
+        #[serde(with = "crate::units::count")]
+        quantity: u32,
+    },
+    #[serde(rename = "closeStorage")]
+    CloseStorage,
+    /// Order a building from the open shop's builder (M5), its top-left tile at `(x, y)`.
+    #[serde(rename = "orderBuilding")]
+    OrderBuilding {
+        building_id: String,
+        scene_id: String,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+    },
+    /// Upgrade a standing building (`id`, a building on the map) into `buildingId` (M5).
+    #[serde(rename = "upgradeBuilding")]
+    UpgradeBuilding { id: String, building_id: String },
+    /// Buy an animal from the open shop into a building that houses it (M5).
+    #[serde(rename = "buyAnimal")]
+    BuyAnimal {
+        species_id: String,
+        /// The building on the map it goes to.
+        building: String,
+        #[serde(default)]
+        name: String,
+    },
+    /// The farm map of a new game (M5). Only before the first tick.
+    #[serde(rename = "chooseFarmLayout")]
+    ChooseFarmLayout { layout_id: String },
+    /// Hand an item in to a collection that takes donations (M6).
+    #[serde(rename = "donateItem")]
+    DonateItem { collection_id: String, item_id: String },
+    /// Hand in what a bundle line still needs (M6).
+    #[serde(rename = "handInBundle")]
+    HandInBundle {
+        bundle_id: String,
+        #[serde(with = "crate::units::index")]
+        line: i32,
+    },
+    /// Read letter `index` of the mailbox, taking what it holds (M6).
+    #[serde(rename = "readMail")]
+    ReadMail {
+        #[serde(with = "crate::units::index")]
+        index: i32,
+    },
     /// A validated mutation returned by a sandboxed plugin hook (M5).
     #[serde(rename = "pluginMutation")]
     PluginMutation { plugin_id: String, mutation: PluginMutation },
@@ -168,6 +228,16 @@ impl Command {
             Self::WearItem { .. } => "wearItem",
             Self::TakeOff { .. } => "takeOff",
             Self::SetPlayerLook { .. } => "setPlayerLook",
+            Self::StoreItem { .. } => "storeItem",
+            Self::TakeStoredItem { .. } => "takeStoredItem",
+            Self::CloseStorage => "closeStorage",
+            Self::OrderBuilding { .. } => "orderBuilding",
+            Self::UpgradeBuilding { .. } => "upgradeBuilding",
+            Self::BuyAnimal { .. } => "buyAnimal",
+            Self::ChooseFarmLayout { .. } => "chooseFarmLayout",
+            Self::DonateItem { .. } => "donateItem",
+            Self::HandInBundle { .. } => "handInBundle",
+            Self::ReadMail { .. } => "readMail",
             Self::PluginMutation { .. } => "pluginMutation",
         }
     }

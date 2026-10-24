@@ -36,6 +36,12 @@ pub struct ShopDefinition {
     pub repairs_tools: bool,
     #[serde(with = "crate::units::milli")]
     pub repair_cost_per_point: u32,
+    /// Buildings it builds and upgrades (M5): a builder.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<String>,
+    /// Animal species it sells (M5).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub animals: Vec<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -50,6 +56,8 @@ impl Default for ShopDefinition {
             buys_items: true,
             repairs_tools: false,
             repair_cost_per_point: 500,
+            buildings: Vec::new(),
+            animals: Vec::new(),
             extra: Map::new(),
         }
     }

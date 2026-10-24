@@ -258,6 +258,15 @@ internal sealed class ContentForm : IContentDraft
         {
             AddProperty(panel, target, type, property, Join(path, property.Name));
         }
+
+        // A building on the start map (M5) takes its top-left tile from the map.
+        if (type == typeof(BuildingState) && path.Length == 0
+            && panel.Children.OfType<TextBox>().FirstOrDefault(box => box.Name == "ContentField_X") is { } x
+            && panel.Children.OfType<TextBox>().FirstOrDefault(box => box.Name == "ContentField_Y") is { } y
+            && PickButton("ContentPick_X", "the building's top-left tile", () => StringOf(target["sceneId"]) ?? "", x, y) is { } pick)
+        {
+            panel.Children.Insert(panel.Children.IndexOf(y) + 1, pick);
+        }
     }
 
     private void AddProperty(Panel panel, JsonObject target, Type owner, PropertyInfo property, string path)

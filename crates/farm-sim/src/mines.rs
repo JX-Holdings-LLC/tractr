@@ -4,8 +4,8 @@
 //! Floors are transient world scenes that are NOT synced back to the project — leaving and
 //! re-entering regenerates the identical layout (state on a floor resets when you leave,
 //! genre-standard and deliberate). Ladders down are revealed by breaking rocks; elevator
-//! checkpoints every N floors let you skip ahead. Hazards v1 = the energy cost of swinging your
-//! pickaxe (combat is an explicit non-goal until demanded).
+//! checkpoints every N floors let you skip ahead. A depth band may also scatter hazard terrain
+//! and leave treasure on its floors, and (with combat on) put monsters there (M7).
 
 use crate::effects::Effect;
 use crate::engine_types::{Effects, EngineContext};
@@ -47,7 +47,8 @@ pub fn floor_side(configured: u32) -> i32 {
     i32::try_from(configured).unwrap_or(i32::MAX).clamp(MIN_FLOOR_SIZE, MAX_SCENE_SIZE)
 }
 
-fn band_for_floor(config: &MineConfig, floor: u32) -> Option<&MineBand> {
+/// The depth band of `floor`: the band that holds it, else the last band.
+pub fn band_for_floor(config: &MineConfig, floor: u32) -> Option<&MineBand> {
     config.bands.iter().find(|band| floor >= band.from_floor && floor <= band.to_floor).or_else(|| config.bands.last())
 }
 
@@ -89,6 +90,8 @@ pub fn generate_mine_floor(ctx: &EngineContext, engine_seed: &str, floor: u32) -
                 place_rock(ctx, band, &weights, &mut rng, &mut scene, x, y, x == entry_x && y == entry_y);
             }
         }
+        // Hazards and treasure (M7), after the rocks (which they leave as they were).
+        scatter_hazards_and_treasure(ctx, band, &mut rng, &mut scene);
     }
 
     // Mark the scene as generated so the project bridge skips it and `exitMine` drops it.
@@ -96,6 +99,67 @@ pub fn generate_mine_floor(ctx: &EngineContext, engine_seed: &str, floor: u32) -
     // Underground: the weather stays outside.
     scene.indoor = Some(true);
     scene
+}
+
+/// Hazard terrain on the overlay of free floor tiles (each band hazard by its density), then
+/// `treasureCount` weighted treasures left on free tiles. The entry and its neighbours stay
+/// clear. Nothing is drawn for a band without either.
+fn scatter_hazards_and_treasure(ctx: &EngineContext, band: &MineBand, rng: &mut Rng, scene: &mut Scene) {
+    if band.hazards.is_empty() && (band.treasure.is_empty() || band.treasure_count == 0) {
+        return;
+    }
+    let (entry_x, entry_y) = FLOOR_ENTRY;
+    let near_entry = |x: i32, y: i32| (x - entry_x).abs() <= 1 && (y - entry_y).abs() <= 1;
+    let free = |scene: &Scene, x: i32, y: i32| {
+        scene
+            .tile(x, y)
+            .is_some_and(|tile| !tile.collision && tile.node.is_none() && tile.item.is_none() && tile.overlay.is_none())
+            && !near_entry(x, y)
+    };
+    for hazard in &band.hazards {
+        if ctx.terrain(&hazard.terrain_id).is_none() {
+            continue;
+        }
+        for y in 1..scene.height - 1 {
+            for x in 1..scene.width - 1 {
+                if !free(scene, x, y) {
+                    continue;
+                }
+                if u64::from(rng.next_u32()) * u64::from(units::MILLI_ONE)
+                    < u64::from(hazard.density) * units::PROBABILITY_ONE
+                {
+                    if let Some(tile) = scene.tile_mut(x, y) {
+                        tile.overlay = Some(hazard.terrain_id.clone());
+                    }
+                }
+            }
+        }
+    }
+    if band.treasure.is_empty() {
+        return;
+    }
+    let weights: Vec<u32> = band.treasure.iter().map(|entry| entry.weight).collect();
+    let mut open: Vec<(i32, i32)> = Vec::new();
+    for y in 1..scene.height - 1 {
+        for x in 1..scene.width - 1 {
+            if free(scene, x, y) {
+                open.push((x, y));
+            }
+        }
+    }
+    for _ in 0..band.treasure_count.min(32) {
+        if open.is_empty() {
+            break;
+        }
+        let pick = rng.int(0, open.len() as i64 - 1) as usize;
+        let (x, y) = open.remove(pick);
+        let Some(item) = rng.weighted(&weights).and_then(|index| ctx.item(&band.treasure[index].item_id)) else {
+            continue;
+        };
+        if let Some(tile) = scene.tile_mut(x, y) {
+            tile.item = Some(item.clone());
+        }
+    }
 }
 
 /// One interior tile of the generation loop (each C# `continue` is an early return). Draws
@@ -148,6 +212,7 @@ pub fn descend_mine(ctx: &EngineContext, state: &mut GameState, to_floor: u32) -
     let (entry_x, entry_y) = FLOOR_ENTRY;
     world_movement::put_player(state, &scene_id, units::tile_center(entry_x), units::tile_center(entry_y));
     state.mine = MineProgress { current_floor: floor, deepest_floor: state.mine.deepest_floor.max(floor) };
+    crate::combat::spawn_floor(ctx, state, &scene_id, floor);
 
     // `floor % 0` is NaN in JS: never a checkpoint.
     let checkpoint = floor.checked_rem(config.elevator_every) == Some(0);
@@ -222,6 +287,7 @@ pub fn exit_mine(ctx: &EngineContext, state: &mut GameState) -> Effects {
     // Drop generated floors so they regenerate fresh next visit. Authored scenes stay, whatever
     // their id.
     state.world.scenes.retain(|scene| !(scene.is_generated() && is_mine_scene(&scene.id)));
+    state.monsters.retain(|monster| !is_mine_scene(&monster.scene_id));
     world_movement::put_player(state, &target_scene_id, units::tile_center(x), units::tile_center(y));
     state.mine.current_floor = 0;
 

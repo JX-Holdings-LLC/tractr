@@ -1,7 +1,9 @@
 //! The shop (web ShopDialog, C# `PlayOverlays.Shop`): buy the season's stock within daily limits,
-//! sell inventory, repair tools. Buttons are enabled from the engine's own numbers (stock left
-//! from `farm_sim::overlay`); the purchase itself is an engine command that checks again.
+//! sell inventory, repair tools; a builder's buildings and the animals a shop sells (M5,
+//! [`super::building`]). Buttons are enabled from the engine's own numbers (stock left from
+//! `farm_sim::overlay`); the purchase itself is an engine command that checks again.
 
+use super::building::{self, Placement};
 use super::{right_aligned, row, GameAction, GameView, ShopTab};
 use crate::format::num;
 use crate::icons::Icon;
@@ -21,11 +23,20 @@ fn tab_names(tab: ShopTab) -> (&'static str, &'static str) {
         ShopTab::Buy => ("Buy", "shop.buy"),
         ShopTab::Sell => ("Sell", "shop.sell"),
         ShopTab::Repair => ("Repair", "shop.repair"),
+        ShopTab::Build => ("Build", "shop.build"),
+        ShopTab::Animals => ("Animals", "shop.animals"),
     }
 }
 
 /// Title and detail lines in a row's content area.
-fn two_lines(ui: &mut Ui, area: Rect, title: &str, trailing: Option<&str>, detail: &str, detail_error: bool) {
+pub(crate) fn two_lines(
+    ui: &mut Ui,
+    area: Rect,
+    title: &str,
+    trailing: Option<&str>,
+    detail: &str,
+    detail_error: bool,
+) {
     let colors = ui.theme().colors;
     let title_height = ui.line_height(14.0);
     let detail_height = ui.line_height(12.5);
@@ -47,7 +58,13 @@ fn two_lines(ui: &mut Ui, area: Rect, title: &str, trailing: Option<&str>, detai
     );
 }
 
-pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions: &mut Vec<GameAction>) {
+pub(crate) fn draw(
+    ui: &mut Ui,
+    view: &GameView<'_>,
+    tab: &mut ShopTab,
+    placement: &mut Option<Placement>,
+    actions: &mut Vec<GameAction>,
+) {
     if view.state.shop.is_none() {
         return;
     }
@@ -57,7 +74,19 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
     let colors = ui.theme().colors;
     let lang = ui.lang();
 
-    let mut tabs = vec![ShopTab::Buy];
+    // A builder or an animal shop without stock opens on what it does sell.
+    let builds = !view.overlay.building_options.is_empty();
+    let animals = !view.overlay.animal_options.is_empty();
+    let mut tabs = Vec::new();
+    if !shop.stock.is_empty() || !(builds || animals) {
+        tabs.push(ShopTab::Buy);
+    }
+    if builds {
+        tabs.push(ShopTab::Build);
+    }
+    if animals {
+        tabs.push(ShopTab::Animals);
+    }
     if shop.buys_items {
         tabs.push(ShopTab::Sell);
     }
@@ -65,7 +94,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
         tabs.push(ShopTab::Repair);
     }
     if !tabs.contains(tab) {
-        *tab = ShopTab::Buy;
+        *tab = tabs[0];
     }
     if view.keys_active && ui.tab_delta() != 0 {
         let current = tabs.iter().position(|t| t == tab).unwrap_or(0) as i32;
@@ -108,6 +137,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
     let small = ui.button_height(12.5);
     let row_height = (ui.line_height(14.0) + ui.line_height(12.5) + 16.0).max(small + 16.0);
     match *tab {
+        ShopTab::Build => y = building::build_rows(ui, view, area, y, placement, actions),
+        ShopTab::Animals => y = building::animal_rows(ui, view, area, y, actions),
         ShopTab::Sell => {
             // One row per item and quality, totalled across the slots holding it.
             let mut sellable: Vec<(&InventorySlot, u32)> = Vec::new();

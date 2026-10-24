@@ -33,7 +33,17 @@ pub(crate) fn starter_project() -> GameProject {
 
 impl Fixture {
     pub fn starter() -> Self {
-        let project = starter_project();
+        Self::of_project(starter_project())
+    }
+
+    /// The starter farm with `change` made to its project first (content the engine indexes).
+    pub fn with(change: impl FnOnce(&mut GameProject)) -> Self {
+        let mut project = starter_project();
+        change(&mut project);
+        Self::of_project(project)
+    }
+
+    pub fn of_project(project: GameProject) -> Self {
         let ctx = EngineContext::new(farm_sim::create_content_from_project(&project));
         let state = farm_sim::create_game_state(&project, Some("ui-test"));
         Self {
@@ -69,6 +79,7 @@ impl Fixture {
         let view = GameView {
             state: &self.state,
             content: &self.ctx.content,
+            ctx: &self.ctx,
             overlay: &overlay,
             calendar: &calendar,
             panels: &panel_views,

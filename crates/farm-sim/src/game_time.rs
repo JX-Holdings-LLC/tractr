@@ -252,7 +252,9 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
 
     // Multi-tile crops grow and fall as one (watered together; a storm takes the whole crop).
     let multi_tile_crops = multi_tile::before_night(state);
-    night_world_pass(ctx, state, &next, night, &mut rng);
+    // What scarecrows and sprinklers cover tonight (M5).
+    let cover = crate::objects::AreaCover::of(ctx, state);
+    night_world_pass(ctx, state, &next, night, &cover, &mut rng);
     multi_tile::after_night(state, &multi_tile_crops);
 
     let (energy, money) = wake_energy_and_money(ctx, state, options, &mut effects);
@@ -263,12 +265,17 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     state.clock.year = next.year;
     state.clock.time_minutes = units::minutes(time_config(&settings.time).day_start_minute);
     state.clock.weather_id = new_weather_id.clone();
+    // Sprinklers water the morning's soil (M5).
+    if !cover.is_empty() {
+        crate::objects::water_areas(ctx, state, &cover);
+    }
     state.player.energy = energy;
     state.player.money = money;
     state.rng = rng.state;
     state.dialogue = None;
     state.shop = None;
     state.minigame = None;
+    state.storage = None;
     crate::cutscenes::stop(state);
     state.shop_purchases_today = IndexMap::new();
 
@@ -276,6 +283,13 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     // since completion is an absolute-minute comparison (M4a).
     animals::advance_animals_nightly(ctx, state);
     crafting::settle_machines(ctx, state);
+    // The shipping bins are emptied and paid for (M6), the building work goes on and animals
+    // in buildings with room may have young (M5), health fills and the monsters come back (M7).
+    effects.extend(crate::goals::ship_overnight(ctx, state));
+    effects.extend(crate::buildings::advance_construction(ctx, state));
+    effects.extend(animals::breed_overnight(ctx, state));
+    crate::combat::restore_overnight(ctx, state);
+    crate::combat::spawn_scenes(ctx, state);
     effects.extend(quests::restart_repeatable_quests(ctx, state));
 
     if let Some(weather_def) = weather_def {
@@ -284,8 +298,9 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
         }
     }
     announce_new_day(ctx, &next, &previous_season, previous_year, &mut effects);
-    // Relationships (M4), then the morning's events (M3).
+    // Relationships (M4), the morning's post (M6), then the morning's events (M3).
     effects.extend(crate::relationships::morning(ctx, state, previous_day));
+    effects.extend(crate::mail::deliver_morning(ctx, state));
     effects.extend(crate::events::fire_trigger(
         ctx,
         state,
@@ -358,7 +373,15 @@ struct NightWeather {
 /// The nightly world pass over every tile of every scene: storm damage, crop growth, soil
 /// drying or rain, node respawns (the C# cloned every tile grid; the reducer edits the tiles in
 /// place).
-fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate, night: NightWeather, rng: &mut Rng) {
+fn night_world_pass(
+    ctx: &EngineContext,
+    state: &mut GameState,
+    next: &NextDate,
+    night: NightWeather,
+    cover: &crate::objects::AreaCover,
+    rng: &mut Rng,
+) {
+    let pest_chance = ctx.content.settings.farm.as_ref().map_or(0, |farm| farm.pest_chance);
     // Object.fromEntries: later duplicates win.
     let mut node_types: IndexMap<&str, &NodeTypeDefinition> = IndexMap::new();
     for def in &ctx.content.node_types {
@@ -381,21 +404,35 @@ fn night_world_pass(ctx: &EngineContext, state: &mut GameState, next: &NextDate,
         // Weather stays outside indoor scenes (greenhouses, interiors, mine floors) and off
         // indoor terrain.
         let outdoor_scene = !scene.is_indoor();
+        // A greenhouse (M5) grows every season's crops.
+        let all_seasons = scene.is_all_seasons();
         for (y, row) in scene.tiles.iter_mut().enumerate() {
             for (x, tile) in row.iter_mut().enumerate() {
                 let outdoor = outdoor_scene && !terrains.indoor(tile);
+                // A scarecrow's area (M5) is safe from storms and pests.
+                let protected = !cover.is_empty() && cover.protects(&scene.id, x, y);
                 // Storm damage rolls before growth (the storm hits overnight). The draw only
                 // happens for a live crop under damaging weather (short-circuit order).
                 if outdoor
+                    && !protected
                     && tile.crop.as_ref().is_some_and(|crop| crop.withered != Some(true))
                     && night.crop_damage_chance > 0
                     && rng.chance(night.crop_damage_chance)
                 {
                     tile.crop = None;
                 }
+                // Pests (M5) eat what the storm left.
+                if outdoor
+                    && !protected
+                    && pest_chance > 0
+                    && tile.crop.as_ref().is_some_and(|crop| crop.withered != Some(true))
+                    && rng.chance(pest_chance)
+                {
+                    tile.crop = None;
+                }
                 if let Some(crop) = tile.crop.as_mut() {
                     let held_back = !unmet.is_empty() && unmet.contains(&(x, y));
-                    grow_crop_overnight(&mut crop_types, crop, held_back);
+                    grow_crop_overnight(&mut crop_types, crop, held_back, all_seasons);
                 }
                 let plantable = terrains.plantable(&tile.background);
                 settle_soil_overnight(tile, plantable, outdoor && night.waters_outdoor_soil, next.day);
@@ -489,7 +526,7 @@ impl<'c> CropTypes<'c> {
 /// without water, and a crop out of the new season withers. A crop `held_back` by its growth
 /// requirements does neither: it waits for a night that suits it. A withered crop or one of an
 /// unknown type is left alone.
-fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop, held_back: bool) {
+fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop, held_back: bool, all_seasons: bool) {
     if crop.withered == Some(true) {
         return;
     }
@@ -505,7 +542,7 @@ fn grow_crop_overnight(crop_types: &mut CropTypes<'_>, crop: &mut Crop, held_bac
     crop.watered = false;
     crop.stage = crops::compute_crop_stage(crop, definition);
     // Season check happens against the NEW season.
-    if !in_season {
+    if !in_season && !all_seasons {
         crop.withered = Some(true);
     }
 }

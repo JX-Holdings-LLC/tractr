@@ -60,16 +60,18 @@ write it.
 | Minutes a machine processes, schedule minutes | `u32` | whole minute | minutes |
 | Clock ticks | `u64` | tick (20 per second) | ticks |
 | Time rate (`minutesPerRealSecond`) | `u32` | micro-minutes per tick, at load (`rate × 10⁶ / 20`) | minutes per second |
-| Position of the player, NPCs, animals | `i32` | 1/8192 tile (1/256 pixel at the renderer's 32-pixel tiles) | tiles (5.5) |
+| Position of the player, NPCs, animals, monsters | `i32` | 1/8192 tile (1/256 pixel at the renderer's 32-pixel tiles) | tiles (5.5) |
 | Tile coordinates (tiles, scene size, warps, mine entrance `entranceX/Y`, path points) | `i32` | whole tile | tiles |
 | Move intent (`dx`, `dy`) | `i32` | whole, truncated toward zero on read | −1..1 |
 | Command list index (`chooseDialogueOption.index`) | `i32` | whole; a fractional index reads as −1 and picks nothing | index |
-| Movement speed | `i32` | 1/8192 tile per tick, at load (`speed × 8192 / 20`) | tiles per second |
-| Probabilities and chances (mutation, ladder, junk, weather, crop damage, drop chance), fish difficulty, minigame scores and tier `minScore` | `u64` | threshold out of 2³² (`p × 2³²`, clamped to 0..=2³²) | 0–1 |
+| Movement speed (the player's, a monster's) | `i32` | 1/8192 tile per tick, at load (`speed × 8192 / 20`) | tiles per second |
+| Probabilities and chances (mutation, ladder, junk, weather, crop damage, drop chance, pests, breeding), fish difficulty, minigame scores and tier `minScore` | `u64` | threshold out of 2³² (`p × 2³²`, clamped to 0..=2³²) | 0–1 |
 | Friendship, mood | `i32` | whole points | points |
 | Skill XP, skill levels, curve thresholds | `u32` | whole | whole |
 | Tool power, tier, durability; node health | `i32` | whole | whole |
-| Density of mine rocks | `u32` | 1/1000 | fraction |
+| Density of mine rocks and hazards | `u32` | 1/1000 | fraction |
+| Health, damage, defense, monster health (M7) | `i32` | whole points | points |
+| Area effect radius, storage slots, building size, capacity, build days, sight, hurt ticks | `u32` | whole | whole |
 
 Screen-facing fields (sprite frame sizes, asset sizes, panel layout) are not
 simulation state; they stay `f64` in the schema (`units::screen`) and the

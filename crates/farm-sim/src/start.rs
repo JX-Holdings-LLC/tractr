@@ -10,8 +10,8 @@
 
 use crate::packs;
 use crate::schema::{
-    AnimalState, CustomAsset, CustomCropDefinition, GamePanel, GameProject, GraphicsSettings, InventorySlot, KeptState,
-    NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene, VisualRef,
+    AnimalState, BuildingState, CustomAsset, CustomCropDefinition, GamePanel, GameProject, GraphicsSettings,
+    InventorySlot, KeptState, NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene, VisualRef,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -85,6 +85,9 @@ pub struct StartState {
     pub rng_state: Option<RngState>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kept_state: Option<KeptState>,
+    /// Buildings on the map (M5).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<BuildingState>,
 }
 
 impl StartState {
@@ -132,6 +135,7 @@ impl StartState {
             quarantined_items: project.quarantined_items.clone(),
             rng_state: project.rng_state.clone(),
             kept_state: project.kept_state.clone(),
+            buildings: project.buildings.clone().unwrap_or_default(),
         }
     }
 }

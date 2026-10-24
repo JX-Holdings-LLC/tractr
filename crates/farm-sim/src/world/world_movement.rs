@@ -484,6 +484,27 @@ fn settle_tile_entry(
             return SettleResult { effects, aborted: false };
         }
     }
+    // Terrain that hurts (M7, with combat on): fainting ends the step.
+    if state.player.health.is_some() {
+        let damage = find_scene(state, &state.player.scene_id)
+            .and_then(|landed_scene| landed_scene.tile(final_tile.x, final_tile.y))
+            .and_then(|landed_tile| {
+                [Some(landed_tile.background.as_str()), landed_tile.overlay.as_deref(), landed_tile.object.as_deref()]
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|id| ctx.terrain(id))
+                    .find(|terrain| terrain.damage > 0)
+            })
+            .map(|terrain| (terrain.name.clone(), terrain.damage));
+        if let Some((name, amount)) = damage {
+            let before = state.player.scene_id.clone();
+            effects.push(Effect::say(message_levels::ERROR, messages::HAZARD_HURTS.with(&[&name])));
+            effects.extend(crate::combat::hurt(ctx, state, amount));
+            if state.player.scene_id != before {
+                return SettleResult { effects, aborted: false };
+            }
+        }
+    }
 
     // Enter-triggered events fire at the final position (M3)
     effects.extend(events::evaluate_events(

@@ -456,7 +456,7 @@ game on an alien planet would need to change.
 
 The milestones below are roughly in priority order. M1 came first because
 later milestones build on data-driven terrain, tools and items; M1 and M2 are
-done (0.7.0), and M3, M4 and M11 (0.8.0). Each change to
+done (0.7.0), M3, M4 and M11 (0.8.0), and M5, M6 and M7 (0.9.0). Each change to
 the content model goes through the usual path: F# records and checks, Rust
 serde types and parity tests, a schema version bump, and goldens. (Tractr
 has no project migrations since 0.5.0; add one when a schema change has
@@ -560,36 +560,73 @@ Done in 0.8.0 ([Creator Guide](docs/CREATOR-GUIDE.md#people-and-relationships)).
 
 ### M5: Building the farm
 
-- [ ] **Placeable objects**: chests and other storage, fences and gates,
-  sprinklers, scarecrows and other area-of-effect objects, furniture and
-  decoration, all placed and picked up in play.
-- [ ] **Buildings**: barns, coops, sheds and greenhouses with their own
-  interiors, built by an NPC for money and materials, with upgrades. The
-  player's house upgrades the same way.
-- [ ] **Animals with housing**: animals live in a building, several products
-  per species, product quality from mood, babies, and an animal shop flow.
-- [ ] **Farm layouts**: a choice of farm maps when a new game starts.
+Done in 0.9.0 ([Creator Guide](docs/CREATOR-GUIDE.md#building-the-farm)).
+
+- [x] **Placeable objects**: machine types gain **storage** (chests, opened
+  as a modal; picked up only when empty), **shipping** (bins, M6), **gates**
+  that open and close (an open gate never blocks) and **area effects**:
+  sprinklers water their square each morning, scarecrows keep storms and
+  pests (`settings.farm.pestChance`) off theirs. Furniture and decoration are
+  machine types without these; all are placed and picked up in play.
+- [x] **Buildings**: a content type with a footprint, a door, an interior
+  template, cost, materials, nights of building, the scenes it may go in and
+  an animal capacity. A shop that lists buildings is a builder: the player
+  places one on a free spot of the farm, it stands after its nights with its
+  own copy of the interior, and **upgrades** (`upgradeOf`) rebuild a standing
+  building into the next kind, keeping what stood inside. The house is a
+  building on the map from the start (`buildings`) and upgrades the same
+  way. A scene with **every season** on grows any season's crops (a
+  greenhouse).
+- [x] **Animals with housing**: species name the buildings that house them;
+  shops sell them into a building with room; more products per species,
+  each on its own interval and mood; product quality by mood; young born
+  overnight in buildings with room.
+- [x] **Farm layouts**: `settings.farm.layouts` lists farm maps; with two or
+  more a new game asks which, and the chosen map takes the farm scene's
+  place.
 
 ### M6: Long-term goals
 
-- [ ] **Shipping bin**: items sold overnight, with a log of what has been
-  shipped.
-- [ ] **Collections**: a museum or catalogue of items found, with rewards.
-- [ ] **Bundles**: Community Center-style lists of items to hand in, which
-  unlock rewards or fix the world.
-- [ ] **Achievements**, shown in the game (and later on Steam, see
-  [Later](#later)).
-- [ ] **Mail**: letters that arrive in the morning from events, quests,
-  NPCs and birthdays, with items attached.
+Done in 0.9.0 ([Creator Guide](docs/CREATOR-GUIDE.md#long-term-goals)).
+
+- [x] **Shipping bin**: what a bin holds is sold overnight at the item's
+  value for its quality, with a log of the units shipped per item and of
+  last night's shipment.
+- [x] **Collections**: lists of items found, shipped or donated (in the
+  collection's scene: a museum), with rewards at counts.
+- [x] **Bundles**: lines of items (a quantity, a lowest quality) to hand in,
+  grouped by room; complete, a bundle runs its outcomes, which unlock or fix
+  the world.
+- [x] **Achievements**: unlocked the moment their conditions hold, shown in
+  the game (hidden ones as ???), with an `achievementUnlocked` effect and a
+  Steam id kept for Steamworks (see [Later](#later)).
+- [x] **Mail**: letters arrive in the morning from the `sendMail` outcome
+  (events, actions, dialogue, cutscenes), quest rewards and their own
+  conditions (an NPC's hearts, the new `birthday` condition), with items
+  and money attached and outcomes run on reading.
+- [x] New conditions (`money`, `skillLevel`, `mineFloor`, `building`,
+  `collection`, `bundle`, `achievement`, `shipped`, `slain`, `birthday`)
+  and triggers (`build`, `bundle`, `achievement`, `slay`) for goals of
+  every kind.
 
 ### M7: Combat and adventure (optional per game)
 
-- [ ] **Player health**, damage, fainting and recovery, separate from energy.
-- [ ] **Monsters**: definitions with health, movement, attacks and drops,
-  spawned in mine bands and in scenes.
-- [ ] **Weapons** and the combat skill (the skill name exists, the system
-  doesn't).
-- [ ] **Mine floors with hazards and treasure**, not only rocks.
+Done in 0.9.0 ([Creator Guide](docs/CREATOR-GUIDE.md#combat-and-adventure));
+off until `settings.combat.enabled`.
+
+- [x] **Player health**, separate from energy: damage from monsters and
+  terrain with `damage`, a moment of safety after a hit, healing from food
+  (`health`), the `modifyHealth` outcome and sleep; fainting carries the
+  player to the faint spot at half health for a money penalty.
+- [x] **Monsters**: a content type with health, damage, defense, speed,
+  movement (chase within sight, wander, still), drops and experience,
+  spawned each morning by a scene's spawns and on mine floors by their depth
+  band. Their moves roll from the game's seed, never its random stream.
+- [x] **Weapons** and the combat skill: a tool whose action is `attack` hits
+  the monsters ahead for its power plus the combat level, less their
+  defense; slaying one gives its drops and combat experience.
+- [x] **Mine floors with hazards and treasure**: depth bands scatter hazard
+  terrain and leave weighted treasure, besides rocks and monsters.
 
 ### M8: Projects at full size
 
@@ -613,6 +650,9 @@ Done in 0.8.0 ([Creator Guide](docs/CREATOR-GUIDE.md#people-and-relationships)).
 - [ ] **More hooks and mutations**: hooks for harvest, sale, craft, catch,
   scene entry and time of day; mutations for the M3 outcomes; plugins that
   add their own systems with saved state.
+- [ ] **Packs add M5–M7 content**: buildings, collections, bundles,
+  achievements, letters and monsters in content packs, namespaced like the
+  rest (projects have them since 0.9.0; packs don't yet).
 
 ### M10: Playing together
 
@@ -669,6 +709,9 @@ What 0.7.0 left out of the world vocabulary, sound and cutscenes. Done in
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
+- **Farm-building polish**: Edit Mode draws the buildings a game starts with
+  (they show in play, and their tiles are picked on the map); the toolbar
+  keeps one row at 1280×800 when a game has Goals and Mail.
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
 - **Player polish.** GPU effects: day/night lighting, season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws

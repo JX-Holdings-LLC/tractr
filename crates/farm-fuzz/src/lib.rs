@@ -39,7 +39,8 @@ pub enum Target {
     /// Project JSON, a `0xFF` byte, then play: the project's content and new game, then the
     /// decoded commands, with the invariants after every step.
     Project,
-    /// Play on the starter farm with cutscenes added ([`input::add_cutscenes`]): the bytes
+    /// Play on the starter farm with cutscenes and the M5–M7 kit added ([`input::add_cutscenes`],
+    /// [`input::add_farm`]): the bytes
     /// decode to commands and ticks (see [`input`]), with the invariants after every step.
     Commands,
     /// A stateless render request (`farm_host::render::render_json`).
@@ -206,6 +207,7 @@ static STARTER: LazyLock<Starter> = LazyLock::new(|| {
     let target = SaveTarget::for_project(&project, &content);
     let mut play_project = project.clone();
     input::add_cutscenes(&mut play_project);
+    input::add_farm(&mut play_project);
     let play_content = state::create_content_from_project(&play_project);
     let play_ids = Ids::of(&play_content);
     Starter { project, project_json, content, target, play_project, play_content, play_ids }

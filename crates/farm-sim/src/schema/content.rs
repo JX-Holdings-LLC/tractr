@@ -146,6 +146,9 @@ pub struct Item {
     /// The item is clothing the player can wear (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wear: Option<WearDefinition>,
+    /// Health it restores when eaten, with combat on (M7). int.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub health: Option<i32>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

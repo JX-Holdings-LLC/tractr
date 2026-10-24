@@ -6,13 +6,16 @@
 
 use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
+use super::combat::MonsterDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
 use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
+use super::farm::BuildingDefinition;
 use super::fishing::FishTable;
+use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
 use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
@@ -69,6 +72,24 @@ pub struct GameContent {
     pub cutscenes: Vec<Cutscene>,
     /// Heart events (M4).
     pub heart_events: Vec<HeartEvent>,
+    /// Buildings a builder puts up (M5).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub building_types: Vec<BuildingDefinition>,
+    /// Collections (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub collections: Vec<CollectionDefinition>,
+    /// Bundles (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub bundles: Vec<BundleDefinition>,
+    /// Achievements (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub achievements: Vec<AchievementDefinition>,
+    /// Letters (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mail: Vec<MailDefinition>,
+    /// Monsters (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub monsters: Vec<MonsterDefinition>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

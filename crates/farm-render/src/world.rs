@@ -3,8 +3,9 @@
 //!
 //! 1. ground: tile background, overlay and object layers, soil states, ladders;
 //! 2. soft drop shadows under entities and objects (built-in art only);
-//! 3. y-sorted objects and entities (nodes, machines, crops, items, NPCs, animals, the player)
-//!    so tall things overlap whoever stands behind them; ties keep insertion order;
+//! 3. y-sorted objects and entities (nodes, machines, crops, items, buildings, NPCs, animals,
+//!    monsters, the player) so tall things overlap whoever stands behind them; ties keep
+//!    insertion order;
 //! 4. atmosphere: day/night tint (modulate), seasonal foliage, the weather overlay;
 //! 5. floating pops and the Edit Mode grid.
 //!
@@ -100,6 +101,10 @@ enum DrawKind {
     Item,
     Entity,
     Player,
+    /// A building (M5): sorted by its footprint's bottom edge.
+    Building,
+    /// A monster (M7).
+    Monster,
 }
 
 /// One thing to draw in the y-sorted pass.
@@ -113,6 +118,8 @@ struct Drawable<'a> {
     tile_y: i32,
     px: f64,
     py: f64,
+    /// The building's or monster's index in the snapshot.
+    index: usize,
 }
 
 struct Builder<'a, 'l> {
@@ -338,6 +345,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                             tile_y: y,
                             px,
                             py,
+                            index: 0,
                         });
                     }
                 }
@@ -360,6 +368,42 @@ impl<'a, 'l> Builder<'a, 'l> {
                 tile_y: 0,
                 px,
                 py,
+                index: 0,
+            });
+        }
+        for (index, building) in snapshot.buildings.iter().enumerate() {
+            let px = padding + (f64::from(building.x) * pitch);
+            let py = padding + (f64::from(building.y) * pitch);
+            let seq = drawables.len();
+            drawables.push(Drawable {
+                sort_y: py + (f64::from(building.height) * pitch) - self.snapshot.gap(),
+                seq,
+                kind: DrawKind::Building,
+                tile: None,
+                entity: None,
+                tile_x: building.x,
+                tile_y: building.y,
+                px,
+                py,
+                index,
+            });
+        }
+        for (index, monster) in snapshot.monsters.iter().enumerate() {
+            // Monsters stand by their centre, wherever it is (never a tile index).
+            let px = padding + ((monster.x - 0.5) * pitch);
+            let py = padding + ((monster.y - 0.5) * pitch);
+            let seq = drawables.len();
+            drawables.push(Drawable {
+                sort_y: py + ts,
+                seq,
+                kind: DrawKind::Monster,
+                tile: None,
+                entity: None,
+                tile_x: 0,
+                tile_y: 0,
+                px,
+                py,
+                index,
             });
         }
         let player = &snapshot.player;
@@ -376,6 +420,7 @@ impl<'a, 'l> Builder<'a, 'l> {
             tile_y: 0,
             px: player_x,
             py: player_y,
+            index: 0,
         });
 
         // Y-sort: lower on screen draws later (in front); ties keep insertion order.
@@ -397,6 +442,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                         tile.item.as_ref().filter(|item| item.sprite.is_none()).map(|_| 0.4)
                     }
                     (DrawKind::Entity | DrawKind::Player, _, Some(entity)) if entity.sprite.is_none() => Some(0.55),
+                    (DrawKind::Monster, _, _) => snapshot.monsters[d.index].sprite.is_none().then_some(0.55),
                     _ => None,
                 };
                 if let Some(factor) = factor {
@@ -414,6 +460,8 @@ impl<'a, 'l> Builder<'a, 'l> {
                 DrawKind::Item => self.item(d),
                 DrawKind::Entity => self.entity(d),
                 DrawKind::Player => self.player(d),
+                DrawKind::Building => self.building(d),
+                DrawKind::Monster => self.monster(d),
             }
         }
 
@@ -602,6 +650,19 @@ impl<'a, 'l> Builder<'a, 'l> {
     fn machine(&mut self, d: &Drawable<'_>) {
         let Some(machine) = d.tile.and_then(|tile| tile.machine.as_ref()) else { return };
         let (px, py, ts) = (d.px, d.py, self.ts);
+        // An open gate (M5) stands aside: its art faded between its two posts.
+        if machine.open {
+            self.draw_sprite(machine.sprite.as_ref(), px, py, ts, ts, 0.3);
+            let color = parse(&machine.color);
+            let post_width = cs_max(2.0, (ts * 0.16).floor());
+            let post_height = (ts * 0.8).floor();
+            for x in [px + 1.0, px + ts - post_width - 1.0] {
+                let post = rect(x, py + ts - post_height, post_width, post_height);
+                self.push(DrawCmd::FillRoundRect { rect: post, radius: 1.5, color });
+                self.push(DrawCmd::StrokeRoundRect { rect: post, radius: 1.5, color: parse("#00000060"), width: 1.0 });
+            }
+            return;
+        }
         if self.draw_sprite(machine.sprite.as_ref(), px, py, ts, ts, 1.0) {
             return;
         }
@@ -672,6 +733,149 @@ impl<'a, 'l> Builder<'a, 'l> {
             radius: (ts * 0.15).floor() as f32,
             color: parse(canvas2d::ITEM_COLOR),
         });
+    }
+
+    /// A building (M5): its art over the footprint (a tile taller, standing on its bottom edge);
+    /// without art a block with a roof, windows and a door. A site still being built is a
+    /// scaffold of posts and planks over its foundation.
+    fn building(&mut self, d: &Drawable<'_>) {
+        let building = &self.snapshot.buildings[d.index];
+        let (px, py, ts, pitch) = (d.px, d.py, self.ts, self.pitch);
+        let width = (f64::from(building.width) * pitch) - self.snapshot.gap();
+        let height = (f64::from(building.height) * pitch) - self.snapshot.gap();
+        let color = parse(&building.color);
+        let outline = parse("#00000070");
+        if building.scaffold {
+            self.push(DrawCmd::FillRect {
+                rect: rect(px, py, width, height),
+                color: parse("#8a7350a0"),
+                anti_alias: false,
+            });
+            let wood = parse("#a0763c");
+            let top = py - (ts * 0.3);
+            let bottom = py + height;
+            let line = |x0: f64, y0: f64, x1: f64, y1: f64| DrawCmd::Line {
+                x0: x0 as f32,
+                y0: y0 as f32,
+                x1: x1 as f32,
+                y1: y1 as f32,
+                color: wood,
+                width: cs_max(1.5, (ts * 0.08).floor()) as f32,
+            };
+            for column in 0..=building.width {
+                let x = (px + (f64::from(column) * pitch)).clamp(px + 1.0, px + width - 1.0);
+                self.push(line(x, top, x, bottom));
+            }
+            for level in [0.3, 0.7] {
+                let y = top + ((bottom - top) * level);
+                self.push(line(px, y, px + width, y));
+            }
+            self.push(line(px, bottom, px + width, top));
+            return;
+        }
+        if self.draw_sprite(building.sprite.as_ref(), px, py - ts, width, height + ts, 1.0) {
+            return;
+        }
+        // Walls on the footprint, the roof over its upper part and half a tile above it.
+        let roof_height = (height * 0.35) + (ts * 0.5);
+        let walls = rect(px, py + (height * 0.35), width, height * 0.65);
+        self.push(DrawCmd::FillRect { rect: walls, color, anti_alias: false });
+        self.push(DrawCmd::StrokeRect { rect: walls, color: outline, width: 1.0 });
+        let roof = rect(px - 2.0, py + (height * 0.35) - roof_height, width + 4.0, roof_height + 2.0);
+        let roof_color = parse("#7a2e22");
+        self.push(DrawCmd::FillRoundRect { rect: roof, radius: 3.0, color: roof_color });
+        self.push(DrawCmd::StrokeRoundRect { rect: roof, radius: 3.0, color: outline, width: 1.0 });
+        let ridge_y = (roof.y + (roof.height * 0.3)) as f32;
+        self.push(DrawCmd::Line {
+            x0: (px + 3.0) as f32,
+            y0: ridge_y,
+            x1: (px + width - 3.0) as f32,
+            y1: ridge_y,
+            color: parse("#00000040"),
+            width: 1.0,
+        });
+        // Windows either side of the door on a building three or more tiles wide.
+        let window = (ts * 0.32).floor();
+        let window_y = walls.y as f64 + ((f64::from(walls.height) - window) * 0.35);
+        if building.width >= 3 {
+            for x in [px + (ts * 0.34), px + width - (ts * 0.34) - window] {
+                let pane = rect(x, window_y, window, window);
+                self.push(DrawCmd::FillRect { rect: pane, color: parse("#f4e3a1"), anti_alias: false });
+                self.push(DrawCmd::StrokeRect { rect: pane, color: outline, width: 1.0 });
+            }
+        }
+        if let Some((dx, dy)) = building.door {
+            let door_width = (ts * 0.5).floor();
+            let door_height = (ts * 0.72).floor();
+            let dx = px + (f64::from(dx) * pitch) + ((ts - door_width) / 2.0);
+            let dy = py + (f64::from(dy) * pitch) + ts - door_height;
+            let door = rect(dx, dy, door_width, door_height);
+            self.push(DrawCmd::FillRoundRect { rect: door, radius: 2.0, color: parse("#4a2e1a") });
+            self.push(DrawCmd::FillCircle {
+                cx: (dx + (door_width * 0.75)) as f32,
+                cy: (dy + (door_height * 0.55)) as f32,
+                radius: cs_max(1.0, ts * 0.04) as f32,
+                color: parse("#e0c060"),
+            });
+        }
+    }
+
+    /// A monster (M7): its art, else a blob of its colour with eyes that look where it goes,
+    /// lighter while it reels; a small health bar over it once hurt.
+    fn monster(&mut self, d: &Drawable<'_>) {
+        let monster = &self.snapshot.monsters[d.index];
+        let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
+        let opacity = if monster.stunned { 0.6 } else { 1.0 };
+        if !self.draw_sprite(monster.sprite.as_ref(), px, py, ts, ts, opacity) {
+            // A gentle bob while it moves.
+            let bob = if monster.moving { ((tick / 4.0).floor() % 2.0) * (ts * 0.04) } else { 0.0 };
+            let body_width = (ts * 0.72).floor();
+            let body_height = (ts * 0.58).floor();
+            let body = rect(px + ((ts - body_width) / 2.0), py + ts - body_height - 2.0 - bob, body_width, body_height);
+            let color = parse(&monster.color).with_opacity(opacity);
+            self.push(DrawCmd::FillRoundRect { rect: body, radius: (body_height * 0.45) as f32, color });
+            self.push(DrawCmd::StrokeRoundRect {
+                rect: body,
+                radius: (body_height * 0.45) as f32,
+                color: parse("#00000070").with_opacity(opacity),
+                width: 1.0,
+            });
+            let (dx, dy) = canvas2d::direction_offset(Some(&monster.direction));
+            let eye = cs_max(1.5, (ts * 0.09).floor());
+            let pupil = cs_max(1.0, (eye * 0.55).floor());
+            let eye_y = f64::from(body.y) + (body_height * 0.4);
+            let center = f64::from(body.x) + (body_width / 2.0);
+            for side in [-1.0, 1.0] {
+                let ex = center + (side * body_width * 0.18);
+                self.push(DrawCmd::FillCircle {
+                    cx: ex as f32,
+                    cy: eye_y as f32,
+                    radius: eye as f32,
+                    color: parse("#ffffff"),
+                });
+                self.push(DrawCmd::FillCircle {
+                    cx: (ex + (f64::from(dx) * (eye - pupil))) as f32,
+                    cy: (eye_y + (f64::from(dy) * (eye - pupil))) as f32,
+                    radius: pupil as f32,
+                    color: parse("#1a1a2e"),
+                });
+            }
+        }
+        if let Some(health) = monster.health {
+            let bar_width = (ts * 0.7).floor();
+            let bar = rect(px + ((ts - bar_width) / 2.0), py - 2.0, bar_width, cs_max(2.0, (ts * 0.09).floor()));
+            self.push(DrawCmd::FillRect { rect: bar, color: parse("#000000a0"), anti_alias: false });
+            let left =
+                rect(f64::from(bar.x), f64::from(bar.y), bar_width * cs_clamp(health, 0.0, 1.0), f64::from(bar.height));
+            let color = if health > 0.5 {
+                parse("#5ec25e")
+            } else if health > 0.25 {
+                parse("#e0b040")
+            } else {
+                parse("#e04f4f")
+            };
+            self.push(DrawCmd::FillRect { rect: left, color, anti_alias: false });
+        }
     }
 
     /// Creator sprite, then built-in art (`builtin` picks it).

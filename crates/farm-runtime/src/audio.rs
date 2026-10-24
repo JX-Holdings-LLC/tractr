@@ -159,6 +159,7 @@ pub static SFX_PRESETS: &[(&str, SfxPreset)] = &[
     ("quest", SfxPreset::fixed(&[523.0, 659.0, 784.0, 1047.0], 0.4, waveforms::TRIANGLE, 0.3)),
     ("sleep", SfxPreset::fixed(&[330.0, 262.0, 196.0], 0.5, waveforms::SINE, 0.25)),
     ("step", SfxPreset::fixed(&[220.0], 0.03, waveforms::TRIANGLE, 0.08)),
+    ("hurt", SfxPreset::fixed(&[150.0, 110.0], 0.12, waveforms::SAWTOOTH, 0.22)),
 ];
 
 /// The preset registered under `name` (C# `Audio.SfxPresets[name]`).
@@ -181,6 +182,8 @@ pub fn sfx_for_effect(effect: &Effect) -> Option<&str> {
         Effect::DayStarted { .. } => Some("sleep"),
         Effect::SceneChanged { .. } => Some("ui"),
         Effect::PlayerMoved { .. } => None,
+        Effect::AchievementUnlocked { .. } => Some("quest"),
+        Effect::PlayerHurt { .. } => Some("hurt"),
     }
 }
 

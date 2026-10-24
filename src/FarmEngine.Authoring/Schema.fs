@@ -66,6 +66,509 @@ type ActionDef =
     static member Default : ActionDef =
         { Id = ""; Name = ""; Description = ""; Conditions = []; FailMessage = ""; Outcomes = []; EnergyCost = 0.0; Hotkey = None; Extra = [] }
 
+// ---- Building the farm (M5, Rust schema/farm.rs) ----
+
+/// What a placed object does to the square of tiles `Radius` around it, in its scene (M5).
+and AreaEffect =
+    {
+        /// One of `AreaEffects`: `water` (a sprinkler) or `protect` (a scarecrow).
+        Effect: string
+        /// Tiles in each direction (1: the 3×3 square around the object). int, 0..32.
+        Radius: float
+    }
+
+    /// A `AreaEffect` with every field at its schema default.
+    static member Default : AreaEffect =
+        { Effect = "water"; Radius = 1.0 }
+
+/// A building a builder puts up (M5): a footprint on a farm scene with a door into an interior
+/// scene made from a template.
+and BuildingDefinition =
+    {
+        Id: string
+        Name: string
+        Description: string
+        Visual: VisualRef option
+        /// `#rrggbb`: how the game draws it without art.
+        Color: string
+        /// Footprint in tiles. int, 1..16.
+        Width: float
+        /// int, 1..16.
+        Height: float
+        /// The door's tile within the footprint (from its top-left corner); absent: the middle of
+        /// the bottom row.
+        Door: GridPoint option
+        /// The scene each building of this kind gets a copy of as its interior; absent: no
+        /// interior (a silo, a well).
+        InteriorSceneId: string option
+        /// The interior's door: the tile that leads back out; the player arrives on the tile
+        /// above it. Absent: the middle of the interior's bottom row.
+        InteriorDoor: GridPoint option
+        /// What building it costs. nonnegative.
+        Cost: float
+        Materials: RecipeIngredient list
+        /// Nights of building before it stands; 0: done the next morning all the same. int.
+        BuildDays: float
+        /// Scenes it may be built in; empty: the farm scene (`FarmSettings.SceneId`), else the
+        /// start scene.
+        Scenes: string list
+        /// Animals it houses. int.
+        Capacity: float
+        /// The building this one is an upgrade of: it is never built new, only by upgrading one of
+        /// those (the house upgrades the same way).
+        UpgradeOf: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `BuildingDefinition` with every field at its schema default.
+    static member Default : BuildingDefinition =
+        { Id = ""; Name = ""; Description = ""; Visual = None; Color = "#b5651d"; Width = 3.0; Height = 2.0; Door = None; InteriorSceneId = None; InteriorDoor = None; Cost = 0.0; Materials = []; BuildDays = 2.0; Scenes = []; Capacity = 0.0; UpgradeOf = None; Extra = [] }
+
+/// A building on the map (M5), from the project's start (`GameProject.Buildings`) or built in play.
+and BuildingState =
+    {
+        /// Unique among the game's buildings; built ones are `building-N`.
+        Id: string
+        /// Its `BuildingDefinition`.
+        BuildingId: string
+        SceneId: string
+        /// The footprint's top-left tile. int.
+        X: float
+        /// int.
+        Y: float
+        /// The scene behind its door (empty: none yet, or no interior).
+        InteriorSceneId: string
+        /// Nights of building left; 0: it stands. int.
+        DaysLeft: float
+        /// The building it becomes when the work under way (`DaysLeft`) is done (an upgrade).
+        UpgradeTo: string option
+    }
+
+    /// A `BuildingState` with every field at its schema default.
+    static member Default : BuildingState =
+        { Id = ""; BuildingId = ""; SceneId = ""; X = 0.0; Y = 0.0; InteriorSceneId = ""; DaysLeft = 0.0; UpgradeTo = None }
+
+/// One more product of an animal species (M5) beside its `ProductItemId`.
+and AnimalProduct =
+    {
+        ItemId: string
+        /// Days between products. int, positive.
+        IntervalDays: float
+        /// The mood (0..100) the animal needs for it. int.
+        MinMood: float
+    }
+
+    /// A `AnimalProduct` with every field at its schema default.
+    static member Default : AnimalProduct =
+        { ItemId = ""; IntervalDays = 1.0; MinMood = 30.0 }
+
+/// A product quality an animal's mood earns (M5): the best tier whose `MinMood` it has.
+and MoodQuality =
+    {
+        /// int.
+        MinMood: float
+        /// A crop quality id.
+        Quality: string
+    }
+
+    /// A `MoodQuality` with every field at its schema default.
+    static member Default : MoodQuality =
+        { MinMood = 0.0; Quality = "" }
+
+/// How animals of a species have young (M5): each night an adult in a building with room may.
+and AnimalBreeding =
+    {
+        /// Chance per night, 0..1.
+        Chance: float
+        /// int.
+        MinMood: float
+    }
+
+    /// A `AnimalBreeding` with every field at its schema default.
+    static member Default : AnimalBreeding =
+        { Chance = 0.05; MinMood = 70.0 }
+
+/// Progress toward one of `AnimalSpeciesDefinition.Products` (M5).
+and ProductProgress =
+    {
+        /// int.
+        Days: float
+        Ready: bool
+    }
+
+    /// A `ProductProgress` with every field at its schema default.
+    static member Default : ProductProgress =
+        { Days = 0.0; Ready = false }
+
+/// A farm map a new game can start with (M5).
+and FarmLayout =
+    {
+        Id: string
+        Name: string
+        Description: string
+        /// The scene that becomes the farm.
+        SceneId: string
+    }
+
+    /// A `FarmLayout` with every field at its schema default.
+    static member Default : FarmLayout =
+        { Id = ""; Name = ""; Description = ""; SceneId = "" }
+
+/// The farm (M5): its scene, the layouts a new game picks from, and pests.
+and FarmSettings =
+    {
+        /// The farm scene: buildings go here by default, and a layout replaces it.
+        SceneId: string
+        /// Farm maps a new game picks from (two or more make the character creator ask).
+        Layouts: FarmLayout list
+        /// Chance per night that pests eat an outdoor crop no object protects, 0..1.
+        PestChance: float
+    }
+
+    /// A `FarmSettings` with every field at its schema default.
+    static member Default : FarmSettings =
+        { SceneId = ""; Layouts = []; PestChance = 0.0 }
+
+// ---- Long-term goals (M6, Rust schema/goals.rs) ----
+
+/// A reward a collection gives once it holds `Count` items (M6).
+and CollectionReward =
+    {
+        /// int.
+        Count: float
+        /// Shown when it is given; empty: none.
+        Message: string
+        Outcomes: EventOutcome list
+    }
+
+    /// A `CollectionReward` with every field at its schema default.
+    static member Default : CollectionReward =
+        { Count = 0.0; Message = ""; Outcomes = [] }
+
+/// A museum, catalogue or other list of items to find (M6).
+and CollectionDefinition =
+    {
+        Id: string
+        Name: string
+        Description: string
+        Items: string list
+        /// One of `CollectionKinds`: how an item joins it.
+        Kind: string
+        /// Donations are taken only in this scene (the museum); absent: anywhere.
+        SceneId: string option
+        /// In order of `Count`; each is given once.
+        Rewards: CollectionReward list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `CollectionDefinition` with every field at its schema default.
+    static member Default : CollectionDefinition =
+        { Id = ""; Name = ""; Description = ""; Items = []; Kind = "found"; SceneId = None; Rewards = []; Extra = [] }
+
+/// A line of a bundle (M6): `Quantity` of an item, of `Quality` or better.
+and BundleItem =
+    {
+        ItemId: string
+        /// int.
+        Quantity: float
+        /// The lowest crop quality it takes; absent: any.
+        Quality: string option
+    }
+
+    /// A `BundleItem` with every field at its schema default.
+    static member Default : BundleItem =
+        { ItemId = ""; Quantity = 1.0; Quality = None }
+
+/// A Community Center-style list of items to hand in (M6); done, it runs its outcomes (rewards,
+/// flags, an unlocked door: the world fixed).
+and BundleDefinition =
+    {
+        Id: string
+        Name: string
+        Description: string
+        /// The room or board it belongs to (the game lists bundles by group).
+        Group: string
+        /// Items are handed in only in this scene; absent: anywhere.
+        SceneId: string option
+        Items: BundleItem list
+        /// Lines that complete it; absent: all of them. int.
+        Required: float option
+        /// Shown when it is complete; empty: a built-in message.
+        Message: string
+        Outcomes: EventOutcome list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `BundleDefinition` with every field at its schema default.
+    static member Default : BundleDefinition =
+        { Id = ""; Name = ""; Description = ""; Group = ""; SceneId = None; Items = []; Required = None; Message = ""; Outcomes = []; Extra = [] }
+
+/// Something to achieve (M6): unlocked the moment its conditions hold.
+and AchievementDefinition =
+    {
+        Id: string
+        Name: string
+        Description: string
+        Conditions: EventCondition list
+        /// Shown as "???" until unlocked.
+        Hidden: bool
+        Visual: VisualRef option
+        /// Its id on Steam, for an export with Steamworks (later).
+        SteamId: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `AchievementDefinition` with every field at its schema default.
+    static member Default : AchievementDefinition =
+        { Id = ""; Name = ""; Description = ""; Conditions = []; Hidden = false; Visual = None; SteamId = None; Extra = [] }
+
+/// A letter (M6). It arrives in the morning: after a `sendMail` outcome or a quest that sends
+/// it, or by itself on a morning its `Conditions` hold (an NPC at some hearts, a birthday).
+and MailDefinition =
+    {
+        Id: string
+        Subject: string
+        /// The NPC who writes it; empty: no sender (or the text says).
+        From: string
+        Text: string
+        /// Items in the envelope, taken when it is read.
+        Attachments: RecipeIngredient list
+        Money: float
+        /// Run when it is first read.
+        Outcomes: EventOutcome list
+        /// It arrives by itself on a morning these hold; empty: only when sent.
+        Conditions: EventCondition list
+        /// It may come again (each morning its conditions hold; a birthday letter every year).
+        Repeat: bool
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `MailDefinition` with every field at its schema default.
+    static member Default : MailDefinition =
+        { Id = ""; Subject = ""; From = ""; Text = ""; Attachments = []; Money = 0.0; Outcomes = []; Conditions = []; Repeat = false; Extra = [] }
+
+// ---- Combat and adventure (M7, Rust schema/combat.rs) ----
+
+/// Player health and fainting (M7). Absent or not `Enabled`: no health, and monsters are not
+/// spawned.
+and CombatSettings =
+    {
+        Enabled: bool
+        /// Whole points. int, positive.
+        MaxHealth: float
+        /// Money lost on fainting. nonnegative.
+        FaintMoneyPenalty: float
+        /// Where the player wakes after fainting; absent: the start scene.
+        FaintSceneId: string option
+        /// int.
+        FaintX: float option
+        /// int.
+        FaintY: float option
+        /// Ticks after a hit during which the player takes no more damage. int.
+        HurtTicks: float
+    }
+
+    /// A `CombatSettings` with every field at its schema default.
+    static member Default : CombatSettings =
+        { Enabled = false; MaxHealth = 100.0; FaintMoneyPenalty = 0.0; FaintSceneId = None; FaintX = None; FaintY = None; HurtTicks = 30.0 }
+
+/// A monster (M7).
+and MonsterDefinition =
+    {
+        Id: string
+        Name: string
+        Visual: VisualRef option
+        /// `#rrggbb`: how the game draws it without art.
+        Color: string
+        /// Hit points. int, positive.
+        Health: float
+        /// Health the player loses when it touches them. int, nonnegative.
+        Damage: float
+        /// Taken off every hit it takes (a hit always does at least 1). int, nonnegative.
+        Defense: float
+        /// Tiles per second.
+        Speed: float
+        /// One of `MonsterMovements`.
+        Movement: string
+        /// How near (tiles) the player must come for a chaser to notice them. int.
+        Sight: float
+        /// Rolled when it is slain, like a node's drops.
+        Drops: NodeDrop list
+        /// Combat experience for slaying it. int.
+        Experience: float
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `MonsterDefinition` with every field at its schema default.
+    static member Default : MonsterDefinition =
+        { Id = ""; Name = ""; Visual = None; Color = "#6a8f3a"; Health = 10.0; Damage = 5.0; Defense = 0.0; Speed = 2.0; Movement = "chase"; Sight = 5.0; Drops = []; Experience = 5.0; Extra = [] }
+
+/// Monsters a scene has each morning (M7): `Count` of a monster on free tiles of the area
+/// (`X..=X2`, `Y..=Y2`; absent ends: the whole scene).
+and MonsterSpawn =
+    {
+        MonsterId: string
+        /// int.
+        Count: float
+        /// int.
+        X: float option
+        /// int.
+        Y: float option
+        /// int.
+        X2: float option
+        /// int.
+        Y2: float option
+    }
+
+    /// A `MonsterSpawn` with every field at its schema default.
+    static member Default : MonsterSpawn =
+        { MonsterId = ""; Count = 1.0; X = None; Y = None; X2 = None; Y2 = None }
+
+/// A weighted monster of a mine depth band (M7).
+and MineMonsterWeight =
+    {
+        MonsterId: string
+        /// int.
+        Weight: float
+    }
+
+    /// A `MineMonsterWeight` with every field at its schema default.
+    static member Default : MineMonsterWeight =
+        { MonsterId = ""; Weight = 0.0 }
+
+/// A hazard terrain a mine depth band scatters over its floors (M7), on the overlay layer.
+and MineHazard =
+    {
+        TerrainId: string
+        /// Fraction of free floor tiles, 0..1.
+        Density: float
+    }
+
+    /// A `MineHazard` with every field at its schema default.
+    static member Default : MineHazard =
+        { TerrainId = ""; Density = 0.05 }
+
+/// A weighted treasure of a mine depth band (M7): an item left on a floor tile.
+and MineTreasure =
+    {
+        ItemId: string
+        /// int.
+        Weight: float
+    }
+
+    /// A `MineTreasure` with every field at its schema default.
+    static member Default : MineTreasure =
+        { ItemId = ""; Weight = 0.0 }
+
+// ---- The conditions M5–M7 add ----
+
+/// The player has at least `Min` money (M6).
+and MoneyCondition =
+    {
+        Min: float
+    }
+
+    static member Default : MoneyCondition =
+        { Min = 0.0 }
+
+/// The player's level in a skill is at least `Min` (M6).
+and SkillLevelCondition =
+    {
+        Skill: string
+        /// int.
+        Min: float
+    }
+
+    static member Default : SkillLevelCondition =
+        { Skill = ""; Min = 1.0 }
+
+/// The deepest mine floor reached is at least `Min` (M6).
+and MineFloorCondition =
+    {
+        /// int.
+        Min: float
+    }
+
+    static member Default : MineFloorCondition =
+        { Min = 1.0 }
+
+/// A collection holds at least `Min` items; absent `Min`: all of its items (M6).
+and CollectionCondition =
+    {
+        CollectionId: string
+        /// int.
+        Min: float option
+    }
+
+    static member Default : CollectionCondition =
+        { CollectionId = ""; Min = None }
+
+/// A bundle is complete (M6).
+and BundleCondition =
+    {
+        BundleId: string
+    }
+
+    static member Default : BundleCondition =
+        { BundleId = "" }
+
+/// An achievement is unlocked (M6).
+and AchievementCondition =
+    {
+        AchievementId: string
+    }
+
+    static member Default : AchievementCondition =
+        { AchievementId = "" }
+
+/// At least `Min` units shipped of an item; an empty `ItemId`: of everything (M6).
+and ShippedCondition =
+    {
+        ItemId: string
+        /// int.
+        Min: float
+    }
+
+    static member Default : ShippedCondition =
+        { ItemId = ""; Min = 1.0 }
+
+/// At least `Min` standing buildings of a kind, its upgrades counting (M5).
+and BuildingCondition =
+    {
+        BuildingId: string
+        /// int.
+        Min: float
+    }
+
+    static member Default : BuildingCondition =
+        { BuildingId = ""; Min = 1.0 }
+
+/// At least `Min` monsters slain of a kind; an empty `MonsterId`: of any (M7).
+and SlainCondition =
+    {
+        MonsterId: string
+        /// int.
+        Min: float
+    }
+
+    static member Default : SlainCondition =
+        { MonsterId = ""; Min = 1.0 }
+
+/// Today is an NPC's birthday; an empty `NpcId`: anyone's (M6).
+and BirthdayCondition =
+    {
+        NpcId: string
+    }
+
+    static member Default : BirthdayCondition =
+        { NpcId = "" }
+
 and AnimalSpeciesDefinition =
     {
         Id: string
@@ -82,13 +585,22 @@ and AnimalSpeciesDefinition =
         DaysToAdult: float
         /// Renderer hint.
         Color: string
+        /// Buildings its animals live in (M5, `BuildingDefinition` ids); a building that upgrades
+        /// one of them counts too.
+        Housing: (string list) option
+        /// Products beside `ProductItemId` (M5), each on its own interval.
+        Products: (AnimalProduct list) option
+        /// The product quality each mood earns (M5); empty: normal quality.
+        MoodQualities: (MoodQuality list) option
+        /// Young born in buildings with room (M5); absent: none.
+        Breeding: AnimalBreeding option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `AnimalSpeciesDefinition` with every field at its schema default.
     static member Default : AnimalSpeciesDefinition =
-        { Id = ""; Name = ""; Visual = None; PurchaseCost = 0.0; FeedItemId = None; ProductItemId = ""; ProductIntervalDays = 1.0; DaysToAdult = 3.0; Color = "#e8d8c3"; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; PurchaseCost = 0.0; FeedItemId = None; ProductItemId = ""; ProductIntervalDays = 1.0; DaysToAdult = 3.0; Color = "#e8d8c3"; Housing = None; Products = None; MoodQualities = None; Breeding = None; Extra = [] }
 
 /// A live animal (persisted per project/save).
 and AnimalState =
@@ -111,13 +623,17 @@ and AnimalState =
         DaysSinceProduct: float
         /// Product waiting to be collected.
         ProductReady: bool
+        /// The building it lives in (M5: a `BuildingState` id).
+        BuildingId: string option
+        /// Progress toward the species' `Products` (M5), by index.
+        MoreProducts: (ProductProgress list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `AnimalState` with every field at its schema default.
     static member Default : AnimalState =
-        { Id = ""; SpeciesId = ""; Name = ""; SceneId = ""; X = 0.0; Y = 0.0; Mood = 70.0; FedToday = false; PettedToday = false; AgeDays = 0.0; DaysSinceProduct = 0.0; ProductReady = false; Extra = [] }
+        { Id = ""; SpeciesId = ""; Name = ""; SceneId = ""; X = 0.0; Y = 0.0; Mood = 70.0; FedToday = false; PettedToday = false; AgeDays = 0.0; DaysSinceProduct = 0.0; ProductReady = false; BuildingId = None; MoreProducts = None; Extra = [] }
 
 and AnimationClip =
     {
@@ -596,13 +1112,15 @@ and EventOutcome =
         MachineTypeId: string option
         /// The relationship `setRelationship` sets (M4), one of `RelationshipStatuses`.
         Status: string option
+        /// The letter `sendMail` sends (M6).
+        MailId: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `EventOutcome` with every field at its schema default.
     static member Default : EventOutcome =
-        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Variable = None; Text = None; WeatherId = None; Skill = None; ShopId = None; NodeTypeId = None; MachineTypeId = None; Status = None; Extra = [] }
+        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Variable = None; Text = None; WeatherId = None; Skill = None; ShopId = None; NodeTypeId = None; MachineTypeId = None; Status = None; MailId = None; Extra = [] }
 
 /// The project's export settings (Export Game).
 and ExportSettings =
@@ -713,11 +1231,23 @@ and GameContent =
         Cutscenes: Cutscene list
         /// Heart events (M4).
         HeartEvents: HeartEvent list
+        /// Buildings a builder puts up (M5); absent when there are none (Rust skips an empty list).
+        BuildingTypes: (BuildingDefinition list) option
+        /// Collections (M6).
+        Collections: (CollectionDefinition list) option
+        /// Bundles (M6).
+        Bundles: (BundleDefinition list) option
+        /// Achievements (M6).
+        Achievements: (AchievementDefinition list) option
+        /// Letters (M6).
+        Mail: (MailDefinition list) option
+        /// Monsters (M7).
+        Monsters: (MonsterDefinition list) option
     }
 
     /// A `GameContent` with every field at its schema default.
     static member Default : GameContent =
-        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = []; HeartEvents = [] }
+        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = []; HeartEvents = []; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None }
 
 and GameEvent =
     {
@@ -843,6 +1373,20 @@ and GameProject =
         Cutscenes: (Cutscene list) option
         /// Heart events (M4).
         HeartEvents: (HeartEvent list) option
+        /// Buildings a builder puts up (M5).
+        BuildingTypes: (BuildingDefinition list) option
+        /// Buildings on the map when a game starts (M5: the house; Keep changes adds built ones).
+        Buildings: (BuildingState list) option
+        /// Collections (M6).
+        Collections: (CollectionDefinition list) option
+        /// Bundles (M6).
+        Bundles: (BundleDefinition list) option
+        /// Achievements (M6).
+        Achievements: (AchievementDefinition list) option
+        /// Letters (M6).
+        Mail: (MailDefinition list) option
+        /// Monsters (M7).
+        Monsters: (MonsterDefinition list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -857,7 +1401,9 @@ and GameProject =
         QuarantinedItems: (InventorySlot list) option
         /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop,
         /// minigame or cutscene, chosen music, today's shop purchases, NPC walks, mine floor,
-        /// children, changed shop stock). Only the engine reads it.
+        /// children, changed shop stock, and the M5–M7 `goals`: open storage, the farm layout,
+        /// the shipping log, collections, bundles, achievements, mail, monsters and health).
+        /// Only the engine reads it.
         KeptState: Json option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
@@ -865,7 +1411,7 @@ and GameProject =
 
     /// A `GameProject` with every field at its schema default.
     static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Buildings = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -1014,13 +1560,15 @@ and Item =
         Energy: float option
         /// The item is clothing the player can wear (M4).
         Wear: WearDefinition option
+        /// Health it restores when eaten, with combat on (M7). int.
+        Health: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Item` with every field at its schema default.
     static member Default : Item =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Wear = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Wear = None; Health = None; Extra = [] }
 
 /// TS `TileMachineSchema.processing` (inline object): an in-flight machine job.
 and MachineProcessing =
@@ -1046,13 +1594,22 @@ and MachineTypeDefinition =
         BlocksMovement: bool
         /// Station categories a placed machine of this type provides to nearby hand-crafting (e.g. a Kitchen provides 'cooking').
         StationCategories: string list
+        /// Slots of storage: a chest (M5). Absent: none (a shipping bin has
+        /// `FarmSchema.DefaultShippingSlots`). int, nonnegative.
+        Storage: float option
+        /// A shipping bin (M6): what it holds is sold overnight. Absent: not one.
+        Shipping: bool option
+        /// A gate (M5): interacting opens and closes it, and an open gate never blocks.
+        Gate: bool option
+        /// What it does to the tiles around it (M5): sprinklers, scarecrows.
+        AreaEffects: (AreaEffect list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `MachineTypeDefinition` with every field at its schema default.
     static member Default : MachineTypeDefinition =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Color = "#9a7b4f"; ItemId = None; BlocksMovement = true; StationCategories = []; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Color = "#9a7b4f"; ItemId = None; BlocksMovement = true; StationCategories = []; Storage = None; Shipping = None; Gate = None; AreaEffects = None; Extra = [] }
 
 and MineBand =
     {
@@ -1064,11 +1621,21 @@ and MineBand =
         Rocks: MineRockWeight list
         /// Rock density (fraction of floor tiles occupied). 0..1.
         Density: float
+        /// Weighted monsters on its floors (M7).
+        Monsters: (MineMonsterWeight list) option
+        /// Monsters per floor (M7), with combat on; absent: none. int.
+        MonsterCount: float option
+        /// Hazard terrains scattered over its floors (M7).
+        Hazards: (MineHazard list) option
+        /// Weighted treasure left on its floors (M7).
+        Treasure: (MineTreasure list) option
+        /// Treasures per floor (M7); absent: none. int.
+        TreasureCount: float option
     }
 
     /// A `MineBand` with every field at its schema default.
     static member Default : MineBand =
-        { FromFloor = 0.0; ToFloor = 0.0; Rocks = []; Density = 0.35 }
+        { FromFloor = 0.0; ToFloor = 0.0; Rocks = []; Density = 0.35; Monsters = None; MonsterCount = None; Hazards = None; Treasure = None; TreasureCount = None }
 
 and MineConfig =
     {
@@ -1486,13 +2053,15 @@ and Player =
         Look: PlayerLook option
         /// The clothes the player wears (M4), one per slot.
         Worn: (InventorySlot list) option
+        /// Health (M7, with combat on); absent: full. int.
+        Health: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Player` with every field at its schema default.
     static member Default : Player =
-        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Name = None; FarmName = None; Look = None; Worn = None; Extra = [] }
+        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Name = None; FarmName = None; Look = None; Worn = None; Health = None; Extra = [] }
 
 /// The player character's colours (M4): `#rrggbb` each; absent ones keep the built-in art's.
 and PlayerLook =
@@ -1538,11 +2107,15 @@ and ProjectSettings =
         Relationships: RelationshipSettings option
         /// A new game asks for the player's name, the farm's name and the player's colours (M4).
         CharacterCreator: bool option
+        /// The farm scene, its layouts and pests (M5); absent: no layouts, no pests.
+        Farm: FarmSettings option
+        /// Player health, monsters and fainting (M7); absent: no combat.
+        Combat: CombatSettings option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
     static member Default : ProjectSettings =
-        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None; Relationships = None; CharacterCreator = None }
+        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None; Relationships = None; CharacterCreator = None; Farm = None; Combat = None }
 
 and Quest =
     {
@@ -1611,13 +2184,15 @@ and QuestRewards =
         Experience: float option
         /// The skill `Experience` goes to (farming, mining, foraging, fishing, social, …). Absent: farming.
         Skill: string option
+        /// A letter sent on completion (M6), arriving the next morning.
+        MailId: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `QuestRewards` with every field at its schema default.
     static member Default : QuestRewards =
-        { Money = None; Items = None; Experience = None; Skill = None; Extra = [] }
+        { Money = None; Items = None; Experience = None; Skill = None; MailId = None; Extra = [] }
 
 and RecipeDefinition =
     {
@@ -1721,13 +2296,19 @@ and Scene =
         Atmosphere: AtmosphereLook option
         /// A music asset that plays in the scene (M2).
         Music: string option
+        /// Crops are planted and grow here in every season (a greenhouse, M5).
+        AllSeasons: bool option
+        /// The building whose interior this is (M5: a `BuildingState` id; the engine sets it).
+        Building: string option
+        /// Monsters it has each morning (M7).
+        Monsters: (MonsterSpawn list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Scene` with every field at its schema default.
     static member Default : Scene =
-        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; Extra = [] }
+        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; AllSeasons = None; Building = None; Monsters = None; Extra = [] }
 
 and SceneTransition =
     {
@@ -1758,13 +2339,17 @@ and ShopDefinition =
         /// Whether this shop repairs broken tools (for durability * repairCostPerPoint).
         RepairsTools: bool
         RepairCostPerPoint: float
+        /// Buildings it builds and upgrades (M5): a builder.
+        Buildings: (string list) option
+        /// Animal species it sells (M5).
+        Animals: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `ShopDefinition` with every field at its schema default.
     static member Default : ShopDefinition =
-        { Id = ""; Name = ""; Stock = []; SellPriceMultiplier = 1.0; BuysItems = true; RepairsTools = false; RepairCostPerPoint = 0.5; Extra = [] }
+        { Id = ""; Name = ""; Stock = []; SellPriceMultiplier = 1.0; BuysItems = true; RepairsTools = false; RepairCostPerPoint = 0.5; Buildings = None; Animals = None; Extra = [] }
 
 /// A single line in a shop's stock list.
 and ShopStockEntry =
@@ -1877,6 +2462,9 @@ and TerrainDefinition =
         HazardEnergy: float
         /// Keeps the weather off its tile, as an indoor scene does (greenhouse floors).
         Indoor: bool
+        /// Health the player loses on stepping onto it, with combat on (M7); absent: none. int,
+        /// nonnegative.
+        Damage: float option
         /// What tools turn it into.
         Transforms: TerrainTransform list
         /// Undeclared keys, in order.
@@ -1885,7 +2473,7 @@ and TerrainDefinition =
 
     /// A `TerrainDefinition` with every field at its schema default.
     static member Default : TerrainDefinition =
-        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Transforms = []; Extra = [] }
+        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Damage = None; Transforms = []; Extra = [] }
 
 /// A terrain change a tool makes.
 and TerrainTransform =
@@ -1909,13 +2497,17 @@ and TileMachine =
         Processing: MachineProcessing option
         /// Finished output awaiting collection.
         Output: (RecipeIngredient list) option
+        /// What a chest or shipping bin holds (M5).
+        Contents: (InventorySlot list) option
+        /// A gate stands open (M5).
+        Open: bool option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `TileMachine` with every field at its schema default.
     static member Default : TileMachine =
-        { TypeId = ""; Processing = None; Output = None; Extra = [] }
+        { TypeId = ""; Processing = None; Output = None; Contents = None; Open = None; Extra = [] }
 
 /// Live node instance state stored on a tile.
 and TileNode =
@@ -1984,8 +2576,9 @@ and ToolDefinition =
         Id: string
         Name: string
         Description: string
-        /// One of `ToolActions`: water, till, harvest, fish, break, transform, place or plant. Any
-        /// tool strikes the gathering node it faces.
+        /// One of `ToolActions`: water, till, harvest, fish, break, transform, place, plant or
+        /// attack (a weapon, M7: the item's `ToolPower` is the damage). Any tool strikes the
+        /// gathering node it faces.
         Action: string
         /// The play-mode key that uses it (one character); absent: none.
         Key: string option
@@ -2439,6 +3032,16 @@ and [<RequireQualifiedAccess>] EventCondition =
     | Hearts of HeartsCondition
     | DayOfSeason of DayOfSeasonCondition
     | Relationship of RelationshipCondition
+    | Money of MoneyCondition
+    | SkillLevel of SkillLevelCondition
+    | MineFloor of MineFloorCondition
+    | Collection of CollectionCondition
+    | Bundle of BundleCondition
+    | Achievement of AchievementCondition
+    | Shipped of ShippedCondition
+    | Building of BuildingCondition
+    | Slain of SlainCondition
+    | Birthday of BirthdayCondition
 
     /// The `type` discriminator.
     member this.Type =
@@ -2465,3 +3068,13 @@ and [<RequireQualifiedAccess>] EventCondition =
         | Hearts _ -> "hearts"
         | DayOfSeason _ -> "dayOfSeason"
         | Relationship _ -> "relationship"
+        | Money _ -> "money"
+        | SkillLevel _ -> "skillLevel"
+        | MineFloor _ -> "mineFloor"
+        | Collection _ -> "collection"
+        | Bundle _ -> "bundle"
+        | Achievement _ -> "achievement"
+        | Shipped _ -> "shipped"
+        | Building _ -> "building"
+        | Slain _ -> "slain"
+        | Birthday _ -> "birthday"
