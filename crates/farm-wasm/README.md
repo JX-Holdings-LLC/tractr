@@ -143,9 +143,11 @@ function play(cue: string, gain: number) {
 `sfxCues()` lists the cue names (to warm the cache).
 
 A game may bring its own sounds and music (Ogg Vorbis or WAV assets). A sound with
-`asset: true` is one: its samples are `player.audioClip(cue)`, decoded when the game loaded, at
-the file's own rate and interleaved when stereo. Make the buffer at that rate (WebAudio
-resamples it) and cache it per id:
+`asset: true` is one: its samples are `player.audioClip(cue)`, at the file's own rate and
+interleaved when stereo. Short sounds were decoded when the game loaded; music and sounds
+longer than five seconds are decoded on each call (the engine keeps no decoded copy of them,
+the way the desktop player streams them). Make the buffer at that rate (WebAudio resamples
+it) and cache it per id:
 
 ```ts
 const clip = player.audioClip(cue);

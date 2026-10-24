@@ -153,13 +153,18 @@ The built-in sounds and music above play in every game. A game can bring its
 own as well: `sound` and `music` assets (Ogg Vorbis or WAV) in the project,
 shipped in the cartridge's asset table like its images.
 
-- **Decoding.** The player decodes each sound and music asset once, when the
-  game loads (`farm_player::audio_assets`, with the pure-Rust lewton and hound
-  decoders), at the file's own sample rate. WAV may be 8- to 32-bit PCM or
-  32-bit float; mono and stereo stay as they are, more channels are mixed
-  down to mono. A file is at most 10 minutes long. The format comes from the
-  file's first bytes, not its MIME type. Decoded audio stays in memory, about
-  21 MB a minute of stereo at 44.1 kHz.
+- **Decoding.** The player decodes each sound and music asset once when the
+  game loads, to check it and measure it (`farm_player::audio_assets`, with
+  the pure-Rust lewton and hound decoders), at the file's own sample rate.
+  WAV may be 8- to 32-bit PCM or 32-bit float; mono and stereo stay as they
+  are, more channels are mixed down to mono. A file is at most 10 minutes
+  long. The format comes from the file's first bytes, not its MIME type.
+- **Memory.** Decoded audio takes about 21 MB a minute of stereo at
+  44.1 kHz, so only sounds up to 5 seconds long stay decoded. Music and
+  longer sounds keep just their file (the bytes the cartridge's asset table
+  holds anyway, not a copy) and are decoded and resampled while they play,
+  about half a second ahead (`farm_player::audio_stream`): a stream holds a
+  few thousand frames of its file, never all of it.
 - **Sounds.** `playSound(id)` plays the sound asset `id` once, mixed with
   everything else at the sound-effects volume. Without such an asset the
   built-in preset of that name plays, as before. An asset whose id is a
@@ -185,15 +190,21 @@ shipped in the cartridge's asset table like its images.
   broken, too long) is left out when the game loads
   (`Player::audio_assets().failed()` lists it with the reason), and the
   built-in sound or music plays in its place. Audio never stops the game.
-- **Playback.** A `SoundRequest` carries its sound asset's decoded `Clip`,
-  and a `MusicCue` its music asset (`asset`, with the built-in `music` as the
-  fallback), so a host needs nothing else. The desktop game and the editor's
-  Play Mode (`speaker`) resample a clip to the device's rate the first time
-  it plays (cubic interpolation) and keep it while the device stays open:
-  a sound at once, music on a thread of its own while the music before it
-  keeps playing. The web demo plays them too: a frame names them
+- **Playback.** A `SoundRequest` carries its sound asset's `AudioFile` (with
+  its decoded `Clip` when it is short), and a `MusicCue` its music asset
+  (`asset`, with the built-in `music` as the fallback), so a host needs
+  nothing else. The desktop game and the editor's Play Mode (`speaker`)
+  resample a short sound to the device's rate the first time it plays (cubic
+  interpolation) and keep it in a cache of 16 MB; past that the sounds played
+  longest ago are dropped, never one that is still playing. Music and long
+  sounds stream: a thread of their own (`Feeder`) decodes and resamples them
+  with the same interpolation and hands the audio callback ready samples
+  through a fixed queue, so the callback never decodes, allocates or waits.
+  Looped music goes from its end straight back into its start, interpolated
+  across the seam. The web demo plays them too: a frame names them
   (`info.sounds[].asset`, `info.music.asset`), the page fetches the decoded
-  samples with `Player.audioClip(id)` and WebAudio resamples them
+  samples with `Player.audioClip(id)` (music and long sounds are decoded for
+  that call; the page keeps the `AudioBuffer`) and WebAudio resamples them
   ([crates/farm-wasm/README.md](../crates/farm-wasm/README.md#sound)).
 
 Like the built-in sounds, none of this reaches the simulation: the state,

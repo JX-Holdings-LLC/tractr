@@ -179,9 +179,10 @@ Cargo crates, the NuGet packages (Avalonia, SkiaSharp and Svg.Skia move
 together), the .NET SDK in `global.json` and the pinned actions. The
 **Dependency audit** workflow (`audit.yml`, run by CI and weekly) fails on a
 RustSec advisory (`cargo deny`, configured in `deny.toml`, over `Cargo.lock`
-and the plugin guest's and meter's lock files), on a vulnerable NuGet package
-(`tools/ci/dotnet-vulnerable.py`) and on an unused Cargo dependency
-(`cargo machete`).
+and the plugin guest's and meter's lock files; unmaintained and unsound
+notices too, unless `deny.toml` triages them with a reason), on a vulnerable
+NuGet package (`tools/ci/dotnet-vulnerable.py`) and on an unused Cargo
+dependency (`cargo machete`).
 
 ## How the Update Center finds updates
 
