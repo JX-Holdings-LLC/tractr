@@ -53,7 +53,7 @@ public sealed class FarmFfiTests
     public void TheLibrarySpeaksTheAbiTheseBindingsExpect()
     {
         Assert.Null(FarmFfi.LoadError);
-        Assert.Equal(3u, FarmFfi.AbiVersion);
+        Assert.Equal(4u, FarmFfi.AbiVersion);
         // Loaded from the application's folder, not from wherever the OS would search.
         var loaded = System.Diagnostics.Process.GetCurrentProcess().Modules
             .Cast<System.Diagnostics.ProcessModule>()
