@@ -22,6 +22,8 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly StackPanel _weather = new() { Name = "WeatherOdds", Spacing = 6 };
     private readonly StackPanel _skillNames = new() { Name = "SkillNames", Spacing = 5 };
     private readonly StackPanel _overlays = new() { Name = "WeatherOverlays", Spacing = 5 };
+    /// <summary>Each weather type's overlay picker, refilled as the overlay rows change.</summary>
+    private readonly Dictionary<WeatherLookDraft, ComboBox> _overlayPickers = [];
     private readonly StackPanel _weatherLooks = new() { Name = "WeatherLooks", Spacing = 5 };
     private readonly StackPanel _looks = new() { Name = "AtmosphereLooks", Spacing = 8 };
     private readonly StackPanel _exportProblems = new() { Name = "ExportSettingsProblems", Spacing = 4 };
@@ -190,6 +192,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         _ = new DraftRows<SkillNameDraft>(_skillNames, ViewModel.SkillNames, SkillNameRow);
         _ = new DraftRows<OverlayDraft>(_overlays, ViewModel.Overlays, OverlayRow);
         _ = new DraftRows<WeatherLookDraft>(_weatherLooks, ViewModel.WeatherLooks, WeatherLookRow);
+        ViewModel.OverlayChoicesChanged += (_, _) => RefreshOverlayPickers();
         _ = new DraftRows<LookDraft>(_looks, ViewModel.Looks, LookRow);
         ViewModel.SkillLevels.CollectionChanged += (_, _) => ShowSkillLevels();
         ShowSkillLevels();
@@ -344,6 +347,18 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private static ComboBox RowPicker(string name, IReadOnlyList<PickerOption> options, string current, Action<string> set, double width)
     {
         var box = new ComboBox { Name = name, Width = width };
+        FillPicker(box, options, current);
+        box.SelectionChanged += (_, _) =>
+        {
+            if (box.SelectedItem is ComboBoxItem { Tag: string id }) set(id);
+        };
+        return box;
+    }
+
+    /// <summary>Puts <paramref name="options"/> in a <see cref="RowPicker"/>, with <paramref name="current"/> chosen.</summary>
+    private static void FillPicker(ComboBox box, IReadOnlyList<PickerOption> options, string current)
+    {
+        box.Items.Clear();
         foreach (var option in options)
         {
             var item = new ComboBoxItem { Content = option.Label, Tag = option.Id };
@@ -352,11 +367,20 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         }
 
         box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, current));
-        box.SelectionChanged += (_, _) =>
+    }
+
+    /// <summary>Offers each weather type the overlays the rows have now, before the weather is saved.</summary>
+    private void RefreshOverlayPickers()
+    {
+        foreach (var look in _overlayPickers.Keys.Where(look => !ViewModel.WeatherLooks.Contains(look)).ToList())
         {
-            if (box.SelectedItem is ComboBoxItem { Tag: string id }) set(id);
-        };
-        return box;
+            _overlayPickers.Remove(look);
+        }
+
+        foreach (var (look, picker) in _overlayPickers)
+        {
+            FillPicker(picker, ViewModel.OverlayChoices(look.Overlay), look.Overlay);
+        }
     }
 
     private Control SkillNameRow(SkillNameDraft skill)
@@ -390,6 +414,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private Control WeatherLookRow(WeatherLookDraft look)
     {
         var overlay = RowPicker($"WeatherLook_Overlay_{look.WeatherId}", ViewModel.OverlayChoices(look.Overlay), look.Overlay, value => look.Overlay = value, 150);
+        _overlayPickers[look] = overlay;
         var music = RowPicker($"WeatherLook_Music_{look.WeatherId}", ViewModel.MusicChoices(look.Music), look.Music, value => look.Music = value, 150);
         Ui.Label((overlay, look.OverlayLabel), (music, look.MusicLabel));
         return Ui.HStack(8, new TextBlock { Text = look.WeatherName, Width = 90, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },

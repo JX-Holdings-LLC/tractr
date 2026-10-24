@@ -217,10 +217,17 @@ public sealed class WorldVocabularyEditorTests
         Assert.Equal("{0} shells", settings.Words.OrNull()?.Money.OrNull());
         Assert.Equal("music-1", settings.Calendar.Seasons[0].Music.OrNull());
 
+        // A new overlay is offered to the weather types before the weather is saved, under its id as typed.
         Press(host.Window, "AddOverlayButton");
         Pump();
         var weatherId = host.Workspace.Current!.Weather.Types[0].Id;
-        Press(host.Window, "SaveWeatherButton");
+        var picker = FindByName<ComboBox>(host.Window, $"WeatherLook_Overlay_{weatherId}");
+        Assert.Contains(picker.Items.OfType<ComboBoxItem>(), item => Equals(item.Tag, "overlay-1"));
+        FindByName<TextBox>(host.Window, "Overlay_Id_overlay-1").Text = "acid";
+        Pump();
+        Assert.Contains(picker.Items.OfType<ComboBoxItem>(), item => Equals(item.Tag, "acid"));
+        Assert.DoesNotContain(picker.Items.OfType<ComboBoxItem>(), item => Equals(item.Tag, "overlay-1"));
+        FindByName<TextBox>(host.Window, "Overlay_Id_overlay-1").Text = "overlay-1";
         Pump();
         Choose(host, $"WeatherLook_Overlay_{weatherId}", "overlay-1");
         Choose(host, $"WeatherLook_Music_{weatherId}", "music-1");
