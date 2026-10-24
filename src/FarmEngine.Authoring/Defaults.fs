@@ -343,14 +343,16 @@ module Defaults =
     /// MinigameEditor `addTier`.
     let newResultTier () : MinigameResultTier = { MinScore = 0.0; Outcomes = [] }
 
-    /// SceneManager `createScene`: `createEmptyScene` filled with the chosen tile type (grass by default).
+    /// SceneManager `createScene`: `createEmptyScene` filled with the chosen tile type (grass by
+    /// default), placed on that terrain's own layer as painting places it (M1: a game's terrain
+    /// says its layer and whether it blocks).
     let newSceneWith (project: GameProject) (name: string) (width: int) (height: int) (defaultTile: string) : Scene =
         let width = max 1 width
         let height = max 1 height
         let name = if String.IsNullOrWhiteSpace name then "New Scene" else name.Trim()
         let scene = AuthoringTiles.CreateEmptyScene(nextId "scene" (allIds project), name, float width, float height)
-        if defaultTile = TileTypes.Grass then scene
-        else Proj.mapTiles (fun tile -> AuthoringTiles.CreateEmptyTile(tile.X, tile.Y, defaultTile)) scene
+        let terrains = ContentCompiler.terrains project
+        Proj.mapTiles (fun tile -> AuthoringTiles.SetTileLayerIn(terrains, tile, defaultTile, None)) scene
 
     /// SceneManager `createScene` with the dialog defaults (16×12, grass).
     let newScene (project: GameProject) (name: string) (width: int) (height: int) : Scene = newSceneWith project name width height TileTypes.Grass
