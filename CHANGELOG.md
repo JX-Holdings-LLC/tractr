@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+The project moved to `JX-Holdings-LLC/tractr` and the repository was renamed. No
+engine or game behaviour changed; this release checks the move: updater source,
+release workflows, links and the full test suite.
+
 ## 0.9.0
 
 Roadmap milestones M5 (building the farm), M6 (long-term goals) and M7

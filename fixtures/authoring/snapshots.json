@@ -46,8 +46,8 @@
   "content/packs-all-disabled.json": {
     "ok": true,
     "errors": [],
-    "json": "12d1108a67120de1",
-    "stable": "c9af64d87d6a6322",
+    "json": "253f7f3954acd459",
+    "stable": "ebd1a631a065c080",
     "problems": [
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
@@ -58,8 +58,8 @@
   "content/packs-de.json": {
     "ok": true,
     "errors": [],
-    "json": "023dcd9cf30e4484",
-    "stable": "34cf12dd6875c179",
+    "json": "25ffec7c6ff14536",
+    "stable": "2f3b4bbacac81e97",
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
@@ -71,8 +71,8 @@
   "content/packs-fr.json": {
     "ok": true,
     "errors": [],
-    "json": "7a891fdcbf21c6e8",
-    "stable": "1a60d4f52b4e0574",
+    "json": "d1bda681fc28c1bd",
+    "stable": "670e7a57b9fa4b27",
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
@@ -172,8 +172,8 @@
   "replays/content-packs-and-plugins.json": {
     "ok": true,
     "errors": [],
-    "json": "7a891fdcbf21c6e8",
-    "stable": "1a60d4f52b4e0574",
+    "json": "d1bda681fc28c1bd",
+    "stable": "670e7a57b9fa4b27",
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
