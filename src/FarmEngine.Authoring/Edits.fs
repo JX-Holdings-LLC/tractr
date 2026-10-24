@@ -138,6 +138,9 @@ type Edit =
     | RemoveCropMutation of mutationId: string
     | UpsertCutscene of cutscene: Cutscene
     | RemoveCutscene of cutsceneId: string
+    /// Heart events (M4).
+    | UpsertHeartEvent of heartEvent: HeartEvent
+    | RemoveHeartEvent of heartEventId: string
     | SetWeather of config: WeatherConfig
     /// ProjectSettingsEditor weather table: a weight of 0 removes the entry.
     | SetWeatherWeight of seasonId: string * weatherId: string * weight: float

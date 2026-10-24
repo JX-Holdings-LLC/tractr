@@ -193,6 +193,15 @@ module Defaults =
                 | Some f -> f.Id
                 | None -> ""
             EventCondition.FestivalId { FestivalId = festival }
+        | "variable" -> EventCondition.Variable { VariableCondition.Default with Name = "coins"; Value = Some 1.0; Compare = VariableComparisons.Ge }
+        | "all" -> EventCondition.All { Conditions = [] }
+        | "any" -> EventCondition.Any { Conditions = [] }
+        | "not" -> EventCondition.Not { Conditions = [] }
+        | "chance" -> EventCondition.Chance { Chance = 0.5 }
+        | "scene" -> EventCondition.Scene { SceneIds = (if project.StartSceneId = "" then [] else [ project.StartSceneId ]) }
+        | "hearts" -> EventCondition.Hearts { NpcId = ""; Min = Some 2.0; Max = None }
+        | "dayOfSeason" -> EventCondition.DayOfSeason { MinDay = Some 1.0; MaxDay = Some 7.0 }
+        | "relationship" -> EventCondition.Relationship { NpcId = ""; Status = RelationshipStatuses.Dating }
         | _ -> EventCondition.Flag { Flag = ""; Value = true }
 
     /// event-forms.tsx outcome picker: an outcome of the kind with nothing filled in yet.
@@ -335,6 +344,17 @@ module Defaults =
     /// ActionsEditor `duplicateMinigame`.
     let duplicateMinigame (project: GameProject) (minigame: MinigameDef) : MinigameDef =
         { minigame with Id = slugId (sprintf "%s copy" minigame.Name) (allIds project) "minigame"; Name = sprintf "%s (copy)" minigame.Name }
+
+    /// A new heart event (M4): the first NPC at two hearts, with the first cutscene, when talking.
+    let newHeartEvent (project: GameProject) : HeartEvent =
+        { HeartEvent.Default with
+            Id = nextId "heart" (allIds project); Name = "New Heart Event"; Hearts = 2.0
+            NpcId = (match project.Npcs with n :: _ -> n.Id | [] -> "")
+            CutsceneId = (match defaultArg project.Cutscenes [] with c :: _ -> c.Id | [] -> "") }
+
+    /// A copy of a heart event (M4): "(copy)" with a fresh slug id.
+    let duplicateHeartEvent (project: GameProject) (heartEvent: HeartEvent) : HeartEvent =
+        { heartEvent with Id = slugId (sprintf "%s copy" heartEvent.Name) (allIds project) "heart"; Name = sprintf "%s (copy)" heartEvent.Name }
 
     /// A copy of a cutscene (M2): "(copy)" with a fresh slug id.
     let duplicateCutscene (project: GameProject) (cutscene: Cutscene) : Cutscene =

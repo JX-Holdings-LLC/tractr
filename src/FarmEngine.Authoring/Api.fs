@@ -126,6 +126,8 @@ type Edits =
     static member RemoveCropMutation(mutationId: string) : Edit = RemoveCropMutation mutationId
     static member UpsertCutscene(cutscene: Cutscene) : Edit = UpsertCutscene cutscene
     static member RemoveCutscene(cutsceneId: string) : Edit = RemoveCutscene cutsceneId
+    static member UpsertHeartEvent(heartEvent: HeartEvent) : Edit = UpsertHeartEvent heartEvent
+    static member RemoveHeartEvent(heartEventId: string) : Edit = RemoveHeartEvent heartEventId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
     static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
     static member SetMine(config: MineConfig) : Edit = SetMine config
@@ -243,6 +245,7 @@ type Defaults =
     static member NewCropQuality(project: GameProject) : CropQualityDefinition = Defaults.newCropQuality project
     static member NewCropMutation(project: GameProject) : CropMutationDefinition = Defaults.newCropMutation project
     static member NewCutscene(project: GameProject) : Cutscene = Defaults.newCutscene project
+    static member NewHeartEvent(project: GameProject) : HeartEvent = Defaults.newHeartEvent project
     static member NewAnimalSpecies(project: GameProject) : AnimalSpeciesDefinition = Defaults.newAnimalSpecies project
     static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState = Defaults.newAnimal project speciesId sceneId x y
     static member NewFishTable(project: GameProject) : FishTable = Defaults.newFishTable project
@@ -252,6 +255,7 @@ type Defaults =
     static member NewMinigame(project: GameProject) : MinigameDef = Defaults.newMinigame project
     static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef = Defaults.duplicateMinigame project minigame
     static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene = Defaults.duplicateCutscene project cutscene
+    static member DuplicateHeartEvent(project: GameProject, heartEvent: HeartEvent) : HeartEvent = Defaults.duplicateHeartEvent project heartEvent
     static member NewResultTier() : MinigameResultTier = Defaults.newResultTier ()
     static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene = Defaults.newScene project name width height
     static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene = Defaults.newSceneWith project name width height defaultTile
@@ -365,7 +369,8 @@ type FormField internal (key: string, label: string, kind: string, reference: st
     member _.Key = key
     member _.Label = label
     /// "text", "integer", "number", "bool", "choice", "reference", "referenceList",
-    /// "referenceKeys" or "plain" (named like a reference but not one; see `Reason`).
+    /// "referenceKeys", "conditions" (a nested condition list, M3) or "plain" (named like a
+    /// reference but not one; see `Reason`).
     member _.Kind = kind
     /// The reference kind ("item", "npc", …) for reference fields, else "".
     member _.Reference = reference
@@ -395,6 +400,7 @@ type FormField internal (key: string, label: string, kind: string, reference: st
             | FieldKind.OneOf choices -> "choice", "", References.choiceOptions choices, "", ""
             | FieldKind.Reference kind -> "reference", ReferenceKind.name kind, [], "", ""
             | FieldKind.ReferenceList kind -> "referenceList", ReferenceKind.name kind, [], "", ""
+            | FieldKind.Conditions -> "conditions", "", [], "", ""
         FormField(field.Key, field.Label, kind, reference, choices, field.Optional, field.Empty, field.Placeholder,
                   field.WhenEmpty, field.Min, field.Max, onLabel, offLabel, "")
 

@@ -151,6 +151,28 @@ module References =
           QuestObjectiveTypes.Craft, "Craft Item"; QuestObjectiveTypes.Gift, "Give Gift" ]
 
     let private flag = "a flag name: flags are free text that events, actions and dialogue set and check"
+    let private variable = "a variable name: variables are flags that hold a number or a text (M3)"
+    let private expression = "a portrait expression of the NPC (its `Portraits`)"
+
+    /// The event triggers, with the editor's labels (M3).
+    let triggers =
+        [ EventTriggers.Enter, "Enter a tile"
+          EventTriggers.Interact, "Interact with a tile"
+          EventTriggers.Tick, "Every minute"
+          EventTriggers.DayStart, "Each morning"
+          EventTriggers.Time, "At a time of day"
+          EventTriggers.Harvest, "Harvesting"
+          EventTriggers.Sell, "Selling"
+          EventTriggers.Craft, "Crafting"
+          EventTriggers.Catch, "Catching a fish"
+          EventTriggers.PickUp, "Picking up an item"
+          EventTriggers.Friendship, "Friendship changes"
+          EventTriggers.Quest, "A quest starts or ends" ]
+
+    /// The relationship stages, with the editor's labels (M4).
+    let relationshipStatuses =
+        [ RelationshipStatuses.Single, "Single"; RelationshipStatuses.Dating, "Dating"
+          RelationshipStatuses.Engaged, "Engaged"; RelationshipStatuses.Married, "Married" ]
 
     let declarations: FieldDeclaration list =
         [ // Project
@@ -236,7 +258,8 @@ module References =
           optionalAs "QuestRewards" "Skill" ReferenceKind.Skill "(farming)"
           // Events and the condition/outcome vocabulary
           optionalAs "GameEvent" "SceneId" ReferenceKind.Scene "(every scene)"
-          oneOf "GameEvent" "Trigger" (same EventTriggers.All)
+          oneOf "GameEvent" "Trigger" triggers
+          plain "GameEvent" "Subject" "an item, an NPC or a quest, by the event's trigger"
           reference "HasItemCondition" "ItemId" ReferenceKind.Item
           reference "InventorySpaceCondition" "ItemId" ReferenceKind.Item
           plain "FlagCondition" "Flag" flag
@@ -258,6 +281,38 @@ module References =
           optional "EventOutcome" "CutsceneId" ReferenceKind.Cutscene
           optional "EventOutcome" "ActionId" ReferenceKind.Action
           optional "EventOutcome" "MinigameId" ReferenceKind.Minigame
+          // M3 and M4 conditions and outcomes
+          plain "VariableCondition" "Name" variable
+          oneOf "VariableCondition" "Compare" (same VariableComparisons.All)
+          list "SceneCondition" "SceneIds" ReferenceKind.Scene
+          optionalAs "HeartsCondition" "NpcId" ReferenceKind.Npc "(the NPC speaking)"
+          optionalAs "RelationshipCondition" "NpcId" ReferenceKind.Npc "(the NPC speaking, or anyone)"
+          oneOf "RelationshipCondition" "Status" relationshipStatuses
+          plain "EventOutcome" "Variable" variable
+          optional "EventOutcome" "WeatherId" ReferenceKind.Weather
+          optional "EventOutcome" "Skill" ReferenceKind.Skill
+          optional "EventOutcome" "ShopId" ReferenceKind.Shop
+          optional "EventOutcome" "NodeTypeId" ReferenceKind.NodeType
+          optional "EventOutcome" "MachineTypeId" ReferenceKind.MachineType
+          optionalOneOf "EventOutcome" "Status" relationshipStatuses
+          // Dialogue and relationships (M4)
+          plain "Dialogue" "Expression" expression
+          plain "NpcLine" "Expression" expression
+          plain "NpcPortrait" "Expression" "the expression's name, which lines and dialogues pick"
+          plain "CutsceneStep" "Expression" expression
+          reference "HeartEvent" "NpcId" ReferenceKind.Npc
+          reference "HeartEvent" "CutsceneId" ReferenceKind.Cutscene
+          optionalAs "HeartEvent" "SceneId" ReferenceKind.Scene "(when talking to the NPC)"
+          optionalAs "RelationshipSettings" "DatingItemId" ReferenceKind.Item "(none: dating starts at the hearts)"
+          optional "RelationshipSettings" "ProposalItemId" ReferenceKind.Item
+          optional "RelationshipSettings" "WeddingCutsceneId" ReferenceKind.Cutscene
+          optionalAs "RelationshipSettings" "HomeSceneId" ReferenceKind.Scene "(the spouse stays where they live)"
+          list "RelationshipSettings" "SpouseGiftItemIds" ReferenceKind.Item
+          plain "RelationshipSettings" "ChildNames" "names the children get, in order"
+          oneOf "WearDefinition" "Slot" (same WearSlots.All)
+          plain "Player" "Name" "the player's name (a new game may ask for it)"
+          plain "Player" "FarmName" "the farm's name"
+          oneOf "NpcSocialState" "Status" relationshipStatuses
           // Economy, crafting, gathering
           reference "ShopStockEntry" "ItemId" ReferenceKind.Item
           list "ShopStockEntry" "Seasons" ReferenceKind.Season

@@ -70,6 +70,7 @@ public static class EditorNavigation
         "action" => "Actions",
         "minigame" => "Minigames",
         "cutscene" => "Cutscenes",
+        "heartEvent" => "Heart events",
         "terrain" => "Terrains",
         "tool" => "Tools",
         "itemCategory" => "Item kinds",

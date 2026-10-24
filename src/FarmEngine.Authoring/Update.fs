@@ -173,6 +173,7 @@ module internal Proj =
         own project.CropQualities (fun q -> q.Id)
         own project.CropMutations (fun m -> m.Id)
         own project.Cutscenes (fun c -> c.Id)
+        own project.HeartEvents (fun h -> h.Id)
         ids
 
 /// Tile-layer rules shared by the paint edits (web `game-helpers.ts` `setTileLayer`, `classifyTileType`).

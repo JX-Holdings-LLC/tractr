@@ -98,6 +98,8 @@ module Document =
         | RemoveCropMutation mutationId -> EditContent.removeCropMutation mutationId project
         | UpsertCutscene cutscene -> EditContent.upsertCutscene cutscene project
         | RemoveCutscene cutsceneId -> EditContent.removeCutscene cutsceneId project
+        | UpsertHeartEvent heartEvent -> EditContent.upsertHeartEvent heartEvent project
+        | RemoveHeartEvent heartEventId -> EditContent.removeHeartEvent heartEventId project
         | SetWeather config -> EditContent.setWeather config project
         | SetWeatherWeight(seasonId, weatherId, weight) -> EditContent.setWeatherWeight seasonId weatherId weight project
         | SetMine config -> EditContent.setMine config project
