@@ -7,7 +7,7 @@
 //!   [`theme`] the colors (cozy dark panels, gold accents, Inter), [`i18n`] the string tables
 //!   of the interface (English and Spanish).
 //! - [`game`] draws the play screens: HUD, dialogue, shop, crafting, inventory, quests, creator
-//!   panels, minigames and toasts. Screens read the game and return [`game::GameAction`]s;
+//!   panels, minigames and toasts, chests, the builder's placement map, goals and mail. Screens read the game and return [`game::GameAction`]s;
 //!   every gameplay action is an engine command. Rules (visible options, stock left, what can
 //!   be crafted) come from `farm_sim::overlay`, never from the UI.
 //! - [`shell`] draws the game shell of a standalone game: title screen, save slots, pause

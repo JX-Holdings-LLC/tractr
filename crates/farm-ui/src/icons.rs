@@ -33,6 +33,8 @@ pub enum Icon {
     Sun,
     Clock,
     Book,
+    /// An envelope (M6: the mailbox).
+    Mail,
 }
 
 /// Draws `icon` into the square `rect` in `color`.
@@ -200,6 +202,11 @@ pub fn draw(list: &mut DrawList, icon: Icon, rect: Rect, color: Color, backgroun
             line(list, (0.34, 0.14), (0.34, 0.86));
             line(list, (0.44, 0.34), (0.72, 0.34));
             line(list, (0.44, 0.48), (0.72, 0.48));
+        }
+        Icon::Mail => {
+            list.stroke_round_rect(r(0.12, 0.24, 0.76, 0.52), s * 0.06, color, stroke);
+            line(list, (0.14, 0.28), (0.5, 0.54));
+            line(list, (0.5, 0.54), (0.86, 0.28));
         }
     }
 }

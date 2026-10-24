@@ -485,12 +485,12 @@ pub mod bindings {
     }
 
     fn modal_open(state: &GameState) -> bool {
-        state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some() || state.cutscene.is_some()
+        farm_sim::engine::modal_open(state)
     }
 
     /// The movement intent for this frame: keyboard vector (plus any `extra` touch/D-pad
-    /// vector), clamped per axis, and zero while dialogue, a shop, a minigame or a cutscene is
-    /// open (App.tsx semantics).
+    /// vector), clamped per axis, and zero while dialogue, a shop, a minigame, a cutscene or a
+    /// chest (M5) is open (App.tsx semantics).
     pub fn move_intent(input: &InputManager, state: &GameState, extra: Option<MoveVector>) -> MoveVector {
         if modal_open(state) {
             return MoveVector::new(0.0, 0.0);
@@ -504,17 +504,18 @@ pub mod bindings {
     /// `update()` semantics). Does NOT call [`InputManager::end_frame`] — the host does, once
     /// per frame.
     ///
-    /// While an engine modal (dialogue/shop/minigame) or a host modal (`host_modal_open`) is
-    /// open, only Escape is handled: it closes the host modal first (reported via
+    /// While an engine modal (dialogue/shop/minigame/chest) or a host modal (`host_modal_open`)
+    /// is open, only Escape is handled: it closes the host modal first (reported via
     /// [`PlayFrameInput::escape`]), else cancels the minigame, else closes the shop, else the
-    /// dialogue. A cutscene by itself takes its own keys ([`cutscene_frame`]).
+    /// chest (M5), else the dialogue. A cutscene by itself takes its own keys ([`cutscene_frame`]).
     pub fn poll_play_frame(
         input: &InputManager,
         state: &GameState,
         content: &GameContent,
         host_modal_open: bool,
     ) -> PlayFrameInput {
-        let engine_modal = state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some();
+        let engine_modal =
+            state.dialogue.is_some() || state.shop.is_some() || state.minigame.is_some() || state.storage.is_some();
         if !host_modal_open && !engine_modal && state.cutscene.is_some() {
             return cutscene_frame(input, state, content);
         }
@@ -528,6 +529,8 @@ pub mod bindings {
                     commands.push(Command::CancelMinigame);
                 } else if state.shop.is_some() {
                     commands.push(Command::CloseShop);
+                } else if state.storage.is_some() {
+                    commands.push(Command::CloseStorage);
                 } else if state.dialogue.is_some() {
                     commands.push(Command::CloseDialogue);
                 }

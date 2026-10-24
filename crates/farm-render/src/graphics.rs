@@ -374,6 +374,13 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
     for (target, animal) in snapshot.npcs.iter_mut().skip(npcs.len()).zip(animals) {
         target.sprite = art(GraphicsSource::visual_of(&source.animal_species, Some(&animal.species_id)));
     }
+    // Monsters (M7) face and walk like NPCs; buildings (M5) show their kind's art.
+    for monster in &mut snapshot.monsters {
+        monster.sprite = resolve_visual(assets, monster.visual.as_ref(), tick, &monster.direction, monster.moving);
+    }
+    for building in &mut snapshot.buildings {
+        building.sprite = art(building.visual.as_ref());
+    }
 
     let window = snapshot.tile_window;
     for (y, row) in scene.tiles.iter().enumerate() {

@@ -649,7 +649,10 @@ impl Player {
 
         let playing = self.game.is_some() && self.screens.is_empty();
         let game_modal = playing
-            && self.game.as_ref().is_some_and(|game| self.game_ui.panel.is_some() || game.session.engine_modal_open());
+            && self
+                .game
+                .as_ref()
+                .is_some_and(|game| self.game_ui.host_modal_open() || game.session.engine_modal_open());
         if playing {
             self.step_game(dt, &input);
             // A game left in the background (another window, a hidden browser tab) waits in the
@@ -704,27 +707,49 @@ impl Player {
                 session.minigame_input(MinigameInput::Release);
             }
         }
-        // A panel's own hotkey closes it again (I / J / X), like the editor.
-        let own_key = self.game_ui.panel.map(|panel| match panel {
-            Panel::Inventory => BindAction::Inventory.canonical_key(),
-            Panel::Quests => BindAction::Quests.canonical_key(),
-            Panel::Crafting => BindAction::Craft.canonical_key(),
+        // A panel's own hotkey closes it again (I / J / X), like the editor; the goals and mail
+        // panels' keys (M6) come as host presses below.
+        let own_key = self.game_ui.panel.and_then(|panel| match panel {
+            Panel::Inventory => Some(BindAction::Inventory.canonical_key()),
+            Panel::Quests => Some(BindAction::Quests.canonical_key()),
+            Panel::Crafting => Some(BindAction::Craft.canonical_key()),
+            Panel::Goals | Panel::Mail => None,
         });
         let close_own = own_key.is_some_and(|key| input.game_pressed.iter().any(|pressed| pressed == key));
+        // The goals and mail panels open from the game (no engine modal over it) in games that
+        // have them, and close again with their own key.
+        let content = session.content();
+        let free = !session.engine_modal_open() && session.state().cutscene.is_none();
+        let host_panels: Vec<Panel> = input
+            .host_pressed
+            .iter()
+            .filter_map(|action| match action {
+                BindAction::Goals if farm_ui::game::has_goals(content) => Some(Panel::Goals),
+                BindAction::Mail if farm_ui::game::has_mail(content) => Some(Panel::Mail),
+                _ => None,
+            })
+            .filter(|panel| self.game_ui.panel == Some(*panel) || (self.game_ui.panel.is_none() && free))
+            .collect();
         // Interact presses carry what the player holds for planting.
         let planting = &self.game_ui.planting;
         session.set_planting(Some((planting.seed.clone(), planting.fertilizer.clone())));
-        let toggles = session.update(dt, self.game_ui.panel.is_some());
+        let toggles = session.update(dt, self.game_ui.host_modal_open());
         game.play_seconds += dt;
         if close_own {
             self.game_ui.panel = None;
         }
         if toggles.escape {
-            if self.game_ui.panel.is_some() {
+            // Escape backs out of placing a building into the builder's shop (M5).
+            if self.game_ui.placement.is_some() {
+                self.game_ui.placement = None;
+            } else if self.game_ui.panel.is_some() {
                 self.game_ui.panel = None;
             } else {
                 self.open_pause();
             }
+        }
+        for panel in host_panels {
+            self.toggle_panel(panel);
         }
         for (toggle, panel) in [
             (toggles.inventory, Panel::Inventory),
@@ -994,6 +1019,7 @@ impl Player {
             let view = GameView {
                 state,
                 content,
+                ctx: session.context(),
                 overlay: &overlay,
                 calendar: &calendar,
                 panels: &panel_views,
@@ -1254,13 +1280,22 @@ impl Player {
             ShellAction::SettingsChanged => self.apply_settings(),
             ShellAction::StartCapture(_) | ShellAction::CancelCapture => {}
             ShellAction::FinishCreator => {
-                let command = farm_sim::Command::SetPlayerLook {
-                    name: self.creator.name.clone(),
-                    farm_name: self.creator.farm.clone(),
-                    look: self.creator.look(),
-                };
+                let mut commands = Vec::new();
+                // The farm map first (M5), then who farms it.
+                if let Some(layout_id) = self.creator.chosen_layout() {
+                    commands.push(farm_sim::Command::ChooseFarmLayout { layout_id: layout_id.to_owned() });
+                }
+                if self.creator.look {
+                    commands.push(farm_sim::Command::SetPlayerLook {
+                        name: self.creator.name.clone(),
+                        farm_name: self.creator.farm.clone(),
+                        look: self.creator.look(),
+                    });
+                }
                 if let Some(game) = self.game.as_mut() {
-                    game.session.run_command(&command);
+                    for command in &commands {
+                        game.session.run_command(command);
+                    }
                 }
                 self.screens.retain(|screen| *screen != Screen::Creator);
                 self.drain_session_events();
@@ -1312,13 +1347,24 @@ impl Player {
     fn start_game(&mut self, slot: u32) {
         let session = PlaySession::new_game(self.def.content.clone(), &self.def.start, self.seed.as_deref());
         self.attach(session, slot, 0.0);
-        // A game that asks for its player's name and colours (M4) waits behind the creator.
-        if self.def.content.settings.character_creator == Some(true) {
+        // A game that asks for its player's name and colours (M4), or for one of its farm
+        // layouts (M5), waits behind the creator.
+        let settings = &self.def.content.settings;
+        let layouts: Vec<(String, String, String)> = settings
+            .farm
+            .iter()
+            .flat_map(|farm| &farm.layouts)
+            .map(|layout| (layout.id.clone(), layout.name.clone(), layout.description.clone()))
+            .collect();
+        let look = settings.character_creator == Some(true);
+        if look || layouts.len() >= 2 {
             let player = &self.def.start.player;
             self.creator = shell::CreatorScreen::new(
                 player.name.as_deref().unwrap_or_default(),
                 player.farm_name.as_deref().unwrap_or_default(),
-            );
+            )
+            .with_layouts(layouts);
+            self.creator.look = look;
             self.screens.push(Screen::Creator);
         }
     }

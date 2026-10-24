@@ -332,9 +332,11 @@ pub fn can_hand_in(ctx: &EngineContext, state: &GameState, bundle_id: &str, line
     let rank =
         |quality: Option<&str>| quality.map_or(0, |q| ctx.crop_qualities().iter().position(|t| t.id == q).unwrap_or(0));
     let floor = rank(wanted.quality.as_deref());
-    state.player.inventory.iter().any(|slot| {
-        slot.item.id == wanted.item_id && slot.quantity > 0 && rank(slot.quality.as_deref()) >= floor
-    })
+    state
+        .player
+        .inventory
+        .iter()
+        .any(|slot| slot.item.id == wanted.item_id && slot.quantity > 0 && rank(slot.quality.as_deref()) >= floor)
 }
 
 /// Whether the player is where a goal with `scene_id` takes items (absent: anywhere).

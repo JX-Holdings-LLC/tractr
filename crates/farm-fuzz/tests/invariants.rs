@@ -284,7 +284,11 @@ fn generated_games_build_farms_reach_goals_and_fight() {
         command(Command::OpenShop { shop_id: "fuzz-builder".into() }),
         command(Command::OrderBuilding { building_id: "fuzz-coop".into(), scene_id: scene.clone(), x: 4, y: 4 }),
         command(Command::OrderBuilding { building_id: "fuzz-well".into(), scene_id: scene.clone(), x: 1, y: 6 }),
-        command(Command::BuyAnimal { species_id: "fuzz-hen".into(), building: "fuzz-house".into(), name: String::new() }),
+        command(Command::BuyAnimal {
+            species_id: "fuzz-hen".into(),
+            building: "fuzz-house".into(),
+            name: String::new(),
+        }),
         command(Command::UpgradeBuilding { id: "fuzz-house".into(), building_id: "fuzz-big-coop".into() }),
         command(Command::CloseShop),
         command(Command::PlaceMachine { machine_type_id: "fuzz-chest".into() }),
