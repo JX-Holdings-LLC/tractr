@@ -300,7 +300,11 @@ from separate images (**Add image frame** adds another picture as a frame, so
 one animation can use several files). The preview plays the clip; **Pause
 preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
-machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
+machine. Mark pixel art as **Crisp pixel art** so it stays sharp. Art for the
+player or an NPC turns and walks when its clips are named by direction
+(`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle` and `walk`
+for any direction): walking, a schedule and a cutscene's **face** and
+**move** steps pick the clip.
 
 ### Workshop
 
