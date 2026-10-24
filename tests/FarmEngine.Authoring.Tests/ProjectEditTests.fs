@@ -54,6 +54,27 @@ let ``removing a season drops its festivals and weather row but never the last s
     Assert.Same(one, one |> apply (RemoveSeason "spring"))
 
 [<Fact>]
+let ``removing a season drops its sky look and Problems reports one left behind`` () =
+    let project = starter ()
+    let look tint = { AtmosphereLook.Default with FoliageTint = Some tint }
+    let sky = { AllSeasons = AtmosphereLook.Default; Seasons = [ "summer", look "#80a060"; "winter", look "#b8d0e8" ] }
+    let project = project |> apply (SetSettings { project.Settings with Atmosphere = Some sky })
+    let removed = project |> apply (RemoveSeason "summer")
+    Assert.Equal<string list>([ "winter" ], removed.Settings.Atmosphere.Value.Seasons |> List.map fst)
+    // Nothing left set: the key goes, as the Settings form leaves it out.
+    Assert.Equal(None, (removed |> apply (RemoveSeason "winter")).Settings.Atmosphere)
+    Assert.Same(removed.Settings, Cleanup.dropSeasonLook "fall" removed.Settings)
+    Assert.DoesNotContain("atmosphere.unknownSeason", Problems.collect removed |> List.map (fun p -> p.Code))
+
+    // A look for a season the calendar lacks (an older file, a hand edit) is a warning in Settings.
+    let stale = removed |> apply (SetSettings { removed.Settings with Atmosphere = Some sky })
+    let problem = Problems.collect stale |> List.find (fun p -> p.Code = "atmosphere.unknownSeason")
+    Assert.True(problem.IsWarning)
+    Assert.Equal("settings.atmosphere.seasons.summer", problem.Path)
+    Assert.Equal("The sky has a look for unknown season \"summer\"", problem.Message)
+    Assert.Equal(Some NavigationTarget.Settings, problem.Target)
+
+[<Fact>]
 let ``assets bind and unbind everywhere`` () =
     let project = starter ()
     let asset = { CustomAsset.Default with Id = "art-cow"; Name = "cow.png"; Type = "art"; DataUrl = "data:,"; Width = Some(16.0); Height = Some(16.0) }
