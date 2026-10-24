@@ -123,7 +123,8 @@ module ContentCompiler =
           ItemCategories = itemCategories project
           CropQualities = cropQualities project
           CropMutations = cropMutations project
-          Cutscenes = Option.defaultValue [] project.Cutscenes }
+          Cutscenes = Option.defaultValue [] project.Cutscenes
+          HeartEvents = Option.defaultValue [] project.HeartEvents }
 
     let compile (project: GameProject) =
         let installs = project.ContentPacks

@@ -470,7 +470,55 @@ module EventOutcomeTypes =
     [<Literal>]
     let StartCutscene = "startCutscene"
 
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene ]
+    /// Set a variable to a number (`amount`) or a text (`text`, M3).
+    [<Literal>]
+    let SetVariable = "setVariable"
+
+    /// Add `amount` to a number variable (M3).
+    [<Literal>]
+    let AddVariable = "addVariable"
+
+    /// Put an NPC on a tile (M3).
+    [<Literal>]
+    let MoveNpc = "moveNpc"
+
+    /// Change today's weather (M3).
+    [<Literal>]
+    let SetWeather = "setWeather"
+
+    /// Give `amount` experience in a skill (M3).
+    [<Literal>]
+    let GiveExperience = "giveExperience"
+
+    /// Add an item to a shop (M3): `amount` is its price (absent: the item's), `itemQuantity` a daily limit.
+    [<Literal>]
+    let AddShopStock = "addShopStock"
+
+    /// Stop a shop selling an item (M3).
+    [<Literal>]
+    let RemoveShopStock = "removeShopStock"
+
+    /// Put a gathering node on a tile (M3).
+    [<Literal>]
+    let PlaceNode = "placeNode"
+
+    /// Clear the node on a tile (M3).
+    [<Literal>]
+    let RemoveNode = "removeNode"
+
+    /// Put a machine on a tile (M3).
+    [<Literal>]
+    let PlaceMachine = "placeMachine"
+
+    /// Clear the machine on a tile (M3).
+    [<Literal>]
+    let RemoveMachine = "removeMachine"
+
+    /// Change the player's relationship with an NPC (`status`, M4).
+    [<Literal>]
+    let SetRelationship = "setRelationship"
+
+    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene; SetVariable; AddVariable; MoveNpc; SetWeather; GiveExperience; AddShopStock; RemoveShopStock; PlaceNode; RemoveNode; PlaceMachine; RemoveMachine; SetRelationship ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -484,7 +532,100 @@ module EventTriggers =
     [<Literal>]
     let Tick = "tick"
 
-    let All : string list = [ Enter; Interact; Tick ]
+    /// Each morning, after the night (M3).
+    [<Literal>]
+    let DayStart = "dayStart"
+
+    /// When the clock reaches the event's `Minute` (M3).
+    [<Literal>]
+    let Time = "time"
+
+    /// A crop was harvested (subject: the crop type or the item, M3).
+    [<Literal>]
+    let Harvest = "harvest"
+
+    /// An item was sold (subject: the item, M3).
+    [<Literal>]
+    let Sell = "sell"
+
+    /// A recipe was crafted (subject: the recipe or an item it made, M3).
+    [<Literal>]
+    let Craft = "craft"
+
+    /// A fish was caught (subject: the item, M3).
+    [<Literal>]
+    let Catch = "catch"
+
+    /// An item was picked up from the ground (subject: the item, M3).
+    [<Literal>]
+    let PickUp = "pickUp"
+
+    /// Friendship with an NPC changed (subject: the NPC, M3).
+    [<Literal>]
+    let Friendship = "friendship"
+
+    /// A quest started or was completed (subject: the quest, M3).
+    [<Literal>]
+    let Quest = "quest"
+
+    let All : string list = [ Enter; Interact; Tick; DayStart; Time; Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest ]
+
+    /// The triggers whose events may name a `Subject` (M3).
+    let WithSubject : string list = [ Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest ]
+
+/// How a `variable` condition compares (M3).
+[<RequireQualifiedAccess>]
+module VariableComparisons =
+    [<Literal>]
+    let Eq = "eq"
+
+    [<Literal>]
+    let Ne = "ne"
+
+    [<Literal>]
+    let Lt = "lt"
+
+    [<Literal>]
+    let Le = "le"
+
+    [<Literal>]
+    let Gt = "gt"
+
+    [<Literal>]
+    let Ge = "ge"
+
+    let All : string list = [ Eq; Ne; Lt; Le; Gt; Ge ]
+
+/// A relationship's stage (M4).
+[<RequireQualifiedAccess>]
+module RelationshipStatuses =
+    [<Literal>]
+    let Single = "single"
+
+    [<Literal>]
+    let Dating = "dating"
+
+    [<Literal>]
+    let Engaged = "engaged"
+
+    [<Literal>]
+    let Married = "married"
+
+    let All : string list = [ Single; Dating; Engaged; Married ]
+
+/// The places clothing is worn (M4).
+[<RequireQualifiedAccess>]
+module WearSlots =
+    [<Literal>]
+    let Hat = "hat"
+
+    [<Literal>]
+    let Shirt = "shirt"
+
+    [<Literal>]
+    let Pants = "pants"
+
+    let All : string list = [ Hat; Shirt; Pants ]
 
 /// TS `GiftReaction` (`keyof typeof GIFT_FRIENDSHIP_DELTAS`).
 [<RequireQualifiedAccess>]

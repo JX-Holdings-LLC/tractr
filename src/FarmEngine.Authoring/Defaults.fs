@@ -126,7 +126,7 @@ module Defaults =
     /// NPCDetailEditor `createDialogue`: "Hello there!" with a single "Goodbye" option.
     let newDialogue (project: GameProject) (npcId: string) : Dialogue =
         { Id = nextId "dialogue" (allIds project); NpcId = npcId; Text = "Hello there!"
-          Options = [ { DialogueOption.Default with Text = "Goodbye" } ]; Extra = [] }
+          Options = [ { DialogueOption.Default with Text = "Goodbye" } ]; Expression = None; Extra = [] }
 
     /// DialogueEditor `addOption`.
     let newDialogueOption () : DialogueOption = { DialogueOption.Default with Text = "New option" }
