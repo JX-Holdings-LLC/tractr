@@ -5,6 +5,14 @@
 [advisories]
 # Every RustSec vulnerability fails the check. Unmaintained and unsound notices do too, unless
 # they are triaged here with a reason.
+#
+# The audio crates of farm-player (lewton for Ogg Vorbis, with ogg; hound for WAV; cpal for
+# output) had no RustSec notice of any kind in October 2026, so nothing is ignored for them.
+# lewton has had no release since 2021; it and ogg forbid unsafe code, and farm-player turns a
+# decoder panic into an error and skips the file, so a broken file in a shared game costs at most
+# that sound. If an unmaintained notice for lewton appears, this check fails: replace it then
+# with symphonia (pure Rust, maintained; only its ogg, vorbis, wav and pcm features), behind
+# farm_player::audio_assets::Decoder, rather than ignoring the notice.
 ignore = [
     # ttf-parser is unmaintained and has no maintained drop-in release. farm-render parses only
     # the fonts the player embeds (assets/, trusted input), and winit's sctk-adwaita uses it
