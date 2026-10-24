@@ -344,8 +344,8 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 - **Restart**: start the playtest over from that moment.
 - **Keep changes**: keep what happened in the playtest when you return: the
   world, the player, flags, the date, and what was open or under way (a
-  dialogue or shop, today's purchases, walking NPCs, the mine floor), so the
-  next playtest starts right there.
+  dialogue or shop, a cutscene that was playing, today's purchases, walking
+  NPCs, the mine floor), so the next playtest starts right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
 

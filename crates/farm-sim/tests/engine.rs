@@ -509,7 +509,7 @@ fn npcs_take_a_step_per_minute_at_fast_clock_rates() {
 
 #[test]
 fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
-    use farm_sim::schema::{GridPoint, ShopSession};
+    use farm_sim::schema::{CutsceneState, GridPoint, ShopSession};
     let project = make_project();
     let mut game_state = state::create_game_state(&project, Some("keep"));
     game_state.flags.insert("count".to_owned(), serde_json::json!(3));
@@ -519,6 +519,15 @@ fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
     game_state.shop = Some(ShopSession { shop_id: "shop-general".to_owned() });
     game_state.shop_purchases_today.insert("shop-general".to_owned(), [("seed-wheat".to_owned(), 4)].into());
     game_state.mine.current_floor = 2;
+    // A cutscene halfway through, the NPC it turned facing left.
+    game_state.cutscene = Some(CutsceneState {
+        cutscene_id: "intro".to_owned(),
+        step: 2,
+        started: true,
+        elapsed: 7,
+        facing: [("npc-test".to_owned(), "left".to_owned())].into_iter().collect(),
+        ..CutsceneState::default()
+    });
     let npc = game_state.npcs.get_mut("npc-test").unwrap();
     npc.path = Some(vec![GridPoint { x: 2, y: 1 }]);
     npc.patrol_index = Some(1);
@@ -531,6 +540,7 @@ fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
     assert_eq!(next.shop, game_state.shop);
     assert_eq!(next.shop_purchases_today, game_state.shop_purchases_today);
     assert_eq!(next.mine.current_floor, 2);
+    assert_eq!(next.cutscene, game_state.cutscene, "the cutscene goes on where it was");
     assert_eq!(next.npcs["npc-test"], game_state.npcs["npc-test"]);
 
     // The JSON write-back keeps the project's key order (a removed key no longer swaps the last

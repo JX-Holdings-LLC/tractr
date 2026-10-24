@@ -164,6 +164,7 @@ let private engineState (project: GameProject) (clock: (string * Json) list) (re
           "dialogue", JNull
           "shop", JNull
           "minigame", JNull
+          "cutscene", JNull
           "shopPurchasesToday", JObject []
           "rng", JObject [ "algorithm", JString "xoshiro128ss"; "s", JArray [ JNumber 1.0; JNumber 2.0; JNumber 3.0; JNumber 4.0 ] ] ]
         |> List.map (fun (key, value) -> key, (rest |> List.tryFind (fst >> (=) key) |> Option.map snd |> Option.defaultValue value))
@@ -172,11 +173,13 @@ let private engineState (project: GameProject) (clock: (string * Json) list) (re
 [<Fact>]
 let ``keep changes writes flag values and the live state back as they are`` () =
     let project = starter ()
+    let cutscene = JObject [ "cutsceneId", JString "intro"; "step", JNumber 2.0; "started", JBool true; "facing", JObject [ "npc-farmer", JString "left" ] ]
     let flags = JObject [ "count", JNumber 3.0; "name", JString "Ada"; "met", JBool true ]
     let state =
         engineState project [ "tick", JNumber 1234.0 ] [
             "flags", flags
             "shop", JObject [ "shopId", JString "shop-general" ]
+            "cutscene", cutscene
             "shopPurchasesToday", JObject [ "shop-general", JObject [ "seed-wheat", JNumber 4.0 ] ]
             "mine", JObject [ "deepestFloor", JNumber 3.0; "currentFloor", JNumber 2.0 ]
             "npcs", JObject [ "npc-farmer", JObject [ "x", JNumber 1.0; "y", JNumber 1.0; "sceneId", JString "scene-farm"; "patrolIndex", JNumber 1.0 ] ] ]
@@ -187,6 +190,11 @@ let ``keep changes writes flag values and the live state back as they are`` () =
         let keptState = kept.KeptState |> Option.defaultValue JNull
         Assert.Equal(JNumber 1234.0, Json.get "tick" keptState)
         Assert.Equal(JObject [ "shopId", JString "shop-general" ], Json.get "shop" keptState)
+        Assert.Equal(cutscene, Json.get "cutscene" keptState)
+        // In the engine's key order: the open sessions, then the cutscene.
+        match keptState with
+        | JObject members -> Assert.Equal<string list>([ "tick"; "shopPurchasesToday"; "shop"; "cutscene"; "npcs"; "mineCurrentFloor" ], List.map fst members)
+        | other -> failwithf "kept state %A" other
         Assert.Equal(JNumber 2.0, Json.get "mineCurrentFloor" keptState)
         Assert.Equal(JObject [ "npc-farmer", JObject [ "patrolIndex", JNumber 1.0 ] ], Json.get "npcs" keptState)
         Assert.True(Json.isNullish (Json.get "dialogue" keptState))
