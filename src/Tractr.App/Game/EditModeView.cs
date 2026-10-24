@@ -11,6 +11,7 @@ using Avalonia.Media;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Projects;
 
 namespace Tractr.App.Game;
@@ -829,7 +830,7 @@ public sealed partial class EditModeView : UserControl
         using var art = terrains.Any(terrain => terrain.Visual.OrNull() is not null) ? new VisualPreview() : null;
         void Swatch(TerrainDefinition? terrain)
         {
-            var label = terrain is null ? "Inspect" : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
+            var label = terrain is null ? EditorStrings.Get("palette.inspect") : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
             var chip = new Border
             {
                 Width = 18,
@@ -854,7 +855,7 @@ public sealed partial class EditModeView : UserControl
 
             var toggle = new ToggleButton { Tag = terrain?.Id, Content = Ui.HStack(6, chip, Ui.Text(label, "small")), Margin = new Thickness(0, 0, 6, 6), Name = $"Brush_{terrain?.Id ?? "inspect"}" };
             toggle.Classes.Add("swatch");
-            AutomationProperties.SetName(toggle, terrain is null ? "Inspect (no brush)" : $"Brush: {label}");
+            AutomationProperties.SetName(toggle, terrain is null ? EditorStrings.Get("palette.inspectName") : EditorStrings.Format("palette.brushName", label));
             if (terrain is not null) ToolTip.SetTip(toggle, ContentReadouts.TerrainListNote(terrain, !project.Terrains.OrEmpty().Any(own => own.Id == terrain.Id)));
             toggle.IsChecked = Equals(terrain?.Id, _brush);
             var id = terrain?.Id;
