@@ -6,8 +6,9 @@
 //! A failure prints the shrunk project edits and log bytes; `PROPTEST_RNG_SEED` replays a run.
 
 use farm_fuzz::input::{self, Choices, Ids};
+use farm_sim::replay::ReplayInput;
 use farm_sim::schema::{GameProject, InventorySlot};
-use farm_sim::{state, units, CommandRules, EngineContext, HookBus};
+use farm_sim::{state, units, Command, CommandRules, EngineContext, HookBus};
 use proptest::prelude::*;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -163,11 +164,15 @@ proptest! {
         base in 0..BASES.len(),
         edits in proptest::collection::vec(content_edit(), 0..10),
         scripted in any::<bool>(),
+        cutscenes in any::<bool>(),
         log in proptest::collection::vec(any::<u8>(), 0..400),
     ) {
         let mut project = PROJECTS[base].clone();
         for change in &edits {
             edit(&mut project, change);
+        }
+        if cutscenes {
+            input::add_cutscenes(&mut project);
         }
         let content = state::create_content_from_project(&project);
         let ids = Ids::of(&content);
@@ -177,4 +182,60 @@ proptest! {
         let mut game = state::create_game_state(&project, Some("invariants"));
         farm_fuzz::play_checked(&ctx, &mut game, &log);
     }
+}
+
+/// The generator reaches every cutscene command, and the cutscenes `add_cutscenes` gives a game
+/// start, play, branch, skip and end under the invariants.
+#[test]
+fn generated_games_start_play_and_end_cutscenes() {
+    let mut project = PROJECTS[0].clone();
+    input::add_cutscenes(&mut project);
+    let content = state::create_content_from_project(&project);
+    let ids = Ids::of(&content);
+    assert_eq!(ids.cutscenes, ["fuzz-scene", "fuzz-loop"]);
+    let decoded: Vec<Command> = (0..=255u8)
+        .flat_map(|a| (0..=255u8).map(move |b| [a, b]))
+        .map(|bytes| input::command(&ids, &mut Choices::new(&bytes)))
+        .collect();
+    for wanted in ["advanceCutscene", "chooseCutsceneOption", "skipCutscene"] {
+        assert!(decoded.iter().any(|command| command.type_name() == wanted), "no {wanted} decoded");
+    }
+
+    let ctx = EngineContext::with_hooks(content, HookBus::new()).with_rules(CommandRules::Player);
+    let start =
+        |id: &str| ReplayInput::Command { command: Command::PerformAction { action_id: input::start_action(id) } };
+    let command = |command: Command| ReplayInput::Command { command };
+    let tick = |ticks: u64| ReplayInput::Tick { ticks };
+
+    // Played through: the line, the walks and timed steps, then the choice's "go on".
+    let mut game = state::create_game_state(&project, Some("cutscenes"));
+    farm_fuzz::play_checked(&ctx, &mut game, &[start("fuzz-scene"), tick(1)]);
+    assert_eq!(game.cutscene.as_ref().map(|running| running.step), Some(0), "the first line waits");
+    farm_fuzz::play_checked(&ctx, &mut game, &[command(Command::AdvanceCutscene), tick(400)]);
+    assert!(game.cutscene.is_some(), "the choice waits");
+    farm_fuzz::play_checked(
+        &ctx,
+        &mut game,
+        &[command(Command::ChooseCutsceneOption { index: 1 }), tick(1), command(Command::CloseDialogue), tick(1)],
+    );
+    // The loop cutscene could not start over the running one; "Back." waits.
+    assert_eq!(game.cutscene.as_ref().map(|running| running.cutscene_id.as_str()), Some("fuzz-scene"));
+    farm_fuzz::play_checked(&ctx, &mut game, &[command(Command::AdvanceCutscene), tick(1)]);
+    assert_eq!(game.cutscene, None, "the end step ends it");
+
+    // Skipped, then the loop ends itself, and a cutscene the content lacks never starts.
+    let mut game = state::create_game_state(&project, Some("cutscenes"));
+    farm_fuzz::play_checked(&ctx, &mut game, &[start("fuzz-scene"), tick(1), command(Command::SkipCutscene)]);
+    assert!(game.cutscene.is_some(), "skipping stops at the choice");
+    farm_fuzz::play_checked(
+        &ctx,
+        &mut game,
+        &[command(Command::ChooseCutsceneOption { index: 0 }), command(Command::SkipCutscene)],
+    );
+    farm_fuzz::play_checked(&ctx, &mut game, &[command(Command::ChooseCutsceneOption { index: 2 }), tick(400)]);
+    let mut looping = state::create_game_state(&project, Some("cutscenes"));
+    farm_fuzz::play_checked(&ctx, &mut looping, &[start("fuzz-loop"), tick(1)]);
+    assert_eq!(looping.cutscene, None, "a cutscene that never waits ends");
+    farm_fuzz::play_checked(&ctx, &mut looping, &[start(input::UNKNOWN_ID), tick(1)]);
+    assert_eq!(looping.cutscene, None);
 }

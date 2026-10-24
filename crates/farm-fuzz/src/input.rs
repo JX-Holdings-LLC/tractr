@@ -1,11 +1,12 @@
 //! Fuzz bytes as game input: a replay log of commands (with arguments drawn from the content's
 //! ids, plus an id no content has) and ticks. Every byte string decodes to some log, so the
-//! fuzzer explores play instead of a parser.
+//! fuzzer explores play instead of a parser. [`add_cutscenes`] gives a game cutscenes and the
+//! actions that start them, so the cutscene commands have something to answer.
 
 use farm_sim::replay::ReplayInput;
-use farm_sim::schema::{tool_types, GameContent, PluginMutation, SKILL_NAMES};
+use farm_sim::schema::{tool_types, ActionDef, Cutscene, GameContent, GameProject, PluginMutation, SKILL_NAMES};
 use farm_sim::{units, Command};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 /// The most inputs one log decodes to (a fuzz case stays fast).
 pub const MAX_INPUTS: usize = 96;
@@ -92,6 +93,7 @@ pub struct Ids {
     pub weather: Vec<String>,
     pub quests: Vec<String>,
     pub scenes: Vec<String>,
+    pub cutscenes: Vec<String>,
 }
 
 impl Ids {
@@ -111,6 +113,7 @@ impl Ids {
             weather: ids(&content.weather.types, |d| &d.id),
             quests: ids(&content.quests, |d| &d.id),
             scenes: ids(&content.scenes, |d| &d.id),
+            cutscenes: ids(&content.cutscenes, |d| &d.id),
         }
     }
 }
@@ -151,7 +154,7 @@ pub fn plugin_mutation(ids: &Ids, c: &mut Choices<'_>) -> PluginMutation {
 
 /// One command with arguments from `ids`.
 pub fn command(ids: &Ids, c: &mut Choices<'_>) -> Command {
-    match c.below(28) {
+    match c.below(31) {
         0..=2 => Command::SetMoveIntent { dx: c.int(-2, 2), dy: c.int(-2, 2) },
         3..=5 => Command::Move { dir: c.pick_str(&DIRECTIONS) },
         6..=8 => {
@@ -196,6 +199,11 @@ pub fn command(ids: &Ids, c: &mut Choices<'_>) -> Command {
             1 => Command::ResolveMinigame { score: u64::from(c.u32()) % (units::PROBABILITY_ONE + 1) },
             _ => Command::CancelMinigame,
         },
+        26..=28 => match c.below(3) {
+            0 => Command::AdvanceCutscene,
+            1 => Command::ChooseCutsceneOption { index: c.int(-1, 4) },
+            _ => Command::SkipCutscene,
+        },
         _ => Command::PluginMutation {
             plugin_id: c.pick_str(&["plugin-a", "plugin-b"]),
             mutation: plugin_mutation(ids, c),
@@ -219,4 +227,77 @@ pub fn inputs(ids: &Ids, c: &mut Choices<'_>) -> Vec<ReplayInput> {
         }
     }
     log
+}
+
+/// The id of the action that starts the cutscene `id` ([`add_cutscenes`]).
+pub fn start_action(id: &str) -> String {
+    format!("start-{id}")
+}
+
+/// Adds cutscenes to `project` and, for each, an action that starts it (`performAction`, by
+/// command or plugin mutation, then plays them):
+///
+/// - `fuzz-scene`, skippable, uses every step type: lines, a choice (to labels, to a label it
+///   lacks, to the start), a jump on a flag, moves of the player and of the first NPC (and of
+///   an actor that is missing), faces, emotes, camera pans and follows, fades, music, a sound,
+///   outcomes that warp the player, open a dialogue and start another cutscene, an unknown step
+///   type and an end;
+/// - `fuzz-loop`, not skippable, jumps to itself without ever waiting;
+/// - and an action that starts a cutscene the content lacks.
+pub fn add_cutscenes(project: &mut GameProject) {
+    let npc = project.npcs.first().map_or(UNKNOWN_ID, |npc| npc.id.as_str()).to_owned();
+    let scene = project.player.scene_id.clone();
+    let steps = json!([
+        {"type": "say", "label": "top", "speaker": npc, "text": "Hello."},
+        {"type": "move", "actor": "player", "x": 2, "y": 2},
+        {"type": "move", "actor": npc, "x": 3, "y": 2, "wait": false},
+        {"type": "move", "actor": UNKNOWN_ID, "x": 1, "y": 1},
+        {"type": "move", "actor": "player", "x": -1, "y": 400},
+        {"type": "face", "actor": npc, "direction": "left"},
+        {"type": "face", "actor": "player", "direction": "sideways"},
+        {"type": "emote", "actor": "player", "emote": "heart", "seconds": 0.5},
+        {"type": "emote", "actor": npc, "emote": "idea"},
+        {"type": "camera", "actor": npc, "seconds": 0.5},
+        {"type": "camera", "x": 0, "y": 0, "seconds": 0},
+        {"type": "fade", "mode": "out", "color": "#203040", "seconds": 0.25},
+        {"type": "music", "soundId": "theme"},
+        {"type": "sound", "soundId": "chime"},
+        {"type": "wait", "seconds": 0.5},
+        {"type": "fade", "mode": "in"},
+        {"type": "camera"},
+        {"type": "dance"},
+        {"type": "jump", "goto": "end", "conditions": [{"type": "flag", "flag": "flag-a"}]},
+        {"type": "choice", "speaker": "player", "text": "Again?", "options": [
+            {"text": "Yes", "goto": "top"},
+            {"text": "Go on", "goto": "go-on"},
+            {"text": "Nowhere", "goto": "no-such-label"},
+        ]},
+        {"type": "outcomes", "label": "go-on", "outcomes": [
+            {"type": "setFlag", "flagName": "flag-a"},
+            {"type": "playMusic", "soundId": ""},
+            {"type": "warpPlayer", "sceneId": scene, "x": 1, "y": 1},
+            {"type": "startCutscene", "cutsceneId": "fuzz-loop"},
+            {"type": "startDialogue", "npcId": npc},
+        ]},
+        {"type": "say", "text": "Back."},
+        {"type": "end", "label": "end"},
+        {"type": "say", "text": "Never shown."},
+    ]);
+    let cutscenes: Vec<Cutscene> = serde_json::from_value(json!([
+        {"id": "fuzz-scene", "name": "Fuzz scene", "skippable": true, "steps": steps},
+        {"id": "fuzz-loop", "name": "Fuzz loop", "skippable": false, "steps": [
+            {"type": "jump", "label": "again", "goto": "again"},
+        ]},
+    ]))
+    .expect("the fuzz cutscenes are cutscenes");
+    for id in cutscenes.iter().map(|cutscene| cutscene.id.as_str()).chain([UNKNOWN_ID]) {
+        let action: ActionDef = serde_json::from_value(json!({
+            "id": start_action(id),
+            "name": format!("Start {id}"),
+            "outcomes": [{"type": "startCutscene", "cutsceneId": id}],
+        }))
+        .expect("an action that starts a cutscene");
+        project.actions.push(action);
+    }
+    project.cutscenes.get_or_insert_with(Vec::new).extend(cutscenes);
 }
