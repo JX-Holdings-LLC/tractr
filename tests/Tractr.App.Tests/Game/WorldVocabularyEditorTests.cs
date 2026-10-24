@@ -146,6 +146,31 @@ public sealed class WorldVocabularyEditorTests
     }
 
     [AvaloniaFact]
+    public void CutsceneActorsAndSpeakersPickThePlayerOrAnNpc()
+    {
+        using var host = new GameTestHost();
+        var npcs = host.Workspace.Current!.Npcs.Select(npc => npc.Id).ToArray();
+        FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 1;
+        Pump();
+        FindByName<ContentEditorView>(host.Window, "ContentEditorView").ViewModel.SelectCategory("Cutscenes");
+        Pump();
+        Press(host.Window, "AddContentButton");
+        Pump();
+        static string[] Ids(ComboBox picker) => [.. picker.Items.OfType<ComboBoxItem>().Select(item => (string)item.Tag!)];
+
+        // A line's speaker: a narrator, the player or an NPC.
+        Assert.Equal(["", "player", .. npcs], Ids(FindByName<ComboBox>(host.Window, "ContentField_Steps_1_Speaker")));
+        Choose(host, "ContentField_Steps_1_Speaker", npcs[0]);
+        // A move's actor: the player or an NPC.
+        Choose(host, "ContentField_Steps_1_Type", "move");
+        Assert.Equal(["", "player", .. npcs], Ids(FindByName<ComboBox>(host.Window, "ContentField_Steps_1_Actor")));
+        Choose(host, "ContentField_Steps_1_Actor", "player");
+        Press(host.Window, "SaveContentButton");
+        var step = host.Workspace.Current!.Cutscenes.OrEmpty().Single().Steps[1];
+        Assert.Equal(("move", "player"), (step.Type, step.Actor.OrNull()));
+    }
+
+    [AvaloniaFact]
     public void CropsKeepTheirGrowthRequirementsOnTheirOwnTab()
     {
         using var host = new GameTestHost();

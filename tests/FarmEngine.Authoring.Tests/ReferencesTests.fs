@@ -195,6 +195,24 @@ let ``pickers keep a missing id and offer the empty entry`` () =
     Assert.Equal(project.Items.Length, known.Length)
     Assert.Equal(project.Items.Length, (References.picker ReferenceKind.Item None project None).Length)
 
+[<Fact>]
+let ``cutscene actors and speakers pick the player or an NPC and keep an unknown one`` () =
+    let project = starter ()
+    let options = References.options ReferenceKind.Actor project
+    Assert.Equal<string list>("player" :: (project.Npcs |> List.map (fun n -> n.Id)), ids options)
+    Assert.Equal("Player", options.Head.Label)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Actor, Some "(none)")), References.roleOf "CutsceneStep" "Actor")
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Actor, Some "(narrator)")), References.roleOf "CutsceneStep" "Speaker")
+    // A camera step without an actor looks at its tile.
+    Assert.Equal(
+        Some(FieldRole.Reference(ReferenceKind.Actor, Some "(a tile, or back to the player)")),
+        Vocabulary.roleFor "CutsceneStep" "Actor" CutsceneStepTypes.Camera)
+    Assert.Equal(None, Vocabulary.roleFor "CutsceneStep" "Actor" CutsceneStepTypes.Move)
+    // Missing ids stay visible.
+    let entries = References.picker ReferenceKind.Actor (Some "(narrator)") project (Some "npc-gone")
+    Assert.Equal<string list>([ ""; "npc-gone"; "player" ], entries |> List.take 3 |> ids)
+    Assert.True entries.[1].Missing
+
 // ---- The condition/outcome vocabulary ----
 
 [<Fact>]

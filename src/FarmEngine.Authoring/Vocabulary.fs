@@ -202,9 +202,11 @@ module Vocabulary =
 
     /// What `owner.property` holds while the record's `type` is `kind`, where that differs from
     /// its declaration: a cutscene step's `SoundId` is a music asset on a music step (empty: back
-    /// to the game's music) and a sound asset on a sound step.
+    /// to the game's music) and a sound asset on a sound step; a camera step without an actor
+    /// looks at its tile, or back at the player.
     let roleFor (owner: string) (property: string) (kind: string) : FieldRole option =
         match owner, property, kind with
+        | "CutsceneStep", "Actor", CutsceneStepTypes.Camera -> Some(FieldRole.Reference(ReferenceKind.Actor, Some "(a tile, or back to the player)"))
         | "CutsceneStep", "SoundId", CutsceneStepTypes.Music -> Some(FieldRole.Reference(ReferenceKind.Music, Some "(the game's own music)"))
         | "CutsceneStep", "SoundId", CutsceneStepTypes.Sound -> Some(FieldRole.Reference(ReferenceKind.Sound, None))
         | _ -> None
