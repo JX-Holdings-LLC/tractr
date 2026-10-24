@@ -456,7 +456,7 @@ game on an alien planet would need to change.
 
 The milestones below are roughly in priority order. M1 came first because
 later milestones build on data-driven terrain, tools and items; M1 and M2 are
-done (0.7.0). Each change to
+done (0.7.0), and M3, M4 and M11 (0.8.0). Each change to
 the content model goes through the usual path: F# records and checks, Rust
 serde types and parity tests, a schema version bump, and goldens. (Tractr
 has no project migrations since 0.5.0; add one when a schema change has
@@ -516,30 +516,47 @@ Done in 0.7.0.
 
 ### M3: Event logic for creators who don't write code
 
-- [ ] **Variables.** Number and text variables with set, add and compare,
-  alongside the true/false flags (`FlagCondition` only checks a boolean
-  today; plugins can already store numbers and strings).
-- [ ] **Logic.** All, any and not groups of conditions; a random chance
-  condition.
-- [ ] **More triggers.** Day start, a time of day, harvesting, selling,
-  crafting, catching a fish, picking up an item, a friendship level, a quest
-  changing. Triggers are only enter, interact and tick today.
-- [ ] **More outcomes**: move an NPC, start a cutscene, change the weather,
-  give experience, change a shop's stock, place or remove a node or machine.
+Done in 0.8.0 ([Creator Guide](docs/CREATOR-GUIDE.md#event-logic)).
+
+- [x] **Variables.** Flags hold numbers and texts as well as true or false:
+  the `variable` condition compares one (`eq`, `ne`, `lt`, `le`, `gt`,
+  `ge`), `setVariable` and `addVariable` change one, and `{var:NAME}` shows
+  one in text.
+- [x] **Logic.** `all`, `any` and `not` groups of conditions, nested; a
+  `chance` condition rolled from the game's seed and the moment, without
+  touching the game's random stream. Also `scene`, `hearts`, `dayOfSeason`
+  and `relationship` conditions.
+- [x] **More triggers.** Day start, a time of day, harvesting, selling,
+  crafting, catching a fish, picking up an item, a friendship change and a
+  quest changing, the last seven optionally about one subject (a crop or
+  item, an NPC, a quest). Events an outcome triggers run too, four levels
+  deep at most.
+- [x] **More outcomes**: `moveNpc`, `startCutscene` (M2), `setWeather`,
+  `giveExperience`, `addShopStock` and `removeShopStock` (kept in the save),
+  `placeNode`, `removeNode`, `placeMachine`, `removeMachine` and
+  `setRelationship`.
 
 ### M4: Dialogue and relationships
 
-- [ ] **Daily lines.** NPCs pick a line by day, season, weather, location,
-  hearts and flags, with variety, without the creator writing a dialogue
-  tree for each.
-- [ ] **Text substitution**: player name, farm name, NPC names, item names,
-  the date and variables in any game text.
-- [ ] **Portrait expressions** chosen per line.
-- [ ] **Relationships**: friendship decay, heart events as a first-class
-  content type (at given hearts, with a cutscene), dating, marriage, a spouse
-  who moves in and helps, children. All optional and per game.
-- [ ] **Player character**: a character creator (body, hair, clothing
-  colours), clothing and hats as equippable items, a name and a farm name.
+Done in 0.8.0 ([Creator Guide](docs/CREATOR-GUIDE.md#people-and-relationships)).
+
+- [x] **Daily lines.** An NPC's `lines` have the events' conditions (day,
+  season, weather, scene, hearts, flags) and a weight; each day the NPC picks
+  one that holds, in place of its first dialogue's text.
+- [x] **Text substitution**: `{player}`, `{farm}`, `{spouse}`, `{npc:ID}`,
+  `{item:ID}`, `{var:NAME}`, the date, the time and money, in dialogue,
+  cutscene lines, event and action messages, quests and game panels.
+- [x] **Portrait expressions** chosen per line, dialogue and cutscene line
+  from an NPC's `portraits`.
+- [x] **Relationships**: friendship decay, heart events as a content type
+  (at given hearts, with a cutscene, on entering a scene or talking), dating,
+  engagement and marriage by gifts at given hearts, a spouse who moves to the
+  home tile and does a morning chore, children. All off until a game turns
+  them on (`settings.relationships`, Settings → People).
+- [x] **Player character**: a character creator (name, farm name, skin, hair,
+  shirt, trousers and accent colours, Random) when `settings.characterCreator`
+  is on; hats, shirts and trousers as items worn from the inventory (`wear`),
+  drawn on the player.
 
 ### M5: Building the farm
 
@@ -605,36 +622,46 @@ Done in 0.7.0.
 
 ### M11: Finishing M1 and M2
 
-What 0.7.0 left out of the world vocabulary, sound and cutscenes.
+What 0.7.0 left out of the world vocabulary, sound and cutscenes. Done in
+0.8.0.
 
-- [ ] **Packs add vocabulary.** Content packs can't yet add or replace
-  terrains, tools, item kinds, crop tiers, mutations or cutscenes; only
-  projects can (pairs with [M9](#m9-more-power-for-content-packs)).
-- [ ] **Audio memory.** Sound and music are decoded whole and kept
-  uncompressed (about 21 MB a minute of stereo), plus a resampled copy when
-  the device's rate differs, and the player's clip cache never evicts.
-  Stream long music and evict clips no longer playing.
-- [ ] **Audio in the editor**: a play button to preview a sound or music
-  asset, renaming them, and a Problems check for files that won't decode
-  (the player skips them silently today).
-- [ ] **Music across every scene change.** Music an event or cutscene chose
-  ends on doors and warps, but survives a mine ladder descent and debug
-  teleports.
-- [ ] **Cutscene polish**: smooth camera pans between ticks (only following
-  the player is interpolated), NPC and player pickers for a step's actor
-  and speaker (text fields today), creator-art NPC sprites that turn (they
-  face down; built-in NPC art turns), carrying a running cutscene through
-  Keep changes, and cutscene commands in the `farm-fuzz` generator.
-- [ ] **Edit Mode previews the sky**: the map shows terrain colours and art
-  but not the day/night tint, foliage tint or weather of a scene.
-- [ ] **Editor details**: a new scene filled with a game's own terrain
-  places it by the built-in layer rule instead of the terrain's layer; a new
-  weather overlay shows in the weather types' pickers only after saving the
-  weather; removing a season leaves its sky look behind unreported; and the
-  new Edit Mode strings don't go through `EditorStrings` yet (with the rest
-  of Edit Mode, see [Later](#later)).
-- [ ] **Advisories for the audio crates**: run cargo-deny's advisory check
-  in CI; lewton has had no release since 2021.
+- [x] **Packs add vocabulary.** Content packs add terrains, tools, item
+  kinds, crop qualities and mutations under their own ids (replacing a
+  built-in or earlier one only when listed in `overrides`), and cutscenes and
+  heart events namespaced like other content; importing a pack writes them
+  into the project.
+- [x] **Audio memory.** Only sounds up to 5 seconds stay decoded. Music and
+  longer sounds stream from the cartridge's compressed bytes, decoded and
+  resampled about half a second ahead of the output. The player's cache of
+  resampled sounds holds at most 16 MB and lets go of sounds no longer
+  playing.
+- [x] **Audio in the editor**: a play button previews a sound or music
+  asset through the player's decoder (`farm_player::preview`, via
+  farm-ffi), sound and music assets can be renamed (the id stays), and
+  Problems reports files the player can't decode (`asset.audioUnreadable`,
+  an error).
+- [x] **Music across every scene change.** Music an event or cutscene chose
+  ends whenever the player changes scene: doors, warps, the mine's ladders
+  and exit, and debug teleports. Keep changes carries it into the next
+  playtest.
+- [x] **Cutscene polish**: smooth camera pans between ticks, NPC and player
+  pickers for a step's actor and speaker, creator-art NPC sprites that turn,
+  carrying a running cutscene through Keep changes, and cutscene commands in
+  the `farm-fuzz` generator.
+- [x] **Edit Mode previews the sky**: a Sky box above the map draws the
+  scene at a time of day, season and weather with play's day/night tint,
+  foliage tint and weather overlay (none indoors).
+- [x] **Editor details**: a new scene filled with a game's own terrain
+  places it on the terrain's layer; a new weather overlay shows in the
+  weather types' pickers before the weather is saved; removing a season
+  removes its sky look and Problems reports one left behind; the Edit Mode
+  strings M1 and M2 added go through `EditorStrings` (the rest of Edit Mode
+  stays under [Later](#later)).
+- [x] **Advisories for the audio crates**: cargo-deny's advisory check runs
+  on every pull request (a required check) and weekly, and fails on
+  unmaintained notices too. lewton, ogg, hound and cpal have none;
+  `deny.toml` records that lewton (no release since 2021, no unsafe code) is
+  replaced by symphonia if a notice appears.
 
 ## Later
 

@@ -126,7 +126,7 @@ module Defaults =
     /// NPCDetailEditor `createDialogue`: "Hello there!" with a single "Goodbye" option.
     let newDialogue (project: GameProject) (npcId: string) : Dialogue =
         { Id = nextId "dialogue" (allIds project); NpcId = npcId; Text = "Hello there!"
-          Options = [ { DialogueOption.Default with Text = "Goodbye" } ]; Extra = [] }
+          Options = [ { DialogueOption.Default with Text = "Goodbye" } ]; Expression = None; Extra = [] }
 
     /// DialogueEditor `addOption`.
     let newDialogueOption () : DialogueOption = { DialogueOption.Default with Text = "New option" }
@@ -193,6 +193,15 @@ module Defaults =
                 | Some f -> f.Id
                 | None -> ""
             EventCondition.FestivalId { FestivalId = festival }
+        | "variable" -> EventCondition.Variable { VariableCondition.Default with Name = "coins"; Value = Some 1.0; Compare = VariableComparisons.Ge }
+        | "all" -> EventCondition.All { Conditions = [] }
+        | "any" -> EventCondition.Any { Conditions = [] }
+        | "not" -> EventCondition.Not { Conditions = [] }
+        | "chance" -> EventCondition.Chance { Chance = 0.5 }
+        | "scene" -> EventCondition.Scene { SceneIds = (if project.StartSceneId = "" then [] else [ project.StartSceneId ]) }
+        | "hearts" -> EventCondition.Hearts { NpcId = ""; Min = Some 2.0; Max = None }
+        | "dayOfSeason" -> EventCondition.DayOfSeason { MinDay = Some 1.0; MaxDay = Some 7.0 }
+        | "relationship" -> EventCondition.Relationship { NpcId = ""; Status = RelationshipStatuses.Dating }
         | _ -> EventCondition.Flag { Flag = ""; Value = true }
 
     /// event-forms.tsx outcome picker: an outcome of the kind with nothing filled in yet.
@@ -336,6 +345,17 @@ module Defaults =
     let duplicateMinigame (project: GameProject) (minigame: MinigameDef) : MinigameDef =
         { minigame with Id = slugId (sprintf "%s copy" minigame.Name) (allIds project) "minigame"; Name = sprintf "%s (copy)" minigame.Name }
 
+    /// A new heart event (M4): the first NPC at two hearts, with the first cutscene, when talking.
+    let newHeartEvent (project: GameProject) : HeartEvent =
+        { HeartEvent.Default with
+            Id = nextId "heart" (allIds project); Name = "New Heart Event"; Hearts = 2.0
+            NpcId = (match project.Npcs with n :: _ -> n.Id | [] -> "")
+            CutsceneId = (match defaultArg project.Cutscenes [] with c :: _ -> c.Id | [] -> "") }
+
+    /// A copy of a heart event (M4): "(copy)" with a fresh slug id.
+    let duplicateHeartEvent (project: GameProject) (heartEvent: HeartEvent) : HeartEvent =
+        { heartEvent with Id = slugId (sprintf "%s copy" heartEvent.Name) (allIds project) "heart"; Name = sprintf "%s (copy)" heartEvent.Name }
+
     /// A copy of a cutscene (M2): "(copy)" with a fresh slug id.
     let duplicateCutscene (project: GameProject) (cutscene: Cutscene) : Cutscene =
         { cutscene with Id = slugId (sprintf "%s copy" cutscene.Name) (allIds project) "cutscene"; Name = sprintf "%s (copy)" cutscene.Name }
@@ -343,14 +363,16 @@ module Defaults =
     /// MinigameEditor `addTier`.
     let newResultTier () : MinigameResultTier = { MinScore = 0.0; Outcomes = [] }
 
-    /// SceneManager `createScene`: `createEmptyScene` filled with the chosen tile type (grass by default).
+    /// SceneManager `createScene`: `createEmptyScene` filled with the chosen tile type (grass by
+    /// default), placed on that terrain's own layer as painting places it (M1: a game's terrain
+    /// says its layer and whether it blocks).
     let newSceneWith (project: GameProject) (name: string) (width: int) (height: int) (defaultTile: string) : Scene =
         let width = max 1 width
         let height = max 1 height
         let name = if String.IsNullOrWhiteSpace name then "New Scene" else name.Trim()
         let scene = AuthoringTiles.CreateEmptyScene(nextId "scene" (allIds project), name, float width, float height)
-        if defaultTile = TileTypes.Grass then scene
-        else Proj.mapTiles (fun tile -> AuthoringTiles.CreateEmptyTile(tile.X, tile.Y, defaultTile)) scene
+        let terrains = ContentCompiler.terrains project
+        Proj.mapTiles (fun tile -> AuthoringTiles.SetTileLayerIn(terrains, tile, defaultTile, None)) scene
 
     /// SceneManager `createScene` with the dialog defaults (16×12, grass).
     let newScene (project: GameProject) (name: string) (width: int) (height: int) : Scene = newSceneWith project name width height TileTypes.Grass

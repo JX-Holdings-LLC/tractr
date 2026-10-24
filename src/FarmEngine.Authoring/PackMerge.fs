@@ -89,7 +89,11 @@ module PackMerge =
              && content.NodeTypes.IsEmpty && content.AnimalSpecies.IsEmpty && content.FishTables.IsEmpty
              && content.WeatherTypes.IsEmpty && content.Npcs.IsEmpty && content.Dialogues.IsEmpty && content.Scenes.IsEmpty
              && content.Events.IsEmpty && content.Quests.IsEmpty && content.Shops.IsEmpty && content.Actions.IsEmpty
-             && content.Minigames.IsEmpty && content.PlayerStart.IsNone && content.Strings.IsEmpty)
+             && content.Minigames.IsEmpty && content.PlayerStart.IsNone && content.Strings.IsEmpty
+             && List.isEmpty (defaultArg content.Terrains []) && List.isEmpty (defaultArg content.Tools [])
+             && List.isEmpty (defaultArg content.ItemCategories []) && List.isEmpty (defaultArg content.CropQualities [])
+             && List.isEmpty (defaultArg content.CropMutations []) && List.isEmpty (defaultArg content.Cutscenes [])
+             && List.isEmpty (defaultArg content.HeartEvents []))
 
     /// `permissions.contentInject` is off: none of the pack's content loads (its plugins still
     /// run). A pack that ships content anyway gets a warning (Rust `packs::content_blocked`).
@@ -121,6 +125,11 @@ module PackMerge =
                     (sprintf "Pack '%s' redefines %s '%s' without declaring it in manifest.overrides — keeping the earlier definition"
                         pack.Manifest.Id label id))
         List.ofSeq result
+
+    /// Content without its own vocabulary uses the built-ins (Rust `packs::seed_builtins`): a pack
+    /// adding to it adds to them.
+    let private seeded (builtins: unit -> 'T list) (own: 'T list) (added: 'T list option) : 'T list =
+        if List.isEmpty own && not (List.isEmpty (defaultArg added [])) then builtins () else own
 
     /// The largest scene side the engine accepts (Rust `MAX_SCENE_SIZE`).
     let private maxSceneSize = 256.0
@@ -195,7 +204,26 @@ module PackMerge =
                         Quests = mergeInto "quest" (fun (d: Quest) -> d.Id) content.Quests added.Quests
                         Shops = mergeInto "shop" (fun (d: ShopDefinition) -> d.Id) content.Shops added.Shops
                         Actions = mergeInto "action" (fun (d: ActionDef) -> d.Id) content.Actions added.Actions
-                        Minigames = mergeInto "minigame" (fun (d: MinigameDef) -> d.Id) content.Minigames added.Minigames }
+                        Minigames = mergeInto "minigame" (fun (d: MinigameDef) -> d.Id) content.Minigames added.Minigames
+                        // Vocabulary and story (M11): a built-in id is replaced only when listed in
+                        // manifest.overrides, like any other definition.
+                        Terrains =
+                            mergeInto "terrain" (fun (d: TerrainDefinition) -> d.Id)
+                                (seeded Builtin.terrains content.Terrains added.Terrains) (defaultArg added.Terrains [])
+                        Tools =
+                            mergeInto "tool" (fun (d: ToolDefinition) -> d.Id)
+                                (seeded Builtin.tools content.Tools added.Tools) (defaultArg added.Tools [])
+                        ItemCategories =
+                            mergeInto "item category" (fun (d: ItemCategoryDefinition) -> d.Id)
+                                (seeded Builtin.itemCategories content.ItemCategories added.ItemCategories) (defaultArg added.ItemCategories [])
+                        CropQualities =
+                            mergeInto "crop quality" (fun (d: CropQualityDefinition) -> d.Id)
+                                (seeded Builtin.cropQualities content.CropQualities added.CropQualities) (defaultArg added.CropQualities [])
+                        CropMutations =
+                            mergeInto "crop mutation" (fun (d: CropMutationDefinition) -> d.Id)
+                                (seeded Builtin.cropMutations content.CropMutations added.CropMutations) (defaultArg added.CropMutations [])
+                        Cutscenes = mergeInto "cutscene" (fun (d: Cutscene) -> d.Id) content.Cutscenes (defaultArg added.Cutscenes [])
+                        HeartEvents = mergeInto "heart event" (fun (d: HeartEvent) -> d.Id) content.HeartEvents (defaultArg added.HeartEvents []) }
             let merged = List.fold merge baseContent packs
             merged, List.ofSeq problems
 
@@ -285,6 +313,34 @@ module PackMerge =
             let content = pack.Content
             let overrides = HashSet<string>(pack.Manifest.Overrides)
             let merge label idOf target definitions = mergeArray pack problems overrides label idOf target definitions
+            // A project's vocabulary lists only what it adds to or changes in the built-ins: the
+            // pack's definitions are checked against both, and land in the project's own list.
+            let vocabulary label (idOf: 'T -> string) (builtins: unit -> 'T list) (own: 'T list option) (added: 'T list option) =
+                match added with
+                | None
+                | Some [] -> own
+                | Some definitions ->
+                    let ownList = defaultArg own []
+                    let builtinIds = builtins () |> List.map idOf |> Set.ofList
+                    let ownIds = ownList |> List.map idOf |> Set.ofList
+                    let collides, fresh =
+                        definitions |> List.partition (fun d -> builtinIds.Contains(idOf d) && not (ownIds.Contains(idOf d)))
+                    let kept =
+                        collides
+                        |> List.filter (fun d ->
+                            if overrides.Contains(idOf d) then true
+                            else
+                                problems.Add(problem pack.Manifest.Id "warning"
+                                    (sprintf "Pack '%s' redefines %s '%s' without declaring it in manifest.overrides — keeping the earlier definition"
+                                        pack.Manifest.Id label (idOf d)))
+                                false)
+                    let merged = merge label idOf ownList fresh
+                    Some(merged @ kept)
+            let story label idOf (own: 'T list option) (added: 'T list option) =
+                match added with
+                | None
+                | Some [] -> own
+                | Some definitions -> Some(merge label idOf (defaultArg own []) definitions)
             let next =
                 { project with
                     CustomCrops =
@@ -305,7 +361,17 @@ module PackMerge =
                     Quests = merge "quest" (fun (d: Quest) -> d.Id) project.Quests content.Quests
                     Shops = merge "shop" (fun (d: ShopDefinition) -> d.Id) project.Shops content.Shops
                     Actions = merge "action" (fun (d: ActionDef) -> d.Id) project.Actions content.Actions
-                    Minigames = merge "minigame" (fun (d: MinigameDef) -> d.Id) project.Minigames content.Minigames }
+                    Minigames = merge "minigame" (fun (d: MinigameDef) -> d.Id) project.Minigames content.Minigames
+                    Terrains = vocabulary "terrain" (fun (d: TerrainDefinition) -> d.Id) Builtin.terrains project.Terrains content.Terrains
+                    Tools = vocabulary "tool" (fun (d: ToolDefinition) -> d.Id) Builtin.tools project.Tools content.Tools
+                    ItemCategories =
+                        vocabulary "item category" (fun (d: ItemCategoryDefinition) -> d.Id) Builtin.itemCategories project.ItemCategories content.ItemCategories
+                    CropQualities =
+                        vocabulary "crop quality" (fun (d: CropQualityDefinition) -> d.Id) Builtin.cropQualities project.CropQualities content.CropQualities
+                    CropMutations =
+                        vocabulary "crop mutation" (fun (d: CropMutationDefinition) -> d.Id) Builtin.cropMutations project.CropMutations content.CropMutations
+                    Cutscenes = story "cutscene" (fun (d: Cutscene) -> d.Id) project.Cutscenes content.Cutscenes
+                    HeartEvents = story "heart event" (fun (d: HeartEvent) -> d.Id) project.HeartEvents content.HeartEvents }
 
             match content.PlayerStart with
             | None -> next, List.ofSeq problems

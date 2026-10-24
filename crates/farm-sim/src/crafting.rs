@@ -6,13 +6,15 @@
 
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
+use crate::events;
 use crate::hooks::{HookEvent, RecipeCraftHookPayload};
 use crate::inventory;
 use crate::messages::{self, Message};
 use crate::mines;
 use crate::quests;
 use crate::schema::{
-    GameState, InventorySlot, MachineProcessing, MachineTypeDefinition, RecipeDefinition, RecipeIngredient, TileMachine,
+    event_triggers, GameState, InventorySlot, MachineProcessing, MachineTypeDefinition, RecipeDefinition,
+    RecipeIngredient, TileMachine,
 };
 use crate::skills;
 use crate::units;
@@ -249,6 +251,9 @@ pub fn handle_craft(ctx: &EngineContext, state: &mut GameState, recipe_id: &str)
 
     let mut effects = granted.effects;
     effects.extend(progress_craft_quests(ctx, state, Some(recipe_id), &recipe.outputs));
+    let mut subjects: Vec<&str> = vec![recipe_id];
+    subjects.extend(recipe.outputs.iter().map(|output| output.item_id.as_str()));
+    effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::CRAFT, &subjects)));
     effects
 }
 
@@ -463,5 +468,7 @@ pub fn collect_machine_output(ctx: &EngineContext, state: &mut GameState, scene_
 
     let mut effects = granted.effects;
     effects.extend(progress_craft_quests(ctx, state, None, &output));
+    let subjects: Vec<&str> = output.iter().map(|goods| goods.item_id.as_str()).collect();
+    effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::CRAFT, &subjects)));
     effects
 }

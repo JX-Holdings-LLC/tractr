@@ -27,6 +27,15 @@ pub struct NpcSocialState {
     /// int.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub last_gift_day: Option<u32>,
+    /// The last day the player talked to the NPC (M4: friendship decay). int.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub talked_day: Option<u32>,
+    /// Dating, engaged or married (M4, one of [`super::relationship_statuses`]); absent: single.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// The day `status` began; for an engagement, the wedding day. int.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub status_day: Option<u32>,
 }
 
 /// TS `GiftReaction` (`keyof typeof GIFT_FRIENDSHIP_DELTAS`).

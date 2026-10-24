@@ -39,8 +39,8 @@ pub enum Target {
     /// Project JSON, a `0xFF` byte, then play: the project's content and new game, then the
     /// decoded commands, with the invariants after every step.
     Project,
-    /// Play on the starter farm: the bytes decode to commands and ticks (see [`input`]), with
-    /// the invariants after every step.
+    /// Play on the starter farm with cutscenes added ([`input::add_cutscenes`]): the bytes
+    /// decode to commands and ticks (see [`input`]), with the invariants after every step.
     Commands,
     /// A stateless render request (`farm_host::render::render_json`).
     RenderRequest,
@@ -184,13 +184,16 @@ fn project_fixture_json(name: &str) -> Vec<u8> {
     serde_json::to_vec(&fixture["project"]).unwrap_or_default()
 }
 
-/// The starter farm, compiled once.
+/// The starter farm, compiled once, and the same farm with cutscenes to play
+/// ([`input::add_cutscenes`]).
 struct Starter {
     project: GameProject,
     project_json: Vec<u8>,
     content: GameContent,
     target: SaveTarget,
-    ids: Ids,
+    play_project: GameProject,
+    play_content: GameContent,
+    play_ids: Ids,
 }
 
 static STARTER: LazyLock<Starter> = LazyLock::new(|| {
@@ -201,8 +204,11 @@ static STARTER: LazyLock<Starter> = LazyLock::new(|| {
     let project: GameProject = serde_json::from_value(fixture["project"].clone()).expect("the starter farm project");
     let content = state::create_content_from_project(&project);
     let target = SaveTarget::for_project(&project, &content);
-    let ids = Ids::of(&content);
-    Starter { project, project_json, content, target, ids }
+    let mut play_project = project.clone();
+    input::add_cutscenes(&mut play_project);
+    let play_content = state::create_content_from_project(&play_project);
+    let play_ids = Ids::of(&play_content);
+    Starter { project, project_json, content, target, play_project, play_content, play_ids }
 });
 
 fn new_starter_game(seed: &str) -> GameState {
@@ -299,9 +305,9 @@ fn project(data: &[u8]) {
 fn commands(data: &[u8]) {
     let mut c = Choices::new(data);
     let rules = rules(&mut c);
-    let log = input::inputs(&STARTER.ids, &mut c);
-    let ctx = EngineContext::with_hooks(STARTER.content.clone(), HookBus::new()).with_rules(rules);
-    let mut game = new_starter_game("fuzz");
+    let log = input::inputs(&STARTER.play_ids, &mut c);
+    let ctx = EngineContext::with_hooks(STARTER.play_content.clone(), HookBus::new()).with_rules(rules);
+    let mut game = state::create_game_state(&STARTER.play_project, Some("fuzz"));
     play_checked(&ctx, &mut game, &log);
 }
 

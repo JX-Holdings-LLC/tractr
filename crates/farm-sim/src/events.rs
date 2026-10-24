@@ -6,16 +6,17 @@
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
 use crate::farming::farming_actions;
-use crate::hooks::{ActionHookPayload, HookEvent, RelationshipChangeHookPayload};
+use crate::hooks::{ActionHookPayload, HookEvent};
 use crate::messages;
 use crate::schema::{
-    event_fired_flag, CutsceneState, DialogueState, EventCondition, EventOutcome, GameEvent, GameState,
-    MinigameSession, NpcSocialState, NpcState, OutcomeKind, MAX_FRIENDSHIP,
+    event_fired_flag, event_triggers, relationship_statuses, variable_comparisons, CutsceneState, DialogueState,
+    EventCondition, EventOutcome, GameEvent, GameState, MinigameSession, NpcState, OutcomeKind, ShopStockEntry,
+    TileMachine, TileNode, MAX_FRIENDSHIP,
 };
 use crate::text;
-use crate::units;
+use crate::units::{self, SignedMilli};
 use crate::world::{tiles, world_movement};
-use crate::{energy, game_time, inventory, quests};
+use crate::{energy, game_time, inventory, quests, skills, social, substitution, weather};
 use indexmap::IndexMap;
 use serde_json::Value;
 
@@ -83,6 +84,18 @@ fn position_matches(x: i32, y: i32, x2: Option<i32>, y2: Option<i32>, pos: Event
     pos.x >= min_x && pos.x <= max_x && pos.y >= min_y && pos.y <= max_y
 }
 
+/// What conditions are checked against besides the state.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ConditionScope<'a> {
+    /// The tile entered or interacted with (the tile conditions).
+    pub pos: Option<EventPosition>,
+    /// The NPC the player is talking to (daily lines, heart events): `hearts` and
+    /// `relationship` with an empty `npcId` mean this NPC (M4).
+    pub speaker: Option<&'a str>,
+    /// What a `chance` roll is about (an event or line id), so different events roll apart.
+    pub salt: &'a str,
+}
+
 /// Whether `condition` holds now; `pos` is the tile entered or interacted with (for the tile
 /// conditions).
 pub fn condition_met(
@@ -91,6 +104,27 @@ pub fn condition_met(
     condition: &EventCondition,
     pos: Option<EventPosition>,
 ) -> bool {
+    condition_holds(ctx, state, condition, &ConditionScope { pos, ..ConditionScope::default() })
+}
+
+/// Whether every one of `conditions` holds in `scope`.
+pub fn conditions_hold(
+    ctx: &EngineContext,
+    state: &GameState,
+    conditions: &[EventCondition],
+    scope: &ConditionScope<'_>,
+) -> bool {
+    conditions.iter().all(|condition| condition_holds(ctx, state, condition, scope))
+}
+
+/// Whether `condition` holds now in `scope`.
+pub fn condition_holds(
+    ctx: &EngineContext,
+    state: &GameState,
+    condition: &EventCondition,
+    scope: &ConditionScope<'_>,
+) -> bool {
+    let pos = scope.pos;
     match condition {
         EventCondition::EnterTile { x, y, x2, y2 } => pos.is_some_and(|pos| position_matches(*x, *y, *x2, *y2, pos)),
         EventCondition::InteractTile { x, y, x2, y2 } => pos.is_some_and(|pos| position_matches(*x, *y, *x2, *y2, pos)),
@@ -147,7 +181,81 @@ pub fn condition_met(
             game_time::festival_today(&ctx.content.settings.calendar, &state.clock)
                 .is_some_and(|festival| festival.id == *festival_id)
         }
+        EventCondition::Variable { name, compare, value, text } => match text {
+            Some(text) => compares(compare, text::compare_strings(&variable_text(state, name), text)),
+            None => compares(compare, variable_number(state, name).cmp(&value.unwrap_or(0))),
+        },
+        EventCondition::All { conditions } => conditions_hold(ctx, state, conditions, scope),
+        EventCondition::Any { conditions } => {
+            conditions.iter().any(|condition| condition_holds(ctx, state, condition, scope))
+        }
+        EventCondition::Not { conditions } => {
+            !conditions.iter().any(|condition| condition_holds(ctx, state, condition, scope))
+        }
+        EventCondition::Chance { chance } => u64::from(chance_roll(state, scope.salt, *chance)) < *chance,
+        EventCondition::Scene { scene_ids } => scene_ids.contains(&state.player.scene_id),
+        EventCondition::Hearts { npc_id, min, max } => {
+            let Some(npc_id) = non_empty(Some(npc_id)).or(scope.speaker) else { return false };
+            let hearts = social::hearts(social::friendship_with(state, npc_id));
+            min.is_none_or(|min| hearts >= min) && max.is_none_or(|max| hearts <= max)
+        }
+        EventCondition::DayOfSeason { min_day, max_day } => {
+            let day = game_time::clock_date(&ctx.content.settings.calendar, &state.clock).day_of_season;
+            min_day.is_none_or(|min| day >= min) && max_day.is_none_or(|max| day <= max)
+        }
+        EventCondition::Relationship { npc_id, status } => match non_empty(Some(npc_id)).or(scope.speaker) {
+            Some(npc_id) => social::relationship_status(state, npc_id) == status,
+            // Anyone: single means with no one.
+            None if status == relationship_statuses::SINGLE => {
+                state.social.values().all(|social| social.status.as_deref().is_none_or(str::is_empty))
+            }
+            None => state.social.values().any(|social| social.status.as_deref() == Some(status.as_str())),
+        },
     }
+}
+
+/// Whether an ordering satisfies a `variable` comparison (an unknown one never does).
+fn compares(compare: &str, ordering: std::cmp::Ordering) -> bool {
+    use std::cmp::Ordering::{Equal, Greater, Less};
+    match compare {
+        variable_comparisons::EQ => ordering == Equal,
+        variable_comparisons::NE => ordering != Equal,
+        variable_comparisons::LT => ordering == Less,
+        variable_comparisons::LE => ordering != Greater,
+        variable_comparisons::GT => ordering == Greater,
+        variable_comparisons::GE => ordering != Less,
+        _ => false,
+    }
+}
+
+/// A variable as a number, in thousandths (M3): a number as it is, `true` as 1, anything else
+/// (unset, false, a text) as 0.
+pub fn variable_number(state: &GameState, name: &str) -> i64 {
+    match state.flags.get(name) {
+        Some(Value::Number(number)) => units::milli_of_number(number),
+        Some(Value::Bool(true)) => i64::from(units::MILLI_ONE),
+        _ => 0,
+    }
+}
+
+/// A variable as text (M3): JavaScript `String(value)`, empty when unset.
+pub fn variable_text(state: &GameState, name: &str) -> String {
+    state.flags.get(name).map(text::to_js_string).unwrap_or_default()
+}
+
+/// A random draw for a `chance` condition. Conditions are read without changing the state (the
+/// game's screens ask them too), so the roll does not advance the game's RNG: it hashes the RNG
+/// state, the tick, `salt` and the chance. It is the same for a whole tick, and new each tick.
+fn chance_roll(state: &GameState, salt: &str, chance: u64) -> u32 {
+    let mut bytes = Vec::with_capacity(48 + salt.len());
+    for word in state.rng.s {
+        bytes.extend_from_slice(&word.to_le_bytes());
+    }
+    bytes.extend_from_slice(&state.clock.tick.to_le_bytes());
+    bytes.extend_from_slice(&state.clock.day.to_le_bytes());
+    bytes.extend_from_slice(&chance.to_le_bytes());
+    bytes.extend_from_slice(salt.as_bytes());
+    twox_hash::XxHash3_64::oneshot(&bytes) as u32
 }
 
 /// A `timeOfDay` range against the clock (all in micro-minutes). The clock counts on past
@@ -187,7 +295,9 @@ fn apply_outcome(
     let Some(kind) = outcome.kind() else { return vec![] };
     match kind {
         OutcomeKind::Message => match non_empty(outcome.message.as_deref()) {
-            Some(message) => vec![Effect::message(message_levels::INFO, message)],
+            Some(message) => {
+                vec![Effect::message(message_levels::INFO, substitution::fill(&ctx.content, state, message))]
+            }
             None => vec![],
         },
         OutcomeKind::ModifyFriendship => outcome_modify_friendship(ctx, state, outcome),
@@ -253,7 +363,148 @@ fn apply_outcome(
             let Some(minigame_id) = non_empty(outcome.minigame_id.as_deref()) else { return vec![] };
             start_minigame_session(ctx, state, minigame_id, None)
         }
+        OutcomeKind::SetVariable => {
+            let Some(variable) = non_empty(outcome.variable.as_deref()) else { return vec![] };
+            let value = match &outcome.text {
+                Some(text) => Value::String(text.clone()),
+                None => number_value(outcome.amount.unwrap_or(0)),
+            };
+            state.flags.insert(variable.to_owned(), value);
+            vec![]
+        }
+        OutcomeKind::AddVariable => {
+            let Some(variable) = non_empty(outcome.variable.as_deref()) else { return vec![] };
+            let sum = variable_number(state, variable).saturating_add(outcome.amount.unwrap_or(0));
+            state.flags.insert(variable.to_owned(), number_value(sum));
+            vec![]
+        }
+        OutcomeKind::MoveNpc => outcome_move_npc(ctx, state, outcome),
+        OutcomeKind::SetWeather => {
+            let Some(weather_id) = non_empty(outcome.weather_id.as_deref()) else { return vec![] };
+            if weather::weather_type_by_id(ctx, weather_id).is_some() {
+                state.clock.weather_id = weather_id.to_owned();
+            }
+            vec![]
+        }
+        OutcomeKind::GiveExperience => {
+            let Some(skill) = non_empty(outcome.skill.as_deref()) else { return vec![] };
+            let amount = u32::try_from(whole(outcome.amount.unwrap_or(0)).max(0)).unwrap_or(u32::MAX);
+            skills::grant_xp(ctx, state, skill, amount)
+        }
+        OutcomeKind::AddShopStock | OutcomeKind::RemoveShopStock => {
+            outcome_shop_stock(ctx, state, outcome, kind == OutcomeKind::AddShopStock)
+        }
+        OutcomeKind::PlaceNode | OutcomeKind::RemoveNode | OutcomeKind::PlaceMachine | OutcomeKind::RemoveMachine => {
+            outcome_tile_object(ctx, state, outcome, kind)
+        }
+        OutcomeKind::SetRelationship => {
+            let (Some(npc_id), Some(status)) = (non_empty(outcome.npc_id.as_deref()), outcome.status.as_deref()) else {
+                return vec![];
+            };
+            if ctx.npc(npc_id).is_none() || !relationship_statuses::ALL.contains(&status) {
+                return vec![];
+            }
+            social::set_relationship(ctx, state, npc_id, status)
+        }
     }
+}
+
+/// A number variable's stored value: a whole number as an integer, else the double.
+fn number_value(milli: i64) -> Value {
+    units::canonical_json(units::json::<SignedMilli>(milli))
+}
+
+/// `moveNpc`: put the NPC on the tile (x, y) of `sceneId` (absent: the scene it is in). Its
+/// schedule or pattern takes it on from there.
+fn outcome_move_npc(ctx: &EngineContext, state: &mut GameState, outcome: &EventOutcome) -> Effects {
+    let Some(npc_id) = non_empty(outcome.npc_id.as_deref()) else { return vec![] };
+    let (Some(x), Some(y)) = (outcome.x, outcome.y) else { return vec![] };
+    let Some(npc_def) = ctx.npc(npc_id) else { return vec![] };
+    let current = state.npcs.get(npc_id).cloned();
+    let scene_id = non_empty(outcome.scene_id.as_deref())
+        .map(str::to_owned)
+        .or_else(|| current.as_ref().map(|npc| npc.scene_id.clone()))
+        .unwrap_or_else(|| npc_def.scene_id.clone());
+    if world_movement::ensure_scene(ctx, state, &scene_id).is_none() {
+        return vec![];
+    }
+    let npc = NpcState { x: units::tiles(x), y: units::tiles(y), scene_id, path: None, ..current.unwrap_or_default() };
+    state.npcs.insert(npc_id.to_owned(), npc);
+    vec![]
+}
+
+/// `addShopStock` / `removeShopStock`: the game's own changes to a shop's stock, kept in the
+/// state (the shop's definition is content).
+fn outcome_shop_stock(ctx: &EngineContext, state: &mut GameState, outcome: &EventOutcome, add: bool) -> Effects {
+    let (Some(shop_id), Some(item_id)) = (non_empty(outcome.shop_id.as_deref()), non_empty(outcome.item_id.as_deref()))
+    else {
+        return vec![];
+    };
+    if ctx.shop(shop_id).is_none() || ctx.item(item_id).is_none() {
+        return vec![];
+    }
+    let changes = state.shop_changes.entry(shop_id.to_owned()).or_default();
+    changes.added.retain(|entry| entry.item_id != item_id);
+    changes.removed.retain(|removed| removed != item_id);
+    if add {
+        changes.added.push(ShopStockEntry {
+            item_id: item_id.to_owned(),
+            price: outcome.amount.map(whole).filter(|price| *price >= 0),
+            daily_limit: outcome.item_quantity.filter(|limit| *limit > 0),
+            ..ShopStockEntry::default()
+        });
+    } else {
+        changes.removed.push(item_id.to_owned());
+    }
+    vec![]
+}
+
+/// `placeNode` / `removeNode` / `placeMachine` / `removeMachine` on tile (tileX, tileY) of
+/// `sceneId` (absent: the player's). A node or machine goes only where there is nothing in the
+/// way (a crop, a node, a machine, an item, a wall); removing one takes it away with whatever it
+/// held.
+fn outcome_tile_object(
+    ctx: &EngineContext,
+    state: &mut GameState,
+    outcome: &EventOutcome,
+    kind: OutcomeKind,
+) -> Effects {
+    let (Some(x), Some(y)) = (outcome.tile_x, outcome.tile_y) else { return vec![] };
+    let scene_id = non_empty(outcome.scene_id.as_deref()).unwrap_or(&state.player.scene_id).to_owned();
+    let Some(scene_index) = world_movement::ensure_scene(ctx, state, &scene_id) else { return vec![] };
+    let npc_there =
+        state.npcs.values().any(|npc| npc.scene_id == scene_id && npc.x == units::tiles(x) && npc.y == units::tiles(y));
+    let player_there =
+        state.player.scene_id == scene_id && world_movement::player_tile(state) == world_movement::TilePoint { x, y };
+    let Some(tile) = state.world.scenes[scene_index].tile_mut(x, y) else { return vec![] };
+    let occupied =
+        tile.collision || tile.crop.is_some() || tile.node.is_some() || tile.machine.is_some() || tile.item.is_some();
+    match kind {
+        OutcomeKind::PlaceNode => {
+            let Some(node_type) = outcome.node_type_id.as_deref().and_then(|id| ctx.node_type(id)) else {
+                return vec![];
+            };
+            if !occupied && !npc_there && !player_there {
+                tile.node = Some(TileNode {
+                    type_id: node_type.id.clone(),
+                    remaining_health: node_type.health,
+                    ..TileNode::default()
+                });
+            }
+        }
+        OutcomeKind::PlaceMachine => {
+            let Some(machine_type) = outcome.machine_type_id.as_deref().and_then(|id| ctx.machine_type(id)) else {
+                return vec![];
+            };
+            if !occupied && !npc_there && !player_there {
+                tile.machine = Some(TileMachine { type_id: machine_type.id.clone(), ..TileMachine::default() });
+            }
+        }
+        OutcomeKind::RemoveNode => tile.node = None,
+        OutcomeKind::RemoveMachine => tile.machine = None,
+        _ => {}
+    }
+    vec![]
 }
 
 fn outcome_modify_friendship(ctx: &EngineContext, state: &mut GameState, outcome: &EventOutcome) -> Effects {
@@ -261,17 +512,11 @@ fn outcome_modify_friendship(ctx: &EngineContext, state: &mut GameState, outcome
     if ctx.npc(npc_id).is_none() {
         return vec![];
     }
-    let current = state.social.get(npc_id).cloned().unwrap_or(NpcSocialState {
-        friendship: 0,
-        gifts_today: 0,
-        last_gift_day: None,
-    });
     // Friendship is whole points: the amount rounds.
     let delta = whole(outcome.amount.unwrap_or(0));
-    let friendship = (i64::from(current.friendship) + delta).clamp(0, i64::from(MAX_FRIENDSHIP)) as i32;
-    ctx.emit(HookEvent::RelationshipChange(RelationshipChangeHookPayload { npc_id: npc_id.to_owned(), friendship }));
-    state.social.insert(npc_id.to_owned(), NpcSocialState { friendship, ..current });
-    vec![]
+    let current = i64::from(social::friendship_with(state, npc_id));
+    let friendship = (current + delta).clamp(0, i64::from(MAX_FRIENDSHIP)) as i32;
+    social::set_friendship(ctx, state, npc_id, friendship)
 }
 
 fn outcome_modify_energy(ctx: &EngineContext, state: &mut GameState, outcome: &EventOutcome) -> Effects {
@@ -376,15 +621,17 @@ fn outcome_warp_player(ctx: &EngineContext, state: &mut GameState, outcome: &Eve
     if world_movement::ensure_scene(ctx, state, scene_id).is_none() {
         return vec![];
     }
-    // Music an event chose (M2) ends when the player leaves the scene.
-    if state.player.scene_id != scene_id {
-        state.music = None;
-    }
     // Warp targets are authored as tile coordinates; land on the center, or on the nearest
-    // walkable tile when the target is outside the scene or blocked.
+    // walkable tile when the target is outside the scene or blocked. Music an event chose ends
+    // when the player leaves the scene (`land_player`).
+    let changed_scene = state.player.scene_id != scene_id;
     let (landed, landing_effects) = world_movement::land_player(ctx, state, scene_id, x, y);
     let mut effects = vec![Effect::SceneChanged { scene_id: scene_id.to_owned(), x: landed.x, y: landed.y }];
     effects.extend(landing_effects);
+    if changed_scene {
+        // A heart event of the scene entered (M4).
+        crate::relationships::start_heart_event(ctx, state, crate::relationships::Place::Scene(scene_id));
+    }
     effects
 }
 
@@ -395,7 +642,7 @@ fn outcome_start_dialogue(ctx: &EngineContext, state: &mut GameState, outcome: &
         .clone()
         .or_else(|| ctx.npc(npc_id).and_then(|npc| npc.dialogue.first()).map(|dialogue| dialogue.id.clone()));
     let Some(dialogue_id) = dialogue_id.filter(|id| !id.is_empty()) else { return vec![] };
-    state.dialogue = Some(DialogueState { npc_id: npc_id.to_owned(), dialogue_id });
+    state.dialogue = Some(DialogueState { npc_id: npc_id.to_owned(), dialogue_id, line: None });
     vec![]
 }
 
@@ -461,7 +708,12 @@ fn perform_action_detailed(
         if !condition_met(ctx, state, condition, None) {
             return PerformActionResult {
                 effects: match non_empty(Some(&action.fail_message)) {
-                    Some(fail_message) => vec![Effect::message(message_levels::INFO, fail_message)],
+                    Some(fail_message) => {
+                        vec![Effect::message(
+                            message_levels::INFO,
+                            substitution::fill(&ctx.content, state, fail_message),
+                        )]
+                    }
                     None => vec![],
                 },
                 ran: false,
@@ -513,6 +765,33 @@ pub fn fire_event(ctx: &EngineContext, state: &mut GameState, event: &GameEvent)
     effects
 }
 
+/// How deep events set off by triggers may nest (an event whose outcomes set off a trigger whose
+/// events set off another…, M3). Deeper triggers are ignored, so an event that sets off its own
+/// trigger runs a few times and stops.
+pub const MAX_TRIGGER_DEPTH: u32 = 4;
+
+/// What set off a trigger (M3).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Trigger<'a> {
+    /// One of [`event_triggers`].
+    pub kind: &'a str,
+    /// The tile entered or interacted with.
+    pub pos: Option<EventPosition>,
+    /// What it is about (an item, an NPC, a quest; a harvest names the crop type and the item):
+    /// an event with a `subject` fires only when it is one of these.
+    pub subjects: &'a [&'a str],
+    /// For `time`: the clock went from the first time (excluded) to the second (included), in
+    /// micro-minutes.
+    pub span: Option<(u32, u32)>,
+}
+
+impl<'a> Trigger<'a> {
+    /// A trigger of `kind` about `subjects`.
+    pub fn about(kind: &'a str, subjects: &'a [&'a str]) -> Self {
+        Self { kind, subjects, ..Self::default() }
+    }
+}
+
 /// Evaluate all events for a trigger kind. `pos` is the tile entered or interacted with (for
 /// position conditions).
 pub fn evaluate_events(
@@ -521,7 +800,12 @@ pub fn evaluate_events(
     trigger: &str,
     pos: Option<EventPosition>,
 ) -> Effects {
-    evaluate_events_detailed(ctx, state, trigger, pos).effects
+    fire_trigger_detailed(ctx, state, &Trigger { kind: trigger, pos, ..Trigger::default() }).effects
+}
+
+/// Fire the events of `trigger` (M3 triggers; see [`Trigger`]).
+pub fn fire_trigger(ctx: &EngineContext, state: &mut GameState, trigger: &Trigger<'_>) -> Effects {
+    fire_trigger_detailed(ctx, state, trigger).effects
 }
 
 /// What [`evaluate_events_detailed`] did.
@@ -539,20 +823,54 @@ pub fn evaluate_events_detailed(
     trigger: &str,
     pos: Option<EventPosition>,
 ) -> EvaluateEventsResult {
+    fire_trigger_detailed(ctx, state, &Trigger { kind: trigger, pos, ..Trigger::default() })
+}
+
+/// Whether a `time` event at `minute` falls in the clock's step `span`. The clock counts past
+/// midnight until the day ends, so a time is also matched a day later (0:30 at 24:30).
+fn time_reached(ctx: &EngineContext, minute: u32, (from, to): (u32, u32)) -> bool {
+    let day = ctx.content.settings.time.minutes_per_day().max(1).saturating_mul(units::MINUTE);
+    let crossed = |at: u32| from < at && at <= to;
+    crossed(minute) || crossed(minute.saturating_add(day))
+}
+
+/// [`fire_trigger`], also saying whether any event fired.
+pub fn fire_trigger_detailed(
+    ctx: &EngineContext,
+    state: &mut GameState,
+    trigger: &Trigger<'_>,
+) -> EvaluateEventsResult {
+    let depth = ctx.trigger_depth.get();
+    if depth >= MAX_TRIGGER_DEPTH {
+        return EvaluateEventsResult::default();
+    }
+    ctx.trigger_depth.set(depth + 1);
     let mut effects = Vec::new();
     let mut fired = false;
 
     for event in &ctx.content.events {
-        if !event.active || event.trigger != trigger {
+        if !event.active || event.trigger != trigger.kind {
             continue;
         }
         if !event.scene_id.is_empty() && event.scene_id != state.player.scene_id {
             continue;
         }
+        if let Some(subject) = non_empty(event.subject.as_deref()) {
+            if !trigger.subjects.contains(&subject) {
+                continue;
+            }
+        }
+        if trigger.kind == event_triggers::TIME {
+            let (Some(minute), Some(span)) = (event.minute, trigger.span) else { continue };
+            if !time_reached(ctx, minute, span) {
+                continue;
+            }
+        }
         if !event.repeatable && text::truthy(flag_value(state, &event_fired_flag(&event.id))) {
             continue;
         }
-        if !event.conditions.iter().all(|condition| condition_met(ctx, state, condition, pos)) {
+        let scope = ConditionScope { pos: trigger.pos, speaker: None, salt: &event.id };
+        if !conditions_hold(ctx, state, &event.conditions, &scope) {
             continue;
         }
 
@@ -560,5 +878,6 @@ pub fn evaluate_events_detailed(
         fired = true;
     }
 
+    ctx.trigger_depth.set(depth);
     EvaluateEventsResult { effects, fired }
 }

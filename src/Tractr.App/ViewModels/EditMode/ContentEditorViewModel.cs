@@ -130,6 +130,7 @@ public sealed class ContentEditorViewModel : ObservableObject
         Of("Quests", p => p.Quests, Defaults.NewQuest, Edits.UpsertQuest, Edits.RemoveQuest),
         Of("Events", p => p.Events, Defaults.NewEvent, Edits.UpsertEvent, Edits.RemoveEvent),
         Of("Cutscenes", p => p.Cutscenes.OrEmpty(), Defaults.NewCutscene, Edits.UpsertCutscene, Edits.RemoveCutscene, Defaults.DuplicateCutscene),
+        Of("Heart events", p => p.HeartEvents.OrEmpty(), Defaults.NewHeartEvent, Edits.UpsertHeartEvent, Edits.RemoveHeartEvent, Defaults.DuplicateHeartEvent),
         Of("Shops", p => p.Shops, Defaults.NewShop, Edits.UpsertShop, Edits.RemoveShop),
         Of("Recipes", p => p.Recipes, Defaults.NewRecipe, Edits.UpsertRecipe, Edits.RemoveRecipe) with
         {

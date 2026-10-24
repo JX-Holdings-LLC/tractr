@@ -15,6 +15,7 @@ use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::packs::PackInstallation;
 use super::quests::Quest;
+use super::relationships::HeartEvent;
 use super::save::{KeptState, RngState};
 use super::settings::ProjectSettings;
 use super::social::NpcSocialState;
@@ -116,6 +117,9 @@ pub struct GameProject {
     /// Cutscenes (M2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cutscenes: Option<Vec<Cutscene>>,
+    /// Heart events (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heart_events: Option<Vec<HeartEvent>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,

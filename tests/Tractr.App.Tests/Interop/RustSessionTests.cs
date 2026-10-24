@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Interop;
@@ -128,6 +129,22 @@ public sealed class RustSessionTests
         }
 
         Assert.Throws<FormatException>(() => Playtests.ApplyState(project, "[]"));
+    }
+
+    /// <summary>Keep changes carries a cutscene that is playing, in F# as in Rust (M2).</summary>
+    [NativeFact]
+    public void KeepChangesCarriesARunningCutsceneLikeRust()
+    {
+        var project = ProjectCatalog.CreateProjectForTemplate(ProjectTemplates.Starter, 0);
+        using var session = RustSession.Create(project, "keep-cutscene");
+        var state = session.State();
+        state["cutscene"] = JsonNode.Parse("""{"cutsceneId":"intro","step":2,"started":true,"elapsed":7,"facing":{"npc-farmer":"left"}}""");
+        session.SetState(state.ToJsonString());
+
+        var kept = Playtests.ApplyState(project, session.StateJson());
+        Assert.Equal(RecordJson.ToStableText(session.SyncedProject()), RecordJson.ToStableText(kept));
+        var cutscene = RecordJson.ToNode(kept, typeof(GameProject))?["keptState"]?["cutscene"];
+        Assert.Equal(("intro", 2.0), ((string?)cutscene?["cutsceneId"], (double?)cutscene?["step"]));
     }
 
     [NativeFact]

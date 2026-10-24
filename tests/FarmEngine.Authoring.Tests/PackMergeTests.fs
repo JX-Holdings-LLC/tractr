@@ -160,3 +160,39 @@ let ``pack string tables apply for the project locale with authored fallback`` (
     Assert.Equal("Primera Cosecha", (content.Quests |> Seq.find (fun q -> q.Id = "quest-first-harvest")).Name)
     // Unknown locales change nothing.
     Assert.Equal("Wheat", ((localizedContent "fr").Items |> Seq.find (fun i -> i.Id = "crop-wheat")).Name)
+
+// ── Vocabulary and story (M11) ───────────────────────────────────────────────
+
+let private volcano () = validPack (readJson [ "Fixtures"; "volcano-mod.json" ])
+
+[<Fact>]
+let ``packs add vocabulary by plain id and namespace their cutscenes and heart events`` () =
+    let pack = volcano ()
+    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = pack } ]
+    Assert.Empty problems
+    // Lava joins the built-in terrains; the listed override replaces the built-in grass.
+    Assert.Equal((Builtin.terrains ()).Length + 1, merged.Terrains.Length)
+    Assert.Equal("Ash Grass", (merged.Terrains |> List.find (fun t -> t.Id = "grass")).Name)
+    Assert.Contains(merged.ItemCategories, fun c -> c.Id = "gem")
+    Assert.Equal("gem", (merged.Items |> List.find (fun (i: Item) -> i.Id = "volcano:obsidian")).Type)
+    Assert.Equal("volcano:eruption", merged.Cutscenes.Head.Id)
+    Assert.Equal("volcano:eruption", merged.HeartEvents.Head.CutsceneId)
+    Assert.Equal(Some "volcano:eruption", (merged.Events |> List.find (fun e -> e.Id = "volcano:first-rumble")).Outcomes.Head.CutsceneId)
+
+    // Without the override, the built-in grass stays and the pack hears about it.
+    let unlisted = { pack with Manifest = { pack.Manifest with Overrides = [] } }
+    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = unlisted } ]
+    Assert.Equal("Grass", (merged.Terrains |> List.find (fun t -> t.Id = "grass")).Name)
+    Assert.Contains(problems, fun p -> p.Message.Contains "redefines terrain 'grass'")
+
+[<Fact>]
+let ``importing a pack writes its vocabulary and story into the project`` () =
+    let project, problems = PackMerge.applyToProject (blank ()) (volcano ())
+    Assert.Empty problems
+    // The project lists only what it adds to or changes in the built-ins.
+    Assert.Equal<string list>([ "lava"; "grass" ], project.Terrains |> Option.defaultValue [] |> List.map (fun t -> t.Id))
+    Assert.Equal<string list>([ "gem" ], project.ItemCategories |> Option.defaultValue [] |> List.map (fun c -> c.Id))
+    Assert.Equal(None, project.Tools)
+    Assert.Equal<string list>([ "volcano:eruption" ], project.Cutscenes |> Option.defaultValue [] |> List.map (fun c -> c.Id))
+    Assert.Equal<string list>([ "volcano:lava-walk" ], project.HeartEvents |> Option.defaultValue [] |> List.map (fun h -> h.Id))
+    Assert.Equal("Ash Grass", (ContentCompiler.terrains project |> List.find (fun t -> t.Id = "grass")).Name)

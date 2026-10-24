@@ -249,8 +249,9 @@ fn js_mod(x: f64, y: f64) -> f64 {
 
 /// Pure frame selection, shared by previews and exported games (`Graphics.ResolveVisual`).
 ///
-/// `direction` and `moving` pick direction-specific walk/idle clips and sheet rows; creator
-/// definitions (NPCs, items, tiles…) use the defaults `"down"` and `true`.
+/// `direction` and `moving` pick direction-specific walk/idle clips and sheet rows. The player
+/// and NPCs pass their own (so creator-art NPCs turn and walk like the player); other creator
+/// definitions (items, tiles, animals…) use the defaults `"down"` and `true`.
 pub fn resolve_visual(
     assets: &[ArtAsset],
     visual: Option<&VisualRef>,
@@ -359,10 +360,15 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
     snapshot.pixel_art = Some(source.pixel_art);
     snapshot.player.sprite =
         resolve_visual(assets, source.player_visual.as_ref(), tick, &snapshot.player.direction, moving);
+    // A worn hat's art (M4) faces like the player.
+    snapshot.player.hat =
+        resolve_visual(assets, snapshot.player.hat_visual.as_ref(), tick, &snapshot.player.direction, false);
 
     let npcs: Vec<&NpcArt> = source.npcs.iter().filter(|npc| npc.scene_id == scene.id).collect();
+    // NPCs face and walk like the player: a schedule's walk or a cutscene's `face` and `move`
+    // steps pick the direction's clips and sheet row.
     for (target, npc) in snapshot.npcs.iter_mut().zip(&npcs) {
-        target.sprite = art(npc.visual.as_ref());
+        target.sprite = resolve_visual(assets, npc.visual.as_ref(), tick, &target.direction, target.moving);
     }
     let animals = source.animals.iter().filter(|animal| animal.scene_id == scene.id);
     for (target, animal) in snapshot.npcs.iter_mut().skip(npcs.len()).zip(animals) {

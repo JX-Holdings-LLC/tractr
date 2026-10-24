@@ -6,21 +6,31 @@
 
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
+use crate::events;
 use crate::inventory;
 use crate::messages;
 use crate::quests;
-use crate::schema::{DialogueOption, GameContent, GameState, Item, ShopDefinition, ShopSession};
+use crate::schema::{event_triggers, DialogueOption, GameContent, GameState, Item, ShopDefinition, ShopSession};
 use crate::world::world_movement;
 use crate::{units, vocabulary};
+use std::borrow::Cow;
 
-/// The shop definition `shop_id`.
-pub fn find_shop<'a>(ctx: &'a EngineContext, shop_id: &str) -> Option<&'a ShopDefinition> {
-    ctx.shop(shop_id)
+/// The shop `shop_id` as it is in `state`: its definition with the stock events added and
+/// removed (M3).
+pub fn find_shop<'a>(ctx: &'a EngineContext, state: &GameState, shop_id: &str) -> Option<Cow<'a, ShopDefinition>> {
+    let shop = ctx.shop(shop_id)?;
+    let Some(changes) = state.shop_changes.get(shop_id) else { return Some(Cow::Borrowed(shop)) };
+    let mut changed = shop.clone();
+    changed.stock.retain(|entry| {
+        !changes.removed.contains(&entry.item_id) && !changes.added.iter().any(|added| added.item_id == entry.item_id)
+    });
+    changed.stock.extend(changes.added.iter().cloned());
+    Some(Cow::Owned(changed))
 }
 
 /// The `openShop` command: open `shop_id` (closing any dialogue).
 pub fn handle_open_shop(ctx: &EngineContext, state: &mut GameState, shop_id: &str) -> Effects {
-    let shop = find_shop(ctx, shop_id);
+    let shop = find_shop(ctx, state, shop_id);
     if shop.is_none() {
         return vec![Effect::say(message_levels::ERROR, &messages::SHOP_MISSING)];
     }
@@ -130,7 +140,7 @@ pub fn handle_buy_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
         return Vec::new();
     }
 
-    let Some(shop) = find_shop(ctx, &session.shop_id) else {
+    let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
 
@@ -208,7 +218,7 @@ pub fn handle_sell_item(
         return Vec::new();
     }
 
-    let Some(shop) = find_shop(ctx, &session.shop_id) else {
+    let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
     if !shop.buys_items {
@@ -256,7 +266,7 @@ pub fn handle_sell_item(
         else {
             continue;
         };
-        let unit_price = sell_unit_price_with_quality(&ctx.content, &slot.item, tier.as_deref(), shop);
+        let unit_price = sell_unit_price_with_quality(&ctx.content, &slot.item, tier.as_deref(), &shop);
         total = total.saturating_add(unit_price.saturating_mul(i64::from(take)));
         inventory = inventory::remove_item_with_quality(&inventory, item_id, tier.as_deref(), take);
         remaining -= take;
@@ -264,7 +274,9 @@ pub fn handle_sell_item(
 
     state.player.inventory = inventory;
     state.player.money = state.player.money.saturating_add(total);
-    vec![Effect::say(message_levels::SUCCESS, messages::SOLD.with(&[&quantity, &item_name, &total]))]
+    let mut effects = vec![Effect::say(message_levels::SUCCESS, messages::SOLD.with(&[&quantity, &item_name, &total]))];
+    effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::SELL, &[item_id])));
+    effects
 }
 
 /// The `repairTool` command: repair the held tool `item_id` at the open shop, if it repairs tools.
@@ -272,7 +284,7 @@ pub fn handle_repair_tool(ctx: &EngineContext, state: &mut GameState, item_id: &
     let Some(session) = &state.shop else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
-    let Some(shop) = find_shop(ctx, &session.shop_id) else {
+    let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
     if !shop.repairs_tools {
@@ -290,7 +302,7 @@ pub fn handle_repair_tool(ctx: &EngineContext, state: &mut GameState, item_id: &
         return vec![Effect::say(message_levels::INFO, messages::PERFECT_SHAPE.with(&[&slot.item.name]))];
     }
 
-    let cost = repair_cost(missing, shop);
+    let cost = repair_cost(missing, &shop);
     if state.player.money < cost {
         return vec![Effect::say(message_levels::ERROR, messages::REPAIR_TOO_EXPENSIVE.with(&[&cost]))];
     }

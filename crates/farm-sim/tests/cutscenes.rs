@@ -372,6 +372,25 @@ fn music_and_sounds_play() {
     assert_eq!(state.music, None, "empty: the place's music again");
 }
 
+#[test]
+fn music_a_cutscene_chose_lasts_through_moves_and_ends_when_it_warps_the_player_away() {
+    let (ctx, mut state) = with_cutscene(
+        json!([
+            {"type": "music", "soundId": "theme-love"},
+            {"type": "move", "actor": "player", "x": 1, "y": 1, "wait": false},
+            {"type": "say", "text": "..."},
+            {"type": "outcomes", "outcomes": [{"type": "warpPlayer", "sceneId": "scene-cave", "x": 1, "y": 1}]},
+            {"type": "say", "text": "..."},
+        ]),
+        |project| project.scenes.push(farm_sim::world::tiles::create_empty_scene("scene-cave", "Cave", 5, 5)),
+    );
+    start(&ctx, &mut state);
+    tick(&ctx, &mut state, 1);
+    assert_eq!(state.music.as_deref(), Some("theme-love"));
+    run(&ctx, &mut state, Command::AdvanceCutscene);
+    assert_eq!((state.player.scene_id.as_str(), state.music), ("scene-cave", None));
+}
+
 // --- robustness ---
 
 #[test]
@@ -539,7 +558,10 @@ fn a_dialogue_opened_by_an_outcome_holds_the_cutscene_until_it_closes() {
         {"type": "say", "text": "After the talk."},
     ]));
     tick(&ctx, &mut state, 1);
-    assert_eq!(state.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned() }));
+    assert_eq!(
+        state.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned(), line: None })
+    );
     let shown = view(&ctx, &state);
     assert!(shown.line.is_none() && !shown.skippable);
     // The dialogue's commands apply, the cutscene's wait.

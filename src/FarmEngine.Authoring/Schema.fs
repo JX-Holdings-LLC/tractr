@@ -479,6 +479,8 @@ and CutsceneStep =
         Text: string option
         /// Who says it: `player`, an NPC id, or absent for a narrator.
         Speaker: string option
+        /// The speaker's portrait for the line (one of the NPC's `portraits`, M4).
+        Expression: string option
         /// The answers (choice).
         Options: CutsceneChoice list
         /// The label to go to (jump).
@@ -499,7 +501,7 @@ and CutsceneStep =
 
     /// A `CutsceneStep` with every field at its schema default.
     static member Default : CutsceneStep =
-        { Type = ""; Label = None; Actor = None; X = None; Y = None; Direction = None; Emote = None; Seconds = None; Text = None; Speaker = None; Options = []; Goto = None; Conditions = []; Mode = None; Color = None; SoundId = None; Outcomes = []; Wait = None }
+        { Type = ""; Label = None; Actor = None; X = None; Y = None; Direction = None; Emote = None; Seconds = None; Text = None; Speaker = None; Expression = None; Options = []; Goto = None; Conditions = []; Mode = None; Color = None; SoundId = None; Outcomes = []; Wait = None }
 
 and Dialogue =
     {
@@ -507,13 +509,15 @@ and Dialogue =
         NpcId: string
         Text: string
         Options: DialogueOption list
+        /// The portrait the dialogue box shows (one of the NPC's `portraits`, M4).
+        Expression: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Dialogue` with every field at its schema default.
     static member Default : Dialogue =
-        { Id = ""; NpcId = ""; Text = ""; Options = []; Extra = [] }
+        { Id = ""; NpcId = ""; Text = ""; Options = []; Expression = None; Extra = [] }
 
 and DialogueOption =
     {
@@ -576,13 +580,29 @@ and EventOutcome =
         MinigameId: string option
         /// The cutscene `startCutscene` plays (M2).
         CutsceneId: string option
+        /// The variable `setVariable` / `addVariable` change (M3).
+        Variable: string option
+        /// The text `setVariable` stores (M3).
+        Text: string option
+        /// The weather `setWeather` makes today's (M3).
+        WeatherId: string option
+        /// The skill `giveExperience` trains (M3).
+        Skill: string option
+        /// The shop `addShopStock` / `removeShopStock` change (M3).
+        ShopId: string option
+        /// The node type `placeNode` puts down (M3).
+        NodeTypeId: string option
+        /// The machine type `placeMachine` puts down (M3).
+        MachineTypeId: string option
+        /// The relationship `setRelationship` sets (M4), one of `RelationshipStatuses`.
+        Status: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `EventOutcome` with every field at its schema default.
     static member Default : EventOutcome =
-        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Extra = [] }
+        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Variable = None; Text = None; WeatherId = None; Skill = None; ShopId = None; NodeTypeId = None; MachineTypeId = None; Status = None; Extra = [] }
 
 /// The project's export settings (Export Game).
 and ExportSettings =
@@ -691,11 +711,13 @@ and GameContent =
         CropMutations: CropMutationDefinition list
         /// Cutscenes (M2).
         Cutscenes: Cutscene list
+        /// Heart events (M4).
+        HeartEvents: HeartEvent list
     }
 
     /// A `GameContent` with every field at its schema default.
     static member Default : GameContent =
-        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = [] }
+        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = []; HeartEvents = [] }
 
 and GameEvent =
     {
@@ -709,13 +731,18 @@ and GameEvent =
         Outcomes: EventOutcome list
         Active: bool
         Repeatable: bool
+        /// What the trigger is about (M3): an item (harvest, sell, craft, catch, pickUp), an NPC
+        /// (friendship) or a quest (quest). Absent or empty: anything.
+        Subject: string option
+        /// The time of day a `time` trigger fires at, in minutes (M3).
+        Minute: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `GameEvent` with every field at its schema default.
     static member Default : GameEvent =
-        { Id = ""; Name = ""; SceneId = ""; Trigger = ""; Conditions = []; Outcomes = []; Active = false; Repeatable = false; Extra = [] }
+        { Id = ""; Name = ""; SceneId = ""; Trigger = ""; Conditions = []; Outcomes = []; Active = false; Repeatable = false; Subject = None; Minute = None; Extra = [] }
 
 and GamePanel =
     {
@@ -814,6 +841,8 @@ and GameProject =
         CropMutations: (CropMutationDefinition list) option
         /// Cutscenes (M2).
         Cutscenes: (Cutscene list) option
+        /// Heart events (M4).
+        HeartEvents: (HeartEvent list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -826,8 +855,9 @@ and GameProject =
         MineDeepestFloor: float option
         /// Items whose owning pack is missing/disabled (mirrors GameState.quarantinedItems).
         QuarantinedItems: (InventorySlot list) option
-        /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop or
-        /// minigame, today's shop purchases, NPC walks, mine floor). Only the engine reads it.
+        /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop,
+        /// minigame or cutscene, chosen music, today's shop purchases, NPC walks, mine floor,
+        /// children, changed shop stock). Only the engine reads it.
         KeptState: Json option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
@@ -835,7 +865,7 @@ and GameProject =
 
     /// A `GameProject` with every field at its schema default.
     static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -982,13 +1012,15 @@ and Item =
         ConsumeOnUse: bool option
         /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
         Energy: float option
+        /// The item is clothing the player can wear (M4).
+        Wear: WearDefinition option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Item` with every field at its schema default.
     static member Default : Item =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Wear = None; Extra = [] }
 
 /// TS `TileMachineSchema.processing` (inline object): an in-flight machine job.
 and MachineProcessing =
@@ -1203,13 +1235,19 @@ and Npc =
         /// Birthday: day-of-season (1-28) within birthSeason, doubles gift effects.
         Birthday: NpcBirthday option
         Appearance: string
+        /// What the NPC says when the player talks to it, by day (M4): see `NpcLine`.
+        Lines: (NpcLine list) option
+        /// Portraits by expression for the dialogue box (M4).
+        Portraits: (NpcPortrait list) option
+        /// The NPC can be dated and married, when the game allows it (M4).
+        Romanceable: bool option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Npc` with every field at its schema default.
     static member Default : Npc =
-        { Id = ""; Name = ""; Visual = None; X = 0.0; Y = 0.0; SceneId = ""; Dialogue = []; CanMove = false; MovePattern = None; WanderRadius = None; PatrolPoints = None; Schedule = None; GiftTastes = None; Birthday = None; Appearance = ""; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; X = 0.0; Y = 0.0; SceneId = ""; Dialogue = []; CanMove = false; MovePattern = None; WanderRadius = None; PatrolPoints = None; Schedule = None; GiftTastes = None; Birthday = None; Appearance = ""; Lines = None; Portraits = None; Romanceable = None; Extra = [] }
 
 /// TS `NPCSchema.birthday` (inline object).
 and NpcBirthday =
@@ -1249,11 +1287,17 @@ and NpcSocialState =
         GiftsToday: float
         /// int.
         LastGiftDay: float option
+        /// The last day the player talked to the NPC (M4: friendship decay). int.
+        TalkedDay: float option
+        /// Dating, engaged or married (M4, one of `RelationshipStatuses`); absent: single.
+        Status: string option
+        /// The day `Status` began; for an engagement, the wedding day. int.
+        StatusDay: float option
     }
 
     /// A `NpcSocialState` with every field at its schema default.
     static member Default : NpcSocialState =
-        { Friendship = 0.0; GiftsToday = 0.0; LastGiftDay = None }
+        { Friendship = 0.0; GiftsToday = 0.0; LastGiftDay = None; TalkedDay = None; Status = None; StatusDay = None }
 
 and PackContent =
     {
@@ -1274,6 +1318,20 @@ and PackContent =
         Actions: ActionDef list
         Minigames: MinigameDef list
         PlayerStart: PackPlayerStart option
+        /// Terrains the pack adds or replaces (M11).
+        Terrains: (TerrainDefinition list) option
+        /// Tools the pack adds or replaces (M11).
+        Tools: (ToolDefinition list) option
+        /// Item categories the pack adds or replaces (M11).
+        ItemCategories: (ItemCategoryDefinition list) option
+        /// Crop quality tiers the pack adds or replaces (M11).
+        CropQualities: (CropQualityDefinition list) option
+        /// Crop mutations the pack adds or replaces (M11).
+        CropMutations: (CropMutationDefinition list) option
+        /// Cutscenes the pack adds or replaces (M11).
+        Cutscenes: (Cutscene list) option
+        /// Heart events the pack adds or replaces (M4).
+        HeartEvents: (HeartEvent list) option
         /// Per-locale string tables for game text (M7 i18n). Keys address content fields: `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`, `quest:{id}:description`. The authored text is the fallback locale.
         Strings: (string * (string * string) list) list
         /// Undeclared keys, in order.
@@ -1282,7 +1340,7 @@ and PackContent =
 
     /// A `PackContent` with every field at its schema default.
     static member Default : PackContent =
-        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Strings = []; Extra = [] }
+        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; Strings = []; Extra = [] }
 
 and PackDependency =
     {
@@ -1420,13 +1478,36 @@ and Player =
         ActiveQuests: string list
         CompletedQuests: string list
         EquippedTool: string option
+        /// The player's name (M4; a new game may ask for it).
+        Name: string option
+        /// The farm's name (M4).
+        FarmName: string option
+        /// How the player looks (M4); absent: the built-in look.
+        Look: PlayerLook option
+        /// The clothes the player wears (M4), one per slot.
+        Worn: (InventorySlot list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Player` with every field at its schema default.
     static member Default : Player =
-        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Extra = [] }
+        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Name = None; FarmName = None; Look = None; Worn = None; Extra = [] }
+
+/// The player character's colours (M4): `#rrggbb` each; absent ones keep the built-in art's.
+and PlayerLook =
+    {
+        Skin: string option
+        Hair: string option
+        Shirt: string option
+        Pants: string option
+        /// The headband (or other accent).
+        Accent: string option
+    }
+
+    /// A `PlayerLook` with every field at its schema default.
+    static member Default : PlayerLook =
+        { Skin = None; Hair = None; Shirt = None; Pants = None; Accent = None }
 
 and ProjectSettings =
     {
@@ -1453,11 +1534,15 @@ and ProjectSettings =
         Words: GameWords option
         /// The day/night and foliage tints (M1); absent: the built-in look.
         Atmosphere: AtmosphereSettings option
+        /// Friendship decay, dating, marriage and children (M4); absent: none of them.
+        Relationships: RelationshipSettings option
+        /// A new game asks for the player's name, the farm's name and the player's colours (M4).
+        CharacterCreator: bool option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
     static member Default : ProjectSettings =
-        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None }
+        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None; Relationships = None; CharacterCreator = None }
 
 and Quest =
     {
@@ -2003,6 +2088,116 @@ and WeatherTypeDefinition =
     static member Default : WeatherTypeDefinition =
         { Id = ""; Name = ""; WatersOutdoorSoil = false; CropDamageChance = 0.0; NpcsStayInside = false; Overlay = None; Music = None; Extra = [] }
 
+/// A line an NPC may say when the player talks to it (M4): in place of its first dialogue's
+/// text, on days when its conditions hold. Lines whose conditions hold share the day by weight.
+and NpcLine =
+    {
+        Text: string
+        /// The events' conditions; an empty `npcId` in `hearts` and `relationship` is this NPC.
+        Conditions: EventCondition list
+        /// The portrait the dialogue box shows with the line (one of the NPC's `portraits`).
+        Expression: string option
+        /// How often the line comes up next to the others that hold (absent: 1). int.
+        Weight: float option
+    }
+
+    /// A `NpcLine` with every field at its schema default.
+    static member Default : NpcLine =
+        { Text = ""; Conditions = []; Expression = None; Weight = None }
+
+/// A portrait an NPC shows in the dialogue box for an expression (M4).
+and NpcPortrait =
+    {
+        /// `happy`, `sad`… any name; lines, dialogues and cutscene lines pick it by this name.
+        Expression: string
+        Visual: VisualRef
+    }
+
+    /// A `NpcPortrait` with every field at its schema default.
+    static member Default : NpcPortrait =
+        { Expression = ""; Visual = VisualRef.Default }
+
+/// A cutscene that plays once when the player has enough hearts with an NPC (M4).
+and HeartEvent =
+    {
+        Id: string
+        Name: string
+        NpcId: string
+        /// Whole hearts needed. int.
+        Hearts: float
+        CutsceneId: string
+        /// Where it plays: on entering this scene. Absent or empty: when the player talks to the NPC.
+        SceneId: string option
+        /// More conditions (the events'); an empty `npcId` is the event's NPC.
+        Conditions: EventCondition list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `HeartEvent` with every field at its schema default.
+    static member Default : HeartEvent =
+        { Id = ""; Name = ""; NpcId = ""; Hearts = 0.0; CutsceneId = ""; SceneId = None; Conditions = []; Extra = [] }
+
+/// A game's relationship rules (M4). Every part is off until the creator turns it on.
+and RelationshipSettings =
+    {
+        /// Friendship points an NPC loses on a day the player neither talked to it nor gave it a gift (0: no decay). int.
+        DecayPerDay: float
+        /// Romanceable NPCs can be dated.
+        Dating: bool
+        /// Hearts a romanceable NPC needs before it accepts the dating gift. int.
+        DatingHearts: float
+        /// The gift that asks to date (absent: dating starts at the hearts by itself).
+        DatingItemId: string option
+        /// Dated NPCs can be married.
+        Marriage: bool
+        /// Hearts a dated NPC needs before it accepts the proposal. int.
+        ProposalHearts: float
+        /// The gift that proposes (needed for marriage).
+        ProposalItemId: string option
+        /// Days from the engagement to the wedding. int.
+        WeddingDays: float
+        /// Plays on the wedding morning.
+        WeddingCutsceneId: string option
+        /// Where a spouse lives (absent: the spouse keeps its own place).
+        HomeSceneId: string option
+        HomeX: float option
+        HomeY: float option
+        /// A spouse helps each morning: waters the crops, feeds the animals or brings a gift.
+        SpouseHelps: bool
+        /// What a spouse may bring in the morning.
+        SpouseGiftItemIds: string list
+        /// Married couples have children.
+        Children: bool
+        /// Days married before a child arrives, and between children. int.
+        ChildDays: float
+        /// int.
+        MaxChildren: float
+        /// Names the children get, in order.
+        ChildNames: string list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `RelationshipSettings` with every field at its schema default.
+    static member Default : RelationshipSettings =
+        { DecayPerDay = 0.0; Dating = false; DatingHearts = 8.0; DatingItemId = None; Marriage = false; ProposalHearts = 10.0; ProposalItemId = None; WeddingDays = 3.0; WeddingCutsceneId = None; HomeSceneId = None; HomeX = None; HomeY = None; SpouseHelps = true; SpouseGiftItemIds = []; Children = false; ChildDays = 14.0; MaxChildren = 2.0; ChildNames = []; Extra = [] }
+
+/// Where and how a piece of clothing is worn (M4).
+and WearDefinition =
+    {
+        /// One of `WearSlots`.
+        Slot: string
+        /// The colour it gives the shirt, the trousers or the hat (`#rrggbb`).
+        Color: string option
+        /// Art drawn over the player (a hat), facing like the player.
+        Visual: VisualRef option
+    }
+
+    /// A `WearDefinition` with every field at its schema default.
+    static member Default : WearDefinition =
+        { Slot = ""; Color = None; Visual = None }
+
 /// Player entered a tile (or region when x2/y2 present).
 and EnterTileCondition =
     {
@@ -2128,6 +2323,98 @@ and FestivalIdCondition =
     static member Default : FestivalIdCondition =
         { FestivalId = "" }
 
+/// A variable (a flag holding a number or text, M3) compared with a number (`Value`) or, when
+/// `Text` is set, with a text.
+and VariableCondition =
+    {
+        Name: string
+        /// One of `VariableComparisons`.
+        Compare: string
+        Value: float option
+        Text: string option
+    }
+
+    static member Default : VariableCondition =
+        { Name = ""; Compare = "eq"; Value = None; Text = None }
+
+/// Every condition of the group holds (M3).
+and AllCondition =
+    {
+        Conditions: EventCondition list
+    }
+
+    static member Default : AllCondition =
+        { Conditions = [] }
+
+/// At least one condition of the group holds (M3).
+and AnyCondition =
+    {
+        Conditions: EventCondition list
+    }
+
+    static member Default : AnyCondition =
+        { Conditions = [] }
+
+/// None of the conditions of the group holds (M3).
+and NotCondition =
+    {
+        Conditions: EventCondition list
+    }
+
+    static member Default : NotCondition =
+        { Conditions = [] }
+
+/// A random chance (M3). 0..1.
+and ChanceCondition =
+    {
+        Chance: float
+    }
+
+    static member Default : ChanceCondition =
+        { Chance = 0.0 }
+
+/// The player is in one of these scenes (M3).
+and SceneCondition =
+    {
+        SceneIds: string list
+    }
+
+    static member Default : SceneCondition =
+        { SceneIds = [] }
+
+/// Whole hearts with an NPC within a range (M4); an empty `NpcId` is the NPC the player is
+/// talking to.
+and HeartsCondition =
+    {
+        NpcId: string
+        Min: float option
+        Max: float option
+    }
+
+    static member Default : HeartsCondition =
+        { NpcId = ""; Min = None; Max = None }
+
+/// The day of the season within a range (M4).
+and DayOfSeasonCondition =
+    {
+        MinDay: float option
+        MaxDay: float option
+    }
+
+    static member Default : DayOfSeasonCondition =
+        { MinDay = None; MaxDay = None }
+
+/// The player's relationship with an NPC (M4), one of `RelationshipStatuses`; an empty `NpcId`
+/// is the NPC the player is talking to, else anyone.
+and RelationshipCondition =
+    {
+        NpcId: string
+        Status: string
+    }
+
+    static member Default : RelationshipCondition =
+        { NpcId = ""; Status = "" }
+
 /// TS `EventConditionSchema`: a union on `type`.
 and [<RequireQualifiedAccess>] EventCondition =
     | EnterTile of EnterTileCondition
@@ -2143,6 +2430,15 @@ and [<RequireQualifiedAccess>] EventCondition =
     | Friendship of FriendshipCondition
     | Weather of WeatherCondition
     | FestivalId of FestivalIdCondition
+    | Variable of VariableCondition
+    | All of AllCondition
+    | Any of AnyCondition
+    | Not of NotCondition
+    | Chance of ChanceCondition
+    | Scene of SceneCondition
+    | Hearts of HeartsCondition
+    | DayOfSeason of DayOfSeasonCondition
+    | Relationship of RelationshipCondition
 
     /// The `type` discriminator.
     member this.Type =
@@ -2160,3 +2456,12 @@ and [<RequireQualifiedAccess>] EventCondition =
         | Friendship _ -> "friendship"
         | Weather _ -> "weather"
         | FestivalId _ -> "festivalId"
+        | Variable _ -> "variable"
+        | All _ -> "all"
+        | Any _ -> "any"
+        | Not _ -> "not"
+        | Chance _ -> "chance"
+        | Scene _ -> "scene"
+        | Hearts _ -> "hearts"
+        | DayOfSeason _ -> "dayOfSeason"
+        | Relationship _ -> "relationship"

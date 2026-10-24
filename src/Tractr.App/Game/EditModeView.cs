@@ -11,6 +11,7 @@ using Avalonia.Media;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Projects;
 
 namespace Tractr.App.Game;
@@ -162,7 +163,7 @@ public sealed partial class EditModeView : UserControl
         }
     }
 
-    /// <summary>The Map tab's page: the toolbar (scene, markers, zoom, hover readout), the framed map and the cursor status line.</summary>
+    /// <summary>The Map tab's page: the toolbar (scene, sky preview, markers, zoom, hover readout), the framed map and the cursor status line.</summary>
     private DockPanel BuildMapCenter()
     {
         var frame = new Border { Child = _scroller, Background = new SolidColorBrush(Color.Parse("#80E9DAB6")) }.WithClasses("game-frame");
@@ -218,14 +219,18 @@ public sealed partial class EditModeView : UserControl
         var toolbarLeft = Ui.HStack(8, Ui.Icon("IconMap", 18), Ui.Text("Scene", "hud-label"), _sceneSelector);
         _showMarkers.IsCheckedChanged += (_, _) => RefreshMarkers(force: true);
         ToolTip.SetTip(_showMarkers, "Show doors, arrivals, event tiles, the mine entrance and the player start on the map");
-        var toolbarRight = Ui.HStack(6, _showMarkers, zoomOut, _zoomText, zoomIn, fit);
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(0, 0, 0, 10) };
+        var toolbarRight = Ui.HStack(6, BuildSkyToggle(), _showMarkers, zoomOut, _zoomText, zoomIn, fit);
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), Margin = new Thickness(0, 0, 0, 10) };
         toolbar.Children.Add(toolbarLeft);
         var hoverBox = new Border { Child = _hoverInfo, Margin = new Thickness(16, 0) };
         Grid.SetColumn(hoverBox, 1);
         toolbar.Children.Add(hoverBox);
         Grid.SetColumn(toolbarRight, 2);
         toolbar.Children.Add(toolbarRight);
+        var skyRow = BuildSkyRow();
+        Grid.SetRow(skyRow, 1);
+        Grid.SetColumnSpan(skyRow, 3);
+        toolbar.Children.Add(skyRow);
         var toolbarBorder = new Border { Name = "MapToolbar", Child = toolbar, Padding = new Thickness(12, 8), Margin = new Thickness(0, 0, 0, 12) }.WithClasses("hud");
 
         var center = new DockPanel();
@@ -661,6 +666,7 @@ public sealed partial class EditModeView : UserControl
         var scene = CurrentScene();
         _sceneId = scene?.Id;
         RefreshSceneSelector(project);
+        RefreshSky(project, scene);
         RefreshInfo(project);
         RefreshPalette(project);
         RefreshEditorPanels(project, scene);
@@ -824,7 +830,7 @@ public sealed partial class EditModeView : UserControl
         using var art = terrains.Any(terrain => terrain.Visual.OrNull() is not null) ? new VisualPreview() : null;
         void Swatch(TerrainDefinition? terrain)
         {
-            var label = terrain is null ? "Inspect" : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
+            var label = terrain is null ? EditorStrings.Get("palette.inspect") : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
             var chip = new Border
             {
                 Width = 18,
@@ -849,7 +855,7 @@ public sealed partial class EditModeView : UserControl
 
             var toggle = new ToggleButton { Tag = terrain?.Id, Content = Ui.HStack(6, chip, Ui.Text(label, "small")), Margin = new Thickness(0, 0, 6, 6), Name = $"Brush_{terrain?.Id ?? "inspect"}" };
             toggle.Classes.Add("swatch");
-            AutomationProperties.SetName(toggle, terrain is null ? "Inspect (no brush)" : $"Brush: {label}");
+            AutomationProperties.SetName(toggle, terrain is null ? EditorStrings.Get("palette.inspectName") : EditorStrings.Format("palette.brushName", label));
             if (terrain is not null) ToolTip.SetTip(toggle, ContentReadouts.TerrainListNote(terrain, !project.Terrains.OrEmpty().Any(own => own.Id == terrain.Id)));
             toggle.IsChecked = Equals(terrain?.Id, _brush);
             var id = terrain?.Id;

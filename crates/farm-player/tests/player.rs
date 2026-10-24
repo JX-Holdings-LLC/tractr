@@ -701,8 +701,8 @@ fn the_games_own_sounds_and_music_play_instead_of_the_built_in_ones() {
         }
     }
     let chime = sounds.iter().find(|sound| sound.cue == "chime").expect("the chime played");
-    assert_eq!(chime.clip.as_ref().map(|clip| clip.sample_rate), Some(22_050));
-    assert!(sounds.iter().any(|sound| sound.cue == "coin" && sound.clip.is_none()));
+    assert_eq!(chime.file.as_ref().map(|file| file.sample_rate), Some(22_050));
+    assert!(sounds.iter().any(|sound| sound.cue == "coin" && sound.file.is_none()));
 
     // The scene's music plays instead of the built-in day music, which stays the fallback.
     let cue = player.music_cue();

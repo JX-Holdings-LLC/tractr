@@ -13,6 +13,8 @@ type FieldKind =
     | OneOf of choices: (string * string) list
     | Reference of kind: ReferenceKind
     | ReferenceList of kind: ReferenceKind
+    /// A nested list of conditions (the `all`, `any` and `not` groups, M3).
+    | Conditions
 
 /// One field of a condition or outcome form (event-forms.tsx). `Key` is the JSON key. Clearing
 /// an `Optional` field removes it; clearing a required number stores `WhenEmpty` (the web
@@ -55,7 +57,27 @@ module Vocabulary =
           "yearRange", "Year range"
           "timeOfDay", "Time of day"
           "questStatus", "Quest status"
-          "festivalId", "Festival" ]
+          "festivalId", "Festival"
+          "variable", "Variable compares"
+          "all", "All of these"
+          "any", "Any of these"
+          "not", "None of these"
+          "chance", "Random chance"
+          "scene", "Player is in scene"
+          "hearts", "Hearts with NPC"
+          "dayOfSeason", "Day of the season"
+          "relationship", "Relationship" ]
+
+    /// How a `variable` condition compares, with the editor's labels.
+    let comparisons =
+        [ VariableComparisons.Eq, "="; VariableComparisons.Ne, "≠"; VariableComparisons.Lt, "<"
+          VariableComparisons.Le, "≤"; VariableComparisons.Gt, ">"; VariableComparisons.Ge, "≥" ]
+
+    /// The relationship stages, with the editor's labels.
+    let relationshipStatuses = References.relationshipStatuses
+
+    /// The event triggers, with the editor's labels (M3).
+    let triggers = References.triggers
 
     /// The outcome types the editor offers, in its order.
     let outcomeTypes =
@@ -82,7 +104,19 @@ module Vocabulary =
           EventOutcomeTypes.PerformAction, "Perform action"
           EventOutcomeTypes.StartMinigame, "Start minigame"
           EventOutcomeTypes.PlayMusic, "Play music"
-          EventOutcomeTypes.StartCutscene, "Start cutscene" ]
+          EventOutcomeTypes.StartCutscene, "Start cutscene"
+          EventOutcomeTypes.SetVariable, "Set variable"
+          EventOutcomeTypes.AddVariable, "Add to variable"
+          EventOutcomeTypes.MoveNpc, "Move NPC"
+          EventOutcomeTypes.SetWeather, "Change the weather"
+          EventOutcomeTypes.GiveExperience, "Give experience"
+          EventOutcomeTypes.AddShopStock, "Add to a shop"
+          EventOutcomeTypes.RemoveShopStock, "Remove from a shop"
+          EventOutcomeTypes.PlaceNode, "Place node"
+          EventOutcomeTypes.RemoveNode, "Remove node"
+          EventOutcomeTypes.PlaceMachine, "Place machine"
+          EventOutcomeTypes.RemoveMachine, "Remove machine"
+          EventOutcomeTypes.SetRelationship, "Set relationship" ]
 
     /// The label of a condition type (the type itself when unknown).
     let conditionLabel (kind: string) =
@@ -110,6 +144,23 @@ module Vocabulary =
         | "questStatus" ->
             [ reference "questId" "Quest" ReferenceKind.Quest
               field "status" "Status" (FieldKind.OneOf(QuestStatuses.All |> Seq.map (fun s -> s, s) |> List.ofSeq)) ]
+        | "variable" ->
+            [ text "name" "Variable" "coins"
+              field "compare" "Compare" (FieldKind.OneOf comparisons)
+              { field "value" "Number" FieldKind.Number with Optional = true }
+              { text "text" "or text" "" with Optional = true; Placeholder = "compare with a text instead" } ]
+        | "all"
+        | "any"
+        | "not" -> [ field "conditions" "Conditions" FieldKind.Conditions ]
+        | "chance" -> [ { field "chance" "Chance (0–1)" FieldKind.Number with Min = Some 0.0; Max = Some 1.0 } ]
+        | "scene" -> [ field "sceneIds" "Scenes" (FieldKind.ReferenceList ReferenceKind.Scene) ]
+        | "hearts" ->
+            [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(the NPC speaking)" }
+              optionalInteger "min" "At least (hearts)"; optionalInteger "max" "At most (hearts)" ]
+        | "dayOfSeason" -> [ optionalInteger "minDay" "From day"; optionalInteger "maxDay" "To day" ]
+        | "relationship" ->
+            [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(the NPC speaking, or anyone)" }
+              field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
         | _ -> []
 
     /// `OutcomeFields`: the fields each outcome type shows.
@@ -117,6 +168,7 @@ module Vocabulary =
         let item = reference "itemId" "Item" ReferenceKind.Item
         let npc = reference "npcId" "NPC" ReferenceKind.Npc
         let scene = reference "sceneId" "Scene" ReferenceKind.Scene
+        let hereScene = { scene with Optional = true; Empty = Some "(the player's scene)" }
         match kind with
         | EventOutcomeTypes.Message -> [ text "message" "Message" "Message text…" ]
         | EventOutcomeTypes.GiveItem
@@ -143,6 +195,26 @@ module Vocabulary =
         | EventOutcomeTypes.PlayMusic ->
             [ { reference "soundId" "Music" ReferenceKind.Music with Optional = true; Empty = Some "(the game's own music)" } ]
         | EventOutcomeTypes.StartCutscene -> [ reference "cutsceneId" "Cutscene" ReferenceKind.Cutscene ]
+        | EventOutcomeTypes.SetVariable ->
+            [ text "variable" "Variable" "coins"
+              { field "amount" "Number" FieldKind.Number with Optional = true }
+              { text "text" "or text" "" with Optional = true; Placeholder = "store a text instead" } ]
+        | EventOutcomeTypes.AddVariable -> [ text "variable" "Variable" "coins"; field "amount" "Add" FieldKind.Number ]
+        | EventOutcomeTypes.MoveNpc -> [ npc; hereScene; integer "x" "X"; integer "y" "Y" ]
+        | EventOutcomeTypes.SetWeather -> [ reference "weatherId" "Weather" ReferenceKind.Weather ]
+        | EventOutcomeTypes.GiveExperience -> [ reference "skill" "Skill" ReferenceKind.Skill; integer "amount" "Experience" ]
+        | EventOutcomeTypes.AddShopStock ->
+            [ reference "shopId" "Shop" ReferenceKind.Shop; item
+              { optionalInteger "amount" "Price (opt)" with Placeholder = "the item's" }
+              { optionalInteger "itemQuantity" "Daily limit (opt)" with Placeholder = "unlimited" } ]
+        | EventOutcomeTypes.RemoveShopStock -> [ reference "shopId" "Shop" ReferenceKind.Shop; item ]
+        | EventOutcomeTypes.PlaceNode ->
+            [ hereScene; integer "tileX" "X"; integer "tileY" "Y"; reference "nodeTypeId" "Node" ReferenceKind.NodeType ]
+        | EventOutcomeTypes.PlaceMachine ->
+            [ hereScene; integer "tileX" "X"; integer "tileY" "Y"; reference "machineTypeId" "Machine" ReferenceKind.MachineType ]
+        | EventOutcomeTypes.RemoveNode
+        | EventOutcomeTypes.RemoveMachine -> [ hereScene; integer "tileX" "X"; integer "tileY" "Y" ]
+        | EventOutcomeTypes.SetRelationship -> [ npc; field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
         | _ -> []
 
     /// `defaultCondition`: a condition of the type with the web's starting values.
@@ -171,7 +243,7 @@ module Vocabulary =
     /// The fields a cutscene step of each type uses besides its type and label (M2).
     let stepFields (kind: string) : string list =
         match kind with
-        | CutsceneStepTypes.Say -> [ "Text"; "Speaker" ]
+        | CutsceneStepTypes.Say -> [ "Text"; "Speaker"; "Expression" ]
         | CutsceneStepTypes.Choice -> [ "Text"; "Options" ]
         | CutsceneStepTypes.Jump -> [ "Goto"; "Conditions" ]
         | CutsceneStepTypes.Move -> [ "Actor"; "X"; "Y"; "Wait" ]
@@ -187,7 +259,7 @@ module Vocabulary =
 
     let private stepProperties =
         [ "Actor"; "X"; "Y"; "Direction"; "Emote"; "Seconds"; "Text"; "Speaker"; "Options"; "Goto"; "Conditions"; "Mode"; "Color"
-          "SoundId"; "Outcomes"; "Wait" ]
+          "SoundId"; "Outcomes"; "Wait"; "Expression" ]
 
     /// Properties of `owner` a form hides while its `type` discriminator is `kind`.
     let hiddenProperties (owner: string) (kind: string) : string list =
@@ -198,15 +270,26 @@ module Vocabulary =
         | "CutsceneStep" ->
             let shown = stepFields kind
             stepProperties |> List.filter (fun p -> not (List.contains p shown))
+        // An event's subject and minute (M3) apply to some triggers only.
+        | "GameEvent" ->
+            [ if not (List.contains kind EventTriggers.WithSubject) then "Subject"
+              if kind <> EventTriggers.Time then "Minute" ]
         | _ -> []
 
     /// What `owner.property` holds while the record's `type` is `kind`, where that differs from
     /// its declaration: a cutscene step's `SoundId` is a music asset on a music step (empty: back
-    /// to the game's music) and a sound asset on a sound step.
+    /// to the game's music) and a sound asset on a sound step; a camera step without an actor
+    /// looks at its tile, or back at the player.
     let roleFor (owner: string) (property: string) (kind: string) : FieldRole option =
         match owner, property, kind with
+        | "CutsceneStep", "Actor", CutsceneStepTypes.Camera -> Some(FieldRole.Reference(ReferenceKind.Actor, Some "(a tile, or back to the player)"))
         | "CutsceneStep", "SoundId", CutsceneStepTypes.Music -> Some(FieldRole.Reference(ReferenceKind.Music, Some "(the game's own music)"))
         | "CutsceneStep", "SoundId", CutsceneStepTypes.Sound -> Some(FieldRole.Reference(ReferenceKind.Sound, None))
+        // What an event's subject names depends on its trigger (M3).
+        | "GameEvent", "Subject", (EventTriggers.Harvest | EventTriggers.Sell | EventTriggers.Craft | EventTriggers.Catch | EventTriggers.PickUp) ->
+            Some(FieldRole.Reference(ReferenceKind.Item, Some "(any item)"))
+        | "GameEvent", "Subject", EventTriggers.Friendship -> Some(FieldRole.Reference(ReferenceKind.Npc, Some "(anyone)"))
+        | "GameEvent", "Subject", EventTriggers.Quest -> Some(FieldRole.Reference(ReferenceKind.Quest, Some "(any quest)"))
         | _ -> None
 
     let private some (value: 'T) : obj option = Some(box value |> nonNull)
@@ -256,6 +339,8 @@ module Vocabulary =
         | "EventOutcome" -> some (defaultOutcome EventOutcomeTypes.Message)
         | "CutsceneStep" -> some { CutsceneStep.Default with Type = CutsceneStepTypes.Say; Text = Some "..." }
         | "CutsceneChoice" -> some { CutsceneChoice.Default with Text = "OK" }
+        | "NpcLine" -> some { NpcLine.Default with Text = "Nice day, isn't it?" }
+        | "NpcPortrait" -> some { NpcPortrait.Default with Expression = "happy" }
         | "TerrainTransform" -> some ({ Action = ToolActions.Till; Tool = None; Into = TileTypes.Soil } : TerrainTransform)
         | "NeighborRequirement" -> some { NeighborRequirement.Default with Kind = NeighborKinds.Water }
         | _ -> None

@@ -438,7 +438,8 @@ fn a_player_descends_only_at_the_mine_and_only_as_deep_as_they_have_been() {
     assert_eq!(current.mine.deepest_floor, 2);
 
     // A dialogue open: refused without a word.
-    current.dialogue = Some(farm_sim::schema::DialogueState { npc_id: "n".to_owned(), dialogue_id: "d".to_owned() });
+    current.dialogue =
+        Some(farm_sim::schema::DialogueState { npc_id: "n".to_owned(), dialogue_id: "d".to_owned(), line: None });
     let before = current.clone();
     assert!(farm_sim::apply_command(&ctx, &mut current, &Command::DescendMine { floor: 3 }).is_empty());
     assert_eq!(current, before);
@@ -556,6 +557,27 @@ fn exit_mine_returns_to_the_entrance_and_drops_generated_floors() {
             Effect::message("info", "You climb back to the surface."),
         ]
     );
+}
+
+#[test]
+fn music_an_event_chose_ends_on_every_mine_ladder_and_the_way_out() {
+    let (ctx, mut current) = make_engine(|_| {});
+    // Into the mine from the entrance.
+    current.music = Some("song".to_owned());
+    at(&mut current, 5, 4, "down");
+    farm_sim::apply_command(&ctx, &mut current, &Command::Interact);
+    assert_eq!((current.player.scene_id.as_str(), current.music.as_deref()), ("mine-floor-1", None));
+    // Down a ladder.
+    current.music = Some("song".to_owned());
+    mines::descend_mine(&ctx, &mut current, 2);
+    assert_eq!((current.player.scene_id.as_str(), current.music.as_deref()), ("mine-floor-2", None));
+    // The same floor again is no change of scene.
+    current.music = Some("song".to_owned());
+    mines::descend_mine(&ctx, &mut current, 2);
+    assert_eq!(current.music.as_deref(), Some("song"));
+    // Back to the surface.
+    mines::exit_mine(&ctx, &mut current);
+    assert_eq!((current.player.scene_id.as_str(), current.music.as_deref()), (SCENE, None));
 }
 
 #[test]

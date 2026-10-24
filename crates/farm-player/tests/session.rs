@@ -341,6 +341,25 @@ fn debug_actions_change_state_without_commands() {
 }
 
 #[test]
+fn a_debug_teleport_to_another_scene_ends_the_music_an_event_chose() {
+    let mut project = starter();
+    project.scenes.push(farm_sim::world::tiles::create_empty_scene("scene-cave", "Cave", 5, 5));
+    let mut session = session_for(&project);
+    let mut state = session.state().clone();
+    let here = state.player.scene_id.clone();
+    let elsewhere = "scene-cave".to_owned();
+    state.music = Some("song".to_owned());
+    session.replace_state(state);
+    session.debug(&DebugAction::Teleport { scene_id: here });
+    assert_eq!(session.state().music.as_deref(), Some("song"), "a teleport inside the scene keeps it");
+    session.debug(&DebugAction::Teleport { scene_id: elsewhere.clone() });
+    assert_eq!(
+        (session.state().player.scene_id.as_str(), session.state().music.as_deref()),
+        (elsewhere.as_str(), None)
+    );
+}
+
+#[test]
 fn replacing_the_state_releases_a_held_walk() {
     let mut session = session_for(&starter());
     session.key_down("d");

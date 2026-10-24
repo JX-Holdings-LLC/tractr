@@ -153,13 +153,18 @@ The built-in sounds and music above play in every game. A game can bring its
 own as well: `sound` and `music` assets (Ogg Vorbis or WAV) in the project,
 shipped in the cartridge's asset table like its images.
 
-- **Decoding.** The player decodes each sound and music asset once, when the
-  game loads (`farm_player::audio_assets`, with the pure-Rust lewton and hound
-  decoders), at the file's own sample rate. WAV may be 8- to 32-bit PCM or
-  32-bit float; mono and stereo stay as they are, more channels are mixed
-  down to mono. A file is at most 10 minutes long. The format comes from the
-  file's first bytes, not its MIME type. Decoded audio stays in memory, about
-  21 MB a minute of stereo at 44.1 kHz.
+- **Decoding.** The player decodes each sound and music asset once when the
+  game loads, to check it and measure it (`farm_player::audio_assets`, with
+  the pure-Rust lewton and hound decoders), at the file's own sample rate.
+  WAV may be 8- to 32-bit PCM or 32-bit float; mono and stereo stay as they
+  are, more channels are mixed down to mono. A file is at most 10 minutes
+  long. The format comes from the file's first bytes, not its MIME type.
+- **Memory.** Decoded audio takes about 21 MB a minute of stereo at
+  44.1 kHz, so only sounds up to 5 seconds long stay decoded. Music and
+  longer sounds keep just their file (the bytes the cartridge's asset table
+  holds anyway, not a copy) and are decoded and resampled while they play,
+  about half a second ahead (`farm_player::audio_stream`): a stream holds a
+  few thousand frames of its file, never all of it.
 - **Sounds.** `playSound(id)` plays the sound asset `id` once, mixed with
   everything else at the sound-effects volume. Without such an asset the
   built-in preset of that name plays, as before. An asset whose id is a
@@ -168,8 +173,9 @@ shipped in the cartridge's asset table like its images.
 - **Music.** The music is chosen every frame
   (`farm_runtime::music::chosen_music`); the first that applies wins:
   1. the music an event or cutscene chose (`playMusic`), until the player
-     changes scene through a transition or a warp to another scene (an empty
-     id goes back to the place's music);
+     is in another scene, however they got there: a transition, a warp, the
+     mine's ladders and exit, or the debug drawer's teleport (an empty id
+     goes back to the place's music);
   2. today's festival's music;
   3. the weather's music, outdoors only (not in an indoor scene);
   4. the scene's music;
@@ -185,15 +191,29 @@ shipped in the cartridge's asset table like its images.
   broken, too long) is left out when the game loads
   (`Player::audio_assets().failed()` lists it with the reason), and the
   built-in sound or music plays in its place. Audio never stops the game.
-- **Playback.** A `SoundRequest` carries its sound asset's decoded `Clip`,
-  and a `MusicCue` its music asset (`asset`, with the built-in `music` as the
-  fallback), so a host needs nothing else. The desktop game and the editor's
-  Play Mode (`speaker`) resample a clip to the device's rate the first time
-  it plays (cubic interpolation) and keep it while the device stays open:
-  a sound at once, music on a thread of its own while the music before it
-  keeps playing. The web demo plays them too: a frame names them
+  The editor's Problems check (`AudioFiles` in F#) reads each file's
+  structure the way lewton and hound do (Ogg pages and their CRCs, the
+  Vorbis headers; WAV chunks and formats) and reports what would be left out
+  as `asset.audioUnreadable`, an error that blocks Export.
+- **Preview.** The Art tab's play button plays one asset through
+  `farm_player::preview` (feature `audio-out`, via `fe_audio_preview_play`):
+  the same decoder, resampled to the device's rate, on a stream of its own
+  thread, without the game's sound bank or music loops.
+- **Playback.** A `SoundRequest` carries its sound asset's `AudioFile` (with
+  its decoded `Clip` when it is short), and a `MusicCue` its music asset
+  (`asset`, with the built-in `music` as the fallback), so a host needs
+  nothing else. The desktop game and the editor's Play Mode (`speaker`)
+  resample a short sound to the device's rate the first time it plays (cubic
+  interpolation) and keep it in a cache of 16 MB; past that the sounds played
+  longest ago are dropped, never one that is still playing. Music and long
+  sounds stream: a thread of their own (`Feeder`) decodes and resamples them
+  with the same interpolation and hands the audio callback ready samples
+  through a fixed queue, so the callback never decodes, allocates or waits.
+  Looped music goes from its end straight back into its start, interpolated
+  across the seam. The web demo plays them too: a frame names them
   (`info.sounds[].asset`, `info.music.asset`), the page fetches the decoded
-  samples with `Player.audioClip(id)` and WebAudio resamples them
+  samples with `Player.audioClip(id)` (music and long sounds are decoded for
+  that call; the page keeps the `AudioBuffer`) and WebAudio resamples them
   ([crates/farm-wasm/README.md](../crates/farm-wasm/README.md#sound)).
 
 Like the built-in sounds, none of this reaches the simulation: the state,
@@ -353,7 +373,9 @@ under one lock, so plugin hooks never block the editor. Editor shortcuts
 
 1. Input is routed: bound keys become the engine's keys, and the UI gets
    navigation, pointer and raw keys.
-2. The session steps (fixed timestep) unless a menu pauses the game.
+2. The session steps (fixed timestep) unless a menu pauses the game. The
+   camera centres on the player as drawn between the last two ticks, or on
+   where a cutscene's camera looks, which pans between ticks the same way.
 3. `farm-render` builds the world snapshot of the tiles the camera shows (a
    tile window, one tile of margin and the row below for tall objects), so a
    256×256 farm costs about what a small one does; image URLs are shared

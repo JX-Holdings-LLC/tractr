@@ -156,8 +156,16 @@ module Cleanup =
             let npcOutcome =
                 o.Type = EventOutcomeTypes.SpawnNpc || o.Type = EventOutcomeTypes.RemoveNpc
                 || o.Type = EventOutcomeTypes.StartDialogue || o.Type = EventOutcomeTypes.ModifyFriendship
+                || o.Type = EventOutcomeTypes.MoveNpc || o.Type = EventOutcomeTypes.SetRelationship
             dropWhen (npcOutcome && refers o.NpcId npcId) o)
         |> Proj.mapScenes (fun s -> withList s (Lists.filterChanged (fun (id: string) -> id <> npcId) s.Npcs) (fun s l -> { s with Npcs = l }))
+        // Its heart events (M4) go with it.
+        |> fun p ->
+            match p.HeartEvents with
+            | Some events when events |> List.exists (fun h -> h.NpcId = npcId) ->
+                let kept = events |> List.filter (fun h -> h.NpcId <> npcId)
+                { p with HeartEvents = (if kept.IsEmpty then None else Some kept) }
+            | _ -> p
 
     /// A dialogue is gone: chains into it end the conversation; `startDialogue` falls back to the NPC's first.
     let dropDialogue (dialogueId: string) (project: GameProject) : GameProject =
@@ -347,10 +355,22 @@ module Cleanup =
                     let y = max 0 (min (int start.Height - 1) (int p.Player.Y))
                     { p with Player = { p.Player with SceneId = start.Id; X = float x; Y = float y } }
 
-    /// A calendar season is gone: festivals on it, weather rows, and season lists that named it.
-    /// A list it was the only entry of keeps it: an empty (or absent) list means "every season",
-    /// so emptying it would open winter-only stock, quests, fish and recipes all year. Kept, the
-    /// season never comes, and Problems reports it.
+    /// `settings` without the sky look (M1) of a season; an atmosphere left with nothing set
+    /// goes, as the Settings form leaves it out.
+    let dropSeasonLook (seasonId: string) (settings: ProjectSettings) : ProjectSettings =
+        match settings.Atmosphere with
+        | Some atmosphere when atmosphere.Seasons |> List.exists (fun (key, _) -> key = seasonId) ->
+            let seasons = atmosphere.Seasons |> List.filter (fun (key, _) -> key <> seasonId)
+            let atmosphere =
+                if seasons.IsEmpty && atmosphere.AllSeasons = AtmosphereLook.Default then None
+                else Some { atmosphere with Seasons = seasons }
+            { settings with Atmosphere = atmosphere }
+        | _ -> settings
+
+    /// A calendar season is gone: festivals on it, weather rows, its sky look, and season lists
+    /// that named it. A list it was the only entry of keeps it: an empty (or absent) list means
+    /// "every season", so emptying it would open winter-only stock, quests, fish and recipes all
+    /// year. Kept, the season never comes, and Problems reports it.
     let dropSeason (seasonId: string) (project: GameProject) : GameProject =
         let without (seasons: string list) =
             match Lists.filterChanged (fun (s: string) -> s <> seasonId) seasons with
@@ -371,6 +391,9 @@ module Cleanup =
             if p.Weather.Table |> List.exists (fun (key, _) -> key = seasonId) then
                 { p with Weather = { p.Weather with Table = p.Weather.Table |> List.filter (fun (key, _) -> key <> seasonId) } }
             else p
+        |> fun p ->
+            let settings = dropSeasonLook seasonId p.Settings
+            if LanguagePrimitives.PhysicalEquality settings p.Settings then p else { p with Settings = settings }
         |> mapCustomCrops (fun c -> withList c (without c.Seasons) (fun c l -> { c with Seasons = l }))
         |> mapShops (fun s ->
             withList s

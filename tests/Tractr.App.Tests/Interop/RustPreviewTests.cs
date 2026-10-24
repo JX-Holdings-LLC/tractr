@@ -12,6 +12,25 @@ namespace Tractr.App.Tests.Interop;
 public sealed class RustPreviewTests
 {
     [NativeFact]
+    public void PreviewDrawsTheSkyItIsAskedFor()
+    {
+        var project = ProjectCatalog.CreateInitialProject(0);
+        var scene = project.Scenes.First(s => s.Id == project.Player.SceneId);
+        using var preview = RustPreview.Create(project);
+        var camera = new PreviewCamera(40, 30, 200, 120);
+        var plain = preview.Render(scene.Id, 28, 12, camera);
+        var night = preview.Render(scene.Id, 28, 12, camera, sky: new PreviewSky(22 * 60, "", null));
+        Assert.Equal((plain.Width, plain.Height), (night.Width, night.Height));
+        Assert.False(plain.Pixels.AsSpan().SequenceEqual(night.Pixels), "the night tint");
+        // Midday without weather is the built-in look's untinted map.
+        var noon = preview.Render(scene.Id, 28, 12, camera, sky: new PreviewSky(12 * 60, project.CurrentSeason, null));
+        Assert.True(plain.Pixels.AsSpan().SequenceEqual(noon.Pixels));
+        var rain = preview.Render(scene.Id, 28, 12, camera, sky: new PreviewSky(12 * 60, project.CurrentSeason, "rain"));
+        Assert.False(plain.Pixels.AsSpan().SequenceEqual(rain.Pixels), "rain and its tint");
+        Assert.True(plain.Pixels.AsSpan().SequenceEqual(preview.Render(scene.Id, 28, 12, camera).Pixels));
+    }
+
+    [NativeFact]
     public void PreviewRendersTheRequestedViewport()
     {
         var project = ProjectCatalog.CreateInitialProject(0);

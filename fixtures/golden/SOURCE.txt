@@ -15,11 +15,11 @@ without the switch):
                    (inputs: each file's input)
 
 Last recorded (stamped by the recorders):
-  replays: 273ea16a36a6 + uncommitted engine changes
-  content: 792feb86b85e + uncommitted engine changes
+  replays: 682d0bd33f94
+  content: 682d0bd33f94
   rng.json: committed in f2c2a08 (recorded before the recorders stamped)
-  hash.json: 273ea16a36a6 + uncommitted engine changes
-  saves: 273ea16a36a6 + uncommitted engine changes
+  hash.json: 682d0bd33f94
+  saves: 682d0bd33f94
 
 vectors/rng.json and vectors/stable-text.json are fixed vectors for the RNG and for stable
 JSON. They are never re-recorded.

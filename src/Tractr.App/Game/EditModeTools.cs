@@ -7,6 +7,7 @@ using Avalonia.Media;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 
 namespace Tractr.App.Game;
 
@@ -39,10 +40,10 @@ public sealed partial class EditModeView
     private readonly CheckBox _doorReturn = new() { Name = "DoorReturn", Content = "Return door" };
     private readonly CheckBox _sceneIndoor = new() { Name = "SceneIndoor", Content = "Indoor (no weather)" };
     private bool _showingSceneIndoor;
-    private readonly CheckBox _sceneDark = new() { Name = "SceneDark", Content = "Dark (no daylight for crops)" };
+    private readonly CheckBox _sceneDark = new() { Name = "SceneDark", Content = EditorStrings.Get("scene.dark") };
     private readonly ComboBox _sceneMusic = new() { Name = "SceneMusic", MinWidth = 160 };
-    private readonly TextBox _sceneTemperature = new() { Name = "SceneTemperature", Width = 70, PlaceholderText = "season's" };
-    private readonly TextBox _sceneTags = new() { Name = "SceneTags", PlaceholderText = "cave, greenhouse" };
+    private readonly TextBox _sceneTemperature = new() { Name = "SceneTemperature", Width = 70, PlaceholderText = EditorStrings.Get("scene.seasons") };
+    private readonly TextBox _sceneTags = new() { Name = "SceneTags", PlaceholderText = EditorStrings.Get("scene.tagsPlaceholder") };
     private readonly TextBox _sceneFoliage = new() { Name = "SceneFoliageTint", Width = 90, PlaceholderText = "#rrggbb" };
     private readonly TextBox _sceneDaylight = new() { Name = "SceneDaylight", AcceptsReturn = true, MinHeight = 54, PlaceholderText = "360 #ffd8a0" };
     /// <summary>The surroundings' text fields as last shown, so a project change refreshes only the untouched ones.</summary>
@@ -353,7 +354,7 @@ public sealed partial class EditModeView
     /// </summary>
     private void BuildSurroundings(StackPanel side)
     {
-        ToolTip.SetTip(_sceneDark, "Caves and cellars: crops that need light do not grow here, and crops that need the dark do.");
+        ToolTip.SetTip(_sceneDark, EditorStrings.Get("scene.darkTip"));
         _sceneDark.IsCheckedChanged += (_, _) =>
         {
             if (!_showingSceneIndoor) ApplySurroundings(dark: _sceneDark.IsChecked == true);
@@ -363,19 +364,19 @@ public sealed partial class EditModeView
         {
             if (!_showingSceneIndoor && _sceneMusic.SelectedItem is ComboBoxItem { Tag: string id }) ApplySurroundings(music: id);
         };
-        AutomationProperties.SetName(_sceneMusic, "Scene music");
-        AutomationProperties.SetName(_sceneTemperature, "Scene temperature");
-        AutomationProperties.SetName(_sceneTags, "Scene tags");
-        AutomationProperties.SetName(_sceneFoliage, "Scene foliage tint");
-        AutomationProperties.SetName(_sceneDaylight, "Scene daylight");
-        ToolTip.SetTip(_sceneTemperature, "How warm it is here, for crops with a temperature range; empty uses the season's.");
-        ToolTip.SetTip(_sceneTags, "Words crops can require, separated by commas.");
-        ToolTip.SetTip(_sceneDaylight, "This scene's own day/night tint: one line per key, the minute of the day and a colour (360 #ffd8a0). Empty uses the season's.");
-        side.Children.Add(Ui.HStack(8, Ui.Text("Music", "muted", "small"), _sceneMusic));
-        side.Children.Add(Ui.HStack(8, Ui.Text("Temperature", "muted", "small"), _sceneTemperature, Ui.Text("Foliage tint", "muted", "small"), _sceneFoliage));
-        side.Children.Add(Ui.VStack(3, Ui.Text("Tags", "muted", "small"), _sceneTags));
-        side.Children.Add(Ui.VStack(3, Ui.Text("Daylight (minute and colour per line)", "muted", "small"), _sceneDaylight));
-        side.Children.Add(WrapButtons(NamedButton("SaveSurroundingsButton", "Save surroundings", () => ApplySurroundings(fields: true))));
+        AutomationProperties.SetName(_sceneMusic, EditorStrings.Get("scene.musicName"));
+        AutomationProperties.SetName(_sceneTemperature, EditorStrings.Get("scene.temperatureName"));
+        AutomationProperties.SetName(_sceneTags, EditorStrings.Get("scene.tagsName"));
+        AutomationProperties.SetName(_sceneFoliage, EditorStrings.Get("scene.foliageName"));
+        AutomationProperties.SetName(_sceneDaylight, EditorStrings.Get("scene.daylightName"));
+        ToolTip.SetTip(_sceneTemperature, EditorStrings.Get("scene.temperatureTip"));
+        ToolTip.SetTip(_sceneTags, EditorStrings.Get("scene.tagsTip"));
+        ToolTip.SetTip(_sceneDaylight, EditorStrings.Get("scene.daylightTip"));
+        side.Children.Add(Ui.HStack(8, Ui.Text(EditorStrings.Get("common.music"), "muted", "small"), _sceneMusic));
+        side.Children.Add(Ui.HStack(8, Ui.Text(EditorStrings.Get("scene.temperature"), "muted", "small"), _sceneTemperature, Ui.Text(EditorStrings.Get("common.foliageTint"), "muted", "small"), _sceneFoliage));
+        side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.tags"), "muted", "small"), _sceneTags));
+        side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.daylight"), "muted", "small"), _sceneDaylight));
+        side.Children.Add(WrapButtons(NamedButton("SaveSurroundingsButton", EditorStrings.Get("scene.saveSurroundings"), () => ApplySurroundings(fields: true))));
     }
 
     /// <summary>
@@ -426,18 +427,18 @@ public sealed partial class EditModeView
                 var warmth = (_sceneTemperature.Text ?? "").Trim();
                 temperature = warmth.Length == 0 ? null
                     : double.TryParse(warmth, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) ? value
-                    : throw new FormatException("Temperature must be a number.");
+                    : throw new FormatException(EditorStrings.Get("scene.temperatureNumber"));
                 tags = (_sceneTags.Text ?? "").Split(',');
                 atmosphere = SettingsForm.Look("Scene", _sceneDaylight.Text, _sceneFoliage.Text);
             }
 
             var saved = _workspace.Apply(Edits.SetSceneEnvironment(scene.Id, dark ?? scene.Dark.OrNullable() == true, temperature, tags,
                 music ?? scene.Music.OrNull(), atmosphere));
-            if (fields) _editorMessage.Text = saved ? $"Saved the surroundings of {scene.Name}." : "No changes were made.";
+            if (fields) _editorMessage.Text = saved ? EditorStrings.Format("scene.savedSurroundings", scene.Name) : EditorStrings.Get("common.noChanges");
         }
         catch (FormatException error)
         {
-            _editorMessage.Text = $"Could not save the surroundings: {error.Message}";
+            _editorMessage.Text = EditorStrings.Format("scene.couldNotSaveSurroundings", error.Message);
         }
     }
 

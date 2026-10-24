@@ -413,7 +413,8 @@ fn runs_the_bound_action_when_the_option_is_chosen() {
         "ext-test",
     );
     let mut talking = state.clone();
-    talking.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    talking.dialogue =
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     engine::apply_command(&ctx, &mut talking, &Command::ChooseDialogueOption { index: 0 });
     assert!(flag_is_true(&talking, "snacked"));
     assert_eq!(talking.player.money, state.player.money + 5);
@@ -511,7 +512,7 @@ fn warp_player_start_dialogue_and_perform_action_dispatch_like_their_outcomes() 
     mutate(&ctx, &mut talking, PluginMutation::StartDialogue { npc_id: "npc-test".to_owned(), dialogue_id: None });
     assert_eq!(
         talking.dialogue,
-        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() })
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None })
     );
 
     let mut acted = state.clone();
@@ -804,7 +805,10 @@ fn world_outcomes_warp_dialogue_npcs_and_transitions() {
     );
     assert_eq!(state.social["npc-test"].friendship, MAX_FRIENDSHIP);
     assert_eq!(friendship_hooks(&ctx), vec![MAX_FRIENDSHIP]);
-    assert_eq!(state.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() }));
+    assert_eq!(
+        state.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None })
+    );
     let transitions = &state.world.scenes[0].transitions;
     assert_eq!(transitions[0].locked, Some(false));
     assert_eq!(transitions[1].locked, Some(true));
@@ -846,6 +850,17 @@ fn play_music_lasts_until_a_warp_leaves_the_scene() {
     // An empty id goes back to the music the place picks.
     events::apply_outcomes(&ctx, &mut state, &[play("song"), play("")], 0);
     assert_eq!(state.music, None);
+}
+
+#[test]
+fn a_plugin_warp_to_another_scene_ends_the_music() {
+    let (ctx, mut state) = bare(GameContent::default());
+    let warp = |scene: &str| PluginMutation::WarpPlayer { scene_id: scene.to_owned(), x: 1, y: 1 };
+    state.music = Some("song".to_owned());
+    mutate(&ctx, &mut state, warp("scene-a"));
+    assert_eq!(state.music.as_deref(), Some("song"), "a warp inside the scene keeps it");
+    mutate(&ctx, &mut state, warp("scene-b"));
+    assert_eq!((state.player.scene_id.as_str(), state.music), ("scene-b", None));
 }
 
 #[test]
@@ -954,7 +969,8 @@ fn choosing_a_dialogue_option_runs_its_action_and_advances() {
     let content = GameContent { npcs: vec![testy()], actions: vec![snack_action()], ..GameContent::default() };
     let (ctx, state) = bare(content);
     let mut talking = state.clone();
-    talking.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    talking.dialogue =
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
 
     let mut snack = talking.clone();
     dialogue_system::handle_choose_dialogue_option(&ctx, &mut snack, 0);
@@ -965,7 +981,10 @@ fn choosing_a_dialogue_option_runs_its_action_and_advances() {
     let mut gift = talking.clone();
     let effects = dialogue_system::handle_choose_dialogue_option(&ctx, &mut gift, 1);
     assert_eq!(gift.player.money, 125);
-    assert_eq!(gift.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned() }));
+    assert_eq!(
+        gift.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned(), line: None })
+    );
     assert_eq!(effects, vec![message("success", "Received $25")]);
 
     // The flag-gated option is hidden, so index 2 is out of range → closes.

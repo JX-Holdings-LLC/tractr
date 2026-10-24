@@ -51,7 +51,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut ShopTab, actions:
     if view.state.shop.is_none() {
         return;
     }
-    let Some(shop) = view.overlay.shop else { return };
+    let Some(shop) = view.overlay.shop.as_deref() else { return };
     let state = view.state;
     let player = &state.player;
     let colors = ui.theme().colors;

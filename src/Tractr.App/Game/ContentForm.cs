@@ -268,8 +268,8 @@ internal sealed class ContentForm : IContentDraft
         var type = Unwrap(property.PropertyType);
         var nullable = IsNullable(property);
         // A record with a type picks some fields' meaning by it (a cutscene step's sound or music).
-        var field = owner.GetProperty("Type")?.PropertyType == typeof(string)
-            ? ContentForms.Field(owner.Name, property.Name, label, _project, StringOf(target["type"]) ?? "")
+        var field = Discriminator(target, owner) is { } kind
+            ? ContentForms.Field(owner.Name, property.Name, label, _project, kind)
             : ContentForms.Field(owner.Name, property.Name, label, _project);
         if (field is { Kind: "reference" or "referenceList" }) label = TrimId(label);
 
@@ -286,7 +286,8 @@ internal sealed class ContentForm : IContentDraft
             panel.Children.Add(Label(label));
             var control = StringControl(target, key, name, label, field, nullable,
                 multiline: property.Name is "Description" or "Text" or "Message" or "FailMessage",
-                rebuildOnChange: property.Name == "Type" || (owner == typeof(MinigameDef) && property.Name == "Kind"));
+                rebuildOnChange: property.Name == "Type" || (owner == typeof(MinigameDef) && property.Name == "Kind")
+                    || (owner == typeof(GameEvent) && property.Name == "Trigger"));
             panel.Children.Add(control);
             return;
         }
@@ -1083,6 +1084,13 @@ internal sealed class ContentForm : IContentDraft
                     break;
                 case "choice" or "reference":
                     wrap.Children.Add(Labeled(field.Label, StringControl(target, field.Key, name, field.Label, field, field.Optional, multiline: false, rebuildOnChange: false), 240));
+                    break;
+                case "conditions":
+                    // A condition group (M3): its own list of conditions, nested.
+                    var group = new StackPanel { Spacing = 4, Margin = new Thickness(12, 0, 0, 0) };
+                    group.Children.Add(Label(field.Label));
+                    AddConditions(group, target, field.Key, $"{path}_{Pascal(field.Key)}");
+                    stack.Children.Add(group);
                     break;
                 case "referenceList":
                     var chips = new StackPanel { Spacing = 4 };

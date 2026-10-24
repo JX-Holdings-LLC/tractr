@@ -184,10 +184,10 @@ pub fn sfx_for_effect(effect: &Effect) -> Option<&str> {
     }
 }
 
-/// Decoded audio: a game's own sound and music assets (M2), as interleaved PCM in [-1, 1] at the
-/// file's sample rate. The player decodes them when a game loads; hosts resample them to their
-/// output rate. Clones share the samples, and clips compare by identity (the same decoded
-/// buffer), so comparing what plays from frame to frame never walks the samples.
+/// Decoded audio: interleaved PCM in [-1, 1] at the file's sample rate (a short sound asset,
+/// [`AudioFile::decoded`]). Hosts resample it to their output rate. Clones share the samples,
+/// and clips compare by identity (the same decoded buffer), so comparing what plays from frame
+/// to frame never walks the samples.
 #[derive(Clone)]
 pub struct Clip {
     pub sample_rate: u32,
@@ -224,6 +224,54 @@ impl PartialEq for Clip {
         self.sample_rate == other.sample_rate
             && self.channels == other.channels
             && Arc::ptr_eq(&self.samples, &other.samples)
+    }
+}
+
+/// The bytes of an encoded audio file, shared: an entry of a cartridge's asset table, or the
+/// decoded `data:` URL of an editor project.
+pub type FileBytes = Arc<dyn AsRef<[u8]> + Send + Sync>;
+
+/// A game's own sound or music asset (M2): the file, still encoded (Ogg Vorbis or WAV), with the
+/// format it decodes to and its length. The player checks that it decodes when the game loads.
+/// A short sound is kept decoded as well ([`AudioFile::decoded`]); music and long sounds are
+/// decoded and resampled while they play, a little ahead of the output, so their decoded
+/// samples are never all in memory at once. Clones share the bytes, and files compare by
+/// identity (the same bytes).
+#[derive(Clone)]
+pub struct AudioFile {
+    pub sample_rate: u32,
+    /// 1 (mono) or 2 (stereo); files with more channels decode mixed down to mono.
+    pub channels: u16,
+    /// Sample frames (one sample per channel each).
+    pub frames: usize,
+    pub bytes: FileBytes,
+    /// The whole file decoded (short sounds); `None` when it is decoded while it plays.
+    pub decoded: Option<Clip>,
+}
+
+impl AudioFile {
+    /// The length in seconds.
+    pub fn seconds(&self) -> f64 {
+        self.frames as f64 / f64::from(self.sample_rate.max(1))
+    }
+}
+
+impl fmt::Debug for AudioFile {
+    /// The format and length, not the bytes.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AudioFile")
+            .field("sample_rate", &self.sample_rate)
+            .field("channels", &self.channels)
+            .field("frames", &self.frames)
+            .field("bytes", &(*self.bytes).as_ref().len())
+            .field("decoded", &self.decoded.is_some())
+            .finish()
+    }
+}
+
+impl PartialEq for AudioFile {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::addr_eq(Arc::as_ptr(&self.bytes), Arc::as_ptr(&other.bytes))
     }
 }
 

@@ -2,7 +2,7 @@
 //! commands.ts). Determinism contract: same seed + same command log ⇒ same state. JSON shape is
 //! identical to the TS union (`{"type":"move","dir":"up"}`).
 
-use crate::schema::PluginMutation;
+use crate::schema::{PlayerLook, PluginMutation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -111,6 +111,23 @@ pub enum Command {
     /// Skip the rest of a skippable cutscene (`crate::cutscenes` says what still happens).
     #[serde(rename = "skipCutscene")]
     SkipCutscene,
+    /// Put on a piece of clothing from the inventory (M4); what the slot held goes back.
+    #[serde(rename = "wearItem")]
+    WearItem { item_id: String },
+    /// Take off what is worn in `slot` (one of `wear_slots`), back into the inventory (M4).
+    #[serde(rename = "takeOff")]
+    TakeOff { slot: String },
+    /// The character creator's answers (M4): the player's name, the farm's name and colours.
+    /// Only before the first tick of a new game.
+    #[serde(rename = "setPlayerLook")]
+    SetPlayerLook {
+        #[serde(default)]
+        name: String,
+        #[serde(default)]
+        farm_name: String,
+        #[serde(default)]
+        look: PlayerLook,
+    },
     /// A validated mutation returned by a sandboxed plugin hook (M5).
     #[serde(rename = "pluginMutation")]
     PluginMutation { plugin_id: String, mutation: PluginMutation },
@@ -148,6 +165,9 @@ impl Command {
             Self::AdvanceCutscene => "advanceCutscene",
             Self::ChooseCutsceneOption { .. } => "chooseCutsceneOption",
             Self::SkipCutscene => "skipCutscene",
+            Self::WearItem { .. } => "wearItem",
+            Self::TakeOff { .. } => "takeOff",
+            Self::SetPlayerLook { .. } => "setPlayerLook",
             Self::PluginMutation { .. } => "pluginMutation",
         }
     }

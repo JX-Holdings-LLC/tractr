@@ -126,6 +126,8 @@ type Edits =
     static member RemoveCropMutation(mutationId: string) : Edit = RemoveCropMutation mutationId
     static member UpsertCutscene(cutscene: Cutscene) : Edit = UpsertCutscene cutscene
     static member RemoveCutscene(cutsceneId: string) : Edit = RemoveCutscene cutsceneId
+    static member UpsertHeartEvent(heartEvent: HeartEvent) : Edit = UpsertHeartEvent heartEvent
+    static member RemoveHeartEvent(heartEventId: string) : Edit = RemoveHeartEvent heartEventId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
     static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
     static member SetMine(config: MineConfig) : Edit = SetMine config
@@ -148,6 +150,8 @@ type Edits =
     static member BindMachineTypeVisual(machineTypeId: string, visual: VisualRef | null) : Edit = BindVisual(MachineTypeVisual machineTypeId, Edits.Visual visual)
     static member UpsertAsset(asset: CustomAsset) : Edit = UpsertAsset asset
     static member RemoveAsset(assetId: string) : Edit = RemoveAsset assetId
+    /// An asset's display name (trimmed; blank is a no-op); its id, and so what uses it, stays.
+    static member RenameAsset(assetId: string, name: string) : Edit = RenameAsset(assetId, name)
     /// One frame's duration in ticks (20 ticks = 1 second).
     static member SetFrameTicks(assetId: string, clip: string, frame: int, ticks: int) : Edit = SetFrameTicks(assetId, clip, Some frame, ticks)
     /// Every frame of a clip gets the same duration.
@@ -241,6 +245,7 @@ type Defaults =
     static member NewCropQuality(project: GameProject) : CropQualityDefinition = Defaults.newCropQuality project
     static member NewCropMutation(project: GameProject) : CropMutationDefinition = Defaults.newCropMutation project
     static member NewCutscene(project: GameProject) : Cutscene = Defaults.newCutscene project
+    static member NewHeartEvent(project: GameProject) : HeartEvent = Defaults.newHeartEvent project
     static member NewAnimalSpecies(project: GameProject) : AnimalSpeciesDefinition = Defaults.newAnimalSpecies project
     static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState = Defaults.newAnimal project speciesId sceneId x y
     static member NewFishTable(project: GameProject) : FishTable = Defaults.newFishTable project
@@ -250,6 +255,7 @@ type Defaults =
     static member NewMinigame(project: GameProject) : MinigameDef = Defaults.newMinigame project
     static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef = Defaults.duplicateMinigame project minigame
     static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene = Defaults.duplicateCutscene project cutscene
+    static member DuplicateHeartEvent(project: GameProject, heartEvent: HeartEvent) : HeartEvent = Defaults.duplicateHeartEvent project heartEvent
     static member NewResultTier() : MinigameResultTier = Defaults.newResultTier ()
     static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene = Defaults.newScene project name width height
     static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene = Defaults.newSceneWith project name width height defaultTile
@@ -363,7 +369,8 @@ type FormField internal (key: string, label: string, kind: string, reference: st
     member _.Key = key
     member _.Label = label
     /// "text", "integer", "number", "bool", "choice", "reference", "referenceList",
-    /// "referenceKeys" or "plain" (named like a reference but not one; see `Reason`).
+    /// "referenceKeys", "conditions" (a nested condition list, M3) or "plain" (named like a
+    /// reference but not one; see `Reason`).
     member _.Kind = kind
     /// The reference kind ("item", "npc", …) for reference fields, else "".
     member _.Reference = reference
@@ -393,6 +400,7 @@ type FormField internal (key: string, label: string, kind: string, reference: st
             | FieldKind.OneOf choices -> "choice", "", References.choiceOptions choices, "", ""
             | FieldKind.Reference kind -> "reference", ReferenceKind.name kind, [], "", ""
             | FieldKind.ReferenceList kind -> "referenceList", ReferenceKind.name kind, [], "", ""
+            | FieldKind.Conditions -> "conditions", "", [], "", ""
         FormField(field.Key, field.Label, kind, reference, choices, field.Optional, field.Empty, field.Placeholder,
                   field.WhenEmpty, field.Min, field.Max, onLabel, offLabel, "")
 
@@ -728,6 +736,23 @@ type SettingsForm =
 
     /// `settings` with the game's words (null: the built-in words).
     static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
+
+    /// The People section (M4): whether new games open the character creator, and the game's
+    /// relationship rules (null: none). One undo step; nothing changed → an empty batch.
+    static member People(project: GameProject, characterCreator: bool, relationships: RelationshipSettings | null) : Edit =
+        let settings =
+            { project.Settings with
+                CharacterCreator = (if characterCreator then Some true else None)
+                Relationships = Option.ofObj relationships }
+        if settings = project.Settings then Batch("People", []) else SetSettings settings
+
+    /// The relationship rules a game starts from when the creator turns them on (M4).
+    static member DefaultRelationships: RelationshipSettings = RelationshipSettings.Default
+
+    /// `settings` without the sky looks of `seasonIds`, as removing those seasons leaves it
+    /// (`Cleanup.dropSeason`).
+    static member WithoutSeasonLooks(settings: ProjectSettings, seasonIds: seq<string>) : ProjectSettings =
+        seasonIds |> Seq.fold (fun settings id -> Cleanup.dropSeasonLook id settings) settings
 
     /// `time` with its day length (null: the built-in 1440 minutes).
     static member WithDayMinutes(time: TimeConfig, minutes: System.Nullable<float>) : TimeConfig =

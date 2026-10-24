@@ -697,6 +697,9 @@ impl<'a, 'l> Builder<'a, 'l> {
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
         let npc_w = (ts * 0.65).floor();
         let npc_h = (ts * 0.75).floor();
+        // Children (M4) draw smaller.
+        let art_scale = self.art_scale;
+        self.art_scale *= npc.scale.unwrap_or(1.0);
         let drawn = self.entity_art(npc, px, py, |art| {
             if npc.kind == "animal" {
                 art.animal(npc.species_id.as_deref(), Some(&npc.direction), tick, npc.moving)
@@ -704,6 +707,7 @@ impl<'a, 'l> Builder<'a, 'l> {
                 art.npc(npc.appearance.as_deref(), Some(&npc.direction), tick, npc.moving)
             }
         });
+        self.art_scale = art_scale;
         if drawn {
             return;
         }
@@ -763,7 +767,16 @@ impl<'a, 'l> Builder<'a, 'l> {
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
         let player_w = (ts * 0.65).floor();
         let player_h = (ts * 0.75).floor();
-        if self.entity_art(player, px, py, |art| art.player(Some(&player.direction), tick, player.moving)) {
+        let look = player.look.as_deref();
+        let drawn = self.entity_art(player, px, py, |art| {
+            art.player(Some(&player.direction), tick, player.moving).map(|sprite| crate::look::with_look(sprite, look))
+        });
+        // A worn hat (M4) sits on the head: the built-in characters stand a tile and a half tall.
+        if player.hat.is_some() {
+            let size = (ts * 0.6).floor();
+            self.draw_sprite(player.hat.as_ref(), px + ((ts - size) / 2.0), py - (ts * 0.62), size, size, 1.0);
+        }
+        if drawn {
             return;
         }
         let body = rect(px + ((ts - player_w) / 2.0), py + ((ts - player_h) / 2.0), player_w, player_h);

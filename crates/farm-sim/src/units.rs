@@ -780,6 +780,15 @@ pub fn json_int(value: &Value) -> Option<i64> {
     })
 }
 
+/// A JSON number (a flag holding a number, M3 variables) in thousandths: integers exactly, a
+/// double on the [`SignedMilli`] grid.
+pub fn milli_of_number(number: &serde_json::Number) -> i64 {
+    match number.as_i64() {
+        Some(whole) => whole.saturating_mul(i64::from(MILLI_ONE)),
+        None => from_authoring::<SignedMilli>(number.as_f64().filter(|x| x.is_finite()).unwrap_or(0.0)),
+    }
+}
+
 /// The largest integer a double holds exactly (JS `Number.MAX_SAFE_INTEGER`).
 const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 

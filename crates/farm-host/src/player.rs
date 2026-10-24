@@ -149,7 +149,7 @@ impl FrameOutcome {
             sounds: self
                 .sounds
                 .iter()
-                .map(|sound| SoundInfo { cue: &sound.cue, gain: sound.gain, asset: sound.clip.is_some() })
+                .map(|sound| SoundInfo { cue: &sound.cue, gain: sound.gain, asset: sound.file.is_some() })
                 .collect(),
             requests: &self.requests,
             screen: self.screen,
@@ -195,6 +195,7 @@ pub fn screen_name(screen: ScreenKind) -> &'static str {
         ScreenKind::SaveSlots => "saveSlots",
         ScreenKind::NewGameSlots => "newGameSlots",
         ScreenKind::Confirm => "confirm",
+        ScreenKind::Creator => "creator",
     }
 }
 

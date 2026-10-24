@@ -119,6 +119,103 @@ pub enum EventCondition {
         #[serde(default)]
         festival_id: String,
     },
+    /// A variable (a flag holding a number or text, M3) compared with a number (`value`) or,
+    /// when `text` is set, with a text. `compare` is one of [`super::variable_comparisons`].
+    #[serde(rename = "variable")]
+    Variable {
+        #[serde(default)]
+        name: String,
+        #[serde(default = "default_compare")]
+        compare: String,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::signed_milli::opt")]
+        value: Option<i64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        text: Option<String>,
+    },
+    /// Every condition of the group holds (M3).
+    #[serde(rename = "all")]
+    All {
+        #[serde(default)]
+        conditions: Vec<EventCondition>,
+    },
+    /// At least one condition of the group holds (M3).
+    #[serde(rename = "any")]
+    Any {
+        #[serde(default)]
+        conditions: Vec<EventCondition>,
+    },
+    /// None of the conditions of the group holds (M3).
+    #[serde(rename = "not")]
+    Not {
+        #[serde(default)]
+        conditions: Vec<EventCondition>,
+    },
+    /// A random chance, 0..1 (M3).
+    #[serde(rename = "chance")]
+    Chance {
+        #[serde(default, with = "crate::units::probability")]
+        chance: u64,
+    },
+    /// The player is in one of these scenes (M3).
+    #[serde(rename = "scene")]
+    Scene {
+        #[serde(default)]
+        scene_ids: Vec<String>,
+    },
+    /// Whole hearts with an NPC within a range (M4); an empty `npcId` is the NPC the player is
+    /// talking to.
+    #[serde(rename = "hearts")]
+    Hearts {
+        #[serde(default)]
+        npc_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+        min: Option<i32>,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+        max: Option<i32>,
+    },
+    /// The day of the season within a range (M4).
+    #[serde(rename = "dayOfSeason")]
+    DayOfSeason {
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+        min_day: Option<u32>,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+        max_day: Option<u32>,
+    },
+    /// The player's relationship with an NPC (M4), one of [`super::relationship_statuses`]; an
+    /// empty `npcId` is the NPC the player is talking to, else anyone.
+    #[serde(rename = "relationship")]
+    Relationship {
+        #[serde(default)]
+        npc_id: String,
+        #[serde(default)]
+        status: String,
+    },
+}
+
+fn default_compare() -> String {
+    variable_comparisons::EQ.to_owned()
+}
+
+/// How a `variable` condition compares (M3).
+pub mod variable_comparisons {
+    pub const EQ: &str = "eq";
+    pub const NE: &str = "ne";
+    pub const LT: &str = "lt";
+    pub const LE: &str = "le";
+    pub const GT: &str = "gt";
+    pub const GE: &str = "ge";
+
+    pub const ALL: &[&str] = &[EQ, NE, LT, LE, GT, GE];
+}
+
+/// A relationship's stage (M4).
+pub mod relationship_statuses {
+    pub const SINGLE: &str = "single";
+    pub const DATING: &str = "dating";
+    pub const ENGAGED: &str = "engaged";
+    pub const MARRIED: &str = "married";
+
+    pub const ALL: &[&str] = &[SINGLE, DATING, ENGAGED, MARRIED];
 }
 
 impl EventCondition {
@@ -138,6 +235,15 @@ impl EventCondition {
             Self::Friendship { .. } => "friendship",
             Self::Weather { .. } => "weather",
             Self::FestivalId { .. } => "festivalId",
+            Self::Variable { .. } => "variable",
+            Self::All { .. } => "all",
+            Self::Any { .. } => "any",
+            Self::Not { .. } => "not",
+            Self::Chance { .. } => "chance",
+            Self::Scene { .. } => "scene",
+            Self::Hearts { .. } => "hearts",
+            Self::DayOfSeason { .. } => "dayOfSeason",
+            Self::Relationship { .. } => "relationship",
         }
     }
 }
@@ -172,6 +278,30 @@ pub mod event_outcome_types {
     pub const PLAY_MUSIC: &str = "playMusic";
     /// Play a cutscene (`cutsceneId`, M2).
     pub const START_CUTSCENE: &str = "startCutscene";
+    /// Set a variable to a number (`amount`) or a text (`text`, M3).
+    pub const SET_VARIABLE: &str = "setVariable";
+    /// Add `amount` to a number variable (M3).
+    pub const ADD_VARIABLE: &str = "addVariable";
+    /// Walk an NPC to a tile of its scene, or put it on a tile of another (M3).
+    pub const MOVE_NPC: &str = "moveNpc";
+    /// Change today's weather (M3).
+    pub const SET_WEATHER: &str = "setWeather";
+    /// Give `amount` experience in a skill (M3).
+    pub const GIVE_EXPERIENCE: &str = "giveExperience";
+    /// Add an item to a shop (M3): `amount` is its price (absent: the item's), `itemQuantity` a daily limit.
+    pub const ADD_SHOP_STOCK: &str = "addShopStock";
+    /// Stop a shop selling an item (M3).
+    pub const REMOVE_SHOP_STOCK: &str = "removeShopStock";
+    /// Put a gathering node on a tile (M3).
+    pub const PLACE_NODE: &str = "placeNode";
+    /// Clear the node on a tile (M3).
+    pub const REMOVE_NODE: &str = "removeNode";
+    /// Put a machine on a tile (M3).
+    pub const PLACE_MACHINE: &str = "placeMachine";
+    /// Clear the machine on a tile (M3).
+    pub const REMOVE_MACHINE: &str = "removeMachine";
+    /// Change the player's relationship with an NPC (`status`, M4).
+    pub const SET_RELATIONSHIP: &str = "setRelationship";
 
     pub const ALL: &[&str] = &[
         MESSAGE,
@@ -198,6 +328,18 @@ pub mod event_outcome_types {
         START_MINIGAME,
         PLAY_MUSIC,
         START_CUTSCENE,
+        SET_VARIABLE,
+        ADD_VARIABLE,
+        MOVE_NPC,
+        SET_WEATHER,
+        GIVE_EXPERIENCE,
+        ADD_SHOP_STOCK,
+        REMOVE_SHOP_STOCK,
+        PLACE_NODE,
+        REMOVE_NODE,
+        PLACE_MACHINE,
+        REMOVE_MACHINE,
+        SET_RELATIONSHIP,
     ];
 }
 
@@ -231,11 +373,23 @@ pub enum OutcomeKind {
     StartMinigame,
     PlayMusic,
     StartCutscene,
+    SetVariable,
+    AddVariable,
+    MoveNpc,
+    SetWeather,
+    GiveExperience,
+    AddShopStock,
+    RemoveShopStock,
+    PlaceNode,
+    RemoveNode,
+    PlaceMachine,
+    RemoveMachine,
+    SetRelationship,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 24] = [
+    pub const ALL: [OutcomeKind; 36] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -260,6 +414,18 @@ impl OutcomeKind {
         Self::StartMinigame,
         Self::PlayMusic,
         Self::StartCutscene,
+        Self::SetVariable,
+        Self::AddVariable,
+        Self::MoveNpc,
+        Self::SetWeather,
+        Self::GiveExperience,
+        Self::AddShopStock,
+        Self::RemoveShopStock,
+        Self::PlaceNode,
+        Self::RemoveNode,
+        Self::PlaceMachine,
+        Self::RemoveMachine,
+        Self::SetRelationship,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -290,6 +456,18 @@ impl OutcomeKind {
             Self::StartMinigame => t::START_MINIGAME,
             Self::PlayMusic => t::PLAY_MUSIC,
             Self::StartCutscene => t::START_CUTSCENE,
+            Self::SetVariable => t::SET_VARIABLE,
+            Self::AddVariable => t::ADD_VARIABLE,
+            Self::MoveNpc => t::MOVE_NPC,
+            Self::SetWeather => t::SET_WEATHER,
+            Self::GiveExperience => t::GIVE_EXPERIENCE,
+            Self::AddShopStock => t::ADD_SHOP_STOCK,
+            Self::RemoveShopStock => t::REMOVE_SHOP_STOCK,
+            Self::PlaceNode => t::PLACE_NODE,
+            Self::RemoveNode => t::REMOVE_NODE,
+            Self::PlaceMachine => t::PLACE_MACHINE,
+            Self::RemoveMachine => t::REMOVE_MACHINE,
+            Self::SetRelationship => t::SET_RELATIONSHIP,
         }
     }
 
@@ -349,6 +527,30 @@ pub struct EventOutcome {
     /// The cutscene `startCutscene` plays (M2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cutscene_id: Option<String>,
+    /// The variable `setVariable` / `addVariable` change (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub variable: Option<String>,
+    /// The text `setVariable` stores (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    /// The weather `setWeather` makes today's (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weather_id: Option<String>,
+    /// The skill `giveExperience` trains (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill: Option<String>,
+    /// The shop `addShopStock` / `removeShopStock` change (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shop_id: Option<String>,
+    /// The node type `placeNode` puts down (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub node_type_id: Option<String>,
+    /// The machine type `placeMachine` puts down (M3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub machine_type_id: Option<String>,
+    /// The relationship `setRelationship` sets (M4), one of [`super::relationship_statuses`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -366,13 +568,32 @@ impl EventOutcome {
     }
 }
 
-/// TS `EventTriggerSchema`.
+/// TS `EventTriggerSchema`, and the triggers M3 added.
 pub mod event_triggers {
     pub const ENTER: &str = "enter";
     pub const INTERACT: &str = "interact";
     pub const TICK: &str = "tick";
+    /// Each morning, after the night (M3).
+    pub const DAY_START: &str = "dayStart";
+    /// When the clock reaches the event's `minute` (M3).
+    pub const TIME: &str = "time";
+    /// A crop was harvested (subject: the crop type or the item, M3).
+    pub const HARVEST: &str = "harvest";
+    /// An item was sold (subject: the item, M3).
+    pub const SELL: &str = "sell";
+    /// A recipe was crafted (subject: the recipe or an item it made, M3).
+    pub const CRAFT: &str = "craft";
+    /// A fish was caught (subject: the item, M3).
+    pub const CATCH: &str = "catch";
+    /// An item was picked up from the ground (subject: the item, M3).
+    pub const PICK_UP: &str = "pickUp";
+    /// Friendship with an NPC changed (subject: the NPC, M3).
+    pub const FRIENDSHIP: &str = "friendship";
+    /// A quest started or was completed (subject: the quest, M3).
+    pub const QUEST: &str = "quest";
 
-    pub const ALL: &[&str] = &[ENTER, INTERACT, TICK];
+    pub const ALL: &[&str] =
+        &[ENTER, INTERACT, TICK, DAY_START, TIME, HARVEST, SELL, CRAFT, CATCH, PICK_UP, FRIENDSHIP, QUEST];
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -388,6 +609,13 @@ pub struct GameEvent {
     pub outcomes: Vec<EventOutcome>,
     pub active: bool,
     pub repeatable: bool,
+    /// What the trigger is about (M3): an item (harvest, sell, craft, catch, pickUp), an NPC
+    /// (friendship) or a quest (quest). Absent or empty: anything.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subject: Option<String>,
+    /// The time of day a `time` trigger fires at (M3).
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::micro_minutes::opt")]
+    pub minute: Option<u32>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

@@ -97,7 +97,7 @@ module SchemaChecks =
           | Some y2 when y2 < y -> yield! lint (path + ".y2") "y2 must be >= y"
           | _ -> () ]
 
-    let private conditions (basePath: string) (list: EventCondition list) =
+    let rec private conditions (basePath: string) (list: EventCondition list) =
         each list (fun c condition ->
             let cp = $"{basePath}.conditions.{c}"
             match condition with
@@ -120,6 +120,22 @@ module SchemaChecks =
             | EventCondition.QuestStatus q -> nonEmpty (cp + ".questId") q.QuestId @ oneOf (cp + ".status") q.Status QuestStatuses.All
             | EventCondition.Friendship f -> nonEmpty (cp + ".npcId") f.NpcId
             | EventCondition.FestivalId f -> nonEmpty (cp + ".festivalId") f.FestivalId
+            | EventCondition.Variable v ->
+                nonEmpty (cp + ".name") v.Name @ oneOf (cp + ".compare") v.Compare VariableComparisons.All
+            | EventCondition.All g -> conditions cp g.Conditions
+            | EventCondition.Any g -> conditions cp g.Conditions
+            | EventCondition.Not g -> conditions cp g.Conditions
+            | EventCondition.Chance c -> range (cp + ".chance") c.Chance 0.0 1.0
+            | EventCondition.Hearts h ->
+                match h.Min, h.Max with
+                | Some min, Some max when min > max -> lint cp "min is greater than max"
+                | _ -> []
+            | EventCondition.DayOfSeason d ->
+                match d.MinDay, d.MaxDay with
+                | Some minDay, Some maxDay when minDay > maxDay -> lint cp "minDay is greater than maxDay"
+                | _ -> []
+            | EventCondition.Relationship r -> oneOf (cp + ".status") r.Status RelationshipStatuses.All
+            | EventCondition.Scene _
             | EventCondition.Season _
             | EventCondition.Weather _ -> [])
 

@@ -288,6 +288,8 @@ module internal EditContent =
         (fun (p: GameProject) -> defaultArg p.CropMutations []), (fun (p: GameProject) l -> { p with CropMutations = (if List.isEmpty l then None else Some l) }), (fun (x: CropMutationDefinition) -> x.Id)
     let private cutscenes =
         (fun (p: GameProject) -> defaultArg p.Cutscenes []), (fun (p: GameProject) l -> { p with Cutscenes = (if List.isEmpty l then None else Some l) }), (fun (x: Cutscene) -> x.Id)
+    let private heartEvents =
+        (fun (p: GameProject) -> defaultArg p.HeartEvents []), (fun (p: GameProject) l -> { p with HeartEvents = (if List.isEmpty l then None else Some l) }), (fun (x: HeartEvent) -> x.Id)
     let private upsertIn (get, set, idOf) item project = upsert get set idOf item project
     let private removeIn (get, set, idOf) cleanup id project = remove get set idOf cleanup id project
 
@@ -310,6 +312,11 @@ module internal EditContent =
 
     let upsertCutscene (cutscene: Cutscene) (project: GameProject) = upsertIn cutscenes cutscene project
     let removeCutscene (cutsceneId: string) (project: GameProject) = removeIn cutscenes noCleanup cutsceneId project
+
+    // ---- Heart events (M4) ----
+
+    let upsertHeartEvent (heartEvent: HeartEvent) (project: GameProject) = upsertIn heartEvents heartEvent project
+    let removeHeartEvent (heartEventId: string) (project: GameProject) = removeIn heartEvents noCleanup heartEventId project
 
 
     let upsertQuest (quest: Quest) (project: GameProject) = upsertIn quests quest project

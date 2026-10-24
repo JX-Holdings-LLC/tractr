@@ -10,7 +10,7 @@
 //! The JSON form (camelCase) is what the C# host deserializes into its `WorldSnapshot`
 //! classes, so field names must stay as they are. `None` fields are omitted.
 
-use farm_sim::schema::{DaylightKey, WeatherOverlayDefinition};
+use farm_sim::schema::{DaylightKey, VisualRef, WeatherOverlayDefinition};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -186,6 +186,18 @@ pub struct SnapshotEntity {
     pub pixel_x: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pixel_y: Option<f64>,
+    /// The player's colours and clothes as a look key (M4, [`crate::look`]): the built-in art
+    /// is recoloured with it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<String>,
+    /// The art of the hat the player wears (M4), resolved by [`crate::apply_graphics`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hat_visual: Option<VisualRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hat: Option<SnapshotSprite>,
+    /// Drawn smaller or larger than a tile's actor (children, M4); absent: 1.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scale: Option<f64>,
 }
 
 impl Default for SnapshotEntity {
@@ -202,6 +214,10 @@ impl Default for SnapshotEntity {
             moving: false,
             pixel_x: None,
             pixel_y: None,
+            look: None,
+            hat_visual: None,
+            hat: None,
+            scale: None,
         }
     }
 }
@@ -249,7 +265,7 @@ pub struct SnapshotCamera {
 }
 
 /// Time of day, weather and season for the atmosphere pass (day/night tint, seasonal foliage,
-/// rain and snow). `None` on a snapshot means no atmosphere (Edit Mode).
+/// rain and snow). `None` on a snapshot means no atmosphere (Edit Mode without its sky preview).
 ///
 /// The game's own look (M1) rides along already resolved, so the renderer never reads content:
 /// the daylight keyframes and foliage tint of the scene and season, the day length and today's
@@ -259,7 +275,7 @@ pub struct SnapshotCamera {
 pub struct SnapshotAtmosphere {
     /// Minute of day of the game clock (360 = 6:00).
     pub time_minutes: f64,
-    /// Today's weather id (`sun`, `rain`, `storm`, `snow`, …).
+    /// Today's weather id (`sun`, `rain`, `storm`, `snow`, …); `None` indoors.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weather_id: Option<String>,
     /// Season id (`spring`, `summer`, `fall`, `winter`, …).

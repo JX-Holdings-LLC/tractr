@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Projects;
 
 namespace Tractr.App.Game;
@@ -19,12 +20,20 @@ namespace Tractr.App.Game;
 public sealed class ArtEditorView : UserControl, IRetirable
 {
     private static readonly FilePickerFileType ArtFiles = new("Artwork") { Patterns = ArtImport.FilePatterns };
-    private static readonly FilePickerFileType SoundFiles = new("OGG or WAV audio") { Patterns = AudioImport.FilePatterns };
+    private static readonly FilePickerFileType SoundFiles = new(EditorStrings.Get("art.audioFiles")) { Patterns = AudioImport.FilePatterns };
     private readonly ProjectWorkspace _workspace;
     private readonly Action<string, VisualRef> _useMapBrush;
     private readonly DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
     private readonly ListBox _assets = new() { Name = "ArtAssets", MinHeight = 130 };
     private readonly ListBox _sounds = new() { Name = "SoundAssets", MinHeight = 60 };
+    private readonly TextBox _soundName = new() { Name = "SoundAssetName", Width = 150 };
+    private readonly Button _playSound;
+    /// <summary>Watches the preview while it plays, to turn Stop back into Play when it ends.</summary>
+    private readonly DispatcherTimer _soundTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
+    private ISoundPreview _soundPreview = RustSoundPreview.Instance;
+    /// <summary>The sound this view is previewing, or null.</summary>
+    private string? _playingSoundId;
+    private bool _startingSound;
     private readonly Border _preview = new() { Name = "ArtPreview", Width = 140, Height = 140 };
     private readonly VisualPreview _art = new();
     private readonly TextBlock _message = Ui.Wrapped("Import an image to start.", "muted", "small");
@@ -69,7 +78,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
         Ui.Label((_assets, "Artwork"), (_svgSize, "SVG size (longest side, px)"), (_assetName, "Asset name"), (_clips, "Animation clip"),
             (_clipName, "Clip name"), (_frameWidth, "Frame width"), (_frameHeight, "Frame height"), (_frameX, "Frame X"), (_frameY, "Frame Y"),
             (_frameTicks, "Ticks per frame"), (_target, "Assign to"), (_bindingAsset, "Artwork to assign"), (_bindingClip, "Clip to assign"),
-            (_cellSize, "Cell size"), (_cellColumn, "Cell column"), (_cellRow, "Cell row"), (_tileType, "Map tile behavior"), (_sounds, "Sounds and music"));
+            (_cellSize, "Cell size"), (_cellColumn, "Cell column"), (_cellRow, "Cell row"), (_tileType, "Map tile behavior"), (_sounds, EditorStrings.Get("art.soundsName")), (_soundName, "Sound name"));
         Name = "ArtEditorView";
         _message.Name = "ArtMessage";
         _previewTimer.Tick += (_, _) => AdvancePreview();
@@ -100,6 +109,12 @@ public sealed class ArtEditorView : UserControl, IRetirable
             UpdatePreviewTimer();
         };
         _bindingAsset.SelectionChanged += (_, _) => RefreshBindingClips();
+        _sounds.SelectionChanged += (_, _) =>
+        {
+            if (_refreshing) return;
+            ShowSelectedSound();
+        };
+        _soundTimer.Tick += (_, _) => WatchSound();
 
         var left = new StackPanel { Spacing = 10, Margin = new Thickness(0, 0, 20, 0) };
         left.Children.Add(Ui.Text("ARTWORK", "section"));
@@ -120,20 +135,27 @@ public sealed class ArtEditorView : UserControl, IRetirable
         left.Children.Add(_pixelArt);
         _pixelArt.Click += (_, _) => _workspace.Apply(Edits.SetGraphics(GraphicsSettings.Default.WithPixelArt(_pixelArt.IsChecked == true)));
         left.Children.Add(_message);
-        left.Children.Add(Ui.Text("SOUNDS AND MUSIC", "section"));
-        left.Children.Add(Ui.Wrapped("Import OGG or WAV files. Sounds play from events, actions and cutscenes; music plays in scenes, seasons, weather and festivals.", "muted", "small"));
-        var importSounds = Ui.AsyncButton("Import sounds", () => PickSoundsAsync(CustomAssetTypes.Sound), error => _message.Text = $"Could not import: {error.Message}", "tool");
+        left.Children.Add(Ui.Text(EditorStrings.Get("art.sounds"), "section"));
+        left.Children.Add(Ui.Wrapped(EditorStrings.Get("art.soundsHelp"), "muted", "small"));
+        var importSounds = Ui.AsyncButton(EditorStrings.Get("art.importSounds"), () => PickSoundsAsync(CustomAssetTypes.Sound), error => _message.Text = EditorStrings.Format("art.couldNotImport", error.Message), "tool");
         importSounds.Name = "ImportSoundButton";
-        ToolTip.SetTip(importSounds, "Choose sound effects (OGG or WAV); they are added as one undo step.");
-        var importMusic = Ui.AsyncButton("Import music", () => PickSoundsAsync(CustomAssetTypes.Music), error => _message.Text = $"Could not import: {error.Message}", "tool");
+        ToolTip.SetTip(importSounds, EditorStrings.Get("art.importSoundsTip"));
+        var importMusic = Ui.AsyncButton(EditorStrings.Get("art.importMusic"), () => PickSoundsAsync(CustomAssetTypes.Music), error => _message.Text = EditorStrings.Format("art.couldNotImport", error.Message), "tool");
         importMusic.Name = "ImportMusicButton";
-        ToolTip.SetTip(importMusic, "Choose music tracks (OGG or WAV); they are added as one undo step.");
+        ToolTip.SetTip(importMusic, EditorStrings.Get("art.importMusicTip"));
         left.Children.Add(Ui.HStack(8, importSounds, importMusic));
         left.Children.Add(_sounds);
-        var removeSound = Ui.Button("Remove sound", RemoveSound, "tool");
+        var renameSound = Ui.Button("Rename", RenameSound, "tool");
+        renameSound.Name = "RenameSoundButton";
+        ToolTip.SetTip(renameSound, "Rename the selected sound or music; everything that plays it still does");
+        left.Children.Add(Ui.HStack(8, _soundName, renameSound));
+        _playSound = Ui.Button(Ui.IconLabel("IconPlay", "Play"), () => _ = ToggleSoundAsync(), "tool");
+        _playSound.Name = "PlaySoundButton";
+        ToolTip.SetShowOnDisabled(_playSound, true);
+        var removeSound = Ui.Button(EditorStrings.Get("art.removeSound"), RemoveSound, "tool");
         removeSound.Name = "RemoveSoundButton";
-        ToolTip.SetTip(removeSound, "Remove the selected sound or music; what played it plays nothing (Problems lists those uses)");
-        left.Children.Add(removeSound);
+        ToolTip.SetTip(removeSound, EditorStrings.Get("art.removeSoundTip"));
+        left.Children.Add(Ui.HStack(8, _playSound, removeSound));
 
         var right = new StackPanel { Spacing = 10 };
         right.Children.Add(_preview);
@@ -202,7 +224,11 @@ public sealed class ArtEditorView : UserControl, IRetirable
     }
 
     /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
-    public void Retire() => _workspace.ProjectChanged -= OnProjectChanged;
+    public void Retire()
+    {
+        _workspace.ProjectChanged -= OnProjectChanged;
+        StopSound();
+    }
 
     private void OnProjectChanged(object? sender, ProjectChangedEventArgs e)
     {
@@ -219,6 +245,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
     {
         _previewTimer.Stop();
         _art.Dispose();
+        StopSound();
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -327,20 +354,20 @@ public sealed class ArtEditorView : UserControl, IRetirable
             if (imported.Count > 0) _sounds.SelectedItem = _sounds.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, imported[^1].Id));
         }
 
-        var what = type == CustomAssetTypes.Music ? "music track" : "sound";
+        var music = type == CustomAssetTypes.Music;
         var summary = imported.Count switch
         {
             0 => "",
-            1 => $"Imported {imported[0].Name} as {(type == CustomAssetTypes.Music ? "music" : "a sound")} ({DisplayFormat.FileSize(AudioImport.Size(imported[0]))}).",
-            _ => $"Imported {imported.Count} {what}s.",
+            1 => EditorStrings.Format(music ? "art.importedMusic" : "art.importedSound", imported[0].Name, DisplayFormat.FileSize(AudioImport.Size(imported[0]))),
+            _ => EditorStrings.Format(music ? "art.importedMusicTracks" : "art.importedSounds", imported.Count),
         };
-        _message.Text = errors.Count == 0 ? summary : string.Join(" ", new[] { summary, $"Could not import {string.Join("; ", errors)}" }.Where(part => part.Length > 0));
+        _message.Text = errors.Count == 0 ? summary : string.Join(" ", new[] { summary, EditorStrings.Format("art.couldNotImportFiles", string.Join("; ", errors)) }.Where(part => part.Length > 0));
     }
 
     private async Task PickSoundsAsync(string type)
     {
         if (TopLevel.GetTopLevel(this)?.StorageProvider is not { CanOpen: true } storage) return;
-        var title = type == CustomAssetTypes.Music ? "Import music" : "Import sounds";
+        var title = EditorStrings.Get(type == CustomAssetTypes.Music ? "art.importMusic" : "art.importSounds");
         var picked = await storage.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = true, FileTypeFilter = [SoundFiles, FilePickerFileTypes.All] });
         if (picked.Count == 0) return;
         var files = new List<(string, byte[])>();
@@ -358,6 +385,107 @@ public sealed class ArtEditorView : UserControl, IRetirable
         }
 
         ImportSounds(files, type, errors);
+    }
+
+    /// <summary>The preview the play button uses (tests swap in a fake).</summary>
+    internal ISoundPreview SoundPreview
+    {
+        get => _soundPreview;
+        set
+        {
+            StopSound();
+            _soundPreview = value ?? throw new ArgumentNullException(nameof(value));
+            UpdateSoundControls();
+        }
+    }
+
+    /// <summary>The sound or music the play button is playing, or null.</summary>
+    public string? PlayingSoundId => _playingSoundId;
+
+    /// <summary>The play button: plays the selected sound or music once, or stops it.</summary>
+    internal async Task ToggleSoundAsync()
+    {
+        if (_playingSoundId is not null)
+        {
+            StopSound();
+            return;
+        }
+
+        if (_startingSound || SelectedSoundId is not { } id || _workspace.Current?.CustomAssets.FirstOrDefault(asset => asset.Id == id) is not { } asset) return;
+        if (AudioFiles.dataUrlBytes(asset.DataUrl).OrNull() is not { } file)
+        {
+            _message.Text = $"Could not play {asset.Name}: its file is not a base64 data: URL.";
+            return;
+        }
+
+        _startingSound = true;
+        UpdateSoundControls();
+        try
+        {
+            await _soundPreview.PlayAsync(file).ConfigureAwait(true);
+            _playingSoundId = id;
+            _message.Text = $"Playing {asset.Name}.";
+            _soundTimer.Start();
+        }
+        catch (FarmEngine.Interop.FarmFfiException error)
+        {
+            _message.Text = $"Could not play {asset.Name}: {error.Message}";
+        }
+        finally
+        {
+            _startingSound = false;
+            UpdateSoundControls();
+        }
+    }
+
+    /// <summary>Stops the preview this view started (nothing happens otherwise).</summary>
+    private void StopSound()
+    {
+        _soundTimer.Stop();
+        if (_playingSoundId is null) return;
+        _playingSoundId = null;
+        _soundPreview.Stop();
+        UpdateSoundControls();
+    }
+
+    /// <summary>One look at the preview while it plays: Stop turns back into Play when it ended.</summary>
+    internal void WatchSound()
+    {
+        if (_playingSoundId is not null && !_soundPreview.IsPlaying)
+        {
+            _playingSoundId = null;
+            _soundTimer.Stop();
+            UpdateSoundControls();
+        }
+    }
+
+    /// <summary>
+    /// Play turns into Stop while a preview plays. Without sound output (an editor built without
+    /// it, or no Rust library) the button is off and its tooltip says why.
+    /// </summary>
+    private void UpdateSoundControls()
+    {
+        var reason = _soundPreview.UnavailableReason;
+        var playing = _playingSoundId is not null;
+        _playSound.Content = Ui.IconLabel(playing ? "IconClose" : "IconPlay", playing ? "Stop" : "Play");
+        AutomationProperties.SetName(_playSound, playing ? "Stop sound" : "Play sound");
+        _playSound.IsEnabled = reason is null && !_startingSound && (playing || SelectedSoundId is not null);
+        ToolTip.SetTip(_playSound, reason is not null ? $"Sound preview is unavailable: {reason}"
+            : playing ? "Stop playing" : "Play the selected sound or music once");
+    }
+
+    /// <summary>The selected sound's name in the rename field, and the play button's state.</summary>
+    private void ShowSelectedSound()
+    {
+        _soundName.Text = _workspace.Current?.CustomAssets.FirstOrDefault(asset => asset.Id == SelectedSoundId)?.Name ?? "";
+        UpdateSoundControls();
+    }
+
+    /// <summary>Renames the selected sound or music (its id, which everything that plays it names, stays).</summary>
+    private void RenameSound()
+    {
+        if (SelectedSoundId is not { } id || string.IsNullOrWhiteSpace(_soundName.Text)) return;
+        if (_workspace.Apply(Edits.RenameAsset(id, _soundName.Text))) _message.Text = $"Renamed to {_soundName.Text.Trim()}.";
     }
 
     private void RemoveSound()
@@ -527,13 +655,14 @@ public sealed class ArtEditorView : UserControl, IRetirable
             _sounds.Items.Clear();
             foreach (var asset in project.CustomAssets.Where(AudioImport.IsAudio))
             {
-                var text = $"{asset.Name} · {(asset.Type == CustomAssetTypes.Music ? "music" : "sound")} · {DisplayFormat.FileSize(AudioImport.Size(asset))}";
+                var text = $"{asset.Name} · {EditorStrings.Get(asset.Type == CustomAssetTypes.Music ? "art.music" : "art.sound")} · {DisplayFormat.FileSize(AudioImport.Size(asset))}";
                 var item = new ListBoxItem { Tag = asset.Id, Content = Ui.Text(text, "small") };
                 AutomationProperties.SetName(item, text);
                 _sounds.Items.Add(item);
             }
             _sounds.SelectedItem = _sounds.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, previousSound));
-            if (_sounds.Items.Count == 0) _sounds.Items.Add(new ListBoxItem { Content = Ui.Text("No sounds or music yet.", "muted", "small"), IsEnabled = false });
+            if (_sounds.Items.Count == 0) _sounds.Items.Add(new ListBoxItem { Content = Ui.Text(EditorStrings.Get("art.noSounds"), "muted", "small"), IsEnabled = false });
+            if (_playingSoundId is { } playing && !project.CustomAssets.Any(asset => asset.Id == playing)) StopSound();
             var previousTile = (_tileType.SelectedItem as ComboBoxItem)?.Tag as string;
             _tileType.SelectedItem = null;
             _tileType.Items.Clear();
@@ -572,6 +701,7 @@ public sealed class ArtEditorView : UserControl, IRetirable
         }
         RefreshSelected();
         RefreshBindingClips();
+        ShowSelectedSound();
     }
 
     private void RefreshSelected()

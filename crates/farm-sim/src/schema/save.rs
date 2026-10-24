@@ -15,10 +15,13 @@
 //!   intent
 
 use super::actors::GridPoint;
+use super::actors::PlayerLook;
 use super::animals::AnimalState;
 use super::content::InventorySlot;
 use super::cutscenes::CutsceneState;
+use super::economy::ShopStockEntry;
 use super::extensibility::MinigameSession;
+use super::relationships::ChildState;
 use super::social::NpcSocialState;
 use super::world::Scene;
 use crate::units;
@@ -122,6 +125,18 @@ pub struct PlayerState {
     pub completed_quests: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equipped_tool: Option<String>,
+    /// The player's name (M4).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    /// The farm's name (M4).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub farm_name: String,
+    /// How the player looks (M4); absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<PlayerLook>,
+    /// The clothes the player wears (M4), at most one per slot, in the order put on.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub worn: Vec<InventorySlot>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -168,6 +183,10 @@ pub struct QuestProgress {
 pub struct DialogueState {
     pub npc_id: String,
     pub dialogue_id: String,
+    /// The NPC's daily line shown in place of the dialogue's text (M4: an index into its
+    /// `lines`). With an empty `dialogueId` the line is all there is.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub line: Option<u32>,
 }
 
 /// An open shop session.
@@ -254,12 +273,30 @@ pub struct GameState {
     /// The cutscene being played (M2), a modal like dialogue.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cutscene: Option<CutsceneState>,
+    /// The player's children (M4).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<ChildState>,
+    /// Stock events added to or removed from shops (M3), by shop id.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_changes: IndexMap<String, ShopChanges>,
+}
+
+/// What events changed in a shop's stock (M3).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ShopChanges {
+    /// Lines added (an item already stocked is replaced).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub added: Vec<ShopStockEntry>,
+    /// Item ids no longer sold.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<String>,
 }
 
 /// What "Keep changes" carries from a playtest into the next one beyond the project's own
 /// fields (the project's `keptState`), so the next playtest starts where the last one ended
-/// (#36). Absent when there is nothing to carry (tick 0, nothing open, no NPC mid-walk, on the
-/// surface).
+/// (#36). Absent when there is nothing to carry (tick 0, nothing open, no cutscene playing, no
+/// NPC mid-walk, on the surface).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct KeptState {
@@ -275,12 +312,24 @@ pub struct KeptState {
     pub shop: Option<ShopSession>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minigame: Option<MinigameSession>,
+    /// [`GameState::cutscene`]: a cutscene that was playing goes on where it was (M2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscene: Option<CutsceneState>,
+    /// [`GameState::music`]: music an event or cutscene chose plays on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
     /// Walking NPCs by id: their remaining path and patrol waypoint (positions are the
     /// project's NPC fields).
     pub npcs: IndexMap<String, KeptNpc>,
     /// [`MineProgress::current_floor`].
     #[serde(with = "crate::units::count")]
     pub mine_current_floor: u32,
+    /// [`GameState::children`] (M4).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<ChildState>,
+    /// [`GameState::shop_changes`] (M3).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_changes: IndexMap<String, ShopChanges>,
 }
 
 /// An NPC's walk in [`KeptState::npcs`] (the [`NpcState`] fields the project's NPC lacks).
@@ -308,8 +357,12 @@ impl KeptState {
             dialogue: state.dialogue.clone(),
             shop: state.shop.clone(),
             minigame: state.minigame.clone(),
+            cutscene: state.cutscene.clone(),
+            music: state.music.clone(),
             npcs,
             mine_current_floor: state.mine.current_floor,
+            children: state.children.clone(),
+            shop_changes: state.shop_changes.clone(),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -321,6 +374,10 @@ impl KeptState {
         state.dialogue.clone_from(&self.dialogue);
         state.shop.clone_from(&self.shop);
         state.minigame.clone_from(&self.minigame);
+        state.cutscene.clone_from(&self.cutscene);
+        state.music.clone_from(&self.music);
+        state.children.clone_from(&self.children);
+        state.shop_changes.clone_from(&self.shop_changes);
         for (id, kept) in &self.npcs {
             if let Some(npc) = state.npcs.get_mut(id) {
                 npc.path.clone_from(&kept.path);

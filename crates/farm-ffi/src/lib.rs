@@ -15,13 +15,15 @@
 //!
 //! `lib.rs` has the primitives (versions, stable hash, buffers); [`session`] has the engine
 //! sessions (create from project JSON, apply commands, tick, read state/hash/views); [`render`]
-//! has `farm-render` requests and the Edit Mode map preview; [`player`] the graphical player.
+//! has `farm-render` requests and the Edit Mode map preview; [`player`] the graphical player;
+//! [`audio`] decodes and previews sound and music assets.
 //!
 //! The requests and answers themselves live in `farm-host`, which farm-wasm shares: this crate
 //! only moves bytes across the C ABI and maps [`farm_host::HostError`]s to [`FeResult`]s.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
+pub mod audio;
 pub mod player;
 pub mod render;
 pub mod session;
@@ -36,7 +38,8 @@ pub use session::FeSession;
 /// - 2: errors in `out` for every handle, `fe_*_last_error` for previews and players,
 ///   `fe_player_frame_info` / `fe_player_copy_pixels`, `fe_preview_set_scene`.
 /// - 3: `fe_hash_text` is gone.
-pub const FE_ABI_VERSION: u32 = 3;
+/// - 4: `fe_audio_output`, `fe_audio_probe` and `fe_audio_preview_{play,stop,playing}`.
+pub const FE_ABI_VERSION: u32 = 4;
 
 /// A Rust-allocated byte buffer handed to .NET. Free it with [`fe_bytes_free`].
 #[repr(C)]

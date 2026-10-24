@@ -45,6 +45,7 @@ module internal ChecksContent =
         check "action" "actions" (p.Actions |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Action id))
         check "minigame" "minigames" (p.Minigames |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Minigame id))
         check "asset" "customAssets" (p.CustomAssets |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Asset id))
+        check "heartEvent" "heartEvents" (defaultArg p.HeartEvents [] |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.HeartEvent id))
         match p.CustomCrops with
         | None -> ()
         | Some crops -> check "crop" "customCrops" (crops |> Seq.map (fun x -> x.Id)) (fun id -> Some(NavigationTarget.Crop id))
@@ -177,10 +178,13 @@ module internal ChecksContent =
 
     /// The condition/outcome vocabulary shared by events, actions and minigame tiers (event-forms.tsx).
     /// `sceneId` is the scene tile conditions and tile outcomes are checked against (empty = any).
-    let private conditions (context: Context) (sink: Sink) (family: string) (path: string) (label: string) (sceneId: string) (target: NavigationTarget option) (conditions: EventCondition list) =
-        conditions
+    let rec private conditions (context: Context) (sink: Sink) (family: string) (path: string) (label: string) (sceneId: string) (target: NavigationTarget option) (list: EventCondition list) =
+        list
         |> Seq.iteri (fun c condition ->
             let cpath = sprintf "%s.conditions[%d]" path c
+            let unknownNpc (npcId: string) (what: string) =
+                if npcId.Length > 0 && not (context.NpcIds.Contains npcId) then
+                    sink.Error(sprintf "%s.conditionUnknownNpc" family, cpath + ".npcId", sprintf "%s checks %s with missing NPC \"%s\"" label what npcId, target)
             let tile (x: float) (y: float) =
                 if sceneId.Length > 0 && context.Scenes.ContainsKey sceneId && not (Context.tileInScene context sceneId x y) then
                     sink.Error(sprintf "%s.conditionTileOutOfBounds" family, cpath + ".x", sprintf "%s watches tile (%g,%g), outside its scene" label x y, target)
@@ -216,6 +220,20 @@ module internal ChecksContent =
             | EventCondition.QuestStatus q when family <> "event" ->
                 if missingText context.QuestIds q.QuestId then
                     sink.Error(sprintf "%s.conditionUnknownQuest" family, cpath + ".questId", sprintf "%s checks missing quest \"%s\"" label q.QuestId, target)
+            // M3 and M4: groups are checked inside; variables are flags.
+            | EventCondition.All g -> conditions context sink family cpath label sceneId target g.Conditions
+            | EventCondition.Any g -> conditions context sink family cpath label sceneId target g.Conditions
+            | EventCondition.Not g -> conditions context sink family cpath label sceneId target g.Conditions
+            | EventCondition.Variable v ->
+                if v.Name.Length > 0 && not (context.KnownFlags.Contains v.Name) then
+                    sink.Warning(sprintf "%s.conditionUnknownVariable" family, cpath + ".name", sprintf "%s checks variable \"%s\", which nothing ever sets" label v.Name, target)
+            | EventCondition.Scene s ->
+                s.SceneIds
+                |> Seq.iteri (fun k id ->
+                    if not (context.Scenes.ContainsKey id) then
+                        sink.Warning(sprintf "%s.conditionUnknownScene" family, sprintf "%s.sceneIds[%d]" cpath k, sprintf "%s checks missing scene \"%s\"" label id, target))
+            | EventCondition.Hearts h -> unknownNpc h.NpcId "hearts"
+            | EventCondition.Relationship r -> unknownNpc r.NpcId "the relationship"
             | _ -> ())
 
     let private outcomes (context: Context) (sink: Sink) (family: string) (path: string) (label: string) (sceneId: string) (target: NavigationTarget option) (outcomes: EventOutcome list) =
@@ -308,6 +326,43 @@ module internal ChecksContent =
                 needs "minigameId" (hasValue outcome.MinigameId)
                 if missing context.MinigameIds outcome.MinigameId then
                     sink.Error(sprintf "%s.outcomeUnknownMinigame" family, opath + ".minigameId", sprintf "%s starts missing minigame \"%s\"" label (text outcome.MinigameId), target)
+            // M3 and M4 outcomes: what they need and what they name.
+            | EventOutcomeTypes.SetVariable | EventOutcomeTypes.AddVariable -> needs "variable" (hasValue outcome.Variable)
+            | EventOutcomeTypes.MoveNpc | EventOutcomeTypes.SetRelationship ->
+                needs "npcId" (hasValue outcome.NpcId)
+                if missing context.NpcIds outcome.NpcId then
+                    sink.Error(sprintf "%s.outcomeUnknownNpc" family, opath + ".npcId", sprintf "%s moves or changes missing NPC \"%s\"" label (text outcome.NpcId), target)
+                if outcome.Type = EventOutcomeTypes.MoveNpc then unknownScene ()
+                else needs "status" (hasValue outcome.Status)
+            | EventOutcomeTypes.SetWeather ->
+                needs "weatherId" (hasValue outcome.WeatherId)
+                if missing context.WeatherIds outcome.WeatherId then
+                    sink.Error(sprintf "%s.outcomeUnknownWeather" family, opath + ".weatherId", sprintf "%s sets missing weather \"%s\"" label (text outcome.WeatherId), target)
+            | EventOutcomeTypes.GiveExperience ->
+                needs "skill" (hasValue outcome.Skill)
+                needs "amount" outcome.Amount.IsSome
+            | EventOutcomeTypes.AddShopStock | EventOutcomeTypes.RemoveShopStock ->
+                needs "shopId" (hasValue outcome.ShopId)
+                needs "itemId" (hasValue outcome.ItemId)
+                if missing context.ShopIds outcome.ShopId then
+                    sink.Error(sprintf "%s.outcomeUnknownShop" family, opath + ".shopId", sprintf "%s changes missing shop \"%s\"" label (text outcome.ShopId), target)
+                if missing context.ItemIds outcome.ItemId then
+                    sink.Error(sprintf "%s.outcomeUnknownItem" family, opath + ".itemId", sprintf "%s stocks missing item \"%s\"" label (text outcome.ItemId), target)
+            | EventOutcomeTypes.PlaceNode | EventOutcomeTypes.RemoveNode | EventOutcomeTypes.PlaceMachine | EventOutcomeTypes.RemoveMachine ->
+                unknownScene ()
+                if outcome.Type = EventOutcomeTypes.PlaceNode then
+                    needs "nodeTypeId" (hasValue outcome.NodeTypeId)
+                    if missing context.NodeTypeIds outcome.NodeTypeId then
+                        sink.Error(sprintf "%s.outcomeUnknownNodeType" family, opath + ".nodeTypeId", sprintf "%s places missing node type \"%s\"" label (text outcome.NodeTypeId), target)
+                if outcome.Type = EventOutcomeTypes.PlaceMachine then
+                    needs "machineTypeId" (hasValue outcome.MachineTypeId)
+                    if missing context.MachineTypeIds outcome.MachineTypeId then
+                        sink.Error(sprintf "%s.outcomeUnknownMachineType" family, opath + ".machineTypeId", sprintf "%s places missing machine type \"%s\"" label (text outcome.MachineTypeId), target)
+                let scene = sceneFor outcome.SceneId
+                let x = defaultArg outcome.TileX 0.0
+                let y = defaultArg outcome.TileY 0.0
+                if scene.Length > 0 && context.Scenes.ContainsKey scene && not (Context.tileInScene context scene x y) then
+                    sink.Error(sprintf "%s.outcomeTileOutOfBounds" family, opath + ".tileX", sprintf "%s uses tile (%g,%g), outside the scene" label x y, target)
             | _ -> ())
 
     let private events (context: Context) (sink: Sink) =
@@ -329,8 +384,71 @@ module internal ChecksContent =
                 sink.Warning("event.enterWithoutTile", path + ".conditions", sprintf "%s fires on enter but has no tile or region condition, so it fires on every step" label, target)
             if event.Trigger = EventTriggers.Interact && not hasTile then
                 sink.Warning("event.interactWithoutTile", path + ".conditions", sprintf "%s fires on interact but has no tile or region condition" label, target)
+            // M3 triggers: a time event needs its minute; a subject names an item, NPC or quest.
+            if event.Trigger = EventTriggers.Time && event.Minute.IsNone then
+                sink.Error("event.timeWithoutMinute", path + ".minute", sprintf "%s fires at a time of day but has no minute" label, target)
+            match event.Subject with
+            | Some subject when subject.Length > 0 ->
+                let known =
+                    match event.Trigger with
+                    | EventTriggers.Friendship -> context.NpcIds.Contains subject
+                    | EventTriggers.Quest -> context.QuestIds.Contains subject
+                    | EventTriggers.Harvest -> context.ItemIds.Contains subject || context.CropIds.Contains subject
+                    | EventTriggers.Craft -> context.ItemIds.Contains subject || context.Project.Recipes |> List.exists (fun r -> r.Id = subject)
+                    | EventTriggers.Sell | EventTriggers.Catch | EventTriggers.PickUp -> context.ItemIds.Contains subject
+                    | _ -> true
+                if not known then
+                    sink.Warning("event.unknownSubject", path + ".subject", sprintf "%s waits for \"%s\", which the game does not have" label subject, target)
+            | _ -> ()
             conditions context sink "event" path label event.SceneId target event.Conditions
             outcomes context sink "event" path label event.SceneId target event.Outcomes)
+
+    /// Heart events (M4): their NPC, cutscene and scene must exist, and their conditions are the events'.
+    let private heartEvents (context: Context) (sink: Sink) =
+        defaultArg context.Project.HeartEvents []
+        |> Seq.iteri (fun i heartEvent ->
+            let path = sprintf "heartEvents[%d]" i
+            let label = sprintf "Heart event \"%s\"" heartEvent.Name
+            let target = Some(NavigationTarget.HeartEvent heartEvent.Id)
+            if not (context.NpcIds.Contains heartEvent.NpcId) then
+                sink.Error("heartEvent.unknownNpc", path + ".npcId", sprintf "%s is for missing NPC \"%s\"" label heartEvent.NpcId, target)
+            if not (context.CutsceneIds.Contains heartEvent.CutsceneId) then
+                sink.Error("heartEvent.unknownCutscene", path + ".cutsceneId", sprintf "%s plays missing cutscene \"%s\"" label heartEvent.CutsceneId, target)
+            match heartEvent.SceneId with
+            | Some scene when scene.Length > 0 && not (context.Scenes.ContainsKey scene) ->
+                sink.Error("heartEvent.unknownScene", path + ".sceneId", sprintf "%s waits in missing scene \"%s\"" label scene, target)
+            | _ -> ()
+            conditions context sink "heartEvent" path label "" target heartEvent.Conditions)
+
+    /// Daily lines (M4): their conditions are the events'.
+    let private lines (context: Context) (sink: Sink) =
+        context.Project.Npcs
+        |> Seq.iteri (fun i npc ->
+            defaultArg npc.Lines []
+            |> Seq.iteri (fun k line ->
+                let path = sprintf "npcs[%d].lines[%d]" i k
+                conditions context sink "npc" path (sprintf "NPC \"%s\" line %d" npc.Name (k + 1)) "" (Some(NavigationTarget.Npc npc.Id)) line.Conditions))
+
+    /// The relationship rules (M4): the gifts, the wedding cutscene and the home must exist.
+    let private relationships (context: Context) (sink: Sink) =
+        match context.Project.Settings.Relationships with
+        | None -> ()
+        | Some rules ->
+            let target = Some NavigationTarget.Settings
+            let item (field: string) (id: string option) =
+                if missing context.ItemIds id then
+                    sink.Error("relationships.unknownItem", "settings.relationships." + field, sprintf "The relationship rules name missing item \"%s\"" (text id), target)
+            item "datingItemId" rules.DatingItemId
+            item "proposalItemId" rules.ProposalItemId
+            rules.SpouseGiftItemIds |> List.iteri (fun k id -> item (sprintf "spouseGiftItemIds[%d]" k) (Some id))
+            if missing context.CutsceneIds rules.WeddingCutsceneId then
+                sink.Error("relationships.unknownCutscene", "settings.relationships.weddingCutsceneId", sprintf "The wedding plays missing cutscene \"%s\"" (text rules.WeddingCutsceneId), target)
+            if missing (HashSet<string>(context.Scenes.Keys)) rules.HomeSceneId then
+                sink.Error("relationships.unknownScene", "settings.relationships.homeSceneId", sprintf "The spouse's home is missing scene \"%s\"" (text rules.HomeSceneId), target)
+            if rules.Marriage && not (hasValue rules.ProposalItemId) then
+                sink.Warning("relationships.noProposal", "settings.relationships.proposalItemId", "Marriage is on but no item proposes, so no one can marry", target)
+            if (rules.Dating || rules.Marriage) && not (context.Project.Npcs |> List.exists (fun n -> n.Romanceable = Some true)) then
+                sink.Warning("relationships.noRomanceable", "settings.relationships", "Dating or marriage is on but no NPC is romanceable", target)
 
     /// reserved-keys.ts: gameplay keys creator hotkeys may never claim.
     let reservedActionKeys =
@@ -866,6 +984,9 @@ module internal ChecksContent =
         npcs context sink
         quests context sink
         events context sink
+        heartEvents context sink
+        lines context sink
+        relationships context sink
         actions context sink
         actionCycles context sink
         minigames context sink

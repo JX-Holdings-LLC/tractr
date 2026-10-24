@@ -2,6 +2,7 @@
 
 use super::content::InventorySlot;
 use super::graphics::VisualRef;
+use super::relationships::{NpcLine, NpcPortrait};
 use super::save::SkillState;
 use super::social::GiftTastes;
 use indexmap::IndexMap;
@@ -59,6 +60,9 @@ pub struct Dialogue {
     pub npc_id: String,
     pub text: String,
     pub options: Vec<DialogueOption>,
+    /// The portrait the dialogue box shows (one of the NPC's `portraits`, M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expression: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -147,6 +151,15 @@ pub struct Npc {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub birthday: Option<NpcBirthday>,
     pub appearance: String,
+    /// What the NPC says when the player talks to it, by day (M4): see [`super::NpcLine`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lines: Option<Vec<NpcLine>>,
+    /// Portraits by expression for the dialogue box (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub portraits: Option<Vec<NpcPortrait>>,
+    /// The NPC can be dated and married, when the game allows it (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub romanceable: Option<bool>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -178,6 +191,35 @@ pub struct Player {
     pub completed_quests: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equipped_tool: Option<String>,
+    /// The player's name (M4; a new game may ask for it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// The farm's name (M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub farm_name: Option<String>,
+    /// How the player looks (M4); absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<PlayerLook>,
+    /// The clothes the player wears (M4), one per slot.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worn: Option<Vec<InventorySlot>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+/// The player character's colours (M4): `#rrggbb` each; absent ones keep the built-in art's.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PlayerLook {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hair: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shirt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pants: Option<String>,
+    /// The headband (or other accent).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accent: Option<String>,
 }

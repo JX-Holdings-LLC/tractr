@@ -187,7 +187,8 @@ let private pipelineCases () : (string * GameProject) list =
       yield "packs-project", loadFile [ "fixtures"; "projects"; "packs-project.json" ]
       yield "starter-demo-mod", withPack (starter ()) "demo-mod.json"
       yield "starter-my-first-mod", withPack (starter ()) "my-first-mod.json"
-      yield "starter-lantern-night", withPack (starter ()) "lantern-night-mod.json" ]
+      yield "starter-lantern-night", withPack (starter ()) "lantern-night-mod.json"
+      yield "starter-volcano", withPack (starter ()) "volcano-mod.json" ]
 
 /// A section (content, start or presentation) with each top-level value the project carries
 /// unchanged (the scene grids, mostly) written as `{"$project": key}`, which keeps the fixtures

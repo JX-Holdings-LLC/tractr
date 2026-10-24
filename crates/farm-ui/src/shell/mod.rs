@@ -3,11 +3,13 @@
 //! own layer and returns a [`ShellAction`]; `farm-player` owns the state machine, the saves and
 //! the settings file.
 
+mod creator;
 mod menus;
 mod settings_screen;
 mod slots;
 mod title;
 
+pub use creator::{creator, CreatorField, CreatorScreen};
 pub use menus::{confirm, credits, pause, ConfirmView, CreditsView, PauseView};
 pub use settings_screen::{settings, SettingsScreen, SettingsTab};
 pub use slots::{date_line, slots, SlotPreviewView, SlotView, SlotsMode, SlotsView};
@@ -43,4 +45,6 @@ pub enum ShellAction {
     SettingsChanged,
     StartCapture(BindAction),
     CancelCapture,
+    // The character creator (M4).
+    FinishCreator,
 }

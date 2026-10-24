@@ -195,18 +195,38 @@ let ``pickers keep a missing id and offer the empty entry`` () =
     Assert.Equal(project.Items.Length, known.Length)
     Assert.Equal(project.Items.Length, (References.picker ReferenceKind.Item None project None).Length)
 
+[<Fact>]
+let ``cutscene actors and speakers pick the player or an NPC and keep an unknown one`` () =
+    let project = starter ()
+    let options = References.options ReferenceKind.Actor project
+    Assert.Equal<string list>("player" :: (project.Npcs |> List.map (fun n -> n.Id)), ids options)
+    Assert.Equal("Player", options.Head.Label)
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Actor, Some "(none)")), References.roleOf "CutsceneStep" "Actor")
+    Assert.Equal(Some(FieldRole.Reference(ReferenceKind.Actor, Some "(narrator)")), References.roleOf "CutsceneStep" "Speaker")
+    // A camera step without an actor looks at its tile.
+    Assert.Equal(
+        Some(FieldRole.Reference(ReferenceKind.Actor, Some "(a tile, or back to the player)")),
+        Vocabulary.roleFor "CutsceneStep" "Actor" CutsceneStepTypes.Camera)
+    Assert.Equal(None, Vocabulary.roleFor "CutsceneStep" "Actor" CutsceneStepTypes.Move)
+    // Missing ids stay visible.
+    let entries = References.picker ReferenceKind.Actor (Some "(narrator)") project (Some "npc-gone")
+    Assert.Equal<string list>([ ""; "npc-gone"; "player" ], entries |> List.take 3 |> ids)
+    Assert.True entries.[1].Missing
+
 // ---- The condition/outcome vocabulary ----
 
 [<Fact>]
 let ``condition and outcome types are pinned`` () =
     Assert.Equal<string list>(
-        [ "enterTile"; "interactTile"; "friendship"; "weather"; "inventorySpace"; "hasItem"; "flag"; "dayRange"; "season"; "yearRange"; "timeOfDay"; "questStatus"; "festivalId" ],
+        [ "enterTile"; "interactTile"; "friendship"; "weather"; "inventorySpace"; "hasItem"; "flag"; "dayRange"; "season"; "yearRange"; "timeOfDay"; "questStatus"; "festivalId"
+          "variable"; "all"; "any"; "not"; "chance"; "scene"; "hearts"; "dayOfSeason"; "relationship" ],
         Vocabulary.conditionTypes |> List.map fst)
     Assert.Equal("Has item ≥ n", Vocabulary.conditionLabel "hasItem")
     Assert.Equal<string list>(
         [ "modifyFriendship"; "modifyEnergy"; "waterArea"; "message"; "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "clearFlag"
           "startQuest"; "completeQuest"; "spawnNPC"; "removeNPC"; "changeTile"; "warpPlayer"; "startDialogue"; "lockTransition"; "unlockTransition"
-          "playSound"; "performAction"; "startMinigame"; "playMusic"; "startCutscene" ],
+          "playSound"; "performAction"; "startMinigame"; "playMusic"; "startCutscene"; "setVariable"; "addVariable"; "moveNpc"; "setWeather"
+          "giveExperience"; "addShopStock"; "removeShopStock"; "placeNode"; "removeNode"; "placeMachine"; "removeMachine"; "setRelationship" ],
         Vocabulary.outcomeTypes |> List.map fst)
     Assert.Equal("Water nearby soil (magic)", Vocabulary.outcomeLabel "waterArea")
     // Every outcome type the vocabulary offers is a schema outcome type.
@@ -229,7 +249,16 @@ let ``each condition type shows the web fields`` () =
           "yearRange", [ "minYear"; "maxYear" ]
           "timeOfDay", [ "minMinute"; "maxMinute" ]
           "questStatus", [ "questId"; "status" ]
-          "festivalId", [ "festivalId" ] ]
+          "festivalId", [ "festivalId" ]
+          "variable", [ "name"; "compare"; "value"; "text" ]
+          "all", [ "conditions" ]
+          "any", [ "conditions" ]
+          "not", [ "conditions" ]
+          "chance", [ "chance" ]
+          "scene", [ "sceneIds" ]
+          "hearts", [ "npcId"; "min"; "max" ]
+          "dayOfSeason", [ "minDay"; "maxDay" ]
+          "relationship", [ "npcId"; "status" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.conditionTypes.Length)
@@ -268,7 +297,19 @@ let ``each outcome type shows the web fields`` () =
           "performAction", [ "actionId" ]
           "startMinigame", [ "minigameId" ]
           "playMusic", [ "soundId" ]
-          "startCutscene", [ "cutsceneId" ] ]
+          "startCutscene", [ "cutsceneId" ]
+          "setVariable", [ "variable"; "amount"; "text" ]
+          "addVariable", [ "variable"; "amount" ]
+          "moveNpc", [ "npcId"; "sceneId"; "x"; "y" ]
+          "setWeather", [ "weatherId" ]
+          "giveExperience", [ "skill"; "amount" ]
+          "addShopStock", [ "shopId"; "itemId"; "amount"; "itemQuantity" ]
+          "removeShopStock", [ "shopId"; "itemId" ]
+          "placeNode", [ "sceneId"; "tileX"; "tileY"; "nodeTypeId" ]
+          "removeNode", [ "sceneId"; "tileX"; "tileY" ]
+          "placeMachine", [ "sceneId"; "tileX"; "tileY"; "machineTypeId" ]
+          "removeMachine", [ "sceneId"; "tileX"; "tileY" ]
+          "setRelationship", [ "npcId"; "status" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.outcomeTypes.Length)
@@ -340,7 +381,7 @@ let ``new list rows start like the web add buttons`` () =
 
 [<Fact>]
 let ``cutscene steps show the fields of their type and pick music or sounds by it`` () =
-    Assert.Equal<string list>([ "Text"; "Speaker" ], Vocabulary.stepFields CutsceneStepTypes.Say)
+    Assert.Equal<string list>([ "Text"; "Speaker"; "Expression" ], Vocabulary.stepFields CutsceneStepTypes.Say)
     let hidden = Vocabulary.hiddenProperties "CutsceneStep" CutsceneStepTypes.Move
     Assert.DoesNotContain("X", hidden)
     Assert.DoesNotContain("Wait", hidden)

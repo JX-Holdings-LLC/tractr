@@ -42,6 +42,14 @@ focus, letter keys pick the tools: `V` Inspect, `B` Brush, `R` Rectangle,
 Unblock, `D` Door and `P` Player start. Screen readers announce the tile
 under the cursor. Picking a brush is not an undo step.
 
+The **Sky** box above the map previews the scene as the game draws it: tick
+it, pick a time of day (**Morning**, **Noon**, **Evening** or **Night**), a
+season and a weather, and the map shows the day/night tint, the foliage tint
+and the weather overlay for them (the scene's own look first, then the
+season's and the game's; an indoor scene has no weather). The rain and snow
+stand still. It starts off so the map stays easy to read, and it is only a
+view: it isn't saved and isn't an undo step.
+
 Markers on the map show doors (`D`), where doors from other scenes arrive
 (`A`), event triggers (`!`, with their region outlined), the mine entrance
 (`M`) and the player start (`S`); the **Markers** box above the map hides
@@ -68,7 +76,7 @@ The side panel holds the tools (drag its edge to make it wider):
 - **Scene**: add a scene, rename, resize, duplicate or delete it, **Set as
   start**, **Fill scene** with one tile, **Clear crops/items** and **Reset soil**.
   **Indoor (no weather)** marks a greenhouse or interior: rain doesn't water its
-  soil and storms don't damage its crops.
+  soil, storms don't damage its crops, and no rain or snow falls on screen.
   Under the size boxes, the calculator shows the tile count and aspect ratio,
   and warns when a resize would cut tiles off. Shrinking moves the player
   start, NPCs (with their schedules and waypoints), animals, door arrivals,
@@ -98,8 +106,8 @@ to:
   one to change it (deleting your version brings the built-in back).
 - **Quests**: objectives (harvest, collect, talk, visit, craft, gift),
   rewards, prerequisites and when they are available.
-- **Events**: triggers (entering a tile, interacting, time passing),
-  conditions and outcomes, for story beats and flags.
+- **Events**: triggers, conditions and outcomes, for story beats, flags and
+  variables (see [Event logic](#event-logic) below).
 - **Shops**: stock (a card per item with its price override, daily limit and
   the seasons it's sold in), prices and tool repair.
 - **Recipes**, **Node types** and **Machine types**: hand crafting, the
@@ -134,6 +142,8 @@ to:
   and can be customized like crops.
 - **Cutscenes**: scenes that play out over time (see
   [Cutscenes](#cutscenes) below).
+- **Heart events**: cutscenes that play once at a number of hearts with an
+  NPC (see [People and relationships](#people-and-relationships) below).
 
 Every nested field also has an **Edit as JSON** box, for pasting or bulk
 changes.
@@ -212,9 +222,18 @@ Import sound effects and music as **OGG** or **WAV** files in the Art tab
 `playSound` outcome plays a sound asset (or a built-in sound by name). Music
 can be set per **scene**, **season**, **weather** (outdoors) and **festival**,
 and the `playMusic` outcome (or a cutscene's music step) plays a music asset
-until the player changes scene. What plays, first match wins: the music an
+until the player changes scene, however they get there (a door, a warp, a
+mine ladder, a debug teleport). What plays, first match wins: the music an
 event or cutscene chose, today's festival, the weather, the scene, the
 season. With none of those, the built-in music plays as before.
+
+In the Art tab's sound list, **Play** plays the selected sound or music once
+(press it again to stop), through the same decoder the game uses. **Rename**
+changes the name the editor shows; the asset's id stays, so everything that
+plays it still does. Problems lists a file the game can't play (cut short,
+damaged, Ogg Opus instead of Ogg Vorbis, a compressed WAV, longer than 10
+minutes) as an error: the game would leave it out and play the built-in sound
+or music in its place.
 
 ### Cutscenes
 
@@ -244,6 +263,105 @@ outcomes steps it passes still run, music and face steps apply, and moved
 characters arrive where they were going. Skipping stops at a choice, so the
 player still picks the branch. In play, Interact, Enter or Space advances a
 line, the number keys pick an answer, and a click works too.
+
+### Event logic
+
+An event runs its outcomes when its **trigger** happens and all its
+conditions hold. An event with a scene only fires while the player is in that
+scene.
+
+The triggers: entering a tile, interacting with one, time passing (`tick`),
+the start of a day, a time of day (`time`, at the event's **Minute**), and
+harvesting, selling, crafting, catching a fish, picking up an item, a
+friendship change and a quest changing. The last seven can name a
+**subject** (the crop or item, the NPC or the quest); without one the event
+fires for any.
+
+**Conditions** check tiles, items, flags, the day, the season, the year, the
+time, quests, friendship and the weather, and also:
+
+- **variable**: compares a variable (`eq`, `ne`, `lt`, `le`, `gt`, `ge`)
+  with a number, or with a text for `eq` and `ne`.
+- **all**, **any** and **not**: groups of conditions, nested as deep as you
+  like.
+- **chance**: holds with a probability (0 to 1). The roll comes from the
+  game's seed and the moment, so a replay rolls the same.
+- **scene**, **hearts** (at least and at most), `dayOfSeason` and
+  **relationship** (single, dating, engaged, married).
+
+Variables are flags that hold a number or a text as well as true or false:
+**setVariable** sets one, **addVariable** adds to a number (a missing one
+counts as 0), and `{var:NAME}` shows one in any text.
+
+**Outcomes** give and take items and money, set flags, change friendship and
+energy, start quests, dialogues, cutscenes, minigames and actions, play
+sounds and music, change tiles and warp the player, and also: **moveNpc**
+(to a scene and tile), **setWeather**, **giveExperience** (in a skill),
+**addShopStock** and **removeShopStock** (a shop keeps the change for the
+rest of the game), **placeNode** and **removeNode**, **placeMachine** and
+**removeMachine**, and **setRelationship**. An outcome that triggers events
+of its own (a harvest, a sale) runs them too, four levels deep at most.
+
+### People and relationships
+
+#### Daily lines
+
+An NPC's **Lines** are what it says when the player talks to it, without a
+dialogue tree for each day. A line has the events' conditions (the day, the
+season, the weather, the scene, hearts, flags; an empty NPC in **hearts** or
+**relationship** means the NPC itself) and a **weight**. Each day the NPC
+picks one of the lines whose conditions hold, by weight, and says it in place
+of its first dialogue's text, with that dialogue's options. An NPC with lines
+and no dialogue just says the line.
+
+#### Text substitution
+
+Any dialogue, cutscene line, event or action message, quest and game panel
+can name things that change: `{player}`, `{farm}`, `{spouse}`, `{npc:ID}`,
+`{item:ID}`, `{var:NAME}`, `{season}`, `{day}`, `{year}`, `{date}`, `{time}`
+and `{money}`. Anything else in braces stays as written.
+
+#### Portraits
+
+An NPC's **Portraits** give art per expression (`happy`, `sad`, any name). A
+line, a dialogue or a cutscene line picks one by its **Expression**; without
+one the dialogue box shows the NPC's own art.
+
+#### Heart events
+
+A heart event plays its cutscene once, when the player has the hearts with
+the NPC and its conditions hold: on entering the event's scene, or,
+without a scene, when the player talks to the NPC.
+
+#### Relationships
+
+Relationships are off until you tick **Relationships** in **Settings →
+People** and save their rules:
+
+- Friendship decay: points an NPC loses on a day the player neither
+  talked to it nor gave it a gift.
+- **Dating**: a **romanceable** NPC at the dating hearts accepts the dating
+  gift (or, without one, starts dating by itself the next morning).
+- **Marriage**: a dated NPC at the proposal hearts accepts the proposal
+  gift; the wedding is some days later, with its own cutscene if you pick
+  one. One partner at a time.
+- The spouse moves to the home tile you choose and, if it helps, does
+  one chore each morning: waters the farm's crops, feeds the animals or
+  brings a gift.
+- **Children** arrive every so many days of marriage, up to a number, with
+  the names you list.
+
+The **setRelationship** outcome sets a stage directly, and the
+**relationship** condition checks one.
+
+#### The player character
+
+With **New games open the character creator (name, farm name, colours)**
+ticked (Settings → People), a new game opens a screen where the player picks
+a name, a farm name and the colours of skin, hair, shirt, trousers and an
+accent, or **Random**. Items with a **Wear** slot (hat, shirt, trousers) are
+clothes: the inventory's **Wear** button puts one on, and the player is drawn
+with its colour or, for a hat, its art.
 
 ### Problems
 
@@ -283,6 +401,13 @@ scenes join the game world the first time a door or a warp leads there; pack
 ids are namespaced (`my-pack:cave`) but scene references inside a pack are not,
 so a pack names its own scenes in full.
 
+Packs can also bring vocabulary and story: terrains, tools, item kinds, crop
+qualities, crop mutations, cutscenes and heart events. Vocabulary keeps the
+ids it was written with (a pack's `lava` is painted as `lava`), and a pack
+replaces a built-in or an earlier pack's definition only when its manifest
+lists that id in `overrides`; otherwise Problems warns and the earlier one
+stays. Cutscenes and heart events are namespaced like other content.
+
 A pack's plugins only change your game in the ways its manifest declares
 (`permissions.mutations`): by default they can show messages, play sounds
 and touch the pack's own flags and items, nothing else. Plugin answers apply
@@ -299,7 +424,11 @@ from separate images (**Add image frame** adds another picture as a frame, so
 one animation can use several files). The preview plays the clip; **Pause
 preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
-machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
+machine. Mark pixel art as **Crisp pixel art** so it stays sharp. Art for the
+player or an NPC turns and walks when its clips are named by direction
+(`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle` and `walk`
+for any direction): walking, a schedule and a cutscene's **face** and
+**move** steps pick the clip.
 
 ### Workshop
 
@@ -343,8 +472,8 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 - **Restart**: start the playtest over from that moment.
 - **Keep changes**: keep what happened in the playtest when you return: the
   world, the player, flags, the date, and what was open or under way (a
-  dialogue or shop, today's purchases, walking NPCs, the mine floor), so the
-  next playtest starts right there.
+  dialogue or shop, a cutscene that was playing, today's purchases, walking
+  NPCs, the mine floor), so the next playtest starts right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
 

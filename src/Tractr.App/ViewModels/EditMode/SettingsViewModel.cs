@@ -130,6 +130,7 @@ public sealed class SettingsViewModel : ObservableObject
         SaveMineCommand = new RelayCommand(SaveMine);
         PickMineEntranceCommand = new RelayCommand(PickMineEntrance, () => _pickOnMap is not null);
         SaveExportCommand = new RelayCommand(SaveExport);
+        Overlays.CollectionChanged += OnOverlaysChanged;
         _workspace.ProjectChanged += OnProjectChanged;
         Refresh();
     }
@@ -237,13 +238,46 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The music a season, festival or weather type can play: none, the game's music assets and a missing <paramref name="current"/>.</summary>
     public IReadOnlyList<PickerOption> MusicChoices(string? current) => Choices(nameof(CalendarSeason), nameof(CalendarSeason.Music), current);
 
-    /// <summary>The overlays a weather type can show: none, rain, snow, the game's saved overlays and a missing <paramref name="current"/>.</summary>
-    public IReadOnlyList<PickerOption> OverlayChoices(string? current) => Choices(nameof(WeatherTypeDefinition), nameof(WeatherTypeDefinition.Overlay), current);
+    /// <summary>
+    /// The overlays a weather type can show: none, rain, snow, the game's overlays as the rows
+    /// above have them (one added there is offered before the weather is saved) and a missing
+    /// <paramref name="current"/>.
+    /// </summary>
+    public IReadOnlyList<PickerOption> OverlayChoices(string? current)
+    {
+        if (_workspace.Current is not { } project) return [];
+        var drafted = Overlays.Select(row => row.Id.Trim()).Where(id => id.Length > 0).Distinct(StringComparer.Ordinal)
+            .Select(id => WeatherOverlayDefinition.Default.WithId(id)).ToList();
+        return Choices(nameof(WeatherTypeDefinition), nameof(WeatherTypeDefinition.Overlay), current, project.WithWeather(project.Weather.WithOverlays(drafted)));
+    }
 
-    private IReadOnlyList<PickerOption> Choices(string owner, string property, string? current)
+    /// <summary>Raised when <see cref="OverlayChoices"/> may offer other overlays: a row was added or removed, or its id changed.</summary>
+    public event EventHandler? OverlayChoicesChanged;
+
+    private IReadOnlyList<PickerOption> Choices(string owner, string property, string? current, GameProject? draft = null)
     {
         if (_workspace.Current is not { } project || ContentForms.Field(owner, property, property, project) is not { } field) return [];
-        return ContentForms.Entries(field, ContentForms.Options(field.Reference, project), current);
+        return ContentForms.Entries(field, ContentForms.Options(field.Reference, draft ?? project), current);
+    }
+
+    private void OnOverlaysChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var row in e.NewItems?.OfType<OverlayDraft>() ?? [])
+        {
+            row.PropertyChanged += OnOverlayRowChanged;
+        }
+
+        foreach (var row in e.OldItems?.OfType<OverlayDraft>() ?? [])
+        {
+            row.PropertyChanged -= OnOverlayRowChanged;
+        }
+
+        OverlayChoicesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnOverlayRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(OverlayDraft.Id)) OverlayChoicesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // ---- Mine section ----
@@ -351,6 +385,7 @@ public sealed class SettingsViewModel : ObservableObject
     public void Refresh()
     {
         if (_workspace.Current is not { } project) return;
+        PeopleChanged?.Invoke();
         var kept = new List<string>();
         foreach (var section in Enum.GetValues<SettingsSection>())
         {
@@ -689,9 +724,11 @@ public sealed class SettingsViewModel : ObservableObject
             if (settings.Movement.PlayerSpeed > MaxPlayerSpeed)
                 throw new FormatException($"Player speed can be at most {MaxPlayerSpeed} tiles a second.");
             // Seasons removed from the rows go through RemoveSeason first, which also clears them
-            // from weather, crops, shops, quests and fish (Cleanup.dropSeason).
-            var removed = _loadedSeasons.Where(id => !seasons.Any(season => season.Id == id)).Select(Edits.RemoveSeason);
-            _workspace.Apply(Edits.Batch("Project settings", [.. removed, Edits.SetProjectInfo(name, version), Edits.SetSettings(settings)]));
+            // from weather, crops, shops, quests, fish and the sky (Cleanup.dropSeason); the
+            // settings saved after it must not bring their sky looks back.
+            var removedIds = _loadedSeasons.Where(id => !seasons.Any(season => season.Id == id)).ToList();
+            settings = SettingsForm.WithoutSeasonLooks(settings, removedIds);
+            _workspace.Apply(Edits.Batch("Project settings", [.. removedIds.Select(Edits.RemoveSeason), Edits.SetProjectInfo(name, version), Edits.SetSettings(settings)]));
             Load(SettingsSection.Project);
             Message = _workspace.SavedText("Settings");
         }
@@ -793,6 +830,48 @@ public sealed class SettingsViewModel : ObservableObject
         {
             AtmosphereMessage = $"Could not save: {error.Message}";
         }
+    }
+
+    // ---- People (M4) ----
+    // Applied at once, like the mine toggle: the switches take effect when clicked, and the
+    // relationship rules have their own Save.
+
+    private string _peopleMessage = "";
+
+    /// <summary>Raised when the project's People settings may have changed (the view rebuilds its form).</summary>
+    public event Action? PeopleChanged;
+
+    public string PeopleMessage { get => _peopleMessage; private set => SetProperty(ref _peopleMessage, value); }
+
+    /// <summary>The open project (the People form builds on it).</summary>
+    public ProjectWorkspace Workspace => _workspace;
+
+    /// <summary>Shows a message of the People section (the relationship form's errors).</summary>
+    public void ReportPeople(string text) => PeopleMessage = text;
+
+    /// <summary>New games open the character creator.</summary>
+    public bool CharacterCreator => _workspace.Current is { } project && project.Settings.CharacterCreator.Or(false);
+
+    /// <summary>The game's relationship rules, or null when it has none.</summary>
+    public RelationshipSettings? Relationships => _workspace.Current?.Settings.Relationships.OrNull();
+
+    /// <summary>Turns the character creator on or off.</summary>
+    public void SetCharacterCreator(bool on) => ApplyPeople(on, Relationships, "Character creator");
+
+    /// <summary>Turns the relationship rules on (from the defaults) or off.</summary>
+    public void SetRelationshipsOn(bool on) =>
+        ApplyPeople(CharacterCreator, on ? Relationships ?? SettingsForm.DefaultRelationships : null, "Relationships");
+
+    /// <summary>Saves the relationship rules as the form holds them.</summary>
+    public bool SaveRelationships(RelationshipSettings relationships) => ApplyPeople(CharacterCreator, relationships, "Relationships");
+
+    private bool ApplyPeople(bool characterCreator, RelationshipSettings? relationships, string what)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.People(project, characterCreator, relationships));
+        PeopleMessage = saved ? _workspace.SavedText(what) : "No changes were made.";
+        PeopleChanged?.Invoke();
+        return saved;
     }
 
     // ---- Mine section ----

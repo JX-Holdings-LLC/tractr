@@ -19,7 +19,7 @@ struct Objective {
     target: u32,
 }
 
-fn objectives(quest: &Quest, progress: Option<&QuestProgress>, completed: bool) -> Vec<Objective> {
+fn objectives(view: &GameView<'_>, quest: &Quest, progress: Option<&QuestProgress>, completed: bool) -> Vec<Objective> {
     quest
         .objectives
         .iter()
@@ -31,13 +31,18 @@ fn objectives(quest: &Quest, progress: Option<&QuestProgress>, completed: bool) 
                 .find(|value| *value != 0)
                 .unwrap_or(1);
             Objective {
-                text: objective.description.clone(),
+                text: fill(view, &objective.description),
                 done: completed || entry.is_some_and(|entry| entry.completed),
                 amount: entry.map_or(objective.progress, |entry| entry.progress),
                 target,
             }
         })
         .collect()
+}
+
+/// Quest text with its placeholders filled in (M4).
+fn fill(view: &GameView<'_>, text: &str) -> String {
+    farm_sim::substitution::fill(view.content, view.state, text).into_owned()
 }
 
 fn rewards_line(view: &GameView<'_>, quest: &Quest, completed: bool, lang: Lang) -> Option<String> {
@@ -60,15 +65,17 @@ fn card(ui: &mut Ui, view: &GameView<'_>, area: Rect, top: f32, quest: &Quest, c
     let inner_x = area.x + 12.0;
     let width = area.width - 24.0;
     let text = if completed { colors.muted } else { colors.text };
+    let name = fill(view, &quest.name);
+    let description = fill(view, &quest.description);
 
     // Measure first: the row background goes under everything.
     let title_height = ui.line_height(16.5);
-    let description_height = if quest.description.is_empty() {
+    let description_height = if description.is_empty() {
         0.0
     } else {
-        ui.paragraph_height(&quest.description, 12.5, FontId::Regular, width) + 4.0
+        ui.paragraph_height(&description, 12.5, FontId::Regular, width) + 4.0
     };
-    let objectives = objectives(quest, progress, completed);
+    let objectives = objectives(view, quest, progress, completed);
     let count_width = 64.0;
     let objective_width = width - 22.0 - count_width;
     let objective_heights: Vec<f32> = objectives
@@ -88,15 +95,14 @@ fn card(ui: &mut Ui, view: &GameView<'_>, area: Rect, top: f32, quest: &Quest, c
 
     let mut y = top + 10.0;
     let title_rect = Rect::new(inner_x, y, width, title_height);
-    let title_width = ui.label(title_rect, &quest.name, 16.5, FontId::Bold, text, Align::Start);
+    let title_width = ui.label(title_rect, &name, 16.5, FontId::Bold, text, Align::Start);
     if completed {
         let cy = title_rect.y + title_rect.height / 2.0;
         ui.chip(inner_x + title_width + 8.0, cy, "\u{2713} Complete", 11.5, fade(colors.primary, 0.18), colors.primary);
     }
     y += title_height;
-    if !quest.description.is_empty() {
-        y += ui.paragraph(inner_x, y, width, &quest.description, 12.5, FontId::Regular, colors.muted, TextAlign::Left)
-            + 4.0;
+    if !description.is_empty() {
+        y += ui.paragraph(inner_x, y, width, &description, 12.5, FontId::Regular, colors.muted, TextAlign::Left) + 4.0;
     }
     y += 6.0;
     for (objective, objective_height) in objectives.iter().zip(&objective_heights) {

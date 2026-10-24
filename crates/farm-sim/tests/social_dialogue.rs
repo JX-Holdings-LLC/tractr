@@ -19,7 +19,7 @@ const NPC: &str = "npc-farmer";
 const GREETING: &str = "dialogue-farmer-greeting";
 
 fn in_dialogue(state: &mut GameState) {
-    state.dialogue = Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: GREETING.to_owned() });
+    state.dialogue = Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: GREETING.to_owned(), line: None });
 }
 
 /// Appends an option to the farmer's greeting, both on the NPC and in the global list (the C#
@@ -123,7 +123,10 @@ fn friendship_gates_dialogue_options_for_ui_and_engine_alike() {
     assert_eq!(blocked.dialogue, None);
 
     let mut friendly = state.clone();
-    friendly.social.insert(NPC.to_owned(), NpcSocialState { friendship: 150, gifts_today: 0, last_gift_day: None });
+    friendly.social.insert(
+        NPC.to_owned(),
+        NpcSocialState { friendship: 150, gifts_today: 0, last_gift_day: None, ..NpcSocialState::default() },
+    );
     assert_eq!(visible_dialogue_options(&ctx, &friendly, &dialogue).len(), 3);
     let effects = handle_choose_dialogue_option(&ctx, &mut friendly, 2);
     assert_eq!(friendly.player.money, 1099);
@@ -158,7 +161,10 @@ fn gift_reactions_follow_the_taste_tables_and_default_to_neutral() {
 fn hearts_floor_friendship_per_125_points_and_missing_npcs_have_none() {
     let (_, mut state) = make_engine("m4", |_| {});
     assert_eq!(friendship_with(&state, NPC), 0);
-    state.social.insert(NPC.to_owned(), NpcSocialState { friendship: 260, gifts_today: 0, last_gift_day: None });
+    state.social.insert(
+        NPC.to_owned(),
+        NpcSocialState { friendship: 260, gifts_today: 0, last_gift_day: None, ..NpcSocialState::default() },
+    );
     assert_eq!(friendship_with(&state, NPC), 260);
     assert_eq!(hearts(260), 2);
     assert_eq!(hearts(124), 0);
@@ -220,7 +226,7 @@ fn choosing_an_option_advances_to_the_next_dialogue_or_closes() {
     assert!(handle_choose_dialogue_option(&ctx, &mut state, 1).is_empty());
     assert_eq!(
         state.dialogue,
-        Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: "dialogue-farmer-crops".to_owned() })
+        Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: "dialogue-farmer-crops".to_owned(), line: None })
     );
     // Its only option has no follow-up: the dialogue closes.
     assert!(handle_choose_dialogue_option(&ctx, &mut state, 0).is_empty());
@@ -260,7 +266,8 @@ fn invalid_indices_and_unknown_dialogues_close_the_dialogue() {
         assert_eq!(current.player, state.player);
     }
     let mut unknown = state.clone();
-    unknown.dialogue = Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: "dialogue-nope".to_owned() });
+    unknown.dialogue =
+        Some(DialogueState { npc_id: NPC.to_owned(), dialogue_id: "dialogue-nope".to_owned(), line: None });
     assert!(handle_choose_dialogue_option(&ctx, &mut unknown, 0).is_empty());
     assert_eq!(unknown.dialogue, None);
 }
@@ -359,8 +366,11 @@ fn a_shop_option_for_a_missing_shop_reports_an_error_and_still_closes_the_dialog
 #[test]
 fn the_merchant_greeting_opens_the_general_store() {
     let (ctx, mut state) = make_engine("m4", |_| {});
-    state.dialogue =
-        Some(DialogueState { npc_id: "npc-merchant".to_owned(), dialogue_id: "dialogue-merchant-greeting".to_owned() });
+    state.dialogue = Some(DialogueState {
+        npc_id: "npc-merchant".to_owned(),
+        dialogue_id: "dialogue-merchant-greeting".to_owned(),
+        line: None,
+    });
     assert!(handle_choose_dialogue_option(&ctx, &mut state, 0).is_empty());
     assert_eq!(state.shop, Some(ShopSession { shop_id: "shop-general".to_owned() }));
     assert_eq!(state.dialogue, None);

@@ -409,6 +409,13 @@ module internal ChecksWorld =
             |> Seq.iteri (fun k entry ->
                 if not (context.WeatherIds.Contains entry.WeatherId) then
                     sink.Error("weather.tableUnknownType", sprintf "%s[%d].weatherId" (ProblemPath.memberPath "weather.table" season) k, sprintf "The %s weather table rolls missing weather \"%s\"" season entry.WeatherId, settings))
+        // A season's sky look (M1) outlives a season removed outside the editor; it never shows.
+        match project.Settings.Atmosphere with
+        | Some atmosphere ->
+            for season, _ in atmosphere.Seasons do
+                if not (context.SeasonIds.Contains season) then
+                    sink.Warning("atmosphere.unknownSeason", ProblemPath.memberPath "settings.atmosphere.seasons" season, sprintf "The sky has a look for unknown season \"%s\"" season, settings)
+        | None -> ()
 
     let run (context: Context) (sink: Sink) =
         player context sink

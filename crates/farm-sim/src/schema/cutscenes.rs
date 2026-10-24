@@ -86,6 +86,9 @@ pub struct CutsceneStep {
     pub text: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub speaker: Option<String>,
+    /// The speaker's portrait for a `say` line (one of the NPC's `portraits`, M4).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expression: Option<String>,
     pub options: Vec<CutsceneChoice>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goto: Option<String>,

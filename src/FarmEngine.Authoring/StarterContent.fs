@@ -32,18 +32,18 @@ module StarterContent =
               Text = "Welcome to the farm! Plant crops in the soil and watch them grow. Come back when you need advice!"
               Options = [ option "Thanks for the help!"
                           { option "What crops grow best here?" with NextDialogueId = Some "dialogue-farmer-crops" } ]
-              Extra = [] }
+              Expression = None; Extra = [] }
         let crops : Dialogue =
             { Id = "dialogue-farmer-crops"; NpcId = "npc-farmer"
               Text = "Wheat is the easiest crop to start with. Tomatoes take longer but sell for more!"
               Options = [ option "Got it, thanks!" ]
-              Extra = [] }
+              Expression = None; Extra = [] }
         let shop : Dialogue =
             { Id = "dialogue-merchant-greeting"; NpcId = "npc-merchant"
               Text = "Welcome! I buy crops and sell seeds, tools and fertilizer. I can also repair worn-out tools."
               Options = [ { option "Let's trade." with OpenShopId = Some "shop-general" }
                           option "Just passing by." ]
-              Extra = [] }
+              Expression = None; Extra = [] }
         let npc id name x y dialogue appearance : Npc =
             { Npc.Default with
                 Id = id; Name = name; X = x; Y = y; SceneId = "scene-farm"; Dialogue = dialogue

@@ -76,6 +76,27 @@ let ``defaults match the web forms`` () =
     Assert.True(scene.Tiles.[0].[0].Collision)
     Assert.Equal("wall", orEmpty scene.Tiles.[0].[0].Object)
 
+[<Fact>]
+let ``a new scene filled with a game's terrain puts it on the terrain's own layer`` () =
+    let terrain id layer walkable = { TerrainDefinition.Default with Id = id; Name = id; Layer = layer; Color = "#405060"; Walkable = walkable }
+    let project =
+        { starter () with
+            Terrains = Some [ terrain "crystal" "object" false; terrain "moss" "overlay" true; terrain "lava" "background" false ] }
+    let tile (fill: string) = (Defaults.newSceneWith project "Alien" 3 2 fill).Tiles.[1].[2]
+    // The built-in rule would have put each of these on the background.
+    let crystal = tile "crystal"
+    Assert.Equal(("crystal", "grass", Some "crystal", None, true), (crystal.Type, crystal.Background, crystal.Object, crystal.Overlay, crystal.Collision))
+    let moss = tile "moss"
+    Assert.Equal(("moss", "grass", Some "moss", None, false), (moss.Type, moss.Background, moss.Overlay, moss.Object, moss.Collision))
+    let lava = tile "lava"
+    Assert.Equal(("lava", None, None, true), (lava.Background, lava.Overlay, lava.Object, lava.Collision))
+    // The same tile as filling a grass scene with it.
+    let blank = Defaults.newScene project "Alien" 3 2
+    let filled = project |> apply (AddScene blank) |> apply (FillScene(blank.Id, "crystal"))
+    Assert.Equal(crystal, (filled.Scenes |> List.find (fun s -> s.Id = blank.Id)).Tiles.[1].[2])
+    let grass = tile "grass"
+    Assert.Equal(("grass", "grass", None, None, false), (grass.Type, grass.Background, grass.Overlay, grass.Object, grass.Collision))
+
 /// Every "New" result, once added to the starter project, passes validation.
 let newContentEdits (project: GameProject) : (string * Edit) list =
     let npc = Defaults.newNpc project "Elder"

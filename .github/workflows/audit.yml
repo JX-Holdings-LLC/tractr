@@ -2,7 +2,8 @@ name: Dependency audit
 
 # Known vulnerabilities in the Rust crates (cargo-deny over Cargo.lock and the plugin guest's
 # and meter's lock files; deny.toml) and in the NuGet packages, plus unused Cargo dependencies.
-# CI calls this on every push; the weekly run catches advisories published in between.
+# CI (ci.yml) calls this on every pull request, where it is a required check; the weekly run here
+# catches advisories published in between.
 #
 # Every action is pinned to a commit (Dependabot bumps the pins, .github/dependabot.yml).
 

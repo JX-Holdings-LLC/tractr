@@ -1,5 +1,113 @@
 # Changelog
 
+## 0.8.0
+
+Roadmap milestones M3 (event logic), M4 (dialogue and relationships) and M11
+(finishing M1 and M2). See the Creator Guide's
+[Event logic](docs/CREATOR-GUIDE.md#event-logic) and
+[People and relationships](docs/CREATOR-GUIDE.md#people-and-relationships).
+
+- **Event logic without code.**
+  - **Variables**: flags hold numbers and texts too. The `variable`
+    condition compares one, `setVariable` and `addVariable` change one.
+  - **Logic**: `all`, `any` and `not` groups of conditions, nested, and a
+    `chance` condition that rolls the same in a replay. New `scene`,
+    `hearts`, `dayOfSeason` and `relationship` conditions.
+  - **Triggers**: day start, a time of day, harvesting, selling, crafting,
+    catching a fish, picking up an item, a friendship change and a quest
+    changing, each optionally about one crop, item, NPC or quest.
+  - **Outcomes**: move an NPC, change the weather, give experience, add to
+    or take from a shop's stock (kept in the save), place or remove a node
+    or a machine, and set a relationship. Events an outcome triggers run
+    too, four levels deep at most.
+  - The Events form edits nested conditions, and offers a trigger's subject
+    and minute only for the triggers that use them.
+- **Dialogue and relationships.**
+  - **Daily lines**: an NPC picks a line each day from the ones whose
+    conditions hold (day, season, weather, scene, hearts, flags), by weight.
+  - **Text substitution**: `{player}`, `{farm}`, `{spouse}`, `{npc:ID}`,
+    `{item:ID}`, `{var:NAME}`, `{season}`, `{day}`, `{year}`, `{date}`,
+    `{time}` and `{money}` in dialogue, cutscene lines, messages, quests and
+    game panels.
+  - **Portraits** per expression, chosen by a line, a dialogue or a cutscene
+    line.
+  - **Heart events**, a new Content category: a cutscene that plays once at
+    a number of hearts, on entering a scene or talking to the NPC.
+  - **Relationships**, off until a game turns them on in the new **People**
+    section of Settings: friendship decay, dating and marriage by gifts at
+    given hearts, a wedding cutscene, a spouse who moves home and waters,
+    feeds or brings a gift each morning, and children.
+  - **The player character**: an optional character creator for a new game
+    (name, farm name, skin, hair, shirt, trousers and accent colours,
+    Random), and hats, shirts and trousers worn from the inventory.
+  - Problems checks variables, nested conditions, heart events, lines,
+    portraits and the relationship settings; removing an NPC removes its
+    heart events and the outcomes that move it.
+  - Keep changes carries chosen music, children and changed shop stock, and
+    the player's name, farm name, look and clothes.
+- **Packs add vocabulary.** Content packs can add terrains, tools, item
+  kinds, crop qualities, crop mutations, cutscenes and heart events.
+  Vocabulary keeps its ids and replaces a built-in only when the manifest
+  lists it in `overrides`; cutscenes and heart events are namespaced, with
+  their `cutsceneId` references. Importing a pack writes them into the
+  project.
+- **Audio.**
+  - Music and sounds longer than five seconds are decoded and resampled
+    while they play, a little ahead of the output, instead of being decoded
+    whole when the game loads. Their decoded samples are never all in
+    memory, and their files stay shared with the cartridge rather than
+    copied. Looped music runs from its end straight into its start.
+  - The player keeps at most 16 MB of resampled short sounds, letting go of
+    the ones played longest ago (never one that is playing).
+  - The web demo's `audioClip` decodes music on request instead of keeping
+    it decoded.
+  - The Art tab's sound list has a Play button that plays a sound or music
+    asset once through the game's own decoder (press it again to stop).
+    Without sound output it is disabled and says why.
+  - Sound and music assets can be renamed. The id stays, so everything that
+    plays them still does, and undo brings the old name back.
+  - Problems reports a sound or music file the game can't play (cut short,
+    damaged, Ogg Opus, a compressed WAV, longer than 10 minutes, not base64)
+    as an error: the player would skip it silently and play the built-in
+    sound instead.
+  - farm-ffi C ABI version 4: `fe_audio_output`, `fe_audio_probe`,
+    `fe_audio_preview_play/stop/playing`.
+  - `deny.toml` records why the audio crates need no advisory exceptions,
+    and when lewton gets replaced.
+- **Music and cutscenes.**
+  - Music an event or cutscene chose now ends on every change of scene: a
+    door, a warp, a mine ladder, leaving the mine and the debug drawer's
+    teleport. A door back into the same scene keeps it.
+  - A cutscene's camera pan moves smoothly between ticks, like the camera
+    following the player.
+  - A cutscene step's actor and speaker are pickers: the player or an NPC, a
+    narrator for a line, a tile for a camera step. An id the project no
+    longer has stays visible.
+  - Creator art for NPCs turns and walks like the player's: direction clips
+    (`idle-left`, `walk-up`…) and directional sheets follow walks and the
+    cutscene `face` and `move` steps.
+  - Keep changes carries a cutscene that is playing into the next playtest.
+  - The fuzz generator sends the cutscene commands and plays games with
+    cutscenes.
+- **Edit Mode.**
+  - Edit Mode previews the sky: a **Sky** box above the map draws the scene
+    at a time of day, season and weather with the day/night tint, foliage
+    tint and weather overlay the game draws. It is off by default and not
+    saved.
+  - Indoor scenes no longer show rain or snow (or the weather's tint) in
+    play.
+  - A new scene filled with a game's own terrain puts it on that terrain's
+    layer.
+  - A weather overlay added in Settings is offered to the weather types
+    right away, before Save weather.
+  - Removing a season removes its sky look. Problems warns about a sky look
+    for a season the calendar doesn't have.
+  - The Edit Mode controls added for terrains, sounds, words, weather
+    overlays and the sky are translated (English and Spanish).
+- Saves and replays record the new state (variables, children, shop
+  changes, the player character), so state hashes differ from 0.7.1; every
+  recorded replay keeps its states and effects.
+
 ## 0.7.1
 
 - **Releases publish again.** The release workflow uses release

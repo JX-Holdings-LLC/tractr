@@ -87,6 +87,22 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void RemovingASeasonTakesItsSkyLookWithIt()
+    {
+        using var test = new TestWorkspace();
+        var seasons = test.Project.Settings.Calendar.Seasons.Select(s => s.Id).ToList();
+        test.Workspace.Apply(SettingsForm.Atmosphere(test.Project, null,
+            [(seasons[0], SettingsForm.Look("first", "", "#80a060")), (seasons[^1], SettingsForm.Look("last", "", "#b8d0e8"))]));
+        var viewModel = new SettingsViewModel(test.Workspace);
+
+        viewModel.RemoveSeason(viewModel.Seasons[^1]);
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal([seasons[0]], test.Project.Settings.Atmosphere.OrNull()!.Seasons.Select(entry => entry.Item1));
+        Assert.DoesNotContain(Problems.Collect(test.Project), problem => problem.Code == "atmosphere.unknownSeason");
+        Assert.Equal(["All seasons", .. test.Project.Settings.Calendar.Seasons.Select(s => s.Name)], viewModel.Looks.Select(look => look.What));
+    }
+
+    [Fact]
     public void SkillLevelsContinueTheLastStep()
     {
         using var test = new TestWorkspace();
@@ -207,9 +223,21 @@ public sealed class SettingsViewModelTests
         Assert.Equal(test.Project.Weather.Types.Select(type => type.Id), viewModel.WeatherLooks.Select(row => row.WeatherId));
         Assert.Contains(viewModel.OverlayChoices(""), option => option.Id == "rain");
 
+        var choicesChanged = 0;
+        viewModel.OverlayChoicesChanged += (_, _) => choicesChanged++;
         viewModel.AddOverlayCommand.Execute(null);
         var overlay = Assert.Single(viewModel.Overlays);
         Assert.Equal(("overlay-1", "dust"), (overlay.Id, overlay.Style));
+        // Offered before the weather is saved, under the id as typed.
+        Assert.Equal(1, choicesChanged);
+        Assert.Contains(viewModel.OverlayChoices(""), option => option.Id == "overlay-1");
+        overlay.Id = " acid ";
+        overlay.Color = "#C8B090";
+        Assert.Equal(2, choicesChanged);
+        Assert.Contains(viewModel.OverlayChoices(""), option => option.Id == "acid");
+        Assert.DoesNotContain(viewModel.OverlayChoices(""), option => option.Id == "overlay-1");
+        Assert.Contains(viewModel.OverlayChoices("overlay-1"), option => option is { Id: "overlay-1", Missing: true });
+        overlay.Id = "overlay-1";
         Assert.True(viewModel.IsDirty(SettingsSection.Weather));
         overlay.Color = "sandy";
         viewModel.SaveWeatherCommand.Execute(null);

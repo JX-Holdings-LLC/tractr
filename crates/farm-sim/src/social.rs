@@ -6,14 +6,15 @@
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
 use crate::events;
+use crate::events::Trigger;
 use crate::game_time;
-use crate::hooks::{GiftGivenHookPayload, HookEvent};
+use crate::hooks::{GiftGivenHookPayload, HookEvent, RelationshipChangeHookPayload};
 use crate::inventory;
 use crate::messages;
 use crate::quests;
 use crate::schema::{
-    gift_friendship_delta, gift_reactions, Dialogue, DialogueOption, GameState, Npc, NpcSocialState, NpcState,
-    FRIENDSHIP_PER_HEART, MAX_FRIENDSHIP,
+    event_triggers, gift_friendship_delta, gift_reactions, relationship_statuses, Dialogue, DialogueOption, GameState,
+    Npc, NpcSocialState, NpcState, FRIENDSHIP_PER_HEART, MAX_FRIENDSHIP,
 };
 use crate::skills;
 use crate::text;
@@ -102,12 +103,12 @@ pub fn handle_give_gift(ctx: &EngineContext, state: &mut GameState, item_id: &st
     if ctx.item_category(&held.item.r#type).is_some_and(|category| !category.giftable) {
         return vec![Effect::say(message_levels::INFO, messages::CANT_GIFT.with(&[&held.item.name]))];
     }
+    // The dating gift and the proposal (M4) are not ordinary gifts.
+    if let Some(effects) = crate::relationships::romantic_gift(ctx, state, npc_def, item_id) {
+        return effects;
+    }
 
-    let social = state.social.get(&npc_def.id).cloned().unwrap_or(NpcSocialState {
-        friendship: 0,
-        gifts_today: 0,
-        last_gift_day: None,
-    });
+    let social = state.social.get(&npc_def.id).cloned().unwrap_or_default();
     let social_today = if social.last_gift_day == Some(state.clock.day) {
         social
     } else {
@@ -136,6 +137,7 @@ pub fn handle_give_gift(ctx: &EngineContext, state: &mut GameState, item_id: &st
             friendship,
             gifts_today: social_today.gifts_today.saturating_add(1),
             last_gift_day: Some(state.clock.day),
+            ..social_today
         },
     );
 
@@ -157,6 +159,9 @@ pub fn handle_give_gift(ctx: &EngineContext, state: &mut GameState, item_id: &st
     }));
 
     effects.extend(skills::grant_xp(ctx, state, "social", 4));
+    if friendship != social_today.friendship {
+        effects.extend(events::fire_trigger(ctx, state, &Trigger::about(event_triggers::FRIENDSHIP, &[&npc_def.id])));
+    }
 
     effects.extend(quests::progress_quests(ctx, state, "gift", &npc_def.id, 1));
     effects
@@ -216,4 +221,51 @@ pub fn visible_dialogue_option_indices(ctx: &EngineContext, state: &GameState, d
         })
         .map(|(index, _)| index)
         .collect()
+}
+
+/// The player's relationship with `npc_id` (M4), one of [`relationship_statuses`].
+pub fn relationship_status<'a>(state: &'a GameState, npc_id: &str) -> &'a str {
+    state
+        .social
+        .get(npc_id)
+        .and_then(|social| social.status.as_deref())
+        .filter(|status| !status.is_empty())
+        .unwrap_or(relationship_statuses::SINGLE)
+}
+
+/// Sets the friendship points with `npc_id` (clamped to the friendship range), tells plugins
+/// (`onRelationshipChange`) and fires the `friendship` trigger (M3) when they changed.
+pub fn set_friendship(ctx: &EngineContext, state: &mut GameState, npc_id: &str, friendship: i32) -> Effects {
+    let friendship = friendship.clamp(0, MAX_FRIENDSHIP);
+    let current = state.social.get(npc_id).cloned().unwrap_or_default();
+    let changed = current.friendship != friendship;
+    ctx.emit(HookEvent::RelationshipChange(RelationshipChangeHookPayload { npc_id: npc_id.to_owned(), friendship }));
+    state.social.insert(npc_id.to_owned(), NpcSocialState { friendship, ..current });
+    if !changed {
+        return Vec::new();
+    }
+    events::fire_trigger(ctx, state, &Trigger::about(event_triggers::FRIENDSHIP, &[npc_id]))
+}
+
+/// Sets the player's relationship with `npc_id` (M4): single, dating, engaged (the wedding is
+/// `weddingDays` from today) or married (the spouse moves in when the game has a home).
+pub fn set_relationship(ctx: &EngineContext, state: &mut GameState, npc_id: &str, status: &str) -> Effects {
+    let settings = ctx.content.settings.relationships.clone().unwrap_or_default();
+    let today = state.clock.day;
+    let social = state.social.entry(npc_id.to_owned()).or_default();
+    if status == relationship_statuses::SINGLE {
+        social.status = None;
+        social.status_day = None;
+    } else {
+        social.status = Some(status.to_owned());
+        social.status_day = Some(if status == relationship_statuses::ENGAGED {
+            today.saturating_add(settings.wedding_days.max(1))
+        } else {
+            today
+        });
+    }
+    if status == relationship_statuses::MARRIED {
+        crate::relationships::move_spouse_home(ctx, state, npc_id);
+    }
+    Vec::new()
 }

@@ -181,8 +181,21 @@ pub fn source_bytes(source: &str) -> Option<Cow<'static, [u8]>> {
     data_url_bytes(source).map(Cow::Owned)
 }
 
-/// Decodes an image source (see [`source_bytes`]); `None` when unsupported or corrupt.
+/// Decodes an image source (see [`source_bytes`]); `None` when unsupported or corrupt. A
+/// built-in sheet with a look key (M4, [`crate::look`]) is decoded recoloured.
 pub fn decode_source(source: &str) -> Option<Image> {
+    if let Some((sheet, key)) = crate::look::split(source).filter(|(sheet, _)| sheet.starts_with(URL_SCHEME)) {
+        let image = decode_source(sheet)?;
+        let art = BuiltinArt::embedded();
+        let entry = art.find("char-player")?;
+        let region = (
+            u32::try_from(entry.x).ok()?,
+            u32::try_from(entry.y).ok()?,
+            u32::try_from(entry.w * entry.frames.max(1)).ok()?,
+            u32::try_from(entry.h * entry.rows.max(1)).ok()?,
+        );
+        return Some(crate::look::recolor(image, region, key));
+    }
     let bytes = source_bytes(source)?;
     if bytes.is_empty() {
         return None;

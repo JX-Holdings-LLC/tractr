@@ -125,7 +125,7 @@ module Patterns =
                     outcome kind (fun o -> { o with ItemId = Some itemId; ItemQuantity = Some quantity })
                 let option (text: string) : DialogueOption = { DialogueOption.Default with Text = text }
                 let dialogue (dialogueId: string) (line: string) (options: DialogueOption list) : Dialogue =
-                    { Id = dialogueId; NpcId = id; Text = line; Options = options; Extra = [] }
+                    { Id = dialogueId; NpcId = id; Text = line; Options = options; Expression = None; Extra = [] }
                 match kind with
                 | Story ->
                     let promise = { option "Yes, count me in." with NextDialogueId = Some(id + "-yes") }

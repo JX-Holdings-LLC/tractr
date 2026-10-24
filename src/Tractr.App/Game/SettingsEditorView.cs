@@ -5,6 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using FarmEngine.Authoring;
+using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Projects;
 using Tractr.App.ViewModels.EditMode;
 
@@ -22,6 +24,8 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly StackPanel _weather = new() { Name = "WeatherOdds", Spacing = 6 };
     private readonly StackPanel _skillNames = new() { Name = "SkillNames", Spacing = 5 };
     private readonly StackPanel _overlays = new() { Name = "WeatherOverlays", Spacing = 5 };
+    /// <summary>Each weather type's overlay picker, refilled as the overlay rows change.</summary>
+    private readonly Dictionary<WeatherLookDraft, ComboBox> _overlayPickers = [];
     private readonly StackPanel _weatherLooks = new() { Name = "WeatherLooks", Spacing = 5 };
     private readonly StackPanel _looks = new() { Name = "AtmosphereLooks", Spacing = 8 };
     private readonly StackPanel _exportProblems = new() { Name = "ExportSettingsProblems", Spacing = 4 };
@@ -30,6 +34,10 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly ComboBox _mineScene = new() { Name = "Mine_EntranceScene", MinWidth = 220 };
     private readonly ComboBox _exportIcon = new() { Name = "Export_Icon", MinWidth = 260 };
     private readonly ComboBox _exportPixelScale = new() { Name = "Export_PixelScale", MinWidth = 260 };
+    private readonly CheckBox _characterCreator = new() { Name = "Setting_CharacterCreator", Content = "New games open the character creator (name, farm name, colours)" };
+    private readonly CheckBox _relationshipsOn = new() { Name = "Setting_Relationships", Content = "Relationships: friendship decay, dating, marriage, children" };
+    private readonly StackPanel _relationships = new() { Name = "RelationshipSettings", Spacing = 6 };
+    private ContentForm? _relationshipForm;
     private readonly DraftRows<SeasonDraft> _seasonRows;
     private readonly Dictionary<SeasonDraft, (Button Up, Button Down)> _seasonArrows = [];
     private bool _filling;
@@ -62,11 +70,11 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var addSkillLevel = Ui.CommandButton("Add level", ViewModel.AddSkillLevelCommand, "tool");
         addSkillLevel.Name = "AddSkillLevelButton";
         form.Children.Add(addSkillLevel);
-        form.Children.Add(Ui.Text("WORDS", "section"));
-        form.Children.Add(Ui.Wrapped("What the game calls money, energy and the skills. Empty fields keep the built-in words.", "muted", "small"));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.words"), "section"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.wordsHelp"), "muted", "small"));
         Field(form, SettingsViewModel.MoneyFormatLabel + " ({0} is the amount)", "Setting_MoneyFormat", nameof(SettingsViewModel.MoneyFormat)).PlaceholderText = "${0}";
         Field(form, SettingsViewModel.EnergyWordLabel, "Setting_EnergyWord", nameof(SettingsViewModel.EnergyWord)).PlaceholderText = "Energy";
-        form.Children.Add(Ui.Text("Skill names", "muted", "small"));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.skillNames"), "muted", "small"));
         form.Children.Add(_skillNames);
         form.Children.Add(Ui.Text("TIME", "section"));
         Field(form, SettingsViewModel.DayStartLabel, "Setting_DayStartMinute", nameof(SettingsViewModel.DayStart));
@@ -75,7 +83,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         Field(form, SettingsViewModel.DayMinutesLabel, "Setting_DayMinutes", nameof(SettingsViewModel.DayMinutes)).PlaceholderText = "1440";
         form.Children.Add(Check("Setting_PauseInModals", "Pause the clock in dialogue, shops, minigames and menus", nameof(SettingsViewModel.PauseInModals)));
         form.Children.Add(Ui.Text("SEASONS", "section"));
-        form.Children.Add(Ui.Wrapped("Temperature is for crops with a temperature range; music plays all season instead of the game's own.", "muted", "small"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.seasonsHelp"), "muted", "small"));
         form.Children.Add(_seasons);
         var addSeason = Ui.CommandButton("Add season", ViewModel.AddSeasonCommand, "tool");
         addSeason.Name = "AddSeasonButton";
@@ -94,25 +102,25 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         form.Children.Add(Ui.Text("WEATHER ODDS PER SEASON", "section"));
         form.Children.Add(Ui.Wrapped("Weights, rolled at each day start. Rain waters the soil, storms can damage crops. 0 means never.", "muted", "small"));
         form.Children.Add(_weather);
-        form.Children.Add(Ui.Text("WEATHER OVERLAYS", "section"));
-        form.Children.Add(Ui.Wrapped("How a weather looks: rain streaks, snow flakes, drifting dust or a tint alone, beside the built-in rain and snow.", "muted", "small"));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.overlays"), "section"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.overlaysHelp"), "muted", "small"));
         form.Children.Add(_overlays);
-        var addOverlay = Ui.CommandButton("Add overlay", ViewModel.AddOverlayCommand, "tool");
+        var addOverlay = Ui.CommandButton(EditorStrings.Get("settings.addOverlay"), ViewModel.AddOverlayCommand, "tool");
         addOverlay.Name = "AddOverlayButton";
         form.Children.Add(addOverlay);
-        form.Children.Add(Ui.Text("Each weather's overlay and music (outdoors)", "muted", "small"));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.weatherLooks"), "muted", "small"));
         form.Children.Add(_weatherLooks);
         form.Children.Add(Shown("WeatherMessage", nameof(SettingsViewModel.WeatherMessage)));
         var saveWeather = Ui.CommandButton("Save weather", ViewModel.SaveWeatherCommand, "accent");
         saveWeather.Name = "SaveWeatherButton";
         form.Children.Add(saveWeather);
-        form.Children.Add(Ui.Text("THE SKY", "section"));
-        form.Children.Add(Ui.Wrapped("The day/night tint (one line per key: the minute of the day and a colour, like 360 #ffd8a0) and the tint of trees and weeds. A season's own look replaces the look of all seasons; empty fields keep the look below them, down to the built-in one.", "muted", "small"));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.sky"), "section"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.skyHelp"), "muted", "small"));
         form.Children.Add(_looks);
         form.Children.Add(Shown("AtmosphereMessage", nameof(SettingsViewModel.AtmosphereMessage)));
-        var saveAtmosphere = Ui.CommandButton("Save atmosphere", ViewModel.SaveAtmosphereCommand, "accent");
+        var saveAtmosphere = Ui.CommandButton(EditorStrings.Get("settings.saveSky"), ViewModel.SaveAtmosphereCommand, "accent");
         saveAtmosphere.Name = "SaveAtmosphereButton";
-        var revertAtmosphere = Ui.CommandButton("Revert atmosphere", ViewModel.RevertAtmosphereCommand, "tool");
+        var revertAtmosphere = Ui.CommandButton(EditorStrings.Get("settings.revertSky"), ViewModel.RevertAtmosphereCommand, "tool");
         revertAtmosphere.Name = "RevertAtmosphereButton";
         form.Children.Add(Ui.HStack(8, saveAtmosphere, revertAtmosphere));
         form.Children.Add(Ui.Text("MINE", "section"));
@@ -146,6 +154,14 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         _mineFields.Children.Add(saveMine);
         form.Children.Add(_mineFields);
         form.Children.Add(Shown("MineMessage", nameof(SettingsViewModel.MineMessage)));
+        form.Children.Add(Ui.Text("PEOPLE", "section"));
+        form.Children.Add(Ui.Wrapped("The player character and the game's relationship rules. Each part is off until it is turned on here; NPCs are romanceable one by one in their own forms.", "muted", "small"));
+        _characterCreator.Click += (_, _) => ViewModel.SetCharacterCreator(_characterCreator.IsChecked == true);
+        _relationshipsOn.Click += (_, _) => ViewModel.SetRelationshipsOn(_relationshipsOn.IsChecked == true);
+        form.Children.Add(_characterCreator);
+        form.Children.Add(_relationshipsOn);
+        form.Children.Add(_relationships);
+        form.Children.Add(Shown("PeopleMessage", nameof(SettingsViewModel.PeopleMessage)));
         form.Children.Add(Ui.Text("EXPORT", "section"));
         form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
         Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
@@ -190,6 +206,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         _ = new DraftRows<SkillNameDraft>(_skillNames, ViewModel.SkillNames, SkillNameRow);
         _ = new DraftRows<OverlayDraft>(_overlays, ViewModel.Overlays, OverlayRow);
         _ = new DraftRows<WeatherLookDraft>(_weatherLooks, ViewModel.WeatherLooks, WeatherLookRow);
+        ViewModel.OverlayChoicesChanged += (_, _) => RefreshOverlayPickers();
         _ = new DraftRows<LookDraft>(_looks, ViewModel.Looks, LookRow);
         ViewModel.SkillLevels.CollectionChanged += (_, _) => ShowSkillLevels();
         ShowSkillLevels();
@@ -199,7 +216,39 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         ShowIcons();
         ShowPixelScales();
         ShowExportProblems();
+        ShowPeople();
+        ViewModel.PeopleChanged += ShowPeople;
         ViewModel.PropertyChanged += OnViewModelChanged;
+    }
+
+    /// <summary>The People section from the project: the two switches and, when relationships are on, their rules as a form with Save.</summary>
+    private void ShowPeople()
+    {
+        _characterCreator.IsChecked = ViewModel.CharacterCreator;
+        var relationships = ViewModel.Relationships;
+        _relationshipsOn.IsChecked = relationships is not null;
+        _relationships.Children.Clear();
+        _relationshipForm = null;
+        if (relationships is null || ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _relationshipForm = new ContentForm(project, relationships, typeof(RelationshipSettings), fields, text => ViewModel.ReportPeople(text));
+        _relationships.Children.Add(fields);
+        var save = Ui.Button("Save relationships", SaveRelationships, "accent");
+        save.Name = "SaveRelationshipsButton";
+        _relationships.Children.Add(save);
+    }
+
+    private void SaveRelationships()
+    {
+        if (_relationshipForm is null) return;
+        try
+        {
+            ViewModel.SaveRelationships((RelationshipSettings)_relationshipForm.Commit());
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException)
+        {
+            ViewModel.ReportPeople($"Could not save: {error.Message}");
+        }
     }
 
     public SettingsViewModel ViewModel { get; }
@@ -284,8 +333,8 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var name = Box("Season_Name", nameof(SeasonDraft.Name), 145, season);
         var days = Box("Season_Days", nameof(SeasonDraft.Days), 65, season);
         var temperature = Box("Season_Temperature", nameof(SeasonDraft.Temperature), 60, season);
-        temperature.PlaceholderText = "temp.";
-        ToolTip.SetTip(temperature, "How warm the season is, for crops with a temperature range");
+        temperature.PlaceholderText = EditorStrings.Get("settings.temperaturePlaceholder");
+        ToolTip.SetTip(temperature, EditorStrings.Get("settings.seasonTemperatureTip"));
         var music = RowPicker("Season_Music", ViewModel.MusicChoices(season.Music), season.Music, id => season.Music = id, 150);
         Ui.Label((id, season.IdLabel), (name, season.NameLabel), (days, season.DaysLabel), (temperature, season.TemperatureLabel), (music, season.MusicLabel));
         // Removing and moving change the rows; Save project settings applies them (#70).
@@ -344,6 +393,18 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private static ComboBox RowPicker(string name, IReadOnlyList<PickerOption> options, string current, Action<string> set, double width)
     {
         var box = new ComboBox { Name = name, Width = width };
+        FillPicker(box, options, current);
+        box.SelectionChanged += (_, _) =>
+        {
+            if (box.SelectedItem is ComboBoxItem { Tag: string id }) set(id);
+        };
+        return box;
+    }
+
+    /// <summary>Puts <paramref name="options"/> in a <see cref="RowPicker"/>, with <paramref name="current"/> chosen.</summary>
+    private static void FillPicker(ComboBox box, IReadOnlyList<PickerOption> options, string current)
+    {
+        box.Items.Clear();
         foreach (var option in options)
         {
             var item = new ComboBoxItem { Content = option.Label, Tag = option.Id };
@@ -352,11 +413,20 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         }
 
         box.SelectedItem = box.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, current));
-        box.SelectionChanged += (_, _) =>
+    }
+
+    /// <summary>Offers each weather type the overlays the rows have now, before the weather is saved.</summary>
+    private void RefreshOverlayPickers()
+    {
+        foreach (var look in _overlayPickers.Keys.Where(look => !ViewModel.WeatherLooks.Contains(look)).ToList())
         {
-            if (box.SelectedItem is ComboBoxItem { Tag: string id }) set(id);
-        };
-        return box;
+            _overlayPickers.Remove(look);
+        }
+
+        foreach (var (look, picker) in _overlayPickers)
+        {
+            FillPicker(picker, ViewModel.OverlayChoices(look.Overlay), look.Overlay);
+        }
     }
 
     private Control SkillNameRow(SkillNameDraft skill)
@@ -376,11 +446,11 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var density = Box($"Overlay_Density_{overlay.Key}", nameof(OverlayDraft.Density), 55, overlay);
         var speed = Box($"Overlay_Speed_{overlay.Key}", nameof(OverlayDraft.Speed), 55, overlay);
         var tint = Box($"Overlay_Tint_{overlay.Key}", nameof(OverlayDraft.Tint), 85, overlay);
-        tint.PlaceholderText = "no tint";
-        ToolTip.SetTip(density, "Particles, relative to the built-in amount (1)");
-        ToolTip.SetTip(speed, "Speed, relative to the built-in style (1)");
-        ToolTip.SetTip(tint, "A colour multiplied over the scene while it falls");
-        var remove = Ui.Button("Remove", () => ViewModel.RemoveOverlay(overlay), "tool", "small");
+        tint.PlaceholderText = EditorStrings.Get("settings.noTint");
+        ToolTip.SetTip(density, EditorStrings.Get("settings.densityTip"));
+        ToolTip.SetTip(speed, EditorStrings.Get("settings.speedTip"));
+        ToolTip.SetTip(tint, EditorStrings.Get("settings.tintTip"));
+        var remove = Ui.Button(EditorStrings.Get("common.remove"), () => ViewModel.RemoveOverlay(overlay), "tool", "small");
         remove.Name = $"Overlay_Remove_{overlay.Key}";
         Ui.Label((id, overlay.IdLabel), (style, overlay.StyleLabel), (color, overlay.ColorLabel), (density, overlay.DensityLabel),
             (speed, overlay.SpeedLabel), (tint, overlay.TintLabel), (remove, $"Remove {overlay.What}"));
@@ -390,10 +460,11 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private Control WeatherLookRow(WeatherLookDraft look)
     {
         var overlay = RowPicker($"WeatherLook_Overlay_{look.WeatherId}", ViewModel.OverlayChoices(look.Overlay), look.Overlay, value => look.Overlay = value, 150);
+        _overlayPickers[look] = overlay;
         var music = RowPicker($"WeatherLook_Music_{look.WeatherId}", ViewModel.MusicChoices(look.Music), look.Music, value => look.Music = value, 150);
         Ui.Label((overlay, look.OverlayLabel), (music, look.MusicLabel));
         return Ui.HStack(8, new TextBlock { Text = look.WeatherName, Width = 90, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
-            Ui.Text("Overlay", "muted", "small"), overlay, Ui.Text("Music", "muted", "small"), music);
+            Ui.Text(EditorStrings.Get("settings.overlay"), "muted", "small"), overlay, Ui.Text(EditorStrings.Get("common.music"), "muted", "small"), music);
     }
 
     private Control LookRow(LookDraft look)
@@ -402,12 +473,12 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var daylight = Box($"Look_Daylight_{key}", nameof(LookDraft.Daylight), 220, look);
         daylight.AcceptsReturn = true;
         daylight.MinHeight = 54;
-        daylight.PlaceholderText = look.SeasonId is null ? "built-in day and night" : "the look of all seasons";
+        daylight.PlaceholderText = EditorStrings.Get(look.SeasonId is null ? "settings.builtinSky" : "settings.allSeasonsSky");
         var foliage = Box($"Look_Foliage_{key}", nameof(LookDraft.FoliageTint), 90, look);
         foliage.PlaceholderText = "#rrggbb";
         Ui.Label((daylight, look.DaylightLabel), (foliage, look.FoliageTintLabel));
         return Ui.HStack(8, new TextBlock { Text = look.What, Width = 90, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top },
-            Ui.VStack(3, Ui.Text("Daylight", "muted", "small"), daylight), Ui.VStack(3, Ui.Text("Foliage tint", "muted", "small"), foliage));
+            Ui.VStack(3, Ui.Text(EditorStrings.Get("common.daylight"), "muted", "small"), daylight), Ui.VStack(3, Ui.Text(EditorStrings.Get("common.foliageTint"), "muted", "small"), foliage));
     }
 
     private void ShowWeather()

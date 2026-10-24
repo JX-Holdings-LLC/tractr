@@ -159,6 +159,8 @@ pub enum ScreenKind {
     SaveSlots,
     NewGameSlots,
     Confirm,
+    /// The character creator of a new game (M4).
+    Creator,
 }
 
 /// How a player is set up.
@@ -246,6 +248,8 @@ enum Screen {
     Credits,
     Slots(SlotsMode),
     Confirm(Confirmation),
+    /// The character creator of a new game (M4).
+    Creator,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -290,6 +294,8 @@ pub struct Player {
     game_ui: GameUi,
     settings: Settings,
     settings_screen: SettingsScreen,
+    /// The character creator's answers while it is open (M4).
+    creator: shell::CreatorScreen,
     settings_store: Box<dyn SettingsStore>,
     saves: Box<dyn SaveStore>,
     slots: Vec<SlotInfo>,
@@ -411,6 +417,7 @@ impl Player {
         ui.set_reduced_motion(settings.accessibility.reduced_motion);
         ui.set_readable_font(settings.accessibility.readable_font);
         ui.set_lang(Lang::resolve(&settings.language, options.system_locale.as_deref(), &def.content.settings.locale));
+        let assets = Arc::new(assets);
         let audio = AudioAssets::load(&def.presentation.custom_assets, &assets);
         let mut player = Self {
             mode: options.mode,
@@ -425,6 +432,7 @@ impl Player {
             game_ui: GameUi::new(),
             settings,
             settings_screen: SettingsScreen::default(),
+            creator: shell::CreatorScreen::default(),
             settings_store: options.settings,
             saves: options.saves,
             slots: Vec::new(),
@@ -432,7 +440,7 @@ impl Player {
             router: InputRouter::new(),
             host_view: HostView::default(),
             audio,
-            renderer: FrameRenderer::new(Arc::new(assets)),
+            renderer: FrameRenderer::new(assets),
             ui_list: DrawList::new(),
             world: None,
             planned: Planned::default(),
@@ -583,8 +591,8 @@ impl Player {
         }
     }
 
-    /// The game's own sounds and music, decoded (hosts that fetch samples by id; the assets
-    /// that did not decode).
+    /// The game's own sounds and music (hosts that fetch samples by id; the assets that
+    /// did not decode).
     pub fn audio_assets(&self) -> &AudioAssets {
         &self.audio
     }
@@ -662,6 +670,11 @@ impl Player {
         if playing && !game_modal {
             ui_input.nav.clear();
             ui_input.keys_pressed.clear();
+            ui_input.accept_held = false;
+        }
+        // While a creator's name field takes typing (M4), letters are letters, not navigation.
+        if self.screens.last() == Some(&Screen::Creator) && self.creator.editing.is_some() {
+            ui_input.nav.clear();
             ui_input.accept_held = false;
         }
         self.build_world(width, height);
@@ -768,8 +781,8 @@ impl Player {
                 SessionEvent::Sound { cue } => {
                     if gain > 0.0 {
                         // The game's sound asset of that id (M2), else the built-in cue.
-                        let clip = self.audio.sound(&cue).cloned();
-                        self.sounds.push(SoundRequest { cue, gain, clip });
+                        let file = self.audio.sound(&cue).cloned();
+                        self.sounds.push(SoundRequest { cue, gain, file });
                     }
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
@@ -791,8 +804,8 @@ impl Player {
     fn ui_sound(&mut self) {
         let gain = self.settings.audio.effects_gain();
         if gain > 0.0 {
-            let clip = self.audio.sound("ui").cloned();
-            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6, clip });
+            let file = self.audio.sound("ui").cloned();
+            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6, file });
         }
     }
 
@@ -813,12 +826,10 @@ impl Player {
         let scene = session.current_scene()?;
         let (ix, iy) = session.interpolated_player();
         let (px, py) = (PADDING + (ix - 0.5) * TILE_SIZE, PADDING + (iy - 0.5) * TILE_SIZE);
-        // A cutscene's camera (M2) looks where it pans; otherwise the camera follows the player.
-        let target = match session.cutscene_view().and_then(|view| view.camera) {
-            Some(camera) => (
-                PADDING + units::position_to_tiles(camera.x) * TILE_SIZE,
-                PADDING + units::position_to_tiles(camera.y) * TILE_SIZE,
-            ),
+        // A cutscene's camera (M2) looks where it pans, between ticks like the player; otherwise
+        // the camera follows the player.
+        let target = match session.interpolated_camera() {
+            Some((x, y)) => (PADDING + x * TILE_SIZE, PADDING + y * TILE_SIZE),
             None => (px + TILE_SIZE / 2.0, py + TILE_SIZE / 2.0),
         };
         let world = session.world_size();
@@ -1040,6 +1051,7 @@ impl Player {
                 let view = confirm_view(kind, self.ui.lang());
                 shell::confirm(&mut self.ui, &view)
             }
+            Some(Screen::Creator) => shell::creator(&mut self.ui, &mut self.creator, &mut self.renderer.ui_images),
         };
         self.game_ui.draw_toasts(&mut self.ui);
         self.ui_list = self.ui.end_frame();
@@ -1239,6 +1251,18 @@ impl Player {
             }
             ShellAction::SettingsChanged => self.apply_settings(),
             ShellAction::StartCapture(_) | ShellAction::CancelCapture => {}
+            ShellAction::FinishCreator => {
+                let command = farm_sim::Command::SetPlayerLook {
+                    name: self.creator.name.clone(),
+                    farm_name: self.creator.farm.clone(),
+                    look: self.creator.look(),
+                };
+                if let Some(game) = self.game.as_mut() {
+                    game.session.run_command(&command);
+                }
+                self.screens.retain(|screen| *screen != Screen::Creator);
+                self.drain_session_events();
+            }
         }
     }
 
@@ -1286,6 +1310,15 @@ impl Player {
     fn start_game(&mut self, slot: u32) {
         let session = PlaySession::new_game(self.def.content.clone(), &self.def.start, self.seed.as_deref());
         self.attach(session, slot, 0.0);
+        // A game that asks for its player's name and colours (M4) waits behind the creator.
+        if self.def.content.settings.character_creator == Some(true) {
+            let player = &self.def.start.player;
+            self.creator = shell::CreatorScreen::new(
+                player.name.as_deref().unwrap_or_default(),
+                player.farm_name.as_deref().unwrap_or_default(),
+            );
+            self.screens.push(Screen::Creator);
+        }
     }
 
     fn quit_to_title(&mut self) {
@@ -1484,6 +1517,7 @@ impl Player {
             Some(Screen::Slots(SlotsMode::Save)) => ScreenKind::SaveSlots,
             Some(Screen::Slots(SlotsMode::NewGame)) => ScreenKind::NewGameSlots,
             Some(Screen::Confirm(_)) => ScreenKind::Confirm,
+            Some(Screen::Creator) => ScreenKind::Creator,
         }
     }
 

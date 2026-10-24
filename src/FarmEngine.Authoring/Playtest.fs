@@ -68,8 +68,8 @@ module Playtest =
         if natural.Id <> season || naturalDay <> kept then Some(JNumber kept) else None
 
     /// What the project's own fields do not hold (Rust `KeptState::of_state`): the tick, today's
-    /// shop purchases, an open dialogue, shop or minigame, NPC walks and the mine floor; absent
-    /// when there is nothing to carry.
+    /// shop purchases, an open dialogue, shop or minigame, a cutscene that is playing, NPC walks
+    /// and the mine floor; absent when there is nothing to carry.
     let private keptState (state: Json) : Json option =
         let present (key: string) (value: Json) = if Json.isNullish value then [] else [ key, value ]
         let npcs =
@@ -87,11 +87,20 @@ module Playtest =
             | _ -> JObject []
         let tick = Json.get "tick" (Json.get "clock" state) |> Json.orElse (JNumber 0.0)
         let floor = Json.get "currentFloor" (Json.get "mine" state) |> Json.orElse (JNumber 0.0)
-        let sessions = present "dialogue" (Json.get "dialogue" state) @ present "shop" (Json.get "shop" state) @ present "minigame" (Json.get "minigame" state)
-        if tick = JNumber 0.0 && purchases = JObject [] && sessions.IsEmpty && npcs.IsEmpty && floor = JNumber 0.0 then
+        let sessions =
+            [ "dialogue"; "shop"; "minigame"; "cutscene"; "music" ] |> List.collect (fun key -> present key (Json.get key state))
+        // The player's children and the shops' changed stock (M3, M4), when there are any.
+        let family =
+            [ match Json.get "children" state with
+              | JArray (_ :: _) as children -> "children", children
+              | _ -> ()
+              match Json.get "shopChanges" state with
+              | JObject (_ :: _) as changes -> "shopChanges", changes
+              | _ -> () ]
+        if tick = JNumber 0.0 && purchases = JObject [] && sessions.IsEmpty && npcs.IsEmpty && floor = JNumber 0.0 && family.IsEmpty then
             None
         else
-            Some(JObject([ "tick", tick; "shopPurchasesToday", purchases ] @ sessions @ [ "npcs", JObject npcs; "mineCurrentFloor", floor ]))
+            Some(JObject([ "tick", tick; "shopPurchasesToday", purchases ] @ sessions @ [ "npcs", JObject npcs; "mineCurrentFloor", floor ] @ family))
 
     /// The project JSON with the state written back. Flag values go back as they are (plugins
     /// store numbers and strings), and keys keep their places.
@@ -107,7 +116,12 @@ module Playtest =
             |> setAll
                 ([ for key in [ "x"; "y"; "direction"; "sceneId"; "inventory"; "maxInventorySize"; "money"; "energy"; "maxEnergy"; "skills"; "activeQuests"; "completedQuests" ] ->
                        key, Some(Json.get key player) ]
-                 @ [ "equippedTool", Json.tryGet "equippedTool" player |> Option.filter (Json.isNullish >> not) ])
+                 @ [ "equippedTool", Json.tryGet "equippedTool" player |> Option.filter (Json.isNullish >> not)
+                     // The player character (M4): an empty name and no clothes are absent.
+                     "name", Json.tryGet "name" player |> Option.filter (fun name -> name <> JString "" && not (Json.isNullish name))
+                     "farmName", Json.tryGet "farmName" player |> Option.filter (fun name -> name <> JString "" && not (Json.isNullish name))
+                     "look", Json.tryGet "look" player |> Option.filter (Json.isNullish >> not)
+                     "worn", Json.tryGet "worn" player |> Option.filter (fun worn -> worn <> JArray [] && not (Json.isNullish worn)) ])
         project
         |> Json.set "scenes" (Json.get "scenes" (Json.get "world" state))
         |> mapArray "npcs" (npc (Json.get "npcs" state))

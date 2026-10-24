@@ -98,6 +98,8 @@ module Document =
         | RemoveCropMutation mutationId -> EditContent.removeCropMutation mutationId project
         | UpsertCutscene cutscene -> EditContent.upsertCutscene cutscene project
         | RemoveCutscene cutsceneId -> EditContent.removeCutscene cutsceneId project
+        | UpsertHeartEvent heartEvent -> EditContent.upsertHeartEvent heartEvent project
+        | RemoveHeartEvent heartEventId -> EditContent.removeHeartEvent heartEventId project
         | SetWeather config -> EditContent.setWeather config project
         | SetWeatherWeight(seasonId, weatherId, weight) -> EditContent.setWeatherWeight seasonId weatherId weight project
         | SetMine config -> EditContent.setMine config project
@@ -112,6 +114,7 @@ module Document =
         | BindVisual(target, visual) -> EditProject.bindVisual target visual project
         | UpsertAsset asset -> EditProject.upsertAsset asset project
         | RemoveAsset assetId -> EditProject.removeAsset assetId project
+        | RenameAsset(assetId, name) -> EditProject.renameAsset assetId name project
         | SetFrameTicks(assetId, clip, frame, ticks) -> EditProject.setFrameTicks assetId clip frame ticks project
         | DuplicateFrame(assetId, clip, frame) -> EditProject.duplicateFrame assetId clip frame project
         | InstallPack pack -> EditProject.installPack pack project

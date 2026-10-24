@@ -138,6 +138,9 @@ type Edit =
     | RemoveCropMutation of mutationId: string
     | UpsertCutscene of cutscene: Cutscene
     | RemoveCutscene of cutsceneId: string
+    /// Heart events (M4).
+    | UpsertHeartEvent of heartEvent: HeartEvent
+    | RemoveHeartEvent of heartEventId: string
     | SetWeather of config: WeatherConfig
     /// ProjectSettingsEditor weather table: a weight of 0 removes the entry.
     | SetWeatherWeight of seasonId: string * weatherId: string * weight: float
@@ -164,6 +167,9 @@ type Edit =
     | UpsertAsset of asset: CustomAsset
     /// AssetManager "Remove unused art": here every binding that pointed at it is cleared instead.
     | RemoveAsset of assetId: string
+    /// Art studio and the sound list: an asset's display name (trimmed; a blank name is refused).
+    /// The id stays, so every binding, `soundId` and music field that names it still does.
+    | RenameAsset of assetId: string * name: string
     /// AssetManager frame timing: one frame's duration in ticks, or every frame's when `frame` is
     /// `None` (20 ticks = 1 second; at least 1).
     | SetFrameTicks of assetId: string * clip: string * frame: int option * ticks: int

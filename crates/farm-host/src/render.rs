@@ -6,11 +6,14 @@
 //! - [`HostPreview`]: Edit Mode's map. It keeps the project, its compiled content, the image
 //!   caches and the decorated snapshot of the scene on screen between frames, and rasterizes one
 //!   scene viewport (or one visual binding, for the art studio) per call into premultiplied
-//!   RGBA8. Edits that only change scenes (painting) arrive as those scenes alone
+//!   RGBA8, optionally under the sky preview (a time of day, season and weather). Edits that only change scenes (painting) arrive as those scenes alone
 //!   ([`HostPreview::set_scenes`]), without the rest of the project and its art.
 
 use crate::{view_json, Rgba};
-use farm_render::{apply_graphics, editor_snapshot, GraphicsSource, SnapshotCamera, WorldRenderer, WorldSnapshot};
+use farm_render::{
+    apply_graphics, editor_snapshot, preview_atmosphere, GraphicsSource, SkyPreview, SnapshotCamera, WorldRenderer,
+    WorldSnapshot,
+};
 use farm_sim::schema::{GameContent, GameProject};
 use serde::Deserialize;
 
@@ -65,7 +68,7 @@ enum RenderRequest {
     },
 }
 
-/// `{sceneId, tileSize, padding, camera?, scale}` for [`HostPreview::render`].
+/// `{sceneId, tileSize, padding, camera?, sky?, scale}` for [`HostPreview::render`].
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PreviewRequest {
@@ -76,6 +79,9 @@ struct PreviewRequest {
     padding: f64,
     #[serde(default)]
     camera: Option<SnapshotCamera>,
+    /// The sky preview: the scene under a time of day, season and weather, as play draws it.
+    #[serde(default)]
+    sky: Option<SkyPreview>,
     #[serde(default = "default_scale")]
     scale: f64,
 }
@@ -311,12 +317,25 @@ impl HostPreview {
     }
 
     /// Renders a scene: `{"sceneId":"…","tileSize":28,"padding":12,"camera":{"x":…,"y":…,
-    /// "width":…,"height":…},"scale":1}` (`camera` optional: the whole scene), as premultiplied
-    /// RGBA8.
+    /// "width":…,"height":…},"sky":{"timeMinutes":…,"season":"…","weatherId":"…"},"scale":1}`
+    /// (`camera` optional: the whole scene; `sky` optional: no day/night tint, foliage tint or
+    /// weather), as premultiplied RGBA8.
     pub fn render(&mut self, request: &[u8]) -> Result<Rgba, String> {
         let request: PreviewRequest = serde_json::from_slice(request).map_err(|e| format!("preview request: {e}"))?;
         check_layout(request.tile_size, request.padding)?;
         check_camera(request.camera.as_ref())?;
+        let atmosphere = match &request.sky {
+            Some(sky) => {
+                let scene = self
+                    .project
+                    .scenes
+                    .iter()
+                    .find(|scene| scene.id == request.scene_id)
+                    .ok_or_else(|| format!("Scene {} not found.", request.scene_id))?;
+                Some(preview_atmosphere(&self.project, &self.content, scene, sky))
+            }
+            None => None,
+        };
         let key = (request.scene_id, request.tile_size.to_bits(), request.padding.to_bits());
         let snapshot = match &mut self.snapshot {
             Some((cached, snapshot)) if *cached == key => snapshot,
@@ -332,8 +351,9 @@ impl HostPreview {
                 &mut slot.insert((key, snapshot)).1
             }
         };
-        // Only the camera viewport is culled, translated and rasterized.
+        // Only the camera viewport is culled, translated and rasterized; the sky changes no tile.
         snapshot.camera = request.camera;
+        snapshot.atmosphere = atmosphere;
         Ok(rgba(render(&mut self.renderer, snapshot, request.scale)?))
     }
 
@@ -464,6 +484,43 @@ mod tests {
         }
         let request = format!(r#"{{"type":"editorSnapshot","project":{project},"sceneId":"{scene}","tileSize":0}}"#);
         assert!(render_json(request.as_bytes()).unwrap_err().contains("Tile size"));
+    }
+
+    #[test]
+    fn the_sky_preview_draws_the_scene_under_the_time_season_and_weather() {
+        let path: std::path::PathBuf =
+            [env!("CARGO_MANIFEST_DIR"), "..", "..", "fixtures", "golden", "content", "starter-farm.json"]
+                .iter()
+                .collect();
+        let fixture: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let project = &fixture["project"];
+        let scene_id = project["player"]["sceneId"].as_str().unwrap();
+        let mut preview = HostPreview::new(project.to_string().as_bytes()).unwrap();
+        let render = |preview: &mut HostPreview, sky: &str| {
+            let request = format!(r#"{{"sceneId":"{scene_id}","tileSize":28,"padding":12{sky},"scale":1}}"#);
+            preview.render(request.as_bytes())
+        };
+        let off = render(&mut preview, "").unwrap();
+        let night = render(&mut preview, r#","sky":{"timeMinutes":1320,"season":"spring"}"#).unwrap();
+        assert_ne!(night, off, "the night tint");
+        // Midday in clear weather leaves the built-in look untinted.
+        assert_eq!(render(&mut preview, r#","sky":{"timeMinutes":720,"season":"spring"}"#).unwrap(), off);
+        let rain = render(&mut preview, r#","sky":{"timeMinutes":720,"season":"spring","weatherId":"rain"}"#).unwrap();
+        assert_ne!(rain, off, "rain and its tint");
+        // Turning the sky off again draws the plain map.
+        assert_eq!(render(&mut preview, "").unwrap(), off);
+
+        // The pixels of the editor snapshot under the atmosphere play resolves.
+        let parsed: GameProject = serde_json::from_value(project.clone()).unwrap();
+        let content = farm_sim::create_content_from_project(&parsed);
+        let graphics = GraphicsSource::from_project(&parsed);
+        let scene = parsed.scenes.iter().find(|scene| scene.id == scene_id).unwrap();
+        let mut snapshot = decorated_editor_snapshot(&parsed, &content, &graphics, scene_id, 28.0, 12.0).unwrap();
+        snapshot.atmosphere = Some(farm_render::scene_atmosphere(&content, scene, 720.0, "spring", Some("rain")));
+        assert_eq!(rgba(super::render(&mut WorldRenderer::new(), &snapshot, 1.0).unwrap()), rain);
+
+        let missing = br#"{"sceneId":"nowhere","sky":{"timeMinutes":0}}"#;
+        assert_eq!(preview.render(missing).unwrap_err(), "Scene nowhere not found.");
     }
 
     #[test]

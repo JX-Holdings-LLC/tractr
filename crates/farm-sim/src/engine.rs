@@ -6,15 +6,15 @@ use crate::effects::{message_levels, Effect};
 use crate::engine_types::{CommandRules, Effects, EngineContext};
 use crate::farming::farming_actions;
 use crate::game_time::SleepOptions;
-use crate::hooks::{CommandHookPayload, HookEvent, RelationshipChangeHookPayload};
+use crate::hooks::{CommandHookPayload, HookEvent};
 use crate::messages;
 use crate::npcs::npc_movement;
-use crate::schema::{EventOutcome, GameState, MoveIntent, NpcSocialState, OutcomeKind, PluginMutation, MAX_FRIENDSHIP};
+use crate::schema::{event_triggers, EventOutcome, GameState, MoveIntent, OutcomeKind, PluginMutation};
 use crate::units;
 use crate::world::world_movement;
 use crate::{
     crafting, cutscenes, dialogue_system, economy, energy, events, extensibility, game_time, inventory, mines, skills,
-    social, weather,
+    social, wardrobe, weather,
 };
 
 /// Simulation runs at a fixed rate; rendering interpolates between ticks.
@@ -77,6 +77,9 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
         Command::AdvanceCutscene => cutscenes::handle_advance(ctx, state),
         Command::ChooseCutsceneOption { index } => cutscenes::handle_choose(ctx, state, *index),
         Command::SkipCutscene => cutscenes::handle_skip(ctx, state),
+        Command::WearItem { item_id } => wardrobe::handle_wear(ctx, state, item_id),
+        Command::TakeOff { slot } => wardrobe::handle_take_off(state, slot),
+        Command::SetPlayerLook { name, farm_name, look } => wardrobe::handle_set_look(state, name, farm_name, look),
         Command::PluginMutation { plugin_id, mutation } => apply_plugin_mutation(ctx, state, plugin_id, mutation),
     }
 }
@@ -111,6 +114,7 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
     }
     match command {
         Command::DescendMine { floor } => mines::descend_refusal(ctx, state, *floor),
+        Command::SetPlayerLook { .. } => wardrobe::set_look_refusal(state),
         Command::ExitMine => mines::exit_refusal(state),
         Command::AdvanceCutscene => cutscenes::advance_refusal(ctx, state),
         Command::ChooseCutsceneOption { index } => cutscenes::choose_refusal(ctx, state, *index),
@@ -234,15 +238,8 @@ fn apply_plugin_mutation(
 
 /// `modifyFriendship` from a plugin: whole points, clamped to the friendship range.
 fn plugin_modify_friendship(ctx: &EngineContext, state: &mut GameState, npc_id: &str, delta: i32) -> Effects {
-    let current = state.social.get(npc_id).cloned().unwrap_or(NpcSocialState {
-        friendship: 0,
-        gifts_today: 0,
-        last_gift_day: None,
-    });
-    let friendship = current.friendship.saturating_add(delta).clamp(0, MAX_FRIENDSHIP);
-    state.social.insert(npc_id.to_owned(), NpcSocialState { friendship, ..current });
-    ctx.emit(HookEvent::RelationshipChange(RelationshipChangeHookPayload { npc_id: npc_id.to_owned(), friendship }));
-    vec![]
+    let friendship = social::friendship_with(state, npc_id).saturating_add(delta);
+    social::set_friendship(ctx, state, npc_id, friendship)
 }
 
 /// `modifyEnergy` from a plugin: a loss spends energy (and can collapse the player), a gain
@@ -308,6 +305,13 @@ fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
         advance_npcs_per_minute(ctx, state, before_minute, after_minute);
         crafting::settle_machines(ctx, state);
         effects.extend(events::evaluate_events(ctx, state, "tick", None));
+        // `time` events whose minute the clock just reached (M3).
+        let span = (before_minute.saturating_mul(units::MINUTE), after_minute.saturating_mul(units::MINUTE));
+        effects.extend(events::fire_trigger(
+            ctx,
+            state,
+            &events::Trigger { kind: event_triggers::TIME, span: Some(span), ..events::Trigger::default() },
+        ));
     }
 
     if u64::from(state.clock.time_minutes) >= u64::from(time.day_end_minute) * u64::from(units::MINUTE) {

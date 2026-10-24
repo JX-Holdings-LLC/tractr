@@ -114,7 +114,7 @@ module SampleProjects =
               Options =
                 [ { DialogueOption.Default with Text = "I will help."; OfferQuestId = Some "quest-rebuild-square" }
                   { DialogueOption.Default with Text = "Maybe later." } ]
-              Extra = [] }
+              Expression = None; Extra = [] }
         let elder : Npc =
             { Npc.Default with
                 Id = "npc-elder"; Name = "Elder Rowan"; X = 8.0; Y = 4.0; SceneId = "scene-square"
@@ -123,7 +123,7 @@ module SampleProjects =
             { Id = "dialogue-keeper-lanterns"; NpcId = "npc-keeper"
               Text = "When the square is rebuilt, I will hang the lanterns again. Grow wheat for the feast, and the whole village will come."
               Options = [ { DialogueOption.Default with Text = "I'll do my part." } ]
-              Extra = [] }
+              Expression = None; Extra = [] }
         let keeper : Npc =
             { Npc.Default with
                 Id = "npc-keeper"; Name = "Lantern Keeper Ivy"; X = 12.0; Y = 7.0; SceneId = "scene-square"

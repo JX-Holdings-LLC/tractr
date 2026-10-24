@@ -189,16 +189,22 @@ fn opens_dialogue_when_interacting_with_an_npc() {
     state.player.y = units::tiles(2);
     state.player.direction = "up".to_owned();
     engine::apply_command(&ctx, &mut state, &Command::Interact);
-    assert_eq!(state.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() }));
+    assert_eq!(
+        state.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None })
+    );
 }
 
 #[test]
 fn applies_option_rewards_and_follows_next_dialogue_id() {
     let (ctx, mut state) = engine_state("engine-test");
-    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     engine::apply_command(&ctx, &mut state, &Command::ChooseDialogueOption { index: 1 });
     assert_eq!(state.player.money, 125);
-    assert_eq!(state.dialogue, Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned() }));
+    assert_eq!(
+        state.dialogue,
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-2".to_owned(), line: None })
+    );
 
     engine::apply_command(&ctx, &mut state, &Command::ChooseDialogueOption { index: 0 });
     assert_eq!(state.dialogue, None);
@@ -207,7 +213,7 @@ fn applies_option_rewards_and_follows_next_dialogue_id() {
 #[test]
 fn close_dialogue_clears_dialogue_state() {
     let (ctx, mut state) = engine_state("engine-test");
-    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     engine::apply_command(&ctx, &mut state, &Command::CloseDialogue);
     assert_eq!(state.dialogue, None);
 }
@@ -448,7 +454,8 @@ fn a_day_end_the_clock_cannot_reach_falls_back_to_the_default_window() {
 fn sleeping_closes_an_open_minigame() {
     let (ctx, mut game_state) = engine_state("sleep-minigame");
     game_state.minigame = Some(MinigameSession { minigame_id: "mg".to_owned(), context: Default::default() });
-    game_state.dialogue = Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned() });
+    game_state.dialogue =
+        Some(DialogueState { npc_id: "npc-test".to_owned(), dialogue_id: "dlg-1".to_owned(), line: None });
     farm_sim::game_time::perform_sleep(&ctx, &mut game_state, farm_sim::game_time::SleepOptions::default());
     assert!(game_state.minigame.is_none());
     assert!(game_state.dialogue.is_none());
@@ -509,7 +516,7 @@ fn npcs_take_a_step_per_minute_at_fast_clock_rates() {
 
 #[test]
 fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
-    use farm_sim::schema::{GridPoint, ShopSession};
+    use farm_sim::schema::{CutsceneState, GridPoint, ShopSession};
     let project = make_project();
     let mut game_state = state::create_game_state(&project, Some("keep"));
     game_state.flags.insert("count".to_owned(), serde_json::json!(3));
@@ -519,6 +526,15 @@ fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
     game_state.shop = Some(ShopSession { shop_id: "shop-general".to_owned() });
     game_state.shop_purchases_today.insert("shop-general".to_owned(), [("seed-wheat".to_owned(), 4)].into());
     game_state.mine.current_floor = 2;
+    // A cutscene halfway through, the NPC it turned facing left.
+    game_state.cutscene = Some(CutsceneState {
+        cutscene_id: "intro".to_owned(),
+        step: 2,
+        started: true,
+        elapsed: 7,
+        facing: [("npc-test".to_owned(), "left".to_owned())].into_iter().collect(),
+        ..CutsceneState::default()
+    });
     let npc = game_state.npcs.get_mut("npc-test").unwrap();
     npc.path = Some(vec![GridPoint { x: 2, y: 1 }]);
     npc.patrol_index = Some(1);
@@ -531,6 +547,7 @@ fn keep_changes_carries_flags_and_the_live_state_into_the_next_playtest() {
     assert_eq!(next.shop, game_state.shop);
     assert_eq!(next.shop_purchases_today, game_state.shop_purchases_today);
     assert_eq!(next.mine.current_floor, 2);
+    assert_eq!(next.cutscene, game_state.cutscene, "the cutscene goes on where it was");
     assert_eq!(next.npcs["npc-test"], game_state.npcs["npc-test"]);
 
     // The JSON write-back keeps the project's key order (a removed key no longer swaps the last

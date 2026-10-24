@@ -311,6 +311,20 @@ catalog! {
     GIFT_DISLIKED = "msg.gift.disliked" => "They don't seem thrilled\u{2026}";
     GIFT_HATED = "msg.gift.hated" => "They hate it!";
     GIFT_BIRTHDAY = "msg.gift.birthday" => " (Birthday!)";
+    // Relationships (M4).
+    NOT_READY_TO_DATE = "msg.notReadyToDate" => "{0} isn't ready for that yet.";
+    NOW_DATING = "msg.nowDating" => "You and {0} are dating now!";
+    NOW_ENGAGED = "msg.nowEngaged" => "{0} said yes! The wedding is in {1} days.";
+    ALREADY_TAKEN = "msg.alreadyTaken" => "You're already with someone.";
+    WEDDING_DAY = "msg.weddingDay" => "Today you marry {0}!";
+    SPOUSE_WATERED = "msg.spouseWatered" => "{0} watered the crops this morning.";
+    SPOUSE_FED = "msg.spouseFed" => "{0} fed the animals this morning.";
+    SPOUSE_GIFT = "msg.spouseGift" => "{0} made you {1}.";
+    CHILD_BORN = "msg.childBorn" => "Welcome to the family, {0}!";
+    // Clothing (M4).
+    PUT_ON = "msg.putOn" => "You put on {0}.";
+    TOOK_OFF = "msg.tookOff" => "You took off {0}.";
+    CANT_WEAR = "msg.cantWear" => "{0} isn't something to wear.";
     // The world.
     LANDED_ELSEWHERE = "msg.landedElsewhere" => "({0},{1}) in {2} can't be stood on; landed on ({3},{4}) instead.";
     ENTERED = "msg.entered" => "Entered {0}";

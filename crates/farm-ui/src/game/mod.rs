@@ -168,7 +168,7 @@ impl GameUi {
             None => {}
         }
         // Under the dialogue, shop or minigame a cutscene step opened.
-        cutscene::draw(ui, view, &mut actions);
+        cutscene::draw(ui, view, images, &mut actions);
         shop::draw(ui, view, &mut self.shop_tab, &mut actions);
         dialogue::draw(ui, view, images, &mut actions);
         minigame::draw(ui, view, images, &mut actions);

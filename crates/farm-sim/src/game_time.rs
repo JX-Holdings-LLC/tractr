@@ -284,6 +284,13 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
         }
     }
     announce_new_day(ctx, &next, &previous_season, previous_year, &mut effects);
+    // Relationships (M4), then the morning's events (M3).
+    effects.extend(crate::relationships::morning(ctx, state, previous_day));
+    effects.extend(crate::events::fire_trigger(
+        ctx,
+        state,
+        &crate::events::Trigger::about(crate::schema::event_triggers::DAY_START, &[]),
+    ));
     effects
 }
 
