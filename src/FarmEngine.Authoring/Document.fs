@@ -112,6 +112,7 @@ module Document =
         | BindVisual(target, visual) -> EditProject.bindVisual target visual project
         | UpsertAsset asset -> EditProject.upsertAsset asset project
         | RemoveAsset assetId -> EditProject.removeAsset assetId project
+        | RenameAsset(assetId, name) -> EditProject.renameAsset assetId name project
         | SetFrameTicks(assetId, clip, frame, ticks) -> EditProject.setFrameTicks assetId clip frame ticks project
         | DuplicateFrame(assetId, clip, frame) -> EditProject.duplicateFrame assetId clip frame project
         | InstallPack pack -> EditProject.installPack pack project

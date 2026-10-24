@@ -21,6 +21,8 @@ pub mod desktop;
 pub mod input;
 pub mod player;
 pub mod plugins;
+#[cfg(feature = "audio-out")]
+pub mod preview;
 pub mod render;
 pub mod saves;
 pub mod script;

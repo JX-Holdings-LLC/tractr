@@ -22,7 +22,7 @@ internal static unsafe partial class NativeMethods
     public const string Library = "farm_ffi";
 
     /// <summary>The <c>FE_ABI_VERSION</c> these declarations were written for (<c>crates/farm-ffi/src/lib.rs</c>).</summary>
-    public const uint AbiVersion = 3;
+    public const uint AbiVersion = 4;
 
     /// <summary>A Rust-allocated buffer (<c>FeBytes</c>). Free with <see cref="fe_bytes_free"/>.</summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -220,4 +220,21 @@ internal static unsafe partial class NativeMethods
 
     [LibraryImport(Library, EntryPoint = "fe_player_free")]
     private static partial void fe_player_free(nint player);
+
+    // ---- crates/farm-ffi/src/audio.rs -------------------------------------------------------
+
+    [LibraryImport(Library, EntryPoint = "fe_audio_output")]
+    public static partial byte fe_audio_output();
+
+    [LibraryImport(Library, EntryPoint = "fe_audio_probe")]
+    public static partial FeResult fe_audio_probe(byte* bytes, nuint len, FeBytes* output);
+
+    [LibraryImport(Library, EntryPoint = "fe_audio_preview_play")]
+    public static partial FeResult fe_audio_preview_play(byte* bytes, nuint len, FeBytes* output);
+
+    [LibraryImport(Library, EntryPoint = "fe_audio_preview_stop")]
+    public static partial void fe_audio_preview_stop();
+
+    [LibraryImport(Library, EntryPoint = "fe_audio_preview_playing")]
+    public static partial byte fe_audio_preview_playing();
 }

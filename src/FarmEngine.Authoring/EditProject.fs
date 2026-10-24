@@ -83,6 +83,16 @@ module internal EditProject =
         | Some assets -> { project with CustomAssets = assets }
         | None -> project
 
+    /// An asset's display name, trimmed; blank names and unknown ids are no-ops. Nothing refers
+    /// to an asset by name (bindings, sounds and music name its id), so nothing else changes.
+    let renameAsset (assetId: string) (name: string) (project: GameProject) =
+        let name = name.Trim()
+        if name.Length = 0 then project
+        else
+            match Lists.mapChanged (fun (a: CustomAsset) -> if a.Id = assetId && a.Name <> name then { a with Name = name } else a) project.CustomAssets with
+            | Some assets -> { project with CustomAssets = assets }
+            | None -> project
+
     /// Replace the frames of one clip of one asset; the same project when nothing changed.
     let private mapClipFrames (assetId: string) (clipName: string) (f: ArtFrame list -> ArtFrame list option) (project: GameProject) =
         let mapClip (clip: AnimationClip) =
