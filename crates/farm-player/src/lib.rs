@@ -15,6 +15,7 @@
 
 pub mod audio;
 pub mod audio_assets;
+pub mod audio_stream;
 #[cfg(feature = "desktop")]
 pub mod desktop;
 pub mod input;
@@ -27,9 +28,9 @@ pub mod session;
 #[cfg(feature = "audio-out")]
 pub mod speaker;
 
-pub use audio::{ClipCache, LoopRequest, Mixer, MusicBank, SoundBank, SoundRequest, Voice};
+pub use audio::{ClipCache, LoopRequest, Mixer, MusicBank, Samples, SoundBank, SoundRequest, Voice};
 pub use audio_assets::AudioAssets;
-pub use farm_runtime::audio::Clip;
+pub use farm_runtime::audio::{AudioFile, Clip};
 pub use farm_runtime::music::{MusicAsset, MusicCue};
 pub use farm_ui::{GamepadButton, Settings};
 pub use input::{FrameInput, GamepadAxis, InputEvent, InputRouter, PointerButton};

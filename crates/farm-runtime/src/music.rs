@@ -16,7 +16,7 @@
 //! calls for, and a cue carries it ([`MusicCue::with_asset`]) for the host to loop instead of
 //! the built-in music. The built-in music stays the default, and the ambience plays either way.
 
-use crate::audio::Clip;
+use crate::audio::AudioFile;
 use farm_sim::game_time;
 use farm_sim::schema::{GameContent, GameState};
 use farm_sim::units;
@@ -46,12 +46,12 @@ pub struct MusicCue {
     pub ambience_gain: f32,
 }
 
-/// A decoded music asset: its id (hosts that fetch the samples themselves ask for it by id)
-/// and its samples.
+/// A music asset: its id (hosts that fetch the samples themselves ask for it by id) and its
+/// file, which hosts decode while it plays.
 #[derive(Debug, Clone, PartialEq)]
 pub struct MusicAsset {
     pub id: Arc<str>,
-    pub clip: Clip,
+    pub file: AudioFile,
 }
 
 /// Ambience plays a little under the music.
@@ -523,8 +523,14 @@ mod tests {
 
     #[test]
     fn cues_carry_a_music_asset_unless_silent() {
-        let clip = Clip { sample_rate: 8000, channels: 1, samples: Arc::from(vec![0.0f32; 8]) };
-        let asset = MusicAsset { id: Arc::from("song"), clip };
+        let file = |bytes: Vec<u8>| AudioFile {
+            sample_rate: 8000,
+            channels: 1,
+            frames: 8,
+            bytes: Arc::new(bytes),
+            decoded: None,
+        };
+        let asset = MusicAsset { id: Arc::from("song"), file: file(vec![1, 2, 3]) };
         let cue = MusicCue::new(Some(MUSIC_DAY), Some(AMBIENCE_BIRDS), 0.5).with_asset(Some(asset.clone()));
         assert_eq!(cue.asset.as_ref(), Some(&asset));
         assert_eq!(
@@ -533,9 +539,10 @@ mod tests {
             "the fallback and ambience stay"
         );
         assert_eq!(MusicCue::new(Some(MUSIC_DAY), None, 0.0).with_asset(Some(asset)), MusicCue::default());
-        // Clips compare by identity: equal samples in another buffer are another clip.
-        let other = Clip { sample_rate: 8000, channels: 1, samples: Arc::from(vec![0.0f32; 8]) };
-        assert_ne!(cue.asset.unwrap().clip, other);
+        // Files compare by identity: the same bytes in another buffer are another file.
+        let asset = cue.asset.unwrap();
+        assert_eq!(asset.file, asset.file.clone());
+        assert_ne!(asset.file, file(vec![1, 2, 3]));
     }
 
     #[test]

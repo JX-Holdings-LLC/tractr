@@ -411,6 +411,7 @@ impl Player {
         ui.set_reduced_motion(settings.accessibility.reduced_motion);
         ui.set_readable_font(settings.accessibility.readable_font);
         ui.set_lang(Lang::resolve(&settings.language, options.system_locale.as_deref(), &def.content.settings.locale));
+        let assets = Arc::new(assets);
         let audio = AudioAssets::load(&def.presentation.custom_assets, &assets);
         let mut player = Self {
             mode: options.mode,
@@ -432,7 +433,7 @@ impl Player {
             router: InputRouter::new(),
             host_view: HostView::default(),
             audio,
-            renderer: FrameRenderer::new(Arc::new(assets)),
+            renderer: FrameRenderer::new(assets),
             ui_list: DrawList::new(),
             world: None,
             planned: Planned::default(),
@@ -583,8 +584,8 @@ impl Player {
         }
     }
 
-    /// The game's own sounds and music, decoded (hosts that fetch samples by id; the assets
-    /// that did not decode).
+    /// The game's own sounds and music (hosts that fetch samples by id; the assets that
+    /// did not decode).
     pub fn audio_assets(&self) -> &AudioAssets {
         &self.audio
     }
@@ -768,8 +769,8 @@ impl Player {
                 SessionEvent::Sound { cue } => {
                     if gain > 0.0 {
                         // The game's sound asset of that id (M2), else the built-in cue.
-                        let clip = self.audio.sound(&cue).cloned();
-                        self.sounds.push(SoundRequest { cue, gain, clip });
+                        let file = self.audio.sound(&cue).cloned();
+                        self.sounds.push(SoundRequest { cue, gain, file });
                     }
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
@@ -791,8 +792,8 @@ impl Player {
     fn ui_sound(&mut self) {
         let gain = self.settings.audio.effects_gain();
         if gain > 0.0 {
-            let clip = self.audio.sound("ui").cloned();
-            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6, clip });
+            let file = self.audio.sound("ui").cloned();
+            self.sounds.push(SoundRequest { cue: "ui".to_owned(), gain: gain * 0.6, file });
         }
     }
 

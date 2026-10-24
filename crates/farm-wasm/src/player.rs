@@ -209,11 +209,12 @@ impl WasmPlayer {
     /// The decoded samples of the game's own sound or music asset `id` (a frame's sound with
     /// `asset: true`, or its `music.asset`): an {@link AudioClip} at the file's own sample rate;
     /// `undefined` when the game has no such asset or it did not decode (play the built-in sound
-    /// or music then). They never change: cache the `AudioBuffer` per id.
+    /// or music then). They never change: cache the `AudioBuffer` per id (music and long sounds
+    /// are decoded on each call, and the player keeps no decoded copy of them).
     #[wasm_bindgen(js_name = audioClip, unchecked_return_type = "AudioClip | undefined")]
     pub fn audio_clip(&self, id: &str) -> Result<JsValue, JsValue> {
         let _call = enter()?;
-        let Some(clip) = self.player.get().player().audio_assets().clip(id) else { return Ok(JsValue::UNDEFINED) };
+        let Some(clip) = self.player.get().player().audio_assets().decoded(id) else { return Ok(JsValue::UNDEFINED) };
         let result = Object::new();
         set(&result, "sampleRate", clip.sample_rate.into());
         set(&result, "channels", f64::from(clip.channels).into());
