@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using FarmEngine.Authoring;
+using FarmEngine.Schemas;
 using Tractr.App.Localization;
 using Tractr.App.Projects;
 using Tractr.App.ViewModels.EditMode;
@@ -33,6 +34,10 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly ComboBox _mineScene = new() { Name = "Mine_EntranceScene", MinWidth = 220 };
     private readonly ComboBox _exportIcon = new() { Name = "Export_Icon", MinWidth = 260 };
     private readonly ComboBox _exportPixelScale = new() { Name = "Export_PixelScale", MinWidth = 260 };
+    private readonly CheckBox _characterCreator = new() { Name = "Setting_CharacterCreator", Content = "New games open the character creator (name, farm name, colours)" };
+    private readonly CheckBox _relationshipsOn = new() { Name = "Setting_Relationships", Content = "Relationships: friendship decay, dating, marriage, children" };
+    private readonly StackPanel _relationships = new() { Name = "RelationshipSettings", Spacing = 6 };
+    private ContentForm? _relationshipForm;
     private readonly DraftRows<SeasonDraft> _seasonRows;
     private readonly Dictionary<SeasonDraft, (Button Up, Button Down)> _seasonArrows = [];
     private bool _filling;
@@ -149,6 +154,14 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         _mineFields.Children.Add(saveMine);
         form.Children.Add(_mineFields);
         form.Children.Add(Shown("MineMessage", nameof(SettingsViewModel.MineMessage)));
+        form.Children.Add(Ui.Text("PEOPLE", "section"));
+        form.Children.Add(Ui.Wrapped("The player character and the game's relationship rules (M4). Each part is off until it is turned on here; NPCs are romanceable one by one in their own forms.", "muted", "small"));
+        _characterCreator.Click += (_, _) => ViewModel.SetCharacterCreator(_characterCreator.IsChecked == true);
+        _relationshipsOn.Click += (_, _) => ViewModel.SetRelationshipsOn(_relationshipsOn.IsChecked == true);
+        form.Children.Add(_characterCreator);
+        form.Children.Add(_relationshipsOn);
+        form.Children.Add(_relationships);
+        form.Children.Add(Shown("PeopleMessage", nameof(SettingsViewModel.PeopleMessage)));
         form.Children.Add(Ui.Text("EXPORT", "section"));
         form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
         Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
@@ -203,7 +216,39 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         ShowIcons();
         ShowPixelScales();
         ShowExportProblems();
+        ShowPeople();
+        ViewModel.PeopleChanged += ShowPeople;
         ViewModel.PropertyChanged += OnViewModelChanged;
+    }
+
+    /// <summary>The People section from the project: the two switches and, when relationships are on, their rules as a form with Save.</summary>
+    private void ShowPeople()
+    {
+        _characterCreator.IsChecked = ViewModel.CharacterCreator;
+        var relationships = ViewModel.Relationships;
+        _relationshipsOn.IsChecked = relationships is not null;
+        _relationships.Children.Clear();
+        _relationshipForm = null;
+        if (relationships is null || ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _relationshipForm = new ContentForm(project, relationships, typeof(RelationshipSettings), fields, text => ViewModel.ReportPeople(text));
+        _relationships.Children.Add(fields);
+        var save = Ui.Button("Save relationships", SaveRelationships, "accent");
+        save.Name = "SaveRelationshipsButton";
+        _relationships.Children.Add(save);
+    }
+
+    private void SaveRelationships()
+    {
+        if (_relationshipForm is null) return;
+        try
+        {
+            ViewModel.SaveRelationships((RelationshipSettings)_relationshipForm.Commit());
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException)
+        {
+            ViewModel.ReportPeople($"Could not save: {error.Message}");
+        }
     }
 
     public SettingsViewModel ViewModel { get; }

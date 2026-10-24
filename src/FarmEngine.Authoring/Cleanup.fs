@@ -156,8 +156,16 @@ module Cleanup =
             let npcOutcome =
                 o.Type = EventOutcomeTypes.SpawnNpc || o.Type = EventOutcomeTypes.RemoveNpc
                 || o.Type = EventOutcomeTypes.StartDialogue || o.Type = EventOutcomeTypes.ModifyFriendship
+                || o.Type = EventOutcomeTypes.MoveNpc || o.Type = EventOutcomeTypes.SetRelationship
             dropWhen (npcOutcome && refers o.NpcId npcId) o)
         |> Proj.mapScenes (fun s -> withList s (Lists.filterChanged (fun (id: string) -> id <> npcId) s.Npcs) (fun s l -> { s with Npcs = l }))
+        // Its heart events (M4) go with it.
+        |> fun p ->
+            match p.HeartEvents with
+            | Some events when events |> List.exists (fun h -> h.NpcId = npcId) ->
+                let kept = events |> List.filter (fun h -> h.NpcId <> npcId)
+                { p with HeartEvents = (if kept.IsEmpty then None else Some kept) }
+            | _ -> p
 
     /// A dialogue is gone: chains into it end the conversation; `startDialogue` falls back to the NPC's first.
     let dropDialogue (dialogueId: string) (project: GameProject) : GameProject =

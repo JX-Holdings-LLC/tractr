@@ -855,8 +855,9 @@ and GameProject =
         MineDeepestFloor: float option
         /// Items whose owning pack is missing/disabled (mirrors GameState.quarantinedItems).
         QuarantinedItems: (InventorySlot list) option
-        /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop or
-        /// minigame, today's shop purchases, NPC walks, mine floor). Only the engine reads it.
+        /// The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop,
+        /// minigame or cutscene, chosen music, today's shop purchases, NPC walks, mine floor,
+        /// children, changed shop stock). Only the engine reads it.
         KeptState: Json option
         /// Undeclared keys, in order.
         Extra: (string * Json) list

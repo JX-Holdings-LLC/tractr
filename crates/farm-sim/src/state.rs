@@ -322,6 +322,11 @@ pub fn apply_state_to_project(project: &GameProject, state: &GameState) -> GameP
     next.player.active_quests = state.player.active_quests.clone();
     next.player.completed_quests = state.player.completed_quests.clone();
     next.player.equipped_tool = state.player.equipped_tool.clone();
+    // The player character (M4).
+    next.player.name = Some(state.player.name.clone()).filter(|name| !name.is_empty());
+    next.player.farm_name = Some(state.player.farm_name.clone()).filter(|name| !name.is_empty());
+    next.player.look.clone_from(&state.player.look);
+    next.player.worn = Some(state.player.worn.clone()).filter(|worn| !worn.is_empty());
     // Flag values go back as they are: plugins store numbers and strings (#36).
     next.event_flags = state.flags.clone();
     next.animals = state.animals.clone();
@@ -366,7 +371,7 @@ const SYNCED_PROJECT_KEYS: [&str; 14] = [
 ];
 
 /// Player keys [`apply_state_to_project`] writes.
-const SYNCED_PLAYER_KEYS: [&str; 13] = [
+const SYNCED_PLAYER_KEYS: [&str; 17] = [
     "x",
     "y",
     "direction",
@@ -380,6 +385,10 @@ const SYNCED_PLAYER_KEYS: [&str; 13] = [
     "activeQuests",
     "completedQuests",
     "equippedTool",
+    "name",
+    "farmName",
+    "look",
+    "worn",
 ];
 
 /// [`apply_state_to_project`] on the project's JSON: the keys the state writes back come from

@@ -78,13 +78,19 @@ internal static class ContentFormSchema
 
     internal static string Join(string path, string part) => path.Length == 0 ? part : $"{path}_{part}";
 
-    /// <summary>A record's fields as the form shows them: F# hides some while its <c>type</c> says so (quest objective targets).</summary>
+    /// <summary>A record's fields as the form shows them: F# hides some while its <c>type</c> (an event's <c>trigger</c>) says so (quest objective targets).</summary>
     internal static IEnumerable<PropertyInfo> VisibleProperties(JsonObject target, Type type)
     {
-        var hidden = type.GetProperty("Type")?.PropertyType == typeof(string)
-            ? ContentForms.HiddenProperties(type.Name, StringOf(target["type"]) ?? "")
-            : [];
+        var hidden = Discriminator(target, type) is { } kind ? ContentForms.HiddenProperties(type.Name, kind) : [];
         return FormProperties(type).Where(property => !hidden.Contains(property.Name));
+    }
+
+    /// <summary>What picks some of a record's fields: its <c>type</c>, or an event's <c>trigger</c> (M3); null for records without one.</summary>
+    internal static string? Discriminator(JsonObject target, Type type)
+    {
+        if (type.GetProperty("Type")?.PropertyType == typeof(string)) return StringOf(target["type"]) ?? "";
+        if (type == typeof(GameEvent)) return StringOf(target["trigger"]) ?? "";
+        return null;
     }
 
     /// <summary>"Schedule entry 1 minute must be from 0 to 1560." (or "at least" / "at most").</summary>

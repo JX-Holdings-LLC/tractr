@@ -27,6 +27,7 @@
     <Compile Include="ReadoutsTests.fs" />
     <Compile Include="PropertyTests.fs" />
     <Compile Include="FuzzPropertyTests.fs" />
+    <Compile Include="RelationshipsAuthoringTests.fs" />
     <Compile Include="BrokenProjects.fs" />
     <Compile Include="ValidationCaseTests.fs" />
     <Compile Include="ValidationTests.fs" />

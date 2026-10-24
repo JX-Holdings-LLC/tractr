@@ -737,6 +737,18 @@ type SettingsForm =
     /// `settings` with the game's words (null: the built-in words).
     static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
 
+    /// The People section (M4): whether new games open the character creator, and the game's
+    /// relationship rules (null: none). One undo step; nothing changed → an empty batch.
+    static member People(project: GameProject, characterCreator: bool, relationships: RelationshipSettings | null) : Edit =
+        let settings =
+            { project.Settings with
+                CharacterCreator = (if characterCreator then Some true else None)
+                Relationships = Option.ofObj relationships }
+        if settings = project.Settings then Batch("People", []) else SetSettings settings
+
+    /// The relationship rules a game starts from when the creator turns them on (M4).
+    static member DefaultRelationships: RelationshipSettings = RelationshipSettings.Default
+
     /// `settings` without the sky looks of `seasonIds`, as removing those seasons leaves it
     /// (`Cleanup.dropSeason`).
     static member WithoutSeasonLooks(settings: ProjectSettings, seasonIds: seq<string>) : ProjectSettings =

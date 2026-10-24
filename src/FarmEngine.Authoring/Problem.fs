@@ -37,6 +37,8 @@ type NavigationTarget =
     | CropQuality of id: string
     | CropMutation of id: string
     | Cutscene of id: string
+    /// A heart event (M4).
+    | HeartEvent of id: string
 
 /// One line of the Problems panel: the same shape for schema errors, content lints and editor
 /// checks. `Path` is a JSON path into the project (`npcs[3].dialogue[0].options[1].nextDialogueId`)
@@ -94,6 +96,7 @@ type Problem =
             | NavigationTarget.CropQuality _ -> "cropQuality"
             | NavigationTarget.CropMutation _ -> "cropMutation"
             | NavigationTarget.Cutscene _ -> "cutscene"
+            | NavigationTarget.HeartEvent _ -> "heartEvent"
 
     /// The id of the thing to open (scene id for tiles), or null for settings/interface/none.
     member this.TargetId: string | null =
@@ -107,7 +110,8 @@ type Problem =
             | NavigationTarget.MachineType id | NavigationTarget.AnimalSpecies id | NavigationTarget.FishTable id
             | NavigationTarget.Action id | NavigationTarget.Minigame id | NavigationTarget.Pack id | NavigationTarget.Asset id
             | NavigationTarget.Terrain id | NavigationTarget.Tool id | NavigationTarget.ItemCategory id
-            | NavigationTarget.CropQuality id | NavigationTarget.CropMutation id | NavigationTarget.Cutscene id -> id
+            | NavigationTarget.CropQuality id | NavigationTarget.CropMutation id | NavigationTarget.Cutscene id
+            | NavigationTarget.HeartEvent id -> id
             | NavigationTarget.Settings | NavigationTarget.Interface -> null
 
     /// Tile to scroll to for a scene target (0 otherwise).
@@ -174,7 +178,7 @@ type internal Context =
       CutsceneIds: System.Collections.Generic.HashSet<string>
       SoundIds: System.Collections.Generic.HashSet<string>
       MusicIds: System.Collections.Generic.HashSet<string>
-      /// Flags something can set: `setFlag`/`clearFlag` outcomes, dialogue `eventFlag`s, the
+      /// Flags something can set: `setFlag`/`clearFlag` and the variable outcomes, dialogue `eventFlag`s, the
       /// project's flag table and every event's auto-managed fired flag.
       KnownFlags: System.Collections.Generic.HashSet<string> }
 
@@ -185,8 +189,12 @@ module internal Context =
 
     let private flagsIn (outcomes: seq<EventOutcome>) =
         outcomes
-        |> Seq.filter (fun o -> o.Type = EventOutcomeTypes.SetFlag || o.Type = EventOutcomeTypes.ClearFlag)
-        |> Seq.choose (fun o -> o.FlagName)
+        |> Seq.choose (fun o ->
+            match o.Type with
+            | EventOutcomeTypes.SetFlag | EventOutcomeTypes.ClearFlag -> o.FlagName
+            // Variables are flags that hold a number or a text (M3).
+            | EventOutcomeTypes.SetVariable | EventOutcomeTypes.AddVariable -> o.Variable
+            | _ -> None)
 
     let create (project: GameProject) : Context =
         let scenes = Dictionary<string, Scene>()

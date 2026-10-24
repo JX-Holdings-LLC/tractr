@@ -315,12 +315,21 @@ pub struct KeptState {
     /// [`GameState::cutscene`]: a cutscene that was playing goes on where it was (M2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cutscene: Option<CutsceneState>,
+    /// [`GameState::music`]: music an event or cutscene chose plays on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
     /// Walking NPCs by id: their remaining path and patrol waypoint (positions are the
     /// project's NPC fields).
     pub npcs: IndexMap<String, KeptNpc>,
     /// [`MineProgress::current_floor`].
     #[serde(with = "crate::units::count")]
     pub mine_current_floor: u32,
+    /// [`GameState::children`] (M4).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub children: Vec<ChildState>,
+    /// [`GameState::shop_changes`] (M3).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_changes: IndexMap<String, ShopChanges>,
 }
 
 /// An NPC's walk in [`KeptState::npcs`] (the [`NpcState`] fields the project's NPC lacks).
@@ -349,8 +358,11 @@ impl KeptState {
             shop: state.shop.clone(),
             minigame: state.minigame.clone(),
             cutscene: state.cutscene.clone(),
+            music: state.music.clone(),
             npcs,
             mine_current_floor: state.mine.current_floor,
+            children: state.children.clone(),
+            shop_changes: state.shop_changes.clone(),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -363,6 +375,9 @@ impl KeptState {
         state.shop.clone_from(&self.shop);
         state.minigame.clone_from(&self.minigame);
         state.cutscene.clone_from(&self.cutscene);
+        state.music.clone_from(&self.music);
+        state.children.clone_from(&self.children);
+        state.shop_changes.clone_from(&self.shop_changes);
         for (id, kept) in &self.npcs {
             if let Some(npc) = state.npcs.get_mut(id) {
                 npc.path.clone_from(&kept.path);
