@@ -106,8 +106,8 @@ to:
   one to change it (deleting your version brings the built-in back).
 - **Quests**: objectives (harvest, collect, talk, visit, craft, gift),
   rewards, prerequisites and when they are available.
-- **Events**: triggers (entering a tile, interacting, time passing),
-  conditions and outcomes, for story beats and flags.
+- **Events**: triggers, conditions and outcomes, for story beats, flags and
+  variables (see [Event logic](#event-logic) below).
 - **Shops**: stock (a card per item with its price override, daily limit and
   the seasons it's sold in), prices and tool repair.
 - **Recipes**, **Node types** and **Machine types**: hand crafting, the
@@ -142,6 +142,8 @@ to:
   and can be customized like crops.
 - **Cutscenes**: scenes that play out over time (see
   [Cutscenes](#cutscenes) below).
+- **Heart events**: cutscenes that play once at a number of hearts with an
+  NPC (see [People and relationships](#people-and-relationships) below).
 
 Every nested field also has an **Edit as JSON** box, for pasting or bulk
 changes.
@@ -262,6 +264,105 @@ characters arrive where they were going. Skipping stops at a choice, so the
 player still picks the branch. In play, Interact, Enter or Space advances a
 line, the number keys pick an answer, and a click works too.
 
+### Event logic
+
+An event runs its outcomes when its **trigger** happens and all its
+conditions hold. An event with a scene only fires while the player is in that
+scene.
+
+The triggers: entering a tile, interacting with one, time passing (`tick`),
+the start of a day, a time of day (`time`, at the event's **Minute**), and
+harvesting, selling, crafting, catching a fish, picking up an item, a
+friendship change and a quest changing. The last seven can name a
+**subject** (the crop or item, the NPC or the quest); without one the event
+fires for any.
+
+**Conditions** check tiles, items, flags, the day, the season, the year, the
+time, quests, friendship and the weather, and also:
+
+- **variable**: compares a variable (`eq`, `ne`, `lt`, `le`, `gt`, `ge`)
+  with a number, or with a text for `eq` and `ne`.
+- **all**, **any** and **not**: groups of conditions, nested as deep as you
+  like.
+- **chance**: holds with a probability (0 to 1). The roll comes from the
+  game's seed and the moment, so a replay rolls the same.
+- **scene**, **hearts** (at least and at most), `dayOfSeason` and
+  **relationship** (single, dating, engaged, married).
+
+Variables are flags that hold a number or a text as well as true or false:
+**setVariable** sets one, **addVariable** adds to a number (a missing one
+counts as 0), and `{var:NAME}` shows one in any text.
+
+**Outcomes** give and take items and money, set flags, change friendship and
+energy, start quests, dialogues, cutscenes, minigames and actions, play
+sounds and music, change tiles and warp the player, and also: **moveNpc**
+(to a scene and tile), **setWeather**, **giveExperience** (in a skill),
+**addShopStock** and **removeShopStock** (a shop keeps the change for the
+rest of the game), **placeNode** and **removeNode**, **placeMachine** and
+**removeMachine**, and **setRelationship**. An outcome that triggers events
+of its own (a harvest, a sale) runs them too, four levels deep at most.
+
+### People and relationships
+
+#### Daily lines
+
+An NPC's **Lines** are what it says when the player talks to it, without a
+dialogue tree for each day. A line has the events' conditions (the day, the
+season, the weather, the scene, hearts, flags; an empty NPC in **hearts** or
+**relationship** means the NPC itself) and a **weight**. Each day the NPC
+picks one of the lines whose conditions hold, by weight, and says it in place
+of its first dialogue's text, with that dialogue's options. An NPC with lines
+and no dialogue just says the line.
+
+#### Text substitution
+
+Any dialogue, cutscene line, event or action message, quest and game panel
+can name things that change: `{player}`, `{farm}`, `{spouse}`, `{npc:ID}`,
+`{item:ID}`, `{var:NAME}`, `{season}`, `{day}`, `{year}`, `{date}`, `{time}`
+and `{money}`. Anything else in braces stays as written.
+
+#### Portraits
+
+An NPC's **Portraits** give art per expression (`happy`, `sad`, any name). A
+line, a dialogue or a cutscene line picks one by its **Expression**; without
+one the dialogue box shows the NPC's own art.
+
+#### Heart events
+
+A heart event plays its cutscene once, when the player has the hearts with
+the NPC and its conditions hold: on entering the event's scene, or,
+without a scene, when the player talks to the NPC.
+
+#### Relationships
+
+Relationships are off until you tick **Relationships** in **Settings →
+People** and save their rules:
+
+- Friendship decay: points an NPC loses on a day the player neither
+  talked to it nor gave it a gift.
+- **Dating**: a **romanceable** NPC at the dating hearts accepts the dating
+  gift (or, without one, starts dating by itself the next morning).
+- **Marriage**: a dated NPC at the proposal hearts accepts the proposal
+  gift; the wedding is some days later, with its own cutscene if you pick
+  one. One partner at a time.
+- The spouse moves to the home tile you choose and, if it helps, does
+  one chore each morning: waters the farm's crops, feeds the animals or
+  brings a gift.
+- **Children** arrive every so many days of marriage, up to a number, with
+  the names you list.
+
+The **setRelationship** outcome sets a stage directly, and the
+**relationship** condition checks one.
+
+#### The player character
+
+With **New games open the character creator (name, farm name, colours)**
+ticked (Settings → People), a new game opens a screen where the player picks
+a name, a farm name and the colours of skin, hair, shirt, trousers and an
+accent, or **Random**. Items with a **Wear** slot (hat, shirt, trousers) are
+clothes: the inventory's **Wear** button puts one on, and the player is drawn
+with its colour or, for a hat, its art.
+
 ### Problems
 
 The Problems tab checks the whole project: missing references, unreachable
@@ -299,6 +400,13 @@ reordered, removed, or imported into the project as ordinary content. A pack's
 scenes join the game world the first time a door or a warp leads there; pack
 ids are namespaced (`my-pack:cave`) but scene references inside a pack are not,
 so a pack names its own scenes in full.
+
+Packs can also bring vocabulary and story: terrains, tools, item kinds, crop
+qualities, crop mutations, cutscenes and heart events. Vocabulary keeps the
+ids it was written with (a pack's `lava` is painted as `lava`), and a pack
+replaces a built-in or an earlier pack's definition only when its manifest
+lists that id in `overrides`; otherwise Problems warns and the earlier one
+stays. Cutscenes and heart events are namespaced like other content.
 
 A pack's plugins only change your game in the ways its manifest declares
 (`permissions.mutations`): by default they can show messages, play sounds

@@ -155,7 +155,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         form.Children.Add(_mineFields);
         form.Children.Add(Shown("MineMessage", nameof(SettingsViewModel.MineMessage)));
         form.Children.Add(Ui.Text("PEOPLE", "section"));
-        form.Children.Add(Ui.Wrapped("The player character and the game's relationship rules (M4). Each part is off until it is turned on here; NPCs are romanceable one by one in their own forms.", "muted", "small"));
+        form.Children.Add(Ui.Wrapped("The player character and the game's relationship rules. Each part is off until it is turned on here; NPCs are romanceable one by one in their own forms.", "muted", "small"));
         _characterCreator.Click += (_, _) => ViewModel.SetCharacterCreator(_characterCreator.IsChecked == true);
         _relationshipsOn.Click += (_, _) => ViewModel.SetRelationshipsOn(_relationshipsOn.IsChecked == true);
         form.Children.Add(_characterCreator);
