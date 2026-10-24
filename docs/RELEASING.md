@@ -2,7 +2,7 @@
 
 Windows releases are built by GitHub Actions, packaged with
 [Velopack](https://velopack.io) and published as GitHub Releases of
-`jxburros/farm-game-engine-native`. The in-app **Update Center**
+`JX-Holdings-LLC/tractr`. The in-app **Update Center**
 (Help → Update Center…) reads those releases, so publishing a release is all
 it takes to ship an update.
 
@@ -47,7 +47,7 @@ never dispatch are simply skipped; the next release's notes include theirs.
 
 1. In every pull request, bump the version: with the toolkit pinned in
    `.release/README.md` checked out at `.toolkit`, run
-   `node .toolkit/src/release.mjs bump --app farming-rpg-maker` (a patch;
+   `node .toolkit/src/release.mjs bump --app tractr` (a patch;
    `--kind minor` or `--version 0.4.0-beta.1` for others). It sets
    `release.json`, `version` in the root `Cargo.toml` and the default
    `<Version>` in `Directory.Build.props`, and adds a `## X.Y.Z` section at
@@ -148,7 +148,7 @@ other.
 - **Checksums and provenance.** `SHA256SUMS` lists every published file, and
   GitHub's build provenance attestation covers them. To check a download:
   `sha256sum --check --ignore-missing SHA256SUMS`, or
-  `gh attestation verify Tractr-win-Setup.exe --repo jxburros/farm-game-engine-native`.
+  `gh attestation verify Tractr-win-Setup.exe --repo JX-Holdings-LLC/tractr`.
 - **Reproducibility.** .NET release builds set `ContinuousIntegrationBuild`
   (source paths become `/_/`), cargo builds map the runner's paths away
   (`--remap-path-prefix`) and ship without debug info, so no runner path ends
@@ -187,13 +187,13 @@ dependency (`cargo machete`).
 ## How the Update Center finds updates
 
 - `VelopackUpdateService` creates
-  `new UpdateManager(new GithubSource("https://github.com/jxburros/farm-game-engine-native", accessToken: null, prerelease: channel == Prerelease))`.
+  `new UpdateManager(new GithubSource("https://github.com/JX-Holdings-LLC/tractr", accessToken: null, prerelease: channel == Prerelease))`.
   The **Stable** channel only looks at normal releases; **Pre-release** also
   considers pre-releases. Velopack never offers an older version, so switching
   from Pre-release back to Stable keeps the beta until a newer stable release
   ships.
 - Release notes, publish date and release link come from
-  `GET https://api.github.com/repos/jxburros/farm-game-engine-native/releases`
+  `GET https://api.github.com/repos/JX-Holdings-LLC/tractr/releases`
   (`GitHubReleaseNotesClient`), falling back to the notes inside the package.
 - No token is used, so GitHub allows 60 API requests per hour per IP address.
   Each check makes two of them (Velopack's release lookup and the release notes

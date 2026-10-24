@@ -31,7 +31,7 @@ version = "0.9.0"
 edition = "2021"
 rust-version = "1.88"
 license = "BUSL-1.1"
-repository = "https://github.com/jxburros/farm-game-engine-native"
+repository = "https://github.com/JX-Holdings-LLC/tractr"
 publish = false
 
 [workspace.dependencies]

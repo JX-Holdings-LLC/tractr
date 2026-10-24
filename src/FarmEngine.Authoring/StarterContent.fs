@@ -137,7 +137,7 @@ module StarterContent =
             { PackManifest.Default with
                 Id = "content-default"; Name = "Farm Essentials"; Version = "1.0.0"
                 Description = Some "The built-in farming game: crops, tools, recipes, animals, fishing, weather and the starter farm."
-                Author = Some "farm-game-engine"; EngineCompatibility = "*"; Base = true
+                Author = Some "Tractr"; EngineCompatibility = "*"; Base = true
                 Permissions = { PackPermissions.Default with Hooks = []; ContentInject = true; UiPanels = false } }
           Content =
             { PackContent.Default with

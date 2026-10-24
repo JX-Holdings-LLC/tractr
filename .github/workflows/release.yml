@@ -48,8 +48,8 @@ jobs:
       id: version
       shell: pwsh
       env:
-        RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
-        RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
+        RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
+        RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
       run: |
         "version=$env:RELEASE_VERSION" >> $env:GITHUB_OUTPUT
         "tag=$env:RELEASE_TAG" >> $env:GITHUB_OUTPUT
@@ -72,10 +72,10 @@ jobs:
         esac
     needs:
     - plan
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     env:
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
   player-windows:
     name: Player template (windows-x64)
@@ -86,8 +86,8 @@ jobs:
     env:
       CARGO_PROFILE_RELEASE_DEBUG: '0'
       CARGO_PROFILE_RELEASE_STRIP: symbols
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     steps:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -133,7 +133,7 @@ jobs:
         name: player-windows-x64
         path: player-windows-x64.zip
         retention-days: 7
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     permissions:
       contents: read
   player-linux:
@@ -146,8 +146,8 @@ jobs:
     env:
       CARGO_PROFILE_RELEASE_DEBUG: '0'
       CARGO_PROFILE_RELEASE_STRIP: symbols
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     steps:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -187,7 +187,7 @@ jobs:
         name: player-linux-x64
         path: player-linux-x64.tar.gz
         retention-days: 7
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     permissions:
       contents: read
   player-web:
@@ -236,10 +236,10 @@ jobs:
         name: player-web
         path: player-web.tar.gz
         retention-days: 7
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     env:
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     permissions:
       contents: read
@@ -286,10 +286,10 @@ jobs:
         name: smoke-linux-x64
         path: smoke-linux-x64.json
         retention-days: 7
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     env:
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     permissions:
       contents: read
@@ -306,8 +306,8 @@ jobs:
     env:
       CARGO_PROFILE_RELEASE_DEBUG: '0'
       CARGO_PROFILE_RELEASE_STRIP: symbols
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     steps:
     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -404,8 +404,8 @@ jobs:
         # The plan's notes: the CHANGELOG sections of every version since the last release, also the
         # GitHub Release body.
         $plan = Get-Content plan/release-plan.json -Raw | ConvertFrom-Json
-        $notes = ($plan.selected | Where-Object app -eq 'farming-rpg-maker').notes
-        if (-not $notes) { throw 'The release plan has no notes for farming-rpg-maker' }
+        $notes = ($plan.selected | Where-Object app -eq 'tractr').notes
+        if (-not $notes) { throw 'The release plan has no notes for tractr' }
         Set-Content -Path release-notes.md -Value $notes -Encoding utf8
         Write-Host '--- release-notes.md ---'
         Get-Content release-notes.md
@@ -492,7 +492,7 @@ jobs:
           SHA256SUMS
           build-info.txt
         retention-days: 30
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     permissions:
       contents: read
   publish:
@@ -533,33 +533,33 @@ jobs:
     - name: Stage the complete configured release inventory
       shell: bash
       env:
-        RELEASE_APP: farming-rpg-maker
+        RELEASE_APP: tractr
       run: node .toolkit/src/release.mjs stage --app "$RELEASE_APP" --from bundle --bundle unified-bundle --sha
         "$RELEASE_SOURCE_SHA"
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
       with:
-        name: bundle-farming-rpg-maker
+        name: bundle-tractr
         path: unified-bundle
         if-no-files-found: error
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     env:
-      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].tag }}
-      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].version }}
+      RELEASE_TAG: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].tag }}
+      RELEASE_VERSION: ${{ fromJSON(needs.plan.outputs.apps)['tractr'].version }}
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
-  publish-farming-rpg-maker:
+  publish-tractr:
     needs:
     - plan
     - publish
-    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['farming-rpg-maker'].selected
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     uses: JX-Holdings-LLC/release-infrastructure/.github/workflows/finish.yml@d7f42f9910c075ef34915fa2b95cf28dd2be534a
     permissions:
       contents: write
     with:
       toolkit-ref: d7f42f9910c075ef34915fa2b95cf28dd2be534a
       source-sha: ${{ needs.plan.outputs.sha }}
-      app: farming-rpg-maker
+      app: tractr
       security: standard
-      artifact: bundle-farming-rpg-maker
+      artifact: bundle-tractr
       dry-run: ${{ inputs.dry_run }}
 env:
   DOTNET_NOLOGO: true

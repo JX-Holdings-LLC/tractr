@@ -3,8 +3,8 @@ namespace Tractr.Updates;
 /// <summary>Where releases are published.</summary>
 public static class UpdateSource
 {
-    public const string Owner = "jxburros";
-    public const string Repository = "farm-game-engine-native";
+    public const string Owner = "JX-Holdings-LLC";
+    public const string Repository = "tractr";
 
     /// <summary>Repository URL handed to Velopack's <c>GithubSource</c>.</summary>
     public const string RepositoryUrl = "https://github.com/" + Owner + "/" + Repository;
