@@ -168,7 +168,11 @@ pub fn handle_use_tool(ctx: &EngineContext, state: &mut GameState, tool_type: &s
     let tool = &tool_slot.item;
     let background = ctx.terrain(&target.tile.background);
 
-    let used = if target.tile.node.is_some() && gathering::is_node_active(&target.tile) {
+    let used = if definition.action == tool_actions::ATTACK {
+        // A weapon (M7) swings at the monsters ahead, whatever stands there.
+        let tiles = area_targets(&target, &state.player.direction, &area);
+        ToolUse::Used(crate::combat::attack(ctx, state, &tiles, power).unwrap_or_default())
+    } else if target.tile.node.is_some() && gathering::is_node_active(&target.tile) {
         // Gathering node strike takes priority on node tiles.
         let outcome = gathering::strike_node(ctx, state, &target.scene_id, target.x, target.y, tool_type, tier, power);
         if outcome.struck {
@@ -585,8 +589,12 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
         return animals::handle_animal_interaction(ctx, state, &animal);
     }
 
-    // Machines (M4a): collect finished output (loading goes through machineLoad)
+    // Machines (M4a): collect finished output (loading goes through machineLoad). Chests,
+    // shipping bins and gates (M5) open first.
     if let Some(machine) = &target.tile.machine {
+        if let Some(effects) = crate::objects::interact(ctx, state, &target.scene_id, target.x, target.y, machine) {
+            return effects;
+        }
         if machine.output.as_ref().is_some_and(|output| !output.is_empty()) {
             return crafting::collect_machine_output(ctx, state, &target.scene_id, target.x, target.y);
         }
@@ -806,7 +814,8 @@ fn plant_seed(
         return vec![Effect::say(message_levels::ERROR, &messages::INVALID_CROP)];
     };
 
-    if !crops::can_grow_in_season(Some(definition), &state.clock.season) {
+    // A greenhouse (M5) takes every season's crops.
+    if !scene.is_all_seasons() && !crops::can_grow_in_season(Some(definition), &state.clock.season) {
         let name = messages::Arg::text(&definition.name);
         let season = messages::season_noun(&state.clock.season);
         let text = if choice.seed_item_id.is_some() {
@@ -902,9 +911,12 @@ fn choose_seed<'a>(ctx: &EngineContext, state: &'a GameState, choice: PlantChoic
     }
     let seeds: Vec<&Item> =
         state.player.inventory.iter().filter(|slot| is_seed(ctx, &slot.item)).map(|slot| &slot.item).collect();
+    let all_seasons =
+        world_movement::find_scene(state, &state.player.scene_id).is_some_and(|scene| scene.is_all_seasons());
     let grows_now = |item: &&&Item| {
         let definition = item.crop_type.as_deref().and_then(|crop| ctx.content.crops.get(crop));
-        definition.is_some_and(|definition| crops::can_grow_in_season(Some(definition), &state.clock.season))
+        definition
+            .is_some_and(|definition| all_seasons || crops::can_grow_in_season(Some(definition), &state.clock.season))
     };
     let in_season = if choice.chosen { seeds.iter().find(grows_now) } else { None };
     in_season

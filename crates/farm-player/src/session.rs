@@ -71,6 +71,8 @@ pub enum SessionEvent {
     DayStarted { day: u32, season: String, year: u32 },
     /// A quest was completed.
     QuestCompleted { quest_id: String },
+    /// An achievement was unlocked (M6): a platform host (Steam, later) reports it.
+    AchievementUnlocked { achievement_id: String },
     /// A plugin failed outside a hook (a pack minigame): `text` is the error as
     /// [`PlaySession::plugin_errors`] lists it.
     PluginError { text: String },
@@ -701,6 +703,12 @@ impl PlaySession {
                 }
                 Effect::DayStarted { day, season, year } => {
                     self.events.push(SessionEvent::DayStarted { day: *day, season: season.clone(), year: *year });
+                }
+                Effect::PlayerHurt { amount } => {
+                    self.add_pop(format!("-{amount}"), None, "#ff6b5a");
+                }
+                Effect::AchievementUnlocked { achievement_id } => {
+                    self.events.push(SessionEvent::AchievementUnlocked { achievement_id: achievement_id.clone() });
                 }
                 Effect::PlayerMoved { .. } | Effect::Sound { .. } => {}
             }

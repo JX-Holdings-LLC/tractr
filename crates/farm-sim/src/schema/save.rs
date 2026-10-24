@@ -17,10 +17,13 @@
 use super::actors::GridPoint;
 use super::actors::PlayerLook;
 use super::animals::AnimalState;
+use super::combat::MonsterState;
 use super::content::InventorySlot;
 use super::cutscenes::CutsceneState;
 use super::economy::ShopStockEntry;
 use super::extensibility::MinigameSession;
+use super::farm::{BuildingState, StorageSession};
+use super::goals::{BundleProgress, CollectionProgress, MailState, ShippedLine};
 use super::relationships::ChildState;
 use super::social::NpcSocialState;
 use super::world::Scene;
@@ -137,6 +140,12 @@ pub struct PlayerState {
     /// The clothes the player wears (M4), at most one per slot, in the order put on.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub worn: Vec<InventorySlot>,
+    /// Health in whole points (M7); absent without combat.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub health: Option<i32>,
+    /// Ticks left during which a hit does no harm (M7).
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub hurt: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -279,6 +288,45 @@ pub struct GameState {
     /// Stock events added to or removed from shops (M3), by shop id.
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub shop_changes: IndexMap<String, ShopChanges>,
+    /// The open chest or shipping bin (M5), a modal like a shop.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage: Option<StorageSession>,
+    /// Buildings on the map (M5), standing or being built.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buildings: Vec<BuildingState>,
+    /// The farm layout the player picked (M5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub farm_layout: Option<String>,
+    /// Units shipped so far, by item id (M6: the shipping log).
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub shipped: IndexMap<String, u32>,
+    /// What the shipping bins sold last night (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub last_shipment: Vec<ShippedLine>,
+    /// Collection progress by collection id (M6).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub collections: IndexMap<String, CollectionProgress>,
+    /// Bundle progress by bundle id (M6).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub bundles: IndexMap<String, BundleProgress>,
+    /// Unlocked achievements: the day each was unlocked (M6).
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub achievements: IndexMap<String, u32>,
+    /// Letters received, oldest first (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mailbox: Vec<MailState>,
+    /// Letters arriving tomorrow morning (M6).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mail_queue: Vec<String>,
+    /// Monsters in the world (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub monsters: Vec<MonsterState>,
+    /// The id the next monster gets (M7).
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub next_monster: u32,
+    /// Monsters slain, by monster id (M7).
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub slain: IndexMap<String, u32>,
 }
 
 /// What events changed in a shop's stock (M3).
@@ -330,6 +378,84 @@ pub struct KeptState {
     /// [`GameState::shop_changes`] (M3).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub shop_changes: IndexMap<String, ShopChanges>,
+    /// The goals and the world beyond the project's fields (M5–M7).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goals: Option<KeptGoals>,
+}
+
+/// What [`KeptState`] carries of M5–M7 (the buildings themselves go to the project's
+/// `buildings`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct KeptGoals {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub storage: Option<StorageSession>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub farm_layout: Option<String>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub shipped: IndexMap<String, u32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub last_shipment: Vec<ShippedLine>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub collections: IndexMap<String, CollectionProgress>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub bundles: IndexMap<String, BundleProgress>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub achievements: IndexMap<String, u32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mailbox: Vec<MailState>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mail_queue: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub monsters: Vec<MonsterState>,
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub next_monster: u32,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub slain: IndexMap<String, u32>,
+    /// [`PlayerState::health`].
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub health: Option<i32>,
+}
+
+impl KeptGoals {
+    /// The M5–M7 parts of `state`, or `None` when there are none.
+    pub fn of_state(state: &GameState) -> Option<Self> {
+        let kept = Self {
+            storage: state.storage.clone(),
+            farm_layout: state.farm_layout.clone(),
+            shipped: state.shipped.clone(),
+            last_shipment: state.last_shipment.clone(),
+            collections: state.collections.clone(),
+            bundles: state.bundles.clone(),
+            achievements: state.achievements.clone(),
+            mailbox: state.mailbox.clone(),
+            mail_queue: state.mail_queue.clone(),
+            monsters: state.monsters.clone(),
+            next_monster: state.next_monster,
+            slain: state.slain.clone(),
+            health: state.player.health,
+        };
+        (kept != Self::default()).then_some(kept)
+    }
+
+    /// Puts them back into `state`.
+    pub fn apply_to(&self, state: &mut GameState) {
+        state.storage.clone_from(&self.storage);
+        state.farm_layout.clone_from(&self.farm_layout);
+        state.shipped.clone_from(&self.shipped);
+        state.last_shipment.clone_from(&self.last_shipment);
+        state.collections.clone_from(&self.collections);
+        state.bundles.clone_from(&self.bundles);
+        state.achievements.clone_from(&self.achievements);
+        state.mailbox.clone_from(&self.mailbox);
+        state.mail_queue.clone_from(&self.mail_queue);
+        state.monsters.clone_from(&self.monsters);
+        state.next_monster = self.next_monster;
+        state.slain.clone_from(&self.slain);
+        if self.health.is_some() {
+            state.player.health = self.health;
+        }
+    }
 }
 
 /// An NPC's walk in [`KeptState::npcs`] (the [`NpcState`] fields the project's NPC lacks).
@@ -363,6 +489,7 @@ impl KeptState {
             mine_current_floor: state.mine.current_floor,
             children: state.children.clone(),
             shop_changes: state.shop_changes.clone(),
+            goals: KeptGoals::of_state(state),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -378,6 +505,9 @@ impl KeptState {
         state.music.clone_from(&self.music);
         state.children.clone_from(&self.children);
         state.shop_changes.clone_from(&self.shop_changes);
+        if let Some(goals) = &self.goals {
+            goals.apply_to(state);
+        }
         for (id, kept) in &self.npcs {
             if let Some(npc) = state.npcs.get_mut(id) {
                 npc.path.clone_from(&kept.path);

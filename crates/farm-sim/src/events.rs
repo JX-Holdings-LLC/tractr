@@ -211,6 +211,32 @@ pub fn condition_holds(
             }
             None => state.social.values().any(|social| social.status.as_deref() == Some(status.as_str())),
         },
+        EventCondition::Money { min } => state.player.money >= *min,
+        EventCondition::SkillLevel { skill, min } => skills::skill_level(state, skill) >= *min,
+        EventCondition::MineFloor { min } => state.mine.deepest_floor >= *min,
+        EventCondition::Collection { collection_id, min } => match min {
+            Some(min) => crate::goals::collected(state, collection_id) as u64 >= u64::from(*min),
+            None => crate::goals::collection_complete(ctx, state, collection_id),
+        },
+        EventCondition::Bundle { bundle_id } => crate::goals::bundle_complete(state, bundle_id),
+        EventCondition::Achievement { achievement_id } => state.achievements.contains_key(achievement_id),
+        EventCondition::Shipped { item_id, min } => crate::goals::shipped(state, item_id) >= u64::from(*min),
+        EventCondition::Building { building_id, min } => {
+            crate::buildings::count_standing(ctx, state, building_id) >= *min
+        }
+        EventCondition::Slain { monster_id, min } => crate::combat::slain(state, monster_id) >= u64::from(*min),
+        EventCondition::Birthday { npc_id } => {
+            let date = game_time::clock_date(&ctx.content.settings.calendar, &state.clock);
+            let today = |npc: &crate::schema::Npc| {
+                npc.birthday
+                    .as_ref()
+                    .is_some_and(|birthday| birthday.season == state.clock.season && birthday.day == date.day_of_season)
+            };
+            match non_empty(Some(npc_id)) {
+                Some(npc_id) => ctx.npc(npc_id).is_some_and(today),
+                None => ctx.content.npcs.iter().any(today),
+            }
+        }
     }
 }
 
@@ -405,6 +431,16 @@ fn apply_outcome(
                 return vec![];
             }
             social::set_relationship(ctx, state, npc_id, status)
+        }
+        OutcomeKind::SendMail => {
+            if let Some(mail_id) = non_empty(outcome.mail_id.as_deref()) {
+                crate::mail::send(ctx, state, mail_id);
+            }
+            vec![]
+        }
+        OutcomeKind::ModifyHealth => {
+            let amount = i32::try_from(whole(outcome.amount.unwrap_or(0))).unwrap_or(0);
+            crate::combat::modify_health(ctx, state, amount)
         }
     }
 }

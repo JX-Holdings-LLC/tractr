@@ -325,6 +325,47 @@ catalog! {
     PUT_ON = "msg.putOn" => "You put on {0}.";
     TOOK_OFF = "msg.tookOff" => "You took off {0}.";
     CANT_WEAR = "msg.cantWear" => "{0} isn't something to wear.";
+    // Placed objects (M5).
+    GATE_OPENED = "msg.gateOpened" => "Opened the {0}.";
+    GATE_CLOSED = "msg.gateClosed" => "Closed the {0}.";
+    GATE_BLOCKED = "msg.gateBlocked" => "Step out of the way to close it.";
+    STORAGE_FULL = "msg.storageFull" => "It's full.";
+    EMPTY_IT_FIRST = "msg.emptyItFirst" => "Empty it first.";
+    CANT_SHIP = "msg.cantShip" => "{0} can't be shipped.";
+    // Buildings and animals (M5).
+    UNKNOWN_BUILDING = "msg.unknownBuilding" => "Unknown building.";
+    MISSING_MATERIALS = "msg.missingMaterials" => "You don't have the materials.";
+    CANT_BUILD_HERE = "msg.cantBuildHere" => "A {0} can't be built here.";
+    NO_ROOM_TO_BUILD = "msg.noRoomToBuild" => "There isn't room to build there.";
+    ONLY_AN_UPGRADE = "msg.onlyAnUpgrade" => "That is built by upgrading another building.";
+    NOT_AN_UPGRADE = "msg.notAnUpgrade" => "That isn't an upgrade of this building.";
+    BUILDING_BUSY = "msg.buildingBusy" => "Work on it is already under way.";
+    BUILDING_ORDERED = "msg.buildingOrdered" => "Construction of the {0} begins! It will be ready in {1} day(s).";
+    UPGRADE_ORDERED = "msg.upgradeOrdered" => "The {0} upgrade begins! It will be ready in {1} day(s).";
+    BUILDING_DONE = "msg.buildingDone" => "The {0} is finished!";
+    UNKNOWN_ANIMAL = "msg.unknownAnimal" => "Unknown animal.";
+    CANT_HOUSE = "msg.cantHouse" => "That building can't house a {0}.";
+    BUILDING_FULL = "msg.buildingFull" => "There's no room left in that building.";
+    BOUGHT_ANIMAL = "msg.boughtAnimal" => "{0} moves into the {1}!";
+    ANIMAL_BORN = "msg.animalBorn" => "A baby {0} was born overnight!";
+    FARM_LAYOUT = "msg.farmLayout" => "Your farm: {0}";
+    // Long-term goals (M6).
+    SHIPPED = "msg.shipped" => "Shipped {0} item(s) overnight for ${1}.";
+    COLLECTION_ADDED = "msg.collectionAdded" => "{0} added to the {1}!";
+    NOT_WANTED = "msg.notWanted" => "The {0} doesn't take that.";
+    ALREADY_DONATED = "msg.alreadyDonated" => "That has been handed in already.";
+    HAND_IN_THERE = "msg.handInThere" => "Hand that in at the {0}.";
+    NOTHING_TO_HAND_IN = "msg.nothingToHandIn" => "You have nothing to hand in for that.";
+    HANDED_IN = "msg.handedIn" => "Handed in {0}\u{d7} {1}.";
+    BUNDLE_DONE_ALREADY = "msg.bundleDoneAlready" => "That bundle is complete.";
+    BUNDLE_COMPLETE = "msg.bundleComplete" => "{0} complete!";
+    ACHIEVEMENT_UNLOCKED = "msg.achievementUnlocked" => "Achievement unlocked: {0}";
+    YOU_GOT_MAIL = "msg.youGotMail" => "You've got mail ({0}).";
+    // Combat (M7).
+    FAINTED = "msg.fainted" => "You fainted! Someone carried you to safety (-${0}).";
+    MONSTER_SLAIN = "msg.monsterSlain" => "Defeated the {0}!";
+    MONSTER_SLAIN_GOT = "msg.monsterSlainGot" => "Defeated the {0}! Got {1}";
+    HAZARD_HURTS = "msg.hazardHurts" => "{0} hurts!";
     // The world.
     LANDED_ELSEWHERE = "msg.landedElsewhere" => "({0},{1}) in {2} can't be stood on; landed on ({3},{4}) instead.";
     ENTERED = "msg.entered" => "Entered {0}";

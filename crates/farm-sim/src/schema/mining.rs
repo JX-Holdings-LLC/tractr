@@ -1,6 +1,7 @@
 //! Port of `Mining.cs` (packages/engine-schemas/src/mining.ts).
 //! Mining (M4f) — procedurally generated floors, deterministic per seed.
 
+use super::combat::{MineHazard, MineMonsterWeight, MineTreasure};
 use crate::units;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -29,11 +30,36 @@ pub struct MineBand {
     /// Rock density (fraction of floor tiles occupied). 0..1.
     #[serde(with = "crate::units::milli")]
     pub density: u32,
+    /// Weighted monsters on its floors (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub monsters: Vec<MineMonsterWeight>,
+    /// Monsters per floor (M7), with combat on.
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub monster_count: u32,
+    /// Hazard terrains scattered over its floors (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub hazards: Vec<MineHazard>,
+    /// Weighted treasure left on its floors (M7).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub treasure: Vec<MineTreasure>,
+    /// Treasures per floor (M7).
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub treasure_count: u32,
 }
 
 impl Default for MineBand {
     fn default() -> Self {
-        Self { from_floor: 0, to_floor: 0, rocks: Vec::new(), density: 350 }
+        Self {
+            from_floor: 0,
+            to_floor: 0,
+            rocks: Vec::new(),
+            density: 350,
+            monsters: Vec::new(),
+            monster_count: 0,
+            hazards: Vec::new(),
+            treasure: Vec::new(),
+            treasure_count: 0,
+        }
     }
 }
 

@@ -4,15 +4,17 @@
 //! collects a ready product, or pets it. The nightly pass ages animals, rolls products
 //! (fed + adult + interval) and adjusts mood.
 //!
-//! v1 simplifications (documented): animals are editor-placed (no in-game purchase flow yet)
-//! and stay where placed; barns/coops reuse the existing interior-scene pattern rather than
-//! being special buildings.
+//! Housing (M5): animals bought from a shop live in a building that houses their species
+//! (`crate::buildings`); a species may have more products than its first, each on its own
+//! interval, a product's quality can follow the animal's mood, and adults in a building with
+//! room may have young overnight. Animals stay where they are placed.
 
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
 use crate::inventory;
 use crate::messages;
-use crate::schema::{AnimalSpeciesDefinition, AnimalState, GameState};
+use crate::rng::Rng;
+use crate::schema::{AnimalSpeciesDefinition, AnimalState, GameState, ProductProgress};
 use crate::units;
 
 /// The animal species `species_id`.
@@ -64,18 +66,44 @@ pub fn handle_animal_interaction(ctx: &EngineContext, state: &mut GameState, ani
         }
     }
 
-    // 2. Collect a ready product
-    if animal.product_ready {
-        let product = ctx.item(&species.product_item_id);
-        if let Some(product) = product {
-            let added = inventory::add_item(&state.player.inventory, product, 1, state.player.max_inventory_size, None);
+    // 2. Collect a ready product: the first one, then the others in order (M5), at the quality
+    // the animal's mood earns.
+    let quality = mood_quality(ctx, species, animal.mood);
+    let ready = if animal.product_ready && !species.product_item_id.is_empty() {
+        Some((None, species.product_item_id.as_str()))
+    } else {
+        species.products.iter().enumerate().find_map(|(index, product)| {
+            animal
+                .more_products
+                .get(index)
+                .filter(|progress| progress.ready)
+                .map(|_| (Some(index), product.item_id.as_str()))
+        })
+    };
+    if let Some((which, item_id)) = ready {
+        if let Some(product) = ctx.item(item_id) {
+            let added = inventory::add_item_with_quality(
+                &state.player.inventory,
+                product,
+                quality.as_deref(),
+                1,
+                state.player.max_inventory_size,
+                None,
+            );
             if !added.added {
                 return vec![Effect::say(message_levels::ERROR, &messages::INVENTORY_FULL)];
             }
             state.player.inventory = added.inventory;
-            update_animal(state, &animal.id, |a| {
-                a.product_ready = false;
-                a.days_since_product = 0;
+            update_animal(state, &animal.id, |a| match which {
+                None => {
+                    a.product_ready = false;
+                    a.days_since_product = 0;
+                }
+                Some(index) => {
+                    if let Some(progress) = a.more_products.get_mut(index) {
+                        *progress = ProductProgress::default();
+                    }
+                }
             });
             return vec![Effect::say(
                 message_levels::SUCCESS,
@@ -124,6 +152,19 @@ pub fn advance_animals_nightly(ctx: &EngineContext, state: &mut GameState) {
             }
         }
 
+        // More products (M5), each on its own interval and mood.
+        if !species.products.is_empty() {
+            animal.more_products.resize(species.products.len(), ProductProgress::default());
+            for (product, progress) in species.products.iter().zip(animal.more_products.iter_mut()) {
+                if is_adult && was_cared_for && !progress.ready {
+                    progress.days = progress.days.saturating_add(1);
+                    if progress.days >= product.interval_days && animal.mood >= product.min_mood {
+                        progress.ready = true;
+                    }
+                }
+            }
+        }
+
         animal.age_days = age_days;
         animal.mood = animal.mood.saturating_add(mood_delta).clamp(0, 100);
         animal.fed_today = false;
@@ -131,4 +172,49 @@ pub fn advance_animals_nightly(ctx: &EngineContext, state: &mut GameState) {
         animal.days_since_product = days_since_product;
         animal.product_ready = product_ready;
     }
+}
+
+/// The product quality `mood` earns (M5): the best of the species' `moodQualities` whose
+/// `minMood` it reaches, as the slot records it; `None` for normal quality.
+pub fn mood_quality(ctx: &EngineContext, species: &AnimalSpeciesDefinition, mood: i32) -> Option<String> {
+    let best = species.mood_qualities.iter().filter(|tier| mood >= tier.min_mood).max_by_key(|tier| tier.min_mood)?;
+    ctx.slot_quality(Some(&best.quality))
+}
+
+/// Young born overnight (M5): for each building with room and each species with `breeding`
+/// living there, the adults in the mood for it give one roll of the species' chance (from the
+/// game's random stream, only when there is something to roll for).
+pub fn breed_overnight(ctx: &EngineContext, state: &mut GameState) -> Effects {
+    let mut effects = Vec::new();
+    if state.animals.is_empty() || ctx.content.animal_species.iter().all(|species| species.breeding.is_none()) {
+        return effects;
+    }
+    let buildings = state.buildings.clone();
+    for building in &buildings {
+        for species in ctx.content.animal_species.iter() {
+            let Some(breeding) = &species.breeding else { continue };
+            let parents = state.animals.iter().any(|animal| {
+                animal.building_id.as_deref() == Some(building.id.as_str())
+                    && animal.species_id == species.id
+                    && animal.age_days >= species.days_to_adult
+                    && animal.mood >= breeding.min_mood
+            });
+            if !parents || crate::buildings::occupants(state, &building.id) >= crate::buildings::capacity(ctx, building)
+            {
+                continue;
+            }
+            let mut rng = Rng::new(state.rng.clone());
+            let born = rng.chance(breeding.chance);
+            state.rng = rng.state;
+            if !born {
+                continue;
+            }
+            let Some(spot) = crate::buildings::free_spot(ctx, state, building) else { continue };
+            let name = format!("Baby {}", species.name);
+            let baby = crate::buildings::new_animal(state, species, building, &name, spot);
+            effects.push(Effect::say(message_levels::SUCCESS, messages::ANIMAL_BORN.with(&[&species.name])));
+            state.animals.push(baby);
+        }
+    }
+    effects
 }

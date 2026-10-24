@@ -129,13 +129,18 @@ fn tool_refusal(
 
 /// Roll the weighted drop table once: at most one drop.
 fn roll_drops(definition: &NodeTypeDefinition, rng: &mut Rng) -> Vec<GatherDrop> {
+    roll_drop_table(&definition.drops, rng)
+}
+
+/// Roll a weighted drop table once (a node's or a monster's): at most one drop.
+pub(crate) fn roll_drop_table(table: &[crate::schema::NodeDrop], rng: &mut Rng) -> Vec<GatherDrop> {
     let mut drops: Vec<GatherDrop> = Vec::new();
-    if definition.drops.is_empty() {
+    if table.is_empty() {
         return drops;
     }
-    let weights: Vec<u32> = definition.drops.iter().map(|drop| drop.weight).collect();
+    let weights: Vec<u32> = table.iter().map(|drop| drop.weight).collect();
     if let Some(index) = rng.weighted(&weights) {
-        let drop = &definition.drops[index];
+        let drop = &table[index];
         let quantity = if drop.max > drop.min {
             // min ≤ result ≤ max
             rng.int(i64::from(drop.min), i64::from(drop.max)) as u32

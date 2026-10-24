@@ -787,7 +787,9 @@ impl Player {
                 }
                 SessionEvent::DayStarted { .. } => autosave = true,
                 SessionEvent::PluginError { text } => plugin_errors.push(text),
-                SessionEvent::SceneChanged { .. } | SessionEvent::QuestCompleted { .. } => {}
+                SessionEvent::SceneChanged { .. }
+                | SessionEvent::QuestCompleted { .. }
+                | SessionEvent::AchievementUnlocked { .. } => {}
             }
         }
         for error in plugin_errors {

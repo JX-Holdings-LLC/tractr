@@ -652,6 +652,7 @@ pub fn create_default_mine_bands() -> Vec<MineBand> {
             to_floor: 7,
             density: 300,
             rocks: vec![rock("node-mine-rock", 6), rock("node-copper-ore", 3), rock("node-quartz", 1)],
+            ..MineBand::default()
         },
         MineBand {
             from_floor: 8,
@@ -663,6 +664,7 @@ pub fn create_default_mine_bands() -> Vec<MineBand> {
                 rock("node-iron-ore", 3),
                 rock("node-quartz", 1),
             ],
+            ..MineBand::default()
         },
     ]
 }

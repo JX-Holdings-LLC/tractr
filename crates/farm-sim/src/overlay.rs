@@ -9,9 +9,9 @@
 
 use crate::crafting::{self, CraftableStatus};
 use crate::engine_types::EngineContext;
-use crate::schema::{Dialogue, DialogueOption, GameState, ShopDefinition, Tile};
+use crate::schema::{Dialogue, DialogueOption, GameState, InventorySlot, RecipeIngredient, ShopDefinition, Tile};
 use crate::world::world_movement;
-use crate::{dialogue_system, economy, social, substitution};
+use crate::{buildings, dialogue_system, economy, social, substitution};
 use serde::Serialize;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -47,6 +47,58 @@ pub struct OverlayView<'a> {
     pub craftable: BTreeMap<&'a str, CraftableStatus>,
     /// Whether the inventory holds every input of a recipe (machine loading).
     pub has_ingredients: BTreeMap<&'a str, bool>,
+    /// The open chest or shipping bin (M5).
+    pub storage: Option<StorageView>,
+    /// What the open shop builds (M5): new buildings, and upgrades of standing ones.
+    pub building_options: Vec<BuildOption>,
+    /// The animals the open shop sells and the buildings they may go to (M5).
+    pub animal_options: Vec<AnimalOption>,
+    /// Letters not read yet (M6).
+    pub unread_mail: usize,
+}
+
+/// The open chest or shipping bin (M5).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageView {
+    pub name: String,
+    pub slots: u32,
+    /// A shipping bin: what it holds is sold overnight.
+    pub shipping: bool,
+    pub contents: Vec<InventorySlot>,
+}
+
+/// A building the open shop builds, or an upgrade of a standing building (M5).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildOption {
+    pub building_id: String,
+    pub name: String,
+    pub description: String,
+    pub cost: i64,
+    pub materials: Vec<RecipeIngredient>,
+    pub width: i32,
+    pub height: i32,
+    /// The player has the money and the materials.
+    pub affordable: bool,
+    /// The building on the map it upgrades (`upgradeBuilding`); absent: a new building
+    /// (`orderBuilding`) placed in one of `scenes`.
+    pub upgrades: Option<String>,
+    /// The scenes it may be built in.
+    pub scenes: Vec<String>,
+    pub build_days: u32,
+}
+
+/// An animal the open shop sells (M5).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnimalOption {
+    pub species_id: String,
+    pub name: String,
+    pub cost: i64,
+    /// Standing buildings that house it with room: (building on the map, its name, animals in
+    /// it, its capacity).
+    pub homes: Vec<(String, String, u32, u32)>,
 }
 
 /// Builds the overlay view for `state`.
@@ -85,6 +137,16 @@ pub fn overlay_view<'a>(ctx: &'a EngineContext, state: &GameState) -> OverlayVie
         craftable.insert(recipe.id.as_str(), crafting::craftable_status(ctx, state, recipe));
         has_ingredients.insert(recipe.id.as_str(), crafting::has_ingredients(state, recipe));
     }
+    let (building_options, animal_options) = match &shop {
+        Some(shop) => (build_options(ctx, state, shop), animal_options(ctx, state, shop)),
+        None => (Vec::new(), Vec::new()),
+    };
+    let storage = crate::objects::open_storage(ctx, state).map(|(machine, definition)| StorageView {
+        name: definition.name.clone(),
+        slots: definition.storage_slots(),
+        shipping: definition.shipping,
+        contents: machine.contents.clone(),
+    });
     OverlayView {
         dialogue,
         dialogue_text,
@@ -95,7 +157,87 @@ pub fn overlay_view<'a>(ctx: &'a EngineContext, state: &GameState) -> OverlayVie
         facing: FacingTile { x: facing.x, y: facing.y },
         craftable,
         has_ingredients,
+        storage,
+        building_options,
+        animal_options,
+        unread_mail: crate::mail::unread(state),
     }
+}
+
+fn build_options(ctx: &EngineContext, state: &GameState, shop: &ShopDefinition) -> Vec<BuildOption> {
+    let mut options = Vec::new();
+    for id in &shop.buildings {
+        let Some(definition) = buildings::definition(ctx, id) else { continue };
+        let affordable = state.player.money >= definition.cost
+            && definition
+                .materials
+                .iter()
+                .all(|m| crate::inventory::count_item(&state.player.inventory, &m.item_id) >= u64::from(m.quantity));
+        let (width, height) = definition.size();
+        let option = |upgrades: Option<String>| BuildOption {
+            building_id: definition.id.clone(),
+            name: definition.name.clone(),
+            description: definition.description.clone(),
+            cost: definition.cost,
+            materials: definition.materials.clone(),
+            width,
+            height,
+            affordable,
+            upgrades,
+            scenes: buildings::allowed_scenes(ctx, definition).into_iter().map(str::to_owned).collect(),
+            build_days: definition.build_days.max(1),
+        };
+        match &definition.upgrade_of {
+            None => options.push(option(None)),
+            Some(from) => {
+                for building in state.buildings.iter().filter(|b| &b.building_id == from && b.days_left == 0) {
+                    options.push(option(Some(building.id.clone())));
+                }
+            }
+        }
+    }
+    options
+}
+
+fn animal_options(ctx: &EngineContext, state: &GameState, shop: &ShopDefinition) -> Vec<AnimalOption> {
+    shop.animals
+        .iter()
+        .filter_map(|id| ctx.animal_species(id))
+        .map(|species| AnimalOption {
+            species_id: species.id.clone(),
+            name: species.name.clone(),
+            cost: species.purchase_cost,
+            homes: state
+                .buildings
+                .iter()
+                .filter(|building| buildings::houses(ctx, species, building))
+                .map(|building| {
+                    let name = buildings::definition(ctx, &building.building_id)
+                        .map_or(building.id.clone(), |definition| definition.name.clone());
+                    (
+                        building.id.clone(),
+                        name,
+                        buildings::occupants(state, &building.id),
+                        buildings::capacity(ctx, building),
+                    )
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// Why building `building_id` can't go with its top-left tile on `(x, y)` of `scene_id` (the
+/// build menu's placement preview), or `None` when it can.
+pub fn site_status(
+    ctx: &EngineContext,
+    state: &GameState,
+    building_id: &str,
+    scene_id: &str,
+    x: i32,
+    y: i32,
+) -> Option<crate::messages::Message> {
+    let definition = buildings::definition(ctx, building_id)?;
+    buildings::site_refusal(ctx, state, definition, scene_id, x, y)
 }
 
 impl OverlayView<'_> {

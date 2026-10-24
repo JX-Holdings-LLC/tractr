@@ -2,13 +2,16 @@
 
 use super::actors::{Dialogue, Npc, Player};
 use super::animals::{AnimalSpeciesDefinition, AnimalState};
+use super::combat::MonsterDefinition;
 use super::content::{CustomAsset, CustomCropDefinition, InventorySlot, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
 use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
+use super::farm::{BuildingDefinition, BuildingState};
 use super::fishing::FishTable;
+use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
 use super::graphics::{GraphicsSettings, VisualRef};
 use super::interface::GamePanel;
 use super::mining::MineConfig;
@@ -120,6 +123,27 @@ pub struct GameProject {
     /// Heart events (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heart_events: Option<Vec<HeartEvent>>,
+    /// Buildings a builder puts up (M5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building_types: Option<Vec<BuildingDefinition>>,
+    /// Buildings on the map when a game starts (M5: the house; Keep changes adds built ones).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buildings: Option<Vec<BuildingState>>,
+    /// Collections (M6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collections: Option<Vec<CollectionDefinition>>,
+    /// Bundles (M6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundles: Option<Vec<BundleDefinition>>,
+    /// Achievements (M6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub achievements: Option<Vec<AchievementDefinition>>,
+    /// Letters (M6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mail: Option<Vec<MailDefinition>>,
+    /// Monsters (M7).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monsters: Option<Vec<MonsterDefinition>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,

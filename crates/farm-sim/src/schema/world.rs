@@ -1,5 +1,6 @@
 //! Port of `World.cs` (packages/engine-schemas/src/world.ts).
 
+use super::combat::MonsterSpawn;
 use super::content::{Crop, Item};
 use super::crafting::TileMachine;
 use super::graphics::VisualRef;
@@ -122,6 +123,15 @@ pub struct Scene {
     /// A music asset that plays in the scene (M2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub music: Option<String>,
+    /// Crops are planted and grow here in every season (a greenhouse, M5).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_seasons: Option<bool>,
+    /// The building whose interior this is (M5: a [`super::BuildingState`] id).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building: Option<String>,
+    /// Monsters it has each morning (M7).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monsters: Option<Vec<MonsterSpawn>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -172,6 +182,11 @@ impl Scene {
     /// Does no daylight reach the scene ([`Scene::dark`])?
     pub fn is_dark(&self) -> bool {
         self.dark == Some(true)
+    }
+
+    /// Do crops grow here in every season ([`Scene::all_seasons`])?
+    pub fn is_all_seasons(&self) -> bool {
+        self.all_seasons == Some(true)
     }
 
     /// Whether the scene carries `tag` ([`Scene::tags`]).

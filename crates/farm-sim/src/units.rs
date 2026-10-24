@@ -507,6 +507,23 @@ macro_rules! unit_module {
                 }
             }
 
+            /// `IndexMap<String, Int>`.
+            pub mod map {
+                use super::Int;
+                use indexmap::IndexMap;
+                use serde::{Deserializer, Serializer};
+
+                /// Writes the value as its authoring number (serde `with`).
+                pub fn serialize<S: Serializer>(value: &IndexMap<String, Int>, serializer: S) -> Result<S::Ok, S::Error> {
+                    super::super::serialize_map::<$unit, S>(value, serializer)
+                }
+
+                /// Reads an authoring number into the unit (serde `with`).
+                pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<IndexMap<String, Int>, D::Error> {
+                    super::super::deserialize_map::<$unit, D>(deserializer)
+                }
+            }
+
             /// `IndexMap<String, IndexMap<String, Int>>`.
             pub mod nested_map {
                 use super::Int;

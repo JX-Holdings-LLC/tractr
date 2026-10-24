@@ -25,8 +25,10 @@ pub mod tool_actions {
     pub const TRANSFORM: &str = "transform";
     pub const PLACE: &str = "place";
     pub const PLANT: &str = "plant";
+    /// Hits the monsters ahead (a weapon, M7): the item's `toolPower` is the damage.
+    pub const ATTACK: &str = "attack";
 
-    pub const ALL: &[&str] = &[WATER, TILL, HARVEST, FISH, BREAK, TRANSFORM, PLACE, PLANT];
+    pub const ALL: &[&str] = &[WATER, TILL, HARVEST, FISH, BREAK, TRANSFORM, PLACE, PLANT, ATTACK];
 }
 
 /// A terrain change a tool makes.
@@ -68,6 +70,9 @@ pub struct TerrainDefinition {
     pub hazard_energy: i32,
     /// Keeps the weather off its tile, as an indoor scene does.
     pub indoor: bool,
+    /// Health the player loses on stepping onto it, with combat on (M7). int, nonnegative.
+    #[serde(skip_serializing_if = "super::is_zero_i32", with = "crate::units::int")]
+    pub damage: i32,
     pub transforms: Vec<TerrainTransform>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
@@ -88,6 +93,7 @@ impl Default for TerrainDefinition {
             blocks_light: false,
             hazard_energy: 0,
             indoor: false,
+            damage: 0,
             transforms: Vec::new(),
             extra: Map::new(),
         }

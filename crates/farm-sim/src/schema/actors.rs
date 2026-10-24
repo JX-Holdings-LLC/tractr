@@ -203,6 +203,9 @@ pub struct Player {
     /// The clothes the player wears (M4), one per slot.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub worn: Option<Vec<InventorySlot>>,
+    /// Health (M7, with combat on); absent: full.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub health: Option<i32>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

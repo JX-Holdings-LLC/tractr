@@ -52,6 +52,9 @@ pub struct QuestRewards {
     /// Absent: farming.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill: Option<String>,
+    /// A letter sent on completion (M6), arriving the next morning.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mail_id: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

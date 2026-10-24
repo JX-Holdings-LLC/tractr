@@ -17,6 +17,8 @@
 #![deny(clippy::disallowed_types, clippy::disallowed_methods, clippy::float_arithmetic)]
 
 pub mod animals;
+pub mod buildings;
+pub mod combat;
 pub mod commands;
 pub mod content_builtin;
 pub mod content_index;
@@ -30,16 +32,20 @@ pub mod engine;
 pub mod engine_types;
 pub mod events;
 pub mod extensibility;
+pub mod farm_layouts;
 pub mod farming;
 pub mod fishing;
 pub mod game_time;
 pub mod gathering;
+pub mod goals;
 pub mod hash;
 pub mod hooks;
 pub mod inventory;
+pub mod mail;
 pub mod messages;
 pub mod mines;
 pub mod npcs;
+pub mod objects;
 pub mod overlay;
 pub mod packs;
 pub mod quests;
