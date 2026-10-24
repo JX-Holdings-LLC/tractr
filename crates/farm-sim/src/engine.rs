@@ -30,6 +30,7 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
     }
     ctx.emit(HookEvent::Command(CommandHookPayload { command_type: command.type_name().to_owned() }));
     let mut effects = run_command(ctx, state, command);
+    objects::forget_gone(ctx, state);
     // Items found and achievements reached (M6).
     effects.extend(goals::after_step(ctx, state));
     effects
@@ -363,6 +364,7 @@ fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     if u64::from(state.clock.time_minutes) >= u64::from(time.day_end_minute) * u64::from(units::MINUTE) {
         effects.extend(game_time::perform_sleep(ctx, state, SleepOptions { collapsed: true }));
     }
+    objects::forget_gone(ctx, state);
     // Items found and achievements reached this tick (M6).
     effects.extend(goals::after_step(ctx, state));
     effects

@@ -36,6 +36,10 @@ pub fn handle_choose(ctx: &EngineContext, state: &mut GameState, layout_id: &str
         let others: Vec<&str> =
             farm.layouts.iter().map(|layout| layout.scene_id.as_str()).filter(|id| *id != target).collect();
         state.world.scenes.retain(|scene| !others.contains(&scene.id.as_str()));
+        // What stood on the maps that went goes with them; the farm's monsters come back with
+        // the morning, on the new map.
+        state.monsters.retain(|monster| monster.scene_id != target && !others.contains(&monster.scene_id.as_str()));
+        state.buildings.retain(|building| !others.contains(&building.scene_id.as_str()));
         // Whoever stood on the old map stands where the new one lets them.
         if state.player.scene_id == target {
             let (x, y) = (units::tile_of(state.player.x), units::tile_of(state.player.y));

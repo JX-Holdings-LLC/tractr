@@ -80,6 +80,14 @@ pub fn open_storage<'a>(
     (definition.storage_slots() > 0).then_some((machine, definition))
 }
 
+/// Closes the storage when its object is gone (picked up, replaced by an event, its map
+/// changed): a modal must not outlive what it shows.
+pub fn forget_gone(ctx: &EngineContext, state: &mut GameState) {
+    if state.storage.is_some() && open_storage(ctx, state).is_none() {
+        state.storage = None;
+    }
+}
+
 /// Close the open chest or bin.
 pub fn handle_close(state: &mut GameState) -> Effects {
     state.storage = None;
