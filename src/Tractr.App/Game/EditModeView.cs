@@ -162,7 +162,7 @@ public sealed partial class EditModeView : UserControl
         }
     }
 
-    /// <summary>The Map tab's page: the toolbar (scene, markers, zoom, hover readout), the framed map and the cursor status line.</summary>
+    /// <summary>The Map tab's page: the toolbar (scene, sky preview, markers, zoom, hover readout), the framed map and the cursor status line.</summary>
     private DockPanel BuildMapCenter()
     {
         var frame = new Border { Child = _scroller, Background = new SolidColorBrush(Color.Parse("#80E9DAB6")) }.WithClasses("game-frame");
@@ -218,14 +218,18 @@ public sealed partial class EditModeView : UserControl
         var toolbarLeft = Ui.HStack(8, Ui.Icon("IconMap", 18), Ui.Text("Scene", "hud-label"), _sceneSelector);
         _showMarkers.IsCheckedChanged += (_, _) => RefreshMarkers(force: true);
         ToolTip.SetTip(_showMarkers, "Show doors, arrivals, event tiles, the mine entrance and the player start on the map");
-        var toolbarRight = Ui.HStack(6, _showMarkers, zoomOut, _zoomText, zoomIn, fit);
-        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(0, 0, 0, 10) };
+        var toolbarRight = Ui.HStack(6, BuildSkyToggle(), _showMarkers, zoomOut, _zoomText, zoomIn, fit);
+        var toolbar = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto"), Margin = new Thickness(0, 0, 0, 10) };
         toolbar.Children.Add(toolbarLeft);
         var hoverBox = new Border { Child = _hoverInfo, Margin = new Thickness(16, 0) };
         Grid.SetColumn(hoverBox, 1);
         toolbar.Children.Add(hoverBox);
         Grid.SetColumn(toolbarRight, 2);
         toolbar.Children.Add(toolbarRight);
+        var skyRow = BuildSkyRow();
+        Grid.SetRow(skyRow, 1);
+        Grid.SetColumnSpan(skyRow, 3);
+        toolbar.Children.Add(skyRow);
         var toolbarBorder = new Border { Name = "MapToolbar", Child = toolbar, Padding = new Thickness(12, 8), Margin = new Thickness(0, 0, 0, 12) }.WithClasses("hud");
 
         var center = new DockPanel();
@@ -661,6 +665,7 @@ public sealed partial class EditModeView : UserControl
         var scene = CurrentScene();
         _sceneId = scene?.Id;
         RefreshSceneSelector(project);
+        RefreshSky(project, scene);
         RefreshInfo(project);
         RefreshPalette(project);
         RefreshEditorPanels(project, scene);

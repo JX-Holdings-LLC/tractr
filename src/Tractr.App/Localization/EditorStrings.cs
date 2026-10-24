@@ -7,9 +7,9 @@ public sealed record EditorLanguage(string Code, string NativeName);
 
 /// <summary>
 /// String tables of the editor's own chrome: mode
-/// names, the Play Mode toolbar, the whole menu bar, the welcome tour and the shortcuts list. The
-/// game's interface is localized by the Rust player (farm-ui); editor tabs, forms and Problems
-/// stay English until the full editor pass (ROADMAP "Later").
+/// names, the Play Mode toolbar, the whole menu bar, the welcome tour, the shortcuts list and
+/// the map's sky preview. The game's interface is localized by the Rust player (farm-ui); editor
+/// tabs, forms and Problems stay English until the full editor pass (ROADMAP "Later").
 /// <para>
 /// <see cref="Get(string)"/> looks a key up in the current <see cref="Language"/>, falls back to
 /// English, then to the key itself. The language is an app setting
@@ -107,6 +107,23 @@ public static class EditorStrings
         ["shortcuts.options"] = "Pick a dialogue option",
         ["shortcuts.rebind"] = "Players can rebind the game's keys in Settings → Controls.",
         ["common.close"] = "Close",
+        // Edit Mode: the map's sky preview.
+        ["sky.label"] = "Sky",
+        ["sky.name"] = "Sky preview",
+        ["sky.time"] = "Time",
+        ["sky.season"] = "Season",
+        ["sky.weather"] = "Weather",
+        ["sky.note"] = "A preview only: not saved.",
+        ["sky.morning"] = "Morning",
+        ["sky.noon"] = "Noon",
+        ["sky.evening"] = "Evening",
+        ["sky.night"] = "Night",
+        ["sky.clear"] = "Clear",
+        ["sky.timeName"] = "Sky preview: time of day",
+        ["sky.seasonName"] = "Sky preview season",
+        ["sky.weatherName"] = "Sky preview weather",
+        ["sky.tip"] = "Preview the scene's day/night tint, foliage tint and weather as the game draws them, at a time, season and weather you pick. Not saved with the project.",
+        ["sky.indoor"] = "An indoor scene keeps the weather out.",
     };
 
     private static readonly Dictionary<string, string> Es = new(StringComparer.Ordinal)
@@ -184,6 +201,23 @@ public static class EditorStrings
         ["shortcuts.options"] = "Elegir una opción de diálogo",
         ["shortcuts.rebind"] = "Los jugadores pueden reasignar las teclas del juego en Ajustes → Controles.",
         ["common.close"] = "Cerrar",
+        // Edit Mode: the map's sky preview.
+        ["sky.label"] = "Cielo",
+        ["sky.name"] = "Vista previa del cielo",
+        ["sky.time"] = "Hora",
+        ["sky.season"] = "Estación",
+        ["sky.weather"] = "Tiempo",
+        ["sky.note"] = "Solo una vista previa: no se guarda.",
+        ["sky.morning"] = "Mañana",
+        ["sky.noon"] = "Mediodía",
+        ["sky.evening"] = "Atardecer",
+        ["sky.night"] = "Noche",
+        ["sky.clear"] = "Despejado",
+        ["sky.timeName"] = "Vista previa del cielo: hora del día",
+        ["sky.seasonName"] = "Estación de la vista previa del cielo",
+        ["sky.weatherName"] = "Tiempo de la vista previa del cielo",
+        ["sky.tip"] = "Muestra el tinte de día y noche, el tinte del follaje y el tiempo de la escena como los dibuja el juego, a la hora, estación y tiempo que elijas. No se guarda en el proyecto.",
+        ["sky.indoor"] = "Una escena interior no tiene tiempo atmosférico.",
     };
 
     private static readonly Dictionary<string, Dictionary<string, string>> Tables = new(StringComparer.Ordinal)

@@ -171,9 +171,10 @@ pub unsafe extern "C" fn fe_preview_set_scenes(
 }
 
 /// Renders a scene: `request` is `{"sceneId":"…","tileSize":28,"padding":12,"camera":{"x":…,
-/// "y":…,"width":…,"height":…},"scale":1}` (`camera` optional: the whole scene). `out` receives
-/// the width and height as little-endian `u32`s followed by `width × height` premultiplied RGBA8
-/// pixels.
+/// "y":…,"width":…,"height":…},"sky":{"timeMinutes":…,"season":"…","weatherId":"…"},"scale":1}`
+/// (`camera` optional: the whole scene; `sky` optional: the sky preview, the scene under that
+/// time, season and weather as play draws it). `out` receives the width and height as
+/// little-endian `u32`s followed by `width × height` premultiplied RGBA8 pixels.
 ///
 /// # Safety
 /// `preview` from [`fe_preview_new`]; `request` points to `len` bytes; `out` is valid.
@@ -352,6 +353,14 @@ mod tests {
         assert_eq!(frame.len(), 8 + 201 * 120 * 4);
         // Premultiplied: no channel exceeds alpha.
         assert!(frame[8..].chunks_exact(4).all(|p| p[0] <= p[3] && p[1] <= p[3] && p[2] <= p[3]));
+
+        // The sky preview tints the same viewport.
+        let (result, night) = render(format!(
+            r#"{{"sceneId":{scene_id},"tileSize":28,"padding":12,"camera":{{"x":40,"y":30,"width":100.5,"height":60}},"sky":{{"timeMinutes":1320,"weatherId":"snow"}},"scale":2}}"#
+        ));
+        assert_eq!(result, FeResult::Ok, "{}", String::from_utf8_lossy(&night));
+        assert_eq!((size(&night), night.len()), (size(&frame), frame.len()));
+        assert_ne!(night, frame);
 
         // Without a camera: the whole scene.
         let (result, whole) = render(format!(r#"{{"sceneId":{scene_id},"tileSize":28,"padding":12,"scale":1}}"#));

@@ -10,6 +10,13 @@ namespace FarmEngine.Interop;
 /// <summary>A viewport of the map in world pixels (<c>SnapshotCamera</c>).</summary>
 public sealed record PreviewCamera(double X, double Y, double Width, double Height);
 
+/// <summary>
+/// Edit Mode's sky preview (<c>SkyPreview</c>): the scene drawn under a minute of the day, a
+/// season (empty: the project's starting season) and a weather type (null: clear), with the
+/// day/night tint, foliage tint and weather overlay play draws for them. The particles stand still.
+/// </summary>
+public sealed record PreviewSky(double TimeMinutes, string Season, string? WeatherId);
+
 /// <summary>A rendered preview: <paramref name="Pixels"/> holds Width × Height premultiplied RGBA8 pixels, row by row.</summary>
 public sealed record PreviewFrame(int Width, int Height, byte[] Pixels);
 
@@ -168,11 +175,12 @@ public sealed unsafe class RustPreview : IDisposable
     /// Renders scene <paramref name="sceneId"/> as Edit Mode shows it (grid seams, grid overlay,
     /// the project's art) at <paramref name="tileSize"/>. With a <paramref name="camera"/> only
     /// that viewport is drawn; the frame is the viewport size × <paramref name="scale"/>, rounded up.
+    /// With a <paramref name="sky"/> the scene is drawn under that time, season and weather.
     /// </summary>
-    public PreviewFrame Render(string sceneId, double tileSize = 28, double padding = 12, PreviewCamera? camera = null, double scale = 1)
+    public PreviewFrame Render(string sceneId, double tileSize = 28, double padding = 12, PreviewCamera? camera = null, double scale = 1, PreviewSky? sky = null)
     {
         ArgumentNullException.ThrowIfNull(sceneId);
-        var request = JsonSerializer.SerializeToUtf8Bytes(new { sceneId, tileSize, padding, camera, scale }, InteropJson.Options);
+        var request = JsonSerializer.SerializeToUtf8Bytes(new { sceneId, tileSize, padding, camera, sky, scale }, InteropJson.Options);
         return _native.Read(nameof(Render), request, NativeMethods.fe_preview_render, ReadFrame);
     }
 

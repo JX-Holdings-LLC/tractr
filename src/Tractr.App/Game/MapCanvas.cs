@@ -42,7 +42,8 @@ public sealed class MapCanvas : Control, IDisposable
     private int _projectVersion;
     private MapGeometry? _geometry;
     private WriteableBitmap? _bitmap;
-    private (int Version, MapGeometry Geometry, PixelRect Region, double Scale)? _bitmapKey;
+    private (int Version, MapGeometry Geometry, PixelRect Region, double Scale, PreviewSky? Sky)? _bitmapKey;
+    private PreviewSky? _sky;
     private Rect _bitmapRect;
     private ScrollViewer? _scroller;
 
@@ -94,6 +95,25 @@ public sealed class MapCanvas : Control, IDisposable
                 InvalidateMeasure();
             }
 
+            InvalidateVisual();
+        }
+    }
+
+    /// <summary>
+    /// The sky preview the map is drawn under (editor view state, never saved): a time of day,
+    /// season and weather, with play's tints and a still weather overlay; null draws the plain map.
+    /// </summary>
+    public PreviewSky? Sky
+    {
+        get => _sky;
+        set
+        {
+            if (value == _sky)
+            {
+                return;
+            }
+
+            _sky = value;
             InvalidateVisual();
         }
     }
@@ -225,12 +245,12 @@ public sealed class MapCanvas : Control, IDisposable
         }
 
         var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
-        var key = (_projectVersion, g, region, scale);
+        var key = (_projectVersion, g, region, scale, _sky);
         if (_bitmap is null || _bitmapKey != key)
         {
             try
             {
-                var frame = _preview.Render(g.SceneId, g.TileSize, g.Padding, new PreviewCamera(region.X, region.Y, region.Width, region.Height), scale);
+                var frame = _preview.Render(g.SceneId, g.TileSize, g.Padding, new PreviewCamera(region.X, region.Y, region.Width, region.Height), scale, _sky);
                 _bitmap?.Dispose();
                 _bitmap = ToBitmap(frame, scale);
                 _bitmapKey = key;
