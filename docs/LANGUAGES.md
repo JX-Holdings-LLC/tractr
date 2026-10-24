@@ -193,6 +193,13 @@ what an exported game contains.
   fe_result fe_session_tick(fe_session*, uint32_t ticks, fe_bytes* out);
   fe_result fe_session_save(fe_session*, fe_bytes* out);
 
+  // Sound and music assets in the Art tab (audio.rs): no handle, one preview at a time.
+  uint8_t   fe_audio_output(void);                                   // 1 with `audio-out`
+  fe_result fe_audio_probe(const uint8_t* file, size_t len, fe_bytes* out);       // the player's decoder
+  fe_result fe_audio_preview_play(const uint8_t* file, size_t len, fe_bytes* out); // plays it once
+  void      fe_audio_preview_stop(void);
+  uint8_t   fe_audio_preview_playing(void);
+
   void      fe_bytes_free(fe_bytes);
   uint32_t  fe_abi_version(void);
   ```

@@ -216,6 +216,14 @@ until the player changes scene. What plays, first match wins: the music an
 event or cutscene chose, today's festival, the weather, the scene, the
 season. With none of those, the built-in music plays as before.
 
+In the Art tab's sound list, **Play** plays the selected sound or music once
+(press it again to stop), through the same decoder the game uses. **Rename**
+changes the name the editor shows; the asset's id stays, so everything that
+plays it still does. Problems lists a file the game can't play (cut short,
+damaged, Ogg Opus instead of Ogg Vorbis, a compressed WAV, longer than 10
+minutes) as an error: the game would leave it out and play the built-in sound
+or music in its place.
+
 ### Cutscenes
 
 A cutscene is a list of steps that run one after another, over time. Start

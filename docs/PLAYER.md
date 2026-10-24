@@ -185,6 +185,14 @@ shipped in the cartridge's asset table like its images.
   broken, too long) is left out when the game loads
   (`Player::audio_assets().failed()` lists it with the reason), and the
   built-in sound or music plays in its place. Audio never stops the game.
+  The editor's Problems check (`AudioFiles` in F#) reads each file's
+  structure the way lewton and hound do (Ogg pages and their CRCs, the
+  Vorbis headers; WAV chunks and formats) and reports what would be left out
+  as `asset.audioUnreadable`, an error that blocks Export.
+- **Preview.** The Art tab's play button plays one asset through
+  `farm_player::preview` (feature `audio-out`, via `fe_audio_preview_play`):
+  the same decoder, resampled to the device's rate, on a stream of its own
+  thread, without the game's sound bank or music loops.
 - **Playback.** A `SoundRequest` carries its sound asset's decoded `Clip`,
   and a `MusicCue` its music asset (`asset`, with the built-in `music` as the
   fallback), so a host needs nothing else. The desktop game and the editor's
