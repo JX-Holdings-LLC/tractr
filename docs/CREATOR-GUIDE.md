@@ -395,12 +395,12 @@ that process recipes it can be:
   items of a sellable kind go in.
 - **Gate**: interacting opens and closes it; an open gate never blocks. A
   fence is just a machine type that blocks movement.
-- **Area effects**: what it does to the square of tiles **radius** around
+- `areaEffects`: what it does to the square of tiles **radius** around
   it. **water** (a sprinkler) waters the soil there each morning; **protect**
   (a scarecrow) keeps storms and pests off the crops there overnight. Pests
-  are off until **Settings → Farm → Pest chance** is above 0: each night an
+  are off until the pest chance in **Settings → Farm** is above 0: each night an
   outdoor crop no object protects is eaten with that chance.
-- **Furniture and decoration**: a machine type with none of these.
+- Furniture and decoration: a machine type with none of these.
 
 Placeable objects appear in the game's crafting menu with **Place** (an item
 the type names is used up, as for machines).
@@ -408,18 +408,18 @@ the type names is used up, as for machines).
 #### Buildings
 
 A **building** has a footprint (**Width** × **Height** tiles, up to 16), a
-**Door** in it (the middle of the bottom row by default) and an **Interior
-scene**: each building of the kind gets its own copy of that scene, entered
-through the door; the interior's **Interior door** (the middle of its bottom
+`door` in it (the middle of the bottom row by default) and an interior
+scene (`interiorSceneId`): each building of the kind gets its own copy of that scene, entered
+through the door; the interior's `interiorDoor` (the middle of its bottom
 row by default) leads back out. It costs **Cost** money and its
-**Materials**, takes **Build days** nights to stand, may only go in its
+**Materials**, takes `buildDays` nights to stand, may only go in its
 **Scenes** (empty: the farm scene of **Settings → Farm**, else the start
 scene), and houses **Capacity** animals.
 
 A shop whose **Buildings** list names it is a builder: its **Build** tab
 places a new building on a free spot (no blocked tile, crop, node, object,
 item, door, NPC, animal or player under it) and shows each upgrade of a
-standing building. A building with **Upgrade of** set is never built new: it
+standing building. A building with `upgradeOf` set is never built new: it
 is what that building becomes, with its own interior, cost and nights; what
 stood inside stays where the new floor has room. The player's house
 upgrades the same way: add it under **Content → Placed buildings** (its kind,
@@ -431,11 +431,11 @@ interior) and crops are planted and grow there in any season.
 
 #### Animals and their buildings
 
-An animal species lists the buildings that **house** it (an upgrade of one
+An animal species lists the buildings that house it (an upgrade of one
 of them counts too). A shop whose **Animals** list names it sells it into a
 standing building that houses it and has room; the animal lives inside.
-Beside its **Product**, a species can have more **Products**, each on its
-own interval and needing a mood. **Mood qualities** give a product's quality
+Beside its product, a species can have more **Products**, each on its
+own interval and needing a mood. `moodQualities` give a product's quality
 by the animal's mood (the best one it reaches: 90 for gold, say), and
 **Breeding** gives adults in a building with room a chance each night of
 young.
@@ -450,10 +450,10 @@ lead to the chosen map.
 
 ### Long-term goals
 
-- **Shipping log**: the game counts every unit its shipping bins sold, and
+- Shipping log: the game counts every unit its shipping bins sold, and
   shows last night's shipment.
-- **Collections**: lists of items to **find** (the first time the player
-  holds one), to **ship**, or to **donate** (handed in from the Goals screen,
+- **Collections**: lists of items to find (the first time the player
+  holds one), to ship, or to **donate** (handed in from the Goals screen,
   in the collection's **Scene** when it names one: a museum). **Rewards**
   are given once each, when the collection holds their **count** of items: a
   message and outcomes.
@@ -465,7 +465,7 @@ lead to the chosen map.
   **Group** (a room or a board).
 - **Achievements** unlock the moment their conditions hold (the same
   conditions as events; an achievement without any never unlocks). A
-  **hidden** one shows as ??? until then. **Steam id** is kept for exports
+  **hidden** one shows as ??? until then. `steamId` is kept for exports
   with Steamworks (see [Later](../ROADMAP.md#later)).
 - **Mail**: a letter has a subject, a sender (an NPC), a text (with
   [text substitution](#text-substitution)), attachments, money and outcomes
@@ -481,25 +481,25 @@ lead to the chosen map.
 
 Combat is off until you tick **Combat** in **Settings → Combat**. Then:
 
-- The player has **health** beside energy (**Max health**). Monsters that
+- The player has **health** beside energy (`maxHealth`). Monsters that
   touch them and terrain with **Damage** take it (a hit leaves the player
-  unharmed for **Hurt ticks**); food with **Health** and a night's sleep
-  restore it. At 0 the player faints and comes to at the **faint** scene and
+  unharmed for `hurtTicks`); food with **Health** and a night's sleep
+  restore it. At 0 the player faints and comes to at the faint scene and
   tile (the start scene's middle by default) with half their health, paying
-  the **Faint penalty**.
+  the faint penalty.
 - **Monsters** have health, the damage they do, defense, speed, how they
   move (**chase** a player within **Sight**, **wander**, or stay **still**),
   drops and the combat experience they give. A scene's **Monsters** (in the
   scene panel, one spawn per line: `slime 3`, `bat 2 at 4,4`,
   `slime 3 in 2,2-10,8`) spawns them each morning; a mine depth band's
-  **Monsters** and **Monster count** (Settings → Mine, a form per band) put
+  **Monsters** and `monsterCount` (Settings → Mine, a form per band) put
   them on its floors.
-- A **weapon** is a tool whose action is **attack** (Content → Tools): it
-  hits the monsters on the tiles it covers for its item's **Tool power**,
+- A weapon is a tool whose action is **attack** (Content → Tools): it
+  hits the monsters on the tiles it covers for its item's `toolPower`,
   plus the player's combat level, less the monster's defense.
 - Mine depth bands also scatter **Hazards** (a terrain with damage or
   hazard energy, on the overlay layer, by density) and leave **Treasure**
-  (weighted items, **Treasure count** of them) on their floors.
+  (weighted items, `treasureCount` of them) on their floors.
 
 ### Problems
 
@@ -636,7 +636,7 @@ when you ship an update: saves from the older version keep loading.
 
 WASD or the arrow keys move (hold to walk, diagonals too) · E, Space or Enter
 interact · Q watering can · T hoe · R axe · F pickaxe · C scythe · X crafting ·
-Z sleep · I inventory · J quests · Esc closes a panel or opens the pause menu ·
+Z sleep · I inventory · J quests · G goals · M mail · Esc closes a panel or opens the pause menu ·
 1–9 pick a dialogue option. Gamepads work everywhere, menus included. Players
 can rebind keys in the game's **Settings → Controls**; **Help → Keyboard
 Shortcuts** lists the editor's shortcuts too.

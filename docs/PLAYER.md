@@ -62,6 +62,8 @@ same arguments always give the same image. A script lists input by frame:
 | Z | L3 | Sleep |
 | I | View | Inventory |
 | J | R3 | Quests |
+| G | | Goals: collections, bundles, achievements, the shipping log (games that have them) |
+| M | | Mail (games that have letters) |
 | Esc | B / Menu | Close a panel, dialogue or shop; open the pause menu |
 | 1–9 | | Pick a dialogue option |
 | Tab / Shift+Tab | RB / LB | Next / previous tab in the shop and settings |
@@ -69,7 +71,15 @@ same arguments always give the same image. A script lists input by frame:
 | F12 | | Screenshot ([below](#screenshots)) |
 
 The mouse clicks every button, and the wheel (or the right stick) scrolls
-lists. The toolbar at the top has Inventory, Quests, Craft, Sleep and Menu.
+lists. The toolbar at the top has Inventory, Quests, Craft, Sleep and Menu,
+and Goals and Mail (with an unread count) in games that use them; with combat
+on, the HUD shows health beside energy.
+
+A chest or shipping bin opens like a shop: take from its slots, store from the
+inventory. A builder's **Build** tab places a building on a map of the farm:
+the footprint is green where it can go and red (with the reason) where it
+can't; the arrows, the stick or the pointer move it, Enter or **Build here**
+orders it and Esc goes back to the shop.
 
 Planting: **Hold** on a seed or a fertilizer in the inventory picks what
 interacting with open soil uses (press it again to put it away). Without a held

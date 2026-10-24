@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.9.0
+
+Roadmap milestones M5 (building the farm), M6 (long-term goals) and M7
+(combat and adventure, optional per game). See the Creator Guide's
+[Building the farm](docs/CREATOR-GUIDE.md#building-the-farm),
+[Long-term goals](docs/CREATOR-GUIDE.md#long-term-goals) and
+[Combat and adventure](docs/CREATOR-GUIDE.md#combat-and-adventure).
+Everything is off or absent until a game uses it: recorded games play as
+before.
+
+- **Building the farm.**
+  - **Placed objects**: machine types can be chests (storage, opened in the
+    game like a shop, picked up only when empty), shipping bins, gates that
+    open and close, and objects with area effects: sprinklers water their
+    square each morning, scarecrows keep storms and pests off theirs. Pests
+    are a new farm setting (a chance per night for an unprotected crop).
+  - **Buildings**, a new Content category: a footprint, a door, an interior
+    template, cost, materials, nights of building, where it may go and how
+    many animals it houses. A shop that lists buildings is a builder: the
+    player places a building on a free spot of the farm, and it stands after
+    its nights with its own interior. **Upgrades** (a building that is an
+    upgrade of another) rebuild a standing one, keeping what stood inside;
+    the player's house upgrades the same way (**Placed buildings**).
+  - **Greenhouses**: a scene can grow every season's crops.
+  - **Animals with housing**: species name the buildings that house them,
+    shops sell them into a building with room, and they can have more than
+    one product, product quality by mood, and young born overnight.
+  - **Farm layouts**: Settings → Farm lists farm maps a new game picks from.
+- **Long-term goals.**
+  - **Shipping**: bins sell what they hold overnight, with a log of what was
+    shipped.
+  - **Collections**, **Bundles**, **Achievements** and **Mail**, new Content
+    categories: items found, shipped or donated (a museum) with rewards;
+    Community Center-style hand-ins that run outcomes when complete;
+    achievements unlocked by conditions (an `achievementUnlocked` effect for
+    platform hosts later); letters that arrive in the morning from the new
+    `sendMail` outcome, quest rewards or their own conditions, with items and
+    money attached.
+  - New conditions `money`, `skillLevel`, `mineFloor`, `building`,
+    `collection`, `bundle`, `achievement`, `shipped`, `slain` and
+    `birthday`, and triggers `build`, `bundle`, `achievement` and `slay`.
+- **Combat and adventure**, off until Settings → Combat turns it on.
+  - Player **health** beside energy, hurt by monsters and by terrain with
+    damage, healed by food, the `modifyHealth` outcome and sleep; fainting
+    carries the player to the faint spot for a money penalty.
+  - **Monsters**, a new Content category: health, damage, defense, speed,
+    chasing, wandering or standing still, drops and combat experience;
+    spawned by a scene each morning and by the mine's depth bands.
+  - **Weapons**: a tool whose action is `attack`. Combat is a skill name.
+  - Mine depth bands scatter **hazards** and leave **treasure**; the editor
+    edits depth bands for the first time.
+- **In the game**: a chest and shipping bin screen; Build and Animals tabs
+  in builder shops with a placement map (green or red footprint, the
+  reason it can't go); a Goals panel (G) with Donate and Hand in; a Mail
+  panel (M) with an unread badge; health on the HUD; the farm layout choice
+  in the character creator; buildings, scaffolds, monsters and open gates
+  drawn in the world.
+- **Editor**: the new Content categories, Farm and Combat settings, a scene's
+  every-season flag and monster spawns, and Problems checks for all of it.
+  Keep changes carries the buildings, health and goals into the next
+  playtest.
+- **Fuzzing** covers the new commands and content; it found and fixed a
+  farm layout chosen mid-game leaving monsters on a dropped map, and a chest
+  removed while open.
+
 ## 0.8.0
 
 Roadmap milestones M3 (event logic), M4 (dialogue and relationships) and M11

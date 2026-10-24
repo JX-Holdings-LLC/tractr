@@ -709,6 +709,9 @@ What 0.7.0 left out of the world vocabulary, sound and cutscenes. Done in
   the menu bar, mode names, Play Mode toolbar and help are translated) and of
   the Creator Guide. The game's interface and the engine's own messages are
   translated already.
+- **Farm-building polish**: Edit Mode draws the buildings a game starts with
+  (they show in play, and their tiles are picked on the map); the toolbar
+  keeps one row at 1280×800 when a game has Goals and Mail.
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
 - **Player polish.** GPU effects: day/night lighting, season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws
