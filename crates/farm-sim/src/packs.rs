@@ -2,6 +2,7 @@
 //! `packId:localId` namespacing, explicit override semantics. Conflicts surface as problems for
 //! the Problems panel — never silent last-wins.
 
+use crate::content_builtin;
 use crate::inventory;
 use crate::schema::{
     is_engine_compatible, ContentPack, CropDefinition, GameContent, GameProject, GameState, InventorySlot, Item,
@@ -95,6 +96,7 @@ const REFERENCE_KEYS: &[&str] = &[
     "actionId",
     "minigameId",
     "useActionId",
+    "cutsceneId",
 ];
 
 /// Keys holding arrays of reference strings.
@@ -183,6 +185,20 @@ fn collection_ids(content: &PackContent) -> Vec<&str> {
     ids.extend(content.shops.iter().map(|d| d.id.as_str()));
     ids.extend(content.actions.iter().map(|d| d.id.as_str()));
     ids.extend(content.minigames.iter().map(|d| d.id.as_str()));
+    ids.extend(content.cutscenes.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.heart_events.iter().flatten().map(|d| d.id.as_str()));
+    ids
+}
+
+/// Vocabulary ids (terrains, tools, item categories, crop qualities, crop mutations). These are
+/// not namespaced: scenes, items and crops name them by plain id, the way the built-ins are named.
+fn vocabulary_ids(content: &PackContent) -> Vec<&str> {
+    let mut ids: Vec<&str> = Vec::new();
+    ids.extend(content.terrains.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.tools.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.item_categories.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.crop_qualities.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.crop_mutations.iter().flatten().map(|d| d.id.as_str()));
     ids
 }
 
@@ -205,7 +221,8 @@ fn collect_local_ids(pack: &ContentPack) -> IndexSet<String> {
 }
 
 /// Return a copy of the pack with every definition id and intra-pack reference rewritten to
-/// `packId:localId`. Base packs pass through as-is.
+/// `packId:localId`. Base packs pass through as-is. Vocabulary keeps its ids (M11): a pack's
+/// terrain is painted, and its category or tool named, by the id it was written with.
 pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
     if pack.manifest.base {
         return pack.clone();
@@ -232,11 +249,11 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         actions: rewrite_collection(&source.actions, pack_id, &local_ids),
         minigames: rewrite_collection(&source.minigames, pack_id, &local_ids),
         player_start: source.player_start.as_ref().map(|start| rewrite_definition(start, pack_id, &local_ids, false)),
-        terrains: source.terrains.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
-        tools: source.tools.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
-        item_categories: source.item_categories.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
-        crop_qualities: source.crop_qualities.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
-        crop_mutations: source.crop_mutations.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        terrains: source.terrains.clone(),
+        tools: source.tools.clone(),
+        item_categories: source.item_categories.clone(),
+        crop_qualities: source.crop_qualities.clone(),
+        crop_mutations: source.crop_mutations.clone(),
         cutscenes: source.cutscenes.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         heart_events: source.heart_events.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         strings: source.strings.clone(),
@@ -516,6 +533,13 @@ struct MergeSlots<'a> {
     shops: &'a mut Vec<crate::schema::ShopDefinition>,
     actions: &'a mut Vec<crate::schema::ActionDef>,
     minigames: &'a mut Vec<crate::schema::MinigameDef>,
+    terrains: &'a mut Vec<crate::schema::TerrainDefinition>,
+    tools: &'a mut Vec<crate::schema::ToolDefinition>,
+    item_categories: &'a mut Vec<crate::schema::ItemCategoryDefinition>,
+    crop_qualities: &'a mut Vec<crate::schema::CropQualityDefinition>,
+    crop_mutations: &'a mut Vec<crate::schema::CropMutationDefinition>,
+    cutscenes: &'a mut Vec<crate::schema::Cutscene>,
+    heart_events: &'a mut Vec<crate::schema::HeartEvent>,
 }
 
 fn merge_pack(
@@ -542,11 +566,38 @@ fn merge_pack(
     merger.merge_array(&c.shops, |d| &d.id, slots.shops, "shop");
     merger.merge_array(&c.actions, |d| &d.id, slots.actions, "action");
     merger.merge_array(&c.minigames, |d| &d.id, slots.minigames, "minigame");
+    // Vocabulary and story (M11): a built-in id is replaced only when the pack lists it in
+    // manifest.overrides, like any other definition.
+    merger.merge_array(c.terrains.as_deref().unwrap_or_default(), |d| &d.id, slots.terrains, "terrain");
+    merger.merge_array(c.tools.as_deref().unwrap_or_default(), |d| &d.id, slots.tools, "tool");
+    merger.merge_array(
+        c.item_categories.as_deref().unwrap_or_default(),
+        |d| &d.id,
+        slots.item_categories,
+        "item category",
+    );
+    merger.merge_array(
+        c.crop_qualities.as_deref().unwrap_or_default(),
+        |d| &d.id,
+        slots.crop_qualities,
+        "crop quality",
+    );
+    merger.merge_array(
+        c.crop_mutations.as_deref().unwrap_or_default(),
+        |d| &d.id,
+        slots.crop_mutations,
+        "crop mutation",
+    );
+    merger.merge_array(c.cutscenes.as_deref().unwrap_or_default(), |d| &d.id, slots.cutscenes, "cutscene");
+    merger.merge_array(c.heart_events.as_deref().unwrap_or_default(), |d| &d.id, slots.heart_events, "heart event");
 }
 
 /// Whether a pack declares any content: definitions, a player start or string tables.
 fn has_content(content: &PackContent) -> bool {
-    !collection_ids(content).is_empty() || content.player_start.is_some() || !content.strings.is_empty()
+    !collection_ids(content).is_empty()
+        || !vocabulary_ids(content).is_empty()
+        || content.player_start.is_some()
+        || !content.strings.is_empty()
 }
 
 /// `permissions.contentInject` is off: none of the pack's content loads (its plugins still
@@ -610,6 +661,13 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
                 ));
             }
         }
+        // Content without its own vocabulary uses the built-ins: a pack adding to it adds to them.
+        let added = &pack.content;
+        seed_builtins(&mut content.terrains, added.terrains.as_deref(), content_builtin::terrains);
+        seed_builtins(&mut content.tools, added.tools.as_deref(), content_builtin::tools);
+        seed_builtins(&mut content.item_categories, added.item_categories.as_deref(), content_builtin::item_categories);
+        seed_builtins(&mut content.crop_qualities, added.crop_qualities.as_deref(), content_builtin::crop_qualities);
+        seed_builtins(&mut content.crop_mutations, added.crop_mutations.as_deref(), content_builtin::crop_mutations);
         merge_pack(
             &pack,
             &mut content.crops,
@@ -629,11 +687,26 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
                 shops: &mut content.shops,
                 actions: &mut content.actions,
                 minigames: &mut content.minigames,
+                terrains: &mut content.terrains,
+                tools: &mut content.tools,
+                item_categories: &mut content.item_categories,
+                crop_qualities: &mut content.crop_qualities,
+                crop_mutations: &mut content.crop_mutations,
+                cutscenes: &mut content.cutscenes,
+                heart_events: &mut content.heart_events,
             },
             &mut problems,
         );
     }
     MergePacksIntoContentResult { content: localize_content(content, &strings), problems }
+}
+
+/// An empty vocabulary list stands for the built-ins ([`crate::vocabulary`]): fill it with them
+/// before a pack adds to it.
+fn seed_builtins<T>(list: &mut Vec<T>, added: Option<&[T]>, builtins: fn() -> Vec<T>) {
+    if list.is_empty() && added.is_some_and(|added| !added.is_empty()) {
+        *list = builtins();
+    }
 }
 
 /// All pack problems for a project (Problems panel): order + dry-run merge.
@@ -789,6 +862,63 @@ mod tests {
         let mut plugins_only = pack("plugins-only", &[]);
         plugins_only.pack.manifest.permissions.content_inject = false;
         assert!(merge_packs_into_content(&base, &[plugins_only]).problems.is_empty());
+    }
+
+    #[test]
+    fn packs_add_vocabulary_by_plain_id_and_namespace_their_story() {
+        use crate::schema::{Cutscene, EventOutcome, GameEvent, HeartEvent, ItemCategoryDefinition, TerrainDefinition};
+        let terrain = |id: &str, name: &str| TerrainDefinition {
+            id: id.to_owned(),
+            name: name.to_owned(),
+            layer: "ground".to_owned(),
+            ..TerrainDefinition::default()
+        };
+        let mut volcano = pack("volcano", &[]);
+        let added = &mut volcano.pack.content;
+        added.terrains = Some(vec![terrain("lava", "Lava"), terrain("grass", "Ash grass")]);
+        added.item_categories = Some(vec![ItemCategoryDefinition { id: "gem".to_owned(), ..Default::default() }]);
+        added.cutscenes = Some(vec![Cutscene { id: "eruption".to_owned(), ..Cutscene::default() }]);
+        added.heart_events = Some(vec![HeartEvent {
+            id: "date".to_owned(),
+            npc_id: "mira".to_owned(),
+            cutscene_id: "eruption".to_owned(),
+            ..HeartEvent::default()
+        }]);
+        added.events.push(GameEvent {
+            id: "rumble".to_owned(),
+            outcomes: vec![EventOutcome {
+                r#type: "playCutscene".to_owned(),
+                cutscene_id: Some("eruption".to_owned()),
+                ..EventOutcome::default()
+            }],
+            ..GameEvent::default()
+        });
+
+        let merged = merge_packs_into_content(&GameContent::default(), std::slice::from_ref(&volcano));
+        let content = &merged.content;
+        // The built-ins stay, the new terrain joins them under its own id, and the built-in grass
+        // is kept: the pack did not list it in overrides.
+        let builtins = content_builtin::terrains();
+        assert_eq!(content.terrains.len(), builtins.len() + 1);
+        assert_eq!(content.terrains.last().map(|t| t.id.as_str()), Some("lava"));
+        let grass = content.terrains.iter().find(|t| t.id == "grass").map(|t| t.name.as_str());
+        assert_eq!(grass, builtins.iter().find(|t| t.id == "grass").map(|t| t.name.as_str()));
+        assert!(content.item_categories.iter().any(|c| c.id == "gem"));
+        assert_eq!(merged.problems.len(), 1);
+        assert!(merged.problems[0].message.contains("redefines terrain 'grass'"), "{:?}", merged.problems);
+        // Cutscenes and heart events are content: namespaced, with their references.
+        assert_eq!(content.cutscenes[0].id, "volcano:eruption");
+        assert_eq!(content.heart_events[0].id, "volcano:date");
+        assert_eq!(content.heart_events[0].cutscene_id, "volcano:eruption");
+        assert_eq!(content.heart_events[0].npc_id, "mira");
+        assert_eq!(content.events[0].outcomes[0].cutscene_id.as_deref(), Some("volcano:eruption"));
+
+        // Listed in overrides, the pack's grass replaces the built-in.
+        volcano.pack.manifest.overrides.push("grass".to_owned());
+        let merged = merge_packs_into_content(&GameContent::default(), &[volcano]);
+        let grass = merged.content.terrains.iter().find(|t| t.id == "grass").map(|t| t.name.as_str());
+        assert_eq!(grass, Some("Ash grass"));
+        assert!(merged.problems.is_empty(), "{:?}", merged.problems);
     }
 
     #[test]

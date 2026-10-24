@@ -180,7 +180,7 @@ module PackRules =
     let private collections =
         [ "crops"; "items"; "recipes"; "machineTypes"; "nodeTypes"; "animalSpecies"
           "fishTables"; "weatherTypes"; "npcs"; "dialogues"; "scenes"; "events"
-          "quests"; "shops"; "actions"; "minigames" ]
+          "quests"; "shops"; "actions"; "minigames"; "cutscenes"; "heartEvents" ]
 
     let private referenceKeys =
         Set.ofList
@@ -188,7 +188,7 @@ module PackRules =
               "npcId"; "dialogueId"; "nextDialogueId"; "openShopId"; "offerQuestId"
               "questId"; "targetNPCId"; "targetCropType"; "shopId"; "giver"; "typeId"
               "speciesId"; "recipeId"; "nodeTypeId"; "weatherId"; "targetItemId"
-              "requiredItemId"; "giftItemId"; "actionId"; "minigameId"; "useActionId" ]
+              "requiredItemId"; "giftItemId"; "actionId"; "minigameId"; "useActionId"; "cutsceneId" ]
 
     let private entries (json: Json) =
         match json with
@@ -196,7 +196,8 @@ module PackRules =
         | _ -> []
 
     /// Namespace definitions and only the reference keys used by the reference engine.
-    /// In particular sceneId, plugin source and embedded dialogue ids are not rewritten.
+    /// In particular sceneId, plugin source and embedded dialogue ids are not rewritten. Vocabulary
+    /// (terrains, tools, item categories, crop qualities and mutations) keeps its plain ids (M11).
     let namespacePack (pack: ContentPack) : ContentPack =
         if pack.Manifest.Base then pack
         else

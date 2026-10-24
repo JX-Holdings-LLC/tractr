@@ -1,0 +1,106 @@
+{
+  "manifest": {
+    "id": "volcano",
+    "name": "Volcano",
+    "version": "0.1.0",
+    "description": "Adds lava, ash grass, gems and an eruption cutscene: a pack bringing vocabulary and story.",
+    "author": "Farm Engine",
+    "engineCompatibility": "*",
+    "base": false,
+    "dependencies": [],
+    "overrides": ["grass"],
+    "permissions": {
+      "hooks": [],
+      "contentInject": true,
+      "uiPanels": false
+    }
+  },
+  "content": {
+    "terrains": [
+      {
+        "id": "lava",
+        "name": "Lava",
+        "layer": "background",
+        "color": "#d8471c",
+        "walkable": false,
+        "plantable": false,
+        "waterSource": false,
+        "fishable": false,
+        "blocksLight": false,
+        "hazardEnergy": 5,
+        "indoor": false,
+        "transforms": []
+      },
+      {
+        "id": "grass",
+        "name": "Ash Grass",
+        "layer": "background",
+        "color": "#6b7a5a",
+        "walkable": true,
+        "plantable": false,
+        "waterSource": false,
+        "fishable": false,
+        "blocksLight": false,
+        "hazardEnergy": 0,
+        "indoor": false,
+        "transforms": [{ "action": "till", "into": "soil" }]
+      }
+    ],
+    "itemCategories": [
+      {
+        "id": "gem",
+        "name": "Gem",
+        "plantable": false,
+        "fertilizer": false,
+        "equippable": false,
+        "edible": false,
+        "energy": 0,
+        "placeable": false,
+        "giftable": true,
+        "sellable": true
+      }
+    ],
+    "items": [
+      {
+        "id": "obsidian",
+        "name": "Obsidian",
+        "description": "Cooled lava, glassy and black.",
+        "type": "gem",
+        "stackable": true,
+        "maxStack": 99,
+        "value": 120
+      }
+    ],
+    "cutscenes": [
+      {
+        "id": "eruption",
+        "name": "Eruption",
+        "steps": [{ "type": "say", "speaker": "npc-farmer", "text": "Did you feel that rumble, {player}?" }],
+        "skippable": true
+      }
+    ],
+    "heartEvents": [
+      {
+        "id": "lava-walk",
+        "name": "A walk by the lava",
+        "npcId": "npc-farmer",
+        "hearts": 2,
+        "cutsceneId": "eruption",
+        "conditions": []
+      }
+    ],
+    "events": [
+      {
+        "id": "first-rumble",
+        "name": "First rumble",
+        "sceneId": "scene-farm",
+        "trigger": "dayStart",
+        "conditions": [],
+        "outcomes": [{ "type": "playCutscene", "cutsceneId": "eruption" }],
+        "active": true,
+        "repeatable": false
+      }
+    ]
+  },
+  "plugins": []
+}
