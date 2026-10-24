@@ -813,12 +813,10 @@ impl Player {
         let scene = session.current_scene()?;
         let (ix, iy) = session.interpolated_player();
         let (px, py) = (PADDING + (ix - 0.5) * TILE_SIZE, PADDING + (iy - 0.5) * TILE_SIZE);
-        // A cutscene's camera (M2) looks where it pans; otherwise the camera follows the player.
-        let target = match session.cutscene_view().and_then(|view| view.camera) {
-            Some(camera) => (
-                PADDING + units::position_to_tiles(camera.x) * TILE_SIZE,
-                PADDING + units::position_to_tiles(camera.y) * TILE_SIZE,
-            ),
+        // A cutscene's camera (M2) looks where it pans, between ticks like the player; otherwise
+        // the camera follows the player.
+        let target = match session.interpolated_camera() {
+            Some((x, y)) => (PADDING + x * TILE_SIZE, PADDING + y * TILE_SIZE),
             None => (px + TILE_SIZE / 2.0, py + TILE_SIZE / 2.0),
         };
         let world = session.world_size();

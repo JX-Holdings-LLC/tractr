@@ -530,6 +530,14 @@ fn camera_point(state: &GameState, camera: Option<&CutsceneCamera>) -> (i32, i32
     )
 }
 
+/// Where the running cutscene's camera centres now (position units); `None` while the camera
+/// follows the player as usual (no cutscene, or no camera step). Hosts that draw between ticks
+/// interpolate it from the tick before, as they do the player.
+pub fn camera(state: &GameState) -> Option<(i32, i32)> {
+    let camera = state.cutscene.as_ref()?.camera.as_ref()?;
+    Some(camera_point(state, Some(camera)))
+}
+
 /// A `camera` step: a pan from where the camera is to the tile, onto the actor, or back to the
 /// player.
 fn start_camera(state: &mut GameState, step: &CutsceneStep) -> bool {
