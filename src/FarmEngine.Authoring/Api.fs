@@ -66,6 +66,10 @@ type Edits =
     static member SetSceneEnvironment(sceneId: string, dark: bool, temperature: System.Nullable<float>, tags: seq<string>,
                                       music: string | null, atmosphere: AtmosphereLook | null) : Edit =
         SetSceneEnvironment(sceneId, dark, Option.ofNullable temperature, List.ofSeq tags, Option.ofObj music, Option.ofObj atmosphere)
+    /// A greenhouse (M5): crops grow in the scene in every season.
+    static member SetSceneAllSeasons(sceneId: string, allSeasons: bool) : Edit = SetSceneAllSeasons(sceneId, allSeasons)
+    /// The monsters the scene has each morning (M7).
+    static member SetSceneMonsters(sceneId: string, monsters: seq<MonsterSpawn>) : Edit = SetSceneMonsters(sceneId, List.ofSeq monsters)
     static member ResizeScene(sceneId: string, width: int, height: int) : Edit = ResizeScene(sceneId, width, height)
     /// Largest scene side `ResizeScene` takes.
     static member MaxSceneSize = EditScenes.MaxSceneSize
@@ -128,6 +132,20 @@ type Edits =
     static member RemoveCutscene(cutsceneId: string) : Edit = RemoveCutscene cutsceneId
     static member UpsertHeartEvent(heartEvent: HeartEvent) : Edit = UpsertHeartEvent heartEvent
     static member RemoveHeartEvent(heartEventId: string) : Edit = RemoveHeartEvent heartEventId
+    static member UpsertBuildingType(building: BuildingDefinition) : Edit = UpsertBuildingType building
+    static member RemoveBuildingType(buildingTypeId: string) : Edit = RemoveBuildingType buildingTypeId
+    static member UpsertPlacedBuilding(building: BuildingState) : Edit = UpsertPlacedBuilding building
+    static member RemovePlacedBuilding(placedBuildingId: string) : Edit = RemovePlacedBuilding placedBuildingId
+    static member UpsertMonster(monster: MonsterDefinition) : Edit = UpsertMonster monster
+    static member RemoveMonster(monsterId: string) : Edit = RemoveMonster monsterId
+    static member UpsertCollection(collection: CollectionDefinition) : Edit = UpsertCollection collection
+    static member RemoveCollection(collectionId: string) : Edit = RemoveCollection collectionId
+    static member UpsertBundle(bundle: BundleDefinition) : Edit = UpsertBundle bundle
+    static member RemoveBundle(bundleId: string) : Edit = RemoveBundle bundleId
+    static member UpsertAchievement(achievement: AchievementDefinition) : Edit = UpsertAchievement achievement
+    static member RemoveAchievement(achievementId: string) : Edit = RemoveAchievement achievementId
+    static member UpsertMail(mail: MailDefinition) : Edit = UpsertMail mail
+    static member RemoveMail(mailId: string) : Edit = RemoveMail mailId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
     static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
     static member SetMine(config: MineConfig) : Edit = SetMine config
@@ -256,6 +274,19 @@ type Defaults =
     static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef = Defaults.duplicateMinigame project minigame
     static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene = Defaults.duplicateCutscene project cutscene
     static member DuplicateHeartEvent(project: GameProject, heartEvent: HeartEvent) : HeartEvent = Defaults.duplicateHeartEvent project heartEvent
+    static member NewBuildingType(project: GameProject) : BuildingDefinition = Defaults.newBuildingType project
+    static member DuplicateBuildingType(project: GameProject, building: BuildingDefinition) : BuildingDefinition = Defaults.duplicateBuildingType project building
+    static member NewPlacedBuilding(project: GameProject) : BuildingState = Defaults.newPlacedBuilding project
+    static member NewMonster(project: GameProject) : MonsterDefinition = Defaults.newMonster project
+    static member DuplicateMonster(project: GameProject, monster: MonsterDefinition) : MonsterDefinition = Defaults.duplicateMonster project monster
+    static member NewCollection(project: GameProject) : CollectionDefinition = Defaults.newCollection project
+    static member DuplicateCollection(project: GameProject, collection: CollectionDefinition) : CollectionDefinition = Defaults.duplicateCollection project collection
+    static member NewBundle(project: GameProject) : BundleDefinition = Defaults.newBundle project
+    static member DuplicateBundle(project: GameProject, bundle: BundleDefinition) : BundleDefinition = Defaults.duplicateBundle project bundle
+    static member NewAchievement(project: GameProject) : AchievementDefinition = Defaults.newAchievement project
+    static member DuplicateAchievement(project: GameProject, achievement: AchievementDefinition) : AchievementDefinition = Defaults.duplicateAchievement project achievement
+    static member NewMail(project: GameProject) : MailDefinition = Defaults.newMail project
+    static member DuplicateMail(project: GameProject, mail: MailDefinition) : MailDefinition = Defaults.duplicateMail project mail
     static member NewResultTier() : MinigameResultTier = Defaults.newResultTier ()
     static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene = Defaults.newScene project name width height
     static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene = Defaults.newSceneWith project name width height defaultTile
@@ -748,6 +779,37 @@ type SettingsForm =
 
     /// The relationship rules a game starts from when the creator turns them on (M4).
     static member DefaultRelationships: RelationshipSettings = RelationshipSettings.Default
+
+    /// The Farm section (M5): the farm scene, its layouts and pests (null: none). One undo
+    /// step; nothing changed → an empty batch.
+    static member Farm(project: GameProject, farm: FarmSettings | null) : Edit =
+        let settings = { project.Settings with Farm = Option.ofObj farm }
+        if settings = project.Settings then Batch("Farm", []) else SetSettings settings
+
+    /// The farm settings a game starts from when the creator turns them on (M5): the start
+    /// scene is the farm, with no layouts and no pests.
+    static member DefaultFarm(project: GameProject) : FarmSettings = { FarmSettings.Default with SceneId = project.StartSceneId }
+
+    /// The Combat section (M7): player health, fainting and monsters (null: no combat). One
+    /// undo step; nothing changed → an empty batch.
+    static member Combat(project: GameProject, combat: CombatSettings | null) : Edit =
+        let settings = { project.Settings with Combat = Option.ofObj combat }
+        if settings = project.Settings then Batch("Combat", []) else SetSettings settings
+
+    /// The combat rules a game starts from when the creator turns them on (M7): enabled, with
+    /// the built-in health and fainting.
+    static member DefaultCombat: CombatSettings = { CombatSettings.Default with Enabled = true }
+
+    /// The mine with the depth bands a form edited (M7 adds monsters, hazards and treasure to
+    /// them); the rest of the mine card stays as stored. One undo step.
+    static member MineBands(project: GameProject, bands: seq<MineBand>) : Edit = SetMine { project.Mine with Bands = List.ofSeq bands }
+
+    /// A scene's monster spawns as text, one per line (`SettingsForms.monsterSpawnsText`).
+    static member MonsterSpawnsText(spawns: seq<MonsterSpawn>) : string = SettingsForms.monsterSpawnsText (List.ofSeq spawns)
+
+    /// A scene's monster spawns from their text; throws `FormatException` naming the line.
+    static member MonsterSpawns(text: string | null) : IReadOnlyList<MonsterSpawn> =
+        SettingsForms.parseMonsterSpawns text |> Array.ofList :> IReadOnlyList<MonsterSpawn>
 
     /// `settings` without the sky looks of `seasonIds`, as removing those seasons leaves it
     /// (`Cleanup.dropSeason`).

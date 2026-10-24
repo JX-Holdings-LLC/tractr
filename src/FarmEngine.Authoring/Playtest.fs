@@ -68,8 +68,9 @@ module Playtest =
         if natural.Id <> season || naturalDay <> kept then Some(JNumber kept) else None
 
     /// What the project's own fields do not hold (Rust `KeptState::of_state`): the tick, today's
-    /// shop purchases, an open dialogue, shop or minigame, a cutscene that is playing, NPC walks
-    /// and the mine floor; absent when there is nothing to carry.
+    /// shop purchases, an open dialogue, shop or minigame, a cutscene that is playing, NPC walks,
+    /// the mine floor, children, changed shop stock and the M5–M7 goals; absent when there is
+    /// nothing to carry.
     let private keptState (state: Json) : Json option =
         let present (key: string) (value: Json) = if Json.isNullish value then [] else [ key, value ]
         let npcs =
@@ -97,10 +98,25 @@ module Playtest =
               match Json.get "shopChanges" state with
               | JObject (_ :: _) as changes -> "shopChanges", changes
               | _ -> () ]
-        if tick = JNumber 0.0 && purchases = JObject [] && sessions.IsEmpty && npcs.IsEmpty && floor = JNumber 0.0 && family.IsEmpty then
+        // The goals and the world beyond the project's fields (M5–M7, Rust `KeptGoals::of_state`):
+        // open storage, the farm layout, the shipping log, collections, bundles, achievements,
+        // mail, monsters and the player's health, each when it holds something.
+        let goals =
+            [ for key in [ "storage"; "farmLayout"; "shipped"; "lastShipment"; "collections"; "bundles"; "achievements"; "mailbox"; "mailQueue"; "monsters"; "nextMonster"; "slain" ] do
+                  match Json.get key state with
+                  | JObject (_ :: _)
+                  | JArray (_ :: _)
+                  | JString _ as value -> key, value
+                  | JNumber n as value when n <> 0.0 -> key, value
+                  | _ -> ()
+              match Json.get "health" (Json.get "player" state) with
+              | JNumber _ as health -> "health", health
+              | _ -> () ]
+        let goals = if goals.IsEmpty then [] else [ "goals", JObject goals ]
+        if tick = JNumber 0.0 && purchases = JObject [] && sessions.IsEmpty && npcs.IsEmpty && floor = JNumber 0.0 && family.IsEmpty && goals.IsEmpty then
             None
         else
-            Some(JObject([ "tick", tick; "shopPurchasesToday", purchases ] @ sessions @ [ "npcs", JObject npcs; "mineCurrentFloor", floor ] @ family))
+            Some(JObject([ "tick", tick; "shopPurchasesToday", purchases ] @ sessions @ [ "npcs", JObject npcs; "mineCurrentFloor", floor ] @ family @ goals))
 
     /// The project JSON with the state written back. Flag values go back as they are (plugins
     /// store numbers and strings), and keys keep their places.
@@ -121,9 +137,17 @@ module Playtest =
                      "name", Json.tryGet "name" player |> Option.filter (fun name -> name <> JString "" && not (Json.isNullish name))
                      "farmName", Json.tryGet "farmName" player |> Option.filter (fun name -> name <> JString "" && not (Json.isNullish name))
                      "look", Json.tryGet "look" player |> Option.filter (Json.isNullish >> not)
-                     "worn", Json.tryGet "worn" player |> Option.filter (fun worn -> worn <> JArray [] && not (Json.isNullish worn)) ])
+                     "worn", Json.tryGet "worn" player |> Option.filter (fun worn -> worn <> JArray [] && not (Json.isNullish worn))
+                     // Health (M7): absent without combat.
+                     "health", Json.tryGet "health" player |> Option.filter (Json.isNullish >> not) ])
         project
         |> Json.set "scenes" (Json.get "scenes" (Json.get "world" state))
+        // The buildings on the map (M5), built ones included; none is absent.
+        |> setAll
+            [ "buildings",
+              (match Json.get "buildings" state with
+               | JArray (_ :: _) as buildings -> Some buildings
+               | _ -> None) ]
         |> mapArray "npcs" (npc (Json.get "npcs" state))
         |> mapArray "quests" (quest (Json.get "quests" state))
         |> Json.set "player" projectPlayer

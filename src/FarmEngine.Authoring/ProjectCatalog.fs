@@ -97,8 +97,9 @@ module SampleProjects =
                   for x, y in [ 8, 2; 9, 2; 8, 3; 9, 3 ] -> x, y, "carrot", 2.0, 3.0
                   for x in 7 .. 10 -> x, 6, "wheat", 1.0, 1.0 ]
         let hen id name x y : AnimalState =
-            { Id = id; SpeciesId = "animal-chicken"; Name = name; SceneId = "scene-farm"; X = x; Y = y; Mood = 70.0
-              FedToday = false; PettedToday = false; AgeDays = 30.0; DaysSinceProduct = 0.0; ProductReady = false; Extra = [] }
+            { AnimalState.Default with
+                Id = id; SpeciesId = "animal-chicken"; Name = name; SceneId = "scene-farm"; X = x; Y = y; Mood = 70.0
+                FedToday = false; PettedToday = false; AgeDays = 30.0; DaysSinceProduct = 0.0; ProductReady = false }
         { project with
             Name = "Cozy Garden"
             Settings = settings

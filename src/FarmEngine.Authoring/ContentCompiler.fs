@@ -97,6 +97,8 @@ module ContentCompiler =
     let weather (project: GameProject) =
         if validWeather project.Weather then project.Weather else MigrationsSchema.DefaultWeatherConfig()
 
+    let private nonEmpty (list: 'T list option) : 'T list option = list |> Option.filter (List.isEmpty >> not)
+
     let baseContent (project: GameProject) : GameContent =
         { ContentVersion = GameContentSchema.CurrentContentVersion
           Crops = mergeCrops project.CustomCrops
@@ -124,7 +126,15 @@ module ContentCompiler =
           CropQualities = cropQualities project
           CropMutations = cropMutations project
           Cutscenes = Option.defaultValue [] project.Cutscenes
-          HeartEvents = Option.defaultValue [] project.HeartEvents }
+          HeartEvents = Option.defaultValue [] project.HeartEvents
+          // M5–M7 content comes straight from the project's lists (Rust
+          // `create_base_content_from_project`); an empty list is left out, as serde skips it.
+          BuildingTypes = nonEmpty project.BuildingTypes
+          Collections = nonEmpty project.Collections
+          Bundles = nonEmpty project.Bundles
+          Achievements = nonEmpty project.Achievements
+          Mail = nonEmpty project.Mail
+          Monsters = nonEmpty project.Monsters }
 
     let compile (project: GameProject) =
         let installs = project.ContentPacks

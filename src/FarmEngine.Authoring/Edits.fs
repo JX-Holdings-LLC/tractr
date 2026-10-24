@@ -69,6 +69,10 @@ type Edit =
     /// season's), the tags crops can require, the music asset that plays in it and its own
     /// day/night and foliage tints. Empty values are stored as absent keys.
     | SetSceneEnvironment of sceneId: string * dark: bool * temperature: float option * tags: string list * music: string option * atmosphere: AtmosphereLook option
+    /// Crops are planted and grow in the scene in every season (a greenhouse, M5); off is absent.
+    | SetSceneAllSeasons of sceneId: string * allSeasons: bool
+    /// The monsters the scene has each morning (M7); none is absent.
+    | SetSceneMonsters of sceneId: string * monsters: MonsterSpawn list
     /// SceneManager `applyResize`: the overlap keeps its tiles, new tiles are grass.
     | ResizeScene of sceneId: string * width: int * height: int
     /// SceneManager `duplicateScene`: a deep copy with a new id, "(Copy)" name and no NPC list.
@@ -141,6 +145,26 @@ type Edit =
     /// Heart events (M4).
     | UpsertHeartEvent of heartEvent: HeartEvent
     | RemoveHeartEvent of heartEventId: string
+    /// Building the farm, long-term goals and combat (M5–M7). Removing one scrubs what named it
+    /// (`Cleanup`); conditions on it stay, as other removals leave gates.
+    | UpsertBuildingType of building: BuildingDefinition
+    /// The building type, the placed buildings of it, shops' build lists, housing and upgrades of it.
+    | RemoveBuildingType of buildingTypeId: string
+    | UpsertMonster of monster: MonsterDefinition
+    /// The monster and the scene and mine spawns of it.
+    | RemoveMonster of monsterId: string
+    | UpsertCollection of collection: CollectionDefinition
+    | RemoveCollection of collectionId: string
+    | UpsertBundle of bundle: BundleDefinition
+    | RemoveBundle of bundleId: string
+    | UpsertAchievement of achievement: AchievementDefinition
+    | RemoveAchievement of achievementId: string
+    | UpsertMail of mail: MailDefinition
+    /// The letter, `sendMail` outcomes and quest rewards that sent it.
+    | RemoveMail of mailId: string
+    /// A building on the map when a game starts (M5, `project.Buildings`), by its id.
+    | UpsertPlacedBuilding of building: BuildingState
+    | RemovePlacedBuilding of placedBuildingId: string
     | SetWeather of config: WeatherConfig
     /// ProjectSettingsEditor weather table: a weight of 0 removes the entry.
     | SetWeatherWeight of seasonId: string * weatherId: string * weight: float

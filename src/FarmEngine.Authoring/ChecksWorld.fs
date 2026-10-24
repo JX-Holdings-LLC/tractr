@@ -347,7 +347,189 @@ module internal ChecksWorld =
             band.Rocks
             |> Seq.iteri (fun r rock ->
                 if not (context.NodeTypeIds.Contains rock.NodeTypeId) then
-                    sink.Error("mine.bandUnknownNodeType", sprintf "%s.rocks[%d].nodeTypeId" path r, sprintf "Mine band %d spawns missing node type \"%s\"" (b + 1) rock.NodeTypeId, settings)))
+                    sink.Error("mine.bandUnknownNodeType", sprintf "%s.rocks[%d].nodeTypeId" path r, sprintf "Mine band %d spawns missing node type \"%s\"" (b + 1) rock.NodeTypeId, settings))
+            // Monsters, hazards and treasure (M7).
+            let monsters = defaultArg band.Monsters []
+            monsters
+            |> List.iteri (fun m weight ->
+                if not (context.MonsterIds.Contains weight.MonsterId) then
+                    sink.Error("mine.bandUnknownMonster", sprintf "%s.monsters[%d].monsterId" path m, sprintf "Mine band %d spawns missing monster \"%s\"" (b + 1) weight.MonsterId, settings))
+            if defaultArg band.MonsterCount 0.0 > 0.0 && monsters.IsEmpty then
+                sink.Warning("mine.bandNoMonsters", path + ".monsterCount", sprintf "Mine band %d wants %g monsters a floor but lists none" (b + 1) (defaultArg band.MonsterCount 0.0), settings)
+            defaultArg band.Hazards []
+            |> List.iteri (fun h hazard ->
+                let hp = sprintf "%s.hazards[%d]" path h
+                if not (context.TerrainIds.Contains hazard.TerrainId) then
+                    sink.Error("mine.bandUnknownHazard", hp + ".terrainId", sprintf "Mine band %d scatters missing terrain \"%s\"" (b + 1) hazard.TerrainId, settings)
+                if hazard.Density < 0.0 || hazard.Density > 1.0 then
+                    sink.Error("mine.hazardDensity", hp + ".density", sprintf "Mine band %d hazard %d covers %g of the floor; a share is 0 to 1" (b + 1) (h + 1) hazard.Density, settings))
+            let treasure = defaultArg band.Treasure []
+            treasure
+            |> List.iteri (fun t entry ->
+                if not (context.ItemIds.Contains entry.ItemId) then
+                    sink.Error("mine.bandUnknownTreasure", sprintf "%s.treasure[%d].itemId" path t, sprintf "Mine band %d leaves missing item \"%s\"" (b + 1) entry.ItemId, settings))
+            if defaultArg band.TreasureCount 0.0 > 0.0 && treasure.IsEmpty then
+                sink.Warning("mine.bandNoTreasure", path + ".treasureCount", sprintf "Mine band %d wants %g treasures a floor but lists none" (b + 1) (defaultArg band.TreasureCount 0.0), settings))
+
+    /// Building types (M5): footprint sizes the engine places, scenes that exist, doors inside
+    /// their footprint and interior, upgrades of types that exist and never in a circle.
+    let private buildingTypes (context: Context) (sink: Sink) =
+        let types = defaultArg context.Project.BuildingTypes []
+        let byId = Dictionary<string, BuildingDefinition>()
+        for building in types do
+            if not (byId.ContainsKey building.Id) then byId.[building.Id] <- building
+        types
+        |> List.iteri (fun i building ->
+            let path = sprintf "buildingTypes[%d]" i
+            let label = sprintf "Building \"%s\"" building.Name
+            let target = Some(NavigationTarget.Building building.Id)
+            for field, value in [ "width", building.Width; "height", building.Height ] do
+                if value < 1.0 || value > FarmSchema.MaxBuildingSize || value <> floor value then
+                    sink.Error("building.size", path + "." + field, sprintf "%s is %g tiles %s; a side is a whole 1 to %g" label value (if field = "width" then "wide" else "tall") FarmSchema.MaxBuildingSize, target)
+            match building.Door with
+            | Some door when door.X < 0.0 || door.Y < 0.0 || door.X >= building.Width || door.Y >= building.Height ->
+                sink.Warning("building.doorOutside", path + ".door", sprintf "%s has its door at (%g,%g), outside its footprint; the game moves it inside" label door.X door.Y, target)
+            | _ -> ()
+            match building.InteriorSceneId with
+            | Some scene when scene.Length > 0 && not (context.Scenes.ContainsKey scene) ->
+                sink.Error("building.unknownInterior", path + ".interiorSceneId", sprintf "%s has missing interior scene \"%s\"" label scene, target)
+            | Some scene when scene.Length > 0 ->
+                match building.InteriorDoor with
+                | Some door when not (Context.tileInScene context scene door.X door.Y) ->
+                    sink.Error("building.interiorDoorOutside", path + ".interiorDoor", sprintf "%s has its way out at (%g,%g), outside \"%s\"" label door.X door.Y context.Scenes.[scene].Name, target)
+                | _ -> ()
+            | _ -> ()
+            building.Scenes
+            |> List.iteri (fun k id ->
+                if not (context.Scenes.ContainsKey id) then
+                    sink.Error("building.unknownScene", sprintf "%s.scenes[%d]" path k, sprintf "%s may be built in missing scene \"%s\"" label id, target))
+            building.Materials
+            |> List.iteri (fun k material ->
+                if not (context.ItemIds.Contains material.ItemId) then
+                    sink.Error("building.unknownMaterial", sprintf "%s.materials[%d].itemId" path k, sprintf "%s needs missing item \"%s\"" label material.ItemId, target))
+            if building.Cost < 0.0 then
+                sink.Error("building.cost", path + ".cost", sprintf "%s costs %g; a cost cannot be negative" label building.Cost, target)
+            match building.UpgradeOf with
+            | Some id when id.Length > 0 && not (byId.ContainsKey id) ->
+                sink.Error("building.unknownUpgrade", path + ".upgradeOf", sprintf "%s upgrades missing building \"%s\"" label id, target)
+            | Some id when id.Length > 0 ->
+                // Follow the chain down: coming back to this building is a circle.
+                let rec circles (seen: Set<string>) (current: string) =
+                    if current = building.Id then true
+                    elif seen.Contains current then false
+                    else
+                        match byId.TryGetValue current with
+                        | true, next ->
+                            match next.UpgradeOf with
+                            | Some down when down.Length > 0 -> circles (seen.Add current) down
+                            | _ -> false
+                        | _ -> false
+                if circles Set.empty id then
+                    sink.Error("building.upgradeCycle", path + ".upgradeOf", sprintf "%s is an upgrade of itself through its upgrades, so none of them can be built" label, target)
+            | _ -> ())
+
+    /// The buildings on the start map (M5): their type and scene exist and the footprint fits
+    /// inside the scene; two buildings do not stand on the same tiles.
+    let private placedBuildings (context: Context) (sink: Sink) =
+        let types = defaultArg context.Project.BuildingTypes [] |> List.map (fun b -> b.Id, b) |> dict
+        let footprints = ResizeArray<string * string * float * float * float * float>()
+        defaultArg context.Project.Buildings []
+        |> List.iteri (fun i building ->
+            let path = sprintf "buildings[%d]" i
+            let label = sprintf "The building \"%s\"" building.Id
+            let target = Some(NavigationTarget.PlacedBuilding building.Id)
+            match building.UpgradeTo with
+            | Some id when id.Length > 0 && not (types.ContainsKey id) ->
+                sink.Error("placedBuilding.unknownUpgrade", path + ".upgradeTo", sprintf "%s is being upgraded into missing building \"%s\"" label id, target)
+            | _ -> ()
+            if building.InteriorSceneId.Length > 0 && not (context.Scenes.ContainsKey building.InteriorSceneId) then
+                sink.Error("placedBuilding.unknownInterior", path + ".interiorSceneId", sprintf "%s opens into missing scene \"%s\"" label building.InteriorSceneId, target)
+            match types.TryGetValue building.BuildingId with
+            | false, _ ->
+                sink.Error("placedBuilding.unknownType", path + ".buildingId", sprintf "%s is of missing building type \"%s\"" label building.BuildingId, target)
+            | true, kind ->
+                if not (context.Scenes.ContainsKey building.SceneId) then
+                    sink.Error("placedBuilding.unknownScene", path + ".sceneId", sprintf "%s stands in missing scene \"%s\"" label building.SceneId, target)
+                else
+                    let width = max 1.0 (min FarmSchema.MaxBuildingSize kind.Width)
+                    let height = max 1.0 (min FarmSchema.MaxBuildingSize kind.Height)
+                    let scene = context.Scenes.[building.SceneId]
+                    let at = Some(NavigationTarget.Scene(building.SceneId, int building.X, int building.Y))
+                    if building.X < 0.0 || building.Y < 0.0 || building.X + width > scene.Width || building.Y + height > scene.Height then
+                        sink.Error("placedBuilding.outOfBounds", path + ".x", sprintf "%s (%g×%g at %g,%g) does not fit inside \"%s\"" label width height building.X building.Y scene.Name, at)
+                    for other, sceneId, x, y, w, h in footprints do
+                        if sceneId = building.SceneId && building.X < x + w && x < building.X + width && building.Y < y + h && y < building.Y + height then
+                            sink.Warning("placedBuilding.overlap", path + ".x", sprintf "%s stands on the tiles of \"%s\"" label other, at)
+                    footprints.Add((building.Id, building.SceneId, building.X, building.Y, width, height)))
+
+    /// The farm settings (M5): the farm scene and the layouts' scenes exist, layout ids are
+    /// unique, and the pest chance is a chance.
+    let private farm (context: Context) (sink: Sink) =
+        match context.Project.Settings.Farm with
+        | None -> ()
+        | Some farm ->
+            let settings = Some NavigationTarget.Settings
+            if farm.SceneId.Length > 0 && not (context.Scenes.ContainsKey farm.SceneId) then
+                sink.Error("farm.unknownScene", "settings.farm.sceneId", sprintf "The farm is missing scene \"%s\"" farm.SceneId, settings)
+            if farm.PestChance < 0.0 || farm.PestChance > 1.0 then
+                sink.Error("farm.pestChance", "settings.farm.pestChance", sprintf "The pest chance is %g; a chance is 0 to 1" farm.PestChance, settings)
+            let seen = HashSet<string>()
+            farm.Layouts
+            |> List.iteri (fun i layout ->
+                let path = sprintf "settings.farm.layouts[%d]" i
+                if not (seen.Add layout.Id) then
+                    sink.Error("farm.duplicateLayout", path + ".id", sprintf "Duplicate farm layout id \"%s\"" layout.Id, settings)
+                if not (context.Scenes.ContainsKey layout.SceneId) then
+                    sink.Error("farm.layoutUnknownScene", path + ".sceneId", sprintf "Farm layout \"%s\" is missing scene \"%s\"" layout.Name layout.SceneId, settings))
+            if farm.Layouts.Length = 1 then
+                sink.Info("farm.singleLayout", "settings.farm.layouts", "There is one farm layout; a new game asks for one only when there are two or more", settings)
+            if not farm.Layouts.IsEmpty && farm.SceneId.Length = 0 then
+                sink.Warning("farm.layoutsWithoutScene", "settings.farm.sceneId", "There are farm layouts but no farm scene for them to replace", settings)
+
+    /// Combat (M7): the faint spot exists, health is positive, and monsters only come with combat on.
+    let private combat (context: Context) (sink: Sink) =
+        let project = context.Project
+        let settings = Some NavigationTarget.Settings
+        match project.Settings.Combat with
+        | Some combat ->
+            if combat.MaxHealth < 1.0 then
+                sink.Error("combat.maxHealth", "settings.combat.maxHealth", sprintf "The player's health is %g; it needs at least 1" combat.MaxHealth, settings)
+            if combat.FaintMoneyPenalty < 0.0 then
+                sink.Error("combat.faintPenalty", "settings.combat.faintMoneyPenalty", sprintf "Fainting costs %g; a penalty cannot be negative" combat.FaintMoneyPenalty, settings)
+            if combat.HurtTicks < 0.0 then
+                sink.Error("combat.hurtTicks", "settings.combat.hurtTicks", sprintf "The time after a hit is %g ticks; it cannot be negative" combat.HurtTicks, settings)
+            match combat.FaintSceneId with
+            | Some scene when scene.Length > 0 && not (context.Scenes.ContainsKey scene) ->
+                sink.Error("combat.unknownFaintScene", "settings.combat.faintSceneId", sprintf "The player wakes after fainting in missing scene \"%s\"" scene, settings)
+            | Some scene when scene.Length > 0 ->
+                let x = defaultArg combat.FaintX 0.0
+                let y = defaultArg combat.FaintY 0.0
+                if not (Context.tileInScene context scene x y) then
+                    sink.Error("combat.faintOutOfBounds", "settings.combat.faintX", sprintf "The player wakes after fainting at (%g,%g), outside \"%s\"" x y context.Scenes.[scene].Name, sceneTarget context scene 0.0 0.0)
+            | _ -> ()
+        | None -> ()
+        let combatOn = project.Settings.Combat |> Option.exists (fun c -> c.Enabled)
+        let spawned =
+            project.Scenes |> List.exists (fun s -> not (defaultArg s.Monsters []).IsEmpty)
+            || project.Mine.Bands |> List.exists (fun b -> not (defaultArg b.Monsters []).IsEmpty)
+        if spawned && not combatOn then
+            sink.Info("combat.off", "settings.combat", "Scenes or the mine spawn monsters, but combat is off, so none appear", settings)
+
+    /// The monsters a scene has each morning (M7): monsters that exist, in an area inside the scene.
+    let private sceneMonsters (context: Context) (sink: Sink) =
+        context.Project.Scenes
+        |> List.iteri (fun s scene ->
+            defaultArg scene.Monsters []
+            |> List.iteri (fun k spawn ->
+                let path = sprintf "scenes[%d].monsters[%d]" s k
+                let target = Some(NavigationTarget.Scene(scene.Id, int (defaultArg spawn.X 0.0), int (defaultArg spawn.Y 0.0)))
+                if not (context.MonsterIds.Contains spawn.MonsterId) then
+                    sink.Error("scene.unknownMonster", path + ".monsterId", sprintf "Scene \"%s\" spawns missing monster \"%s\"" scene.Name spawn.MonsterId, target)
+                if spawn.Count < 1.0 then
+                    sink.Warning("scene.monsterCount", path + ".count", sprintf "Scene \"%s\" spawns %g of \"%s\"" scene.Name spawn.Count spawn.MonsterId, target)
+                let outside (value: float option) (size: float) = value |> Option.exists (fun v -> v < 0.0 || v >= size)
+                if outside spawn.X scene.Width || outside spawn.X2 scene.Width || outside spawn.Y scene.Height || outside spawn.Y2 scene.Height then
+                    sink.Error("scene.monsterAreaOutOfBounds", path + ".x", sprintf "Scene \"%s\" spawns \"%s\" in an area outside the scene" scene.Name spawn.MonsterId, target)))
 
     let private calendar (context: Context) (sink: Sink) =
         let project = context.Project
@@ -427,3 +609,8 @@ module internal ChecksWorld =
         placed context sink
         mine context sink
         calendar context sink
+        buildingTypes context sink
+        placedBuildings context sink
+        farm context sink
+        combat context sink
+        sceneMonsters context sink

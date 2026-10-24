@@ -202,6 +202,20 @@ module Defaults =
         | "hearts" -> EventCondition.Hearts { NpcId = ""; Min = Some 2.0; Max = None }
         | "dayOfSeason" -> EventCondition.DayOfSeason { MinDay = Some 1.0; MaxDay = Some 7.0 }
         | "relationship" -> EventCondition.Relationship { NpcId = ""; Status = RelationshipStatuses.Dating }
+        // M5–M7: the first of what they name, where there is one.
+        | "money" -> EventCondition.Money { Min = 1000.0 }
+        | "skillLevel" -> EventCondition.SkillLevel { Skill = "farming"; Min = 2.0 }
+        | "mineFloor" -> EventCondition.MineFloor { Min = 5.0 }
+        | "collection" ->
+            EventCondition.Collection { CollectionId = (match defaultArg project.Collections [] with c :: _ -> c.Id | [] -> ""); Min = None }
+        | "bundle" -> EventCondition.Bundle { BundleId = (match defaultArg project.Bundles [] with b :: _ -> b.Id | [] -> "") }
+        | "achievement" ->
+            EventCondition.Achievement { AchievementId = (match defaultArg project.Achievements [] with a :: _ -> a.Id | [] -> "") }
+        | "shipped" -> EventCondition.Shipped { ItemId = ""; Min = 1.0 }
+        | "building" ->
+            EventCondition.Building { BuildingId = (match defaultArg project.BuildingTypes [] with b :: _ -> b.Id | [] -> ""); Min = 1.0 }
+        | "slain" -> EventCondition.Slain { MonsterId = ""; Min = 10.0 }
+        | "birthday" -> EventCondition.Birthday { NpcId = "" }
         | _ -> EventCondition.Flag { Flag = ""; Value = true }
 
     /// event-forms.tsx outcome picker: an outcome of the kind with nothing filled in yet.
@@ -359,6 +373,79 @@ module Defaults =
     /// A copy of a cutscene (M2): "(copy)" with a fresh slug id.
     let duplicateCutscene (project: GameProject) (cutscene: Cutscene) : Cutscene =
         { cutscene with Id = slugId (sprintf "%s copy" cutscene.Name) (allIds project) "cutscene"; Name = sprintf "%s (copy)" cutscene.Name }
+
+    // ---- Building the farm, long-term goals and combat (M5–M7) ----
+
+    let private copyOf (project: GameProject) (name: string) (prefix: string) =
+        slugId (sprintf "%s copy" name) (allIds project) prefix, sprintf "%s (copy)" name
+
+    /// A new building type (M5): a 3×2 shed for 1000 and 100 wood, built in two nights, its
+    /// interior the first scene not the start scene (none when there is no other).
+    let newBuildingType (project: GameProject) : BuildingDefinition =
+        let interior = project.Scenes |> List.tryFind (fun s -> s.Id <> project.StartSceneId) |> Option.map (fun s -> s.Id)
+        let wood = if ContentCompiler.items project |> List.exists (fun i -> i.Id = "wood") then [ ({ ItemId = "wood"; Quantity = 100.0 } : RecipeIngredient) ] else []
+        { BuildingDefinition.Default with
+            Id = nextId "building-type" (allIds project); Name = "New Building"; Cost = 1000.0; Materials = wood; InteriorSceneId = interior }
+
+    /// A copy of a building type (M5): "(copy)" with a fresh slug id.
+    let duplicateBuildingType (project: GameProject) (building: BuildingDefinition) : BuildingDefinition =
+        let id, name = copyOf project building.Name "building-type"
+        { building with Id = id; Name = name }
+
+    /// A building on the start map (M5): the first building type at (1,1) of the farm scene (else
+    /// the start scene), standing.
+    let newPlacedBuilding (project: GameProject) : BuildingState =
+        let farm = project.Settings.Farm |> Option.map (fun f -> f.SceneId) |> Option.filter (fun id -> project.Scenes |> List.exists (fun s -> s.Id = id))
+        { BuildingState.Default with
+            Id = nextId "building" (allIds project)
+            BuildingId = (match defaultArg project.BuildingTypes [] with b :: _ -> b.Id | [] -> "")
+            SceneId = defaultArg farm project.StartSceneId; X = 1.0; Y = 1.0 }
+
+    /// A new monster (M7): a green slime that chases, with the defaults' health and damage.
+    let newMonster (project: GameProject) : MonsterDefinition =
+        { MonsterDefinition.Default with Id = nextId "monster" (allIds project); Name = "New Monster" }
+
+    let duplicateMonster (project: GameProject) (monster: MonsterDefinition) : MonsterDefinition =
+        let id, name = copyOf project monster.Name "monster"
+        { monster with Id = id; Name = name }
+
+    /// A new collection (M6): items found, with nothing in it yet.
+    let newCollection (project: GameProject) : CollectionDefinition =
+        { CollectionDefinition.Default with Id = nextId "collection" (allIds project); Name = "New Collection"; Kind = CollectionKinds.Found }
+
+    let duplicateCollection (project: GameProject) (collection: CollectionDefinition) : CollectionDefinition =
+        let id, name = copyOf project collection.Name "collection"
+        { collection with Id = id; Name = name }
+
+    /// A new bundle (M6): one of the first item to hand in.
+    let newBundle (project: GameProject) : BundleDefinition =
+        { BundleDefinition.Default with
+            Id = nextId "bundle" (allIds project); Name = "New Bundle"; Group = "Pantry"
+            Items = [ { BundleItem.Default with ItemId = firstItemId project } ] }
+
+    let duplicateBundle (project: GameProject) (bundle: BundleDefinition) : BundleDefinition =
+        let id, name = copyOf project bundle.Name "bundle"
+        { bundle with Id = id; Name = name }
+
+    /// A new achievement (M6): earning 1000 money.
+    let newAchievement (project: GameProject) : AchievementDefinition =
+        { AchievementDefinition.Default with
+            Id = nextId "achievement" (allIds project); Name = "New Achievement"; Description = "Earn 1000."
+            Conditions = [ EventCondition.Money { Min = 1000.0 } ] }
+
+    let duplicateAchievement (project: GameProject) (achievement: AchievementDefinition) : AchievementDefinition =
+        let id, name = copyOf project achievement.Name "achievement"
+        { achievement with Id = id; Name = name }
+
+    /// A new letter (M6) from the first NPC, sent only by an outcome or a quest.
+    let newMail (project: GameProject) : MailDefinition =
+        { MailDefinition.Default with
+            Id = nextId "mail" (allIds project); Subject = "A letter"; Text = "Dear {player},\n\n"
+            From = (match project.Npcs with n :: _ -> n.Id | [] -> "") }
+
+    let duplicateMail (project: GameProject) (letter: MailDefinition) : MailDefinition =
+        let id, subject = copyOf project letter.Subject "mail"
+        { letter with Id = id; Subject = subject }
 
     /// MinigameEditor `addTier`.
     let newResultTier () : MinigameResultTier = { MinScore = 0.0; Outcomes = [] }

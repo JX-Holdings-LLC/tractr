@@ -167,10 +167,12 @@ module Builtin =
 
     let mineBands () =
         let rock id weight : MineRockWeight = { NodeTypeId = id; Weight = weight }
-        [ { FromFloor = 1.0; ToFloor = 7.0; Density = 0.3
-            Rocks = [ rock "node-mine-rock" 6.0; rock "node-copper-ore" 3.0; rock "node-quartz" 1.0 ] }
-          { FromFloor = 8.0; ToFloor = 20.0; Density = 0.35
-            Rocks = [ rock "node-mine-rock" 4.0; rock "node-copper-ore" 3.0; rock "node-iron-ore" 3.0; rock "node-quartz" 1.0 ] } ]
+        [ { MineBand.Default with
+              FromFloor = 1.0; ToFloor = 7.0; Density = 0.3
+              Rocks = [ rock "node-mine-rock" 6.0; rock "node-copper-ore" 3.0; rock "node-quartz" 1.0 ] }
+          { MineBand.Default with
+              FromFloor = 8.0; ToFloor = 20.0; Density = 0.35
+              Rocks = [ rock "node-mine-rock" 4.0; rock "node-copper-ore" 3.0; rock "node-iron-ore" 3.0; rock "node-quartz" 1.0 ] } ]
 
     let machineTypes () =
         let machine id name description color : MachineTypeDefinition =

@@ -174,6 +174,13 @@ module internal Proj =
         own project.CropMutations (fun m -> m.Id)
         own project.Cutscenes (fun c -> c.Id)
         own project.HeartEvents (fun h -> h.Id)
+        own project.BuildingTypes (fun b -> b.Id)
+        own project.Buildings (fun b -> b.Id)
+        own project.Collections (fun c -> c.Id)
+        own project.Bundles (fun b -> b.Id)
+        own project.Achievements (fun a -> a.Id)
+        own project.Mail (fun m -> m.Id)
+        own project.Monsters (fun m -> m.Id)
         ids
 
 /// Tile-layer rules shared by the paint edits (web `game-helpers.ts` `setTileLayer`, `classifyTileType`).

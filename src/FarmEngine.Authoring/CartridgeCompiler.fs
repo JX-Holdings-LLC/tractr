@@ -61,7 +61,9 @@ type CartridgeCompiler =
               yield! optional "mineDeepestFloor" project.MineDeepestFloor JNumber
               yield! optional "quarantinedItems" project.QuarantinedItems (Encode.list SchemaJson.encodeInventorySlot)
               yield! optional "rngState" project.RngState SchemaJson.encodeRngState
-              yield! optional "keptState" project.KeptState id ]
+              yield! optional "keptState" project.KeptState id
+              // The buildings on the map (M5); none is left out, as Rust skips an empty list.
+              yield! optional "buildings" (project.Buildings |> Option.filter (List.isEmpty >> not)) (Encode.list SchemaJson.encodeBuildingState) ]
 
     /// What the renderer and the game panels read (Rust `Presentation::from_project`).
     static member PresentationSection(project: GameProject) : Json =

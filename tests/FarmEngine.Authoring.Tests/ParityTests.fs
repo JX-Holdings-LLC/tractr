@@ -57,16 +57,45 @@ type private KitchenSink() =
         elif t = typeof<int> then box 2
         elif t = typeof<uint32> then box 2u
         elif t = typeof<bool> then box true
-        // A kept playtest's engine state: opaque to F#, a typed `KeptState` to Rust.
+        // A kept playtest's engine state: opaque to F#, a typed `KeptState` to Rust, with every
+        // field of its M5–M7 `goals` (Rust `KeptGoals`).
         elif t = typeof<Json> && field = "KeptState" then
-            box (JObject [ "tick", JNumber 2.0; "shopPurchasesToday", JObject []; "npcs", JObject []; "mineCurrentFloor", JNumber 2.0 ])
+            let n = JNumber 2.0
+            let goals =
+                JObject
+                    [ "storage", JObject [ "sceneId", JString "scene-kept"; "x", n; "y", n ]
+                      "farmLayout", JString "layout-kept"
+                      "shipped", JObject [ "item-kept", n ]
+                      "lastShipment", JArray [ JObject [ "itemId", JString "item-kept"; "quality", JString "silver"; "quantity", n; "money", n ] ]
+                      "collections", JObject [ "collection-kept", JObject [ "items", JArray [ JString "item-kept" ]; "rewarded", n ] ]
+                      "bundles", JObject [ "bundle-kept", JObject [ "handed", JArray [ n ]; "complete", JBool true ] ]
+                      "achievements", JObject [ "achievement-kept", n ]
+                      "mailbox", JArray [ JObject [ "mailId", JString "mail-kept"; "day", n; "read", JBool true; "taken", JBool true ] ]
+                      "mailQueue", JArray [ JString "mail-kept" ]
+                      "monsters",
+                      JArray
+                          [ JObject
+                                [ "id", n; "monsterId", JString "monster-kept"; "sceneId", JString "scene-kept"; "x", JNumber 2.5; "y", JNumber 2.5
+                                  "health", n; "wander", n; "direction", JString "up"; "stunned", n ] ]
+                      "nextMonster", n
+                      "slain", JObject [ "monster-kept", n ]
+                      "health", n ]
+            box (JObject [ "tick", n; "shopPurchasesToday", JObject []; "npcs", JObject []; "mineCurrentFloor", n; "goals", goals ])
         elif t = typeof<Json> then box (JString "json")
         elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<option<_>> then
             let inner = t.GetGenericArguments().[0]
             let some = FSharpType.GetUnionCases(t) |> Array.find (fun c -> c.Name = "Some")
             let none = FSharpType.GetUnionCases(t) |> Array.find (fun c -> c.Name = "None")
             if depth > 12 then FSharpValue.MakeUnion(none, [||])
-            else FSharpValue.MakeUnion(some, [| this.Value(inner, field, depth + 1) |])
+            else
+                let value = this.Value(inner, field, depth + 1)
+                // An empty list past the depth limit stays absent: Rust skips the empty lists it
+                // keeps as a `Vec` (M5–M7), so `Some []` would not read back the same.
+                match value with
+                | :? System.Collections.IEnumerable as items when inner.IsGenericType && inner.GetGenericTypeDefinition() = typedefof<list<_>>
+                                                                  && not (items.GetEnumerator().MoveNext()) ->
+                    FSharpValue.MakeUnion(none, [||])
+                | _ -> FSharpValue.MakeUnion(some, [| value |])
         elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<list<_>> then
             let element = t.GetGenericArguments().[0]
             let items: obj list =

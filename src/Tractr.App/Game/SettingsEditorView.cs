@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using FarmEngine.Authoring;
+using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
 using Tractr.App.Localization;
 using Tractr.App.Projects;
@@ -38,6 +39,14 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly CheckBox _relationshipsOn = new() { Name = "Setting_Relationships", Content = "Relationships: friendship decay, dating, marriage, children" };
     private readonly StackPanel _relationships = new() { Name = "RelationshipSettings", Spacing = 6 };
     private ContentForm? _relationshipForm;
+    private readonly CheckBox _farmOn = new() { Name = "Setting_Farm" };
+    private readonly StackPanel _farm = new() { Name = "FarmSettings", Spacing = 6 };
+    private ContentForm? _farmForm;
+    private readonly CheckBox _combatOn = new() { Name = "Setting_Combat" };
+    private readonly StackPanel _combat = new() { Name = "CombatSettings", Spacing = 6 };
+    private ContentForm? _combatForm;
+    private readonly StackPanel _mineBands = new() { Name = "MineBands", Spacing = 8 };
+    private readonly List<ContentForm> _mineBandForms = [];
     private readonly DraftRows<SeasonDraft> _seasonRows;
     private readonly Dictionary<SeasonDraft, (Button Up, Button Down)> _seasonArrows = [];
     private bool _filling;
@@ -154,6 +163,16 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         _mineFields.Children.Add(saveMine);
         form.Children.Add(_mineFields);
         form.Children.Add(Shown("MineMessage", nameof(SettingsViewModel.MineMessage)));
+        // The depth bands: rocks, and monsters, hazards and treasure (M7), one form per band.
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.mineBands"), "muted", "small"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.mineBandsHelp"), "muted", "small"));
+        form.Children.Add(_mineBands);
+        var addBand = Ui.Button(EditorStrings.Get("settings.addMineBand"), AddMineBand, "tool");
+        addBand.Name = "AddMineBandButton";
+        var saveBands = Ui.Button(EditorStrings.Get("settings.saveMineBands"), SaveMineBands, "accent");
+        saveBands.Name = "SaveMineBandsButton";
+        form.Children.Add(Ui.HStack(8, addBand, saveBands));
+        form.Children.Add(Shown("MineBandsMessage", nameof(SettingsViewModel.MineBandsMessage)));
         form.Children.Add(Ui.Text("PEOPLE", "section"));
         form.Children.Add(Ui.Wrapped("The player character and the game's relationship rules. Each part is off until it is turned on here; NPCs are romanceable one by one in their own forms.", "muted", "small"));
         _characterCreator.Click += (_, _) => ViewModel.SetCharacterCreator(_characterCreator.IsChecked == true);
@@ -162,6 +181,20 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         form.Children.Add(_relationshipsOn);
         form.Children.Add(_relationships);
         form.Children.Add(Shown("PeopleMessage", nameof(SettingsViewModel.PeopleMessage)));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.farm"), "section"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.farmHelp"), "muted", "small"));
+        _farmOn.Content = EditorStrings.Get("settings.farmOn");
+        _farmOn.Click += (_, _) => ViewModel.SetFarmOn(_farmOn.IsChecked == true);
+        form.Children.Add(_farmOn);
+        form.Children.Add(_farm);
+        form.Children.Add(Shown("FarmMessage", nameof(SettingsViewModel.FarmMessage)));
+        form.Children.Add(Ui.Text(EditorStrings.Get("settings.combat"), "section"));
+        form.Children.Add(Ui.Wrapped(EditorStrings.Get("settings.combatHelp"), "muted", "small"));
+        _combatOn.Content = EditorStrings.Get("settings.combatOn");
+        _combatOn.Click += (_, _) => ViewModel.SetCombatOn(_combatOn.IsChecked == true);
+        form.Children.Add(_combatOn);
+        form.Children.Add(_combat);
+        form.Children.Add(Shown("CombatMessage", nameof(SettingsViewModel.CombatMessage)));
         form.Children.Add(Ui.Text("EXPORT", "section"));
         form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
         Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
@@ -218,6 +251,10 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         ShowExportProblems();
         ShowPeople();
         ViewModel.PeopleChanged += ShowPeople;
+        ShowFarm();
+        ViewModel.FarmChanged += ShowFarm;
+        ShowCombat();
+        ViewModel.CombatChanged += ShowCombat;
         ViewModel.PropertyChanged += OnViewModelChanged;
     }
 
@@ -249,6 +286,112 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         {
             ViewModel.ReportPeople($"Could not save: {error.Message}");
         }
+    }
+
+    /// <summary>The Farm section (M5): its switch and, when on, the farm scene, layouts and pests as a form with Save.</summary>
+    private void ShowFarm()
+    {
+        var farm = ViewModel.Farm;
+        _farmOn.IsChecked = farm is not null;
+        _farm.Children.Clear();
+        _farmForm = null;
+        if (farm is null || ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _farmForm = new ContentForm(project, farm, typeof(FarmSettings), fields, ViewModel.ReportFarm);
+        _farm.Children.Add(fields);
+        var save = Ui.Button(EditorStrings.Get("settings.saveFarm"), () => SaveRules<FarmSettings>(_farmForm, ViewModel.SaveFarm, ViewModel.ReportFarm), "accent");
+        save.Name = "SaveFarmButton";
+        _farm.Children.Add(save);
+    }
+
+    /// <summary>
+    /// The Combat section (M7): its switch and, when on, the health and fainting rules as a form
+    /// with Save; and the mine's depth bands, whose monsters come with combat.
+    /// </summary>
+    private void ShowCombat()
+    {
+        var combat = ViewModel.Combat;
+        _combatOn.IsChecked = combat is not null;
+        _combat.Children.Clear();
+        _combatForm = null;
+        ShowMineBands();
+        if (combat is null || ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _combatForm = new ContentForm(project, combat, typeof(CombatSettings), fields, ViewModel.ReportCombat);
+        _combat.Children.Add(fields);
+        var save = Ui.Button(EditorStrings.Get("settings.saveCombat"), () => SaveRules<CombatSettings>(_combatForm, ViewModel.SaveCombat, ViewModel.ReportCombat), "accent");
+        save.Name = "SaveCombatButton";
+        _combat.Children.Add(save);
+    }
+
+    /// <summary>Commits a rules form and saves it, or says why it cannot be saved.</summary>
+    private static void SaveRules<T>(ContentForm? form, Func<T, bool> save, Action<string> report)
+        where T : class
+    {
+        if (form is null) return;
+        try
+        {
+            save((T)form.Commit());
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException)
+        {
+            report(EditorStrings.Format("settings.couldNotSave", error.Message));
+        }
+    }
+
+    /// <summary>One form per depth band of the mine, as stored.</summary>
+    private void ShowMineBands() => ShowMineBands(ViewModel.MineBands);
+
+    private void ShowMineBands(IReadOnlyList<MineBand> bands)
+    {
+        _mineBands.Children.Clear();
+        _mineBandForms.Clear();
+        if (ViewModel.Workspace.Current is not { } project) return;
+        for (var i = 0; i < bands.Count; i++)
+        {
+            var index = i;
+            var fields = new StackPanel { Spacing = 6 };
+            _mineBandForms.Add(new ContentForm(project, bands[i], typeof(MineBand), fields, ViewModel.ReportMineBands));
+            var remove = Ui.Button(EditorStrings.Get("common.remove"), () => RemoveMineBand(index), "tool", "small");
+            remove.Name = $"RemoveMineBand_{i}";
+            var card = Ui.VStack(6, Ui.HStack(8, Ui.Text(EditorStrings.Format("settings.mineBand", i + 1), "muted", "small"), remove), fields);
+            _mineBands.Children.Add(new Border { Name = $"MineBand_{i}", Child = card }.WithClasses("row"));
+        }
+    }
+
+    /// <summary>The bands as their forms hold them, or null (with the reason shown) while one is invalid.</summary>
+    private List<MineBand>? DraftMineBands()
+    {
+        try
+        {
+            return [.. _mineBandForms.Select(form => (MineBand)form.Commit())];
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException)
+        {
+            ViewModel.ReportMineBands(EditorStrings.Format("settings.couldNotSave", error.Message));
+            return null;
+        }
+    }
+
+    /// <summary>A new band below the last one (unsaved until Save depth bands).</summary>
+    private void AddMineBand()
+    {
+        if (DraftMineBands() is not { } bands) return;
+        var from = bands.Count == 0 ? 1.0 : bands[^1].ToFloor + 1;
+        bands.Add(MineBand.Default.WithFromFloor(from).WithToFloor(from + 9));
+        ShowMineBands(bands);
+    }
+
+    private void RemoveMineBand(int index)
+    {
+        if (DraftMineBands() is not { } bands || index >= bands.Count) return;
+        bands.RemoveAt(index);
+        ShowMineBands(bands);
+    }
+
+    private void SaveMineBands()
+    {
+        if (DraftMineBands() is { } bands) ViewModel.SaveMineBands(bands);
     }
 
     public SettingsViewModel ViewModel { get; }

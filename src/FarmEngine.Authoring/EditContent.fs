@@ -290,6 +290,16 @@ module internal EditContent =
         (fun (p: GameProject) -> defaultArg p.Cutscenes []), (fun (p: GameProject) l -> { p with Cutscenes = (if List.isEmpty l then None else Some l) }), (fun (x: Cutscene) -> x.Id)
     let private heartEvents =
         (fun (p: GameProject) -> defaultArg p.HeartEvents []), (fun (p: GameProject) l -> { p with HeartEvents = (if List.isEmpty l then None else Some l) }), (fun (x: HeartEvent) -> x.Id)
+    /// A project list kept absent while empty (M5–M7 content).
+    let private optionalList (get: GameProject -> 'T list option) (set: GameProject -> 'T list option -> GameProject) (idOf: 'T -> string) =
+        (fun (p: GameProject) -> defaultArg (get p) []), (fun (p: GameProject) (l: 'T list) -> set p (if List.isEmpty l then None else Some l)), idOf
+    let private buildingTypes = optionalList (fun p -> p.BuildingTypes) (fun p l -> { p with BuildingTypes = l }) (fun (x: BuildingDefinition) -> x.Id)
+    let private placedBuildings = optionalList (fun p -> p.Buildings) (fun p l -> { p with Buildings = l }) (fun (x: BuildingState) -> x.Id)
+    let private monsters = optionalList (fun p -> p.Monsters) (fun p l -> { p with Monsters = l }) (fun (x: MonsterDefinition) -> x.Id)
+    let private collections = optionalList (fun p -> p.Collections) (fun p l -> { p with Collections = l }) (fun (x: CollectionDefinition) -> x.Id)
+    let private bundles = optionalList (fun p -> p.Bundles) (fun p l -> { p with Bundles = l }) (fun (x: BundleDefinition) -> x.Id)
+    let private achievements = optionalList (fun p -> p.Achievements) (fun p l -> { p with Achievements = l }) (fun (x: AchievementDefinition) -> x.Id)
+    let private mail = optionalList (fun p -> p.Mail) (fun p l -> { p with Mail = l }) (fun (x: MailDefinition) -> x.Id)
     let private upsertIn (get, set, idOf) item project = upsert get set idOf item project
     let private removeIn (get, set, idOf) cleanup id project = remove get set idOf cleanup id project
 
@@ -317,6 +327,30 @@ module internal EditContent =
 
     let upsertHeartEvent (heartEvent: HeartEvent) (project: GameProject) = upsertIn heartEvents heartEvent project
     let removeHeartEvent (heartEventId: string) (project: GameProject) = removeIn heartEvents noCleanup heartEventId project
+
+    // ---- Building the farm, long-term goals and combat (M5–M7) ----
+
+    let upsertBuildingType (building: BuildingDefinition) (project: GameProject) = upsertIn buildingTypes building project
+    let removeBuildingType (buildingTypeId: string) (project: GameProject) = removeIn buildingTypes Cleanup.dropBuildingType buildingTypeId project
+
+    let upsertPlacedBuilding (building: BuildingState) (project: GameProject) = upsertIn placedBuildings building project
+    /// A building taken off the start map: animals housed in it are homeless (Problems says so).
+    let removePlacedBuilding (placedBuildingId: string) (project: GameProject) = removeIn placedBuildings Cleanup.dropPlacedBuilding placedBuildingId project
+
+    let upsertMonster (monster: MonsterDefinition) (project: GameProject) = upsertIn monsters monster project
+    let removeMonster (monsterId: string) (project: GameProject) = removeIn monsters Cleanup.dropMonster monsterId project
+
+    let upsertCollection (collection: CollectionDefinition) (project: GameProject) = upsertIn collections collection project
+    let removeCollection (collectionId: string) (project: GameProject) = removeIn collections noCleanup collectionId project
+
+    let upsertBundle (bundle: BundleDefinition) (project: GameProject) = upsertIn bundles bundle project
+    let removeBundle (bundleId: string) (project: GameProject) = removeIn bundles noCleanup bundleId project
+
+    let upsertAchievement (achievement: AchievementDefinition) (project: GameProject) = upsertIn achievements achievement project
+    let removeAchievement (achievementId: string) (project: GameProject) = removeIn achievements noCleanup achievementId project
+
+    let upsertMail (letter: MailDefinition) (project: GameProject) = upsertIn mail letter project
+    let removeMail (mailId: string) (project: GameProject) = removeIn mail Cleanup.dropMail mailId project
 
 
     let upsertQuest (quest: Quest) (project: GameProject) = upsertIn quests quest project

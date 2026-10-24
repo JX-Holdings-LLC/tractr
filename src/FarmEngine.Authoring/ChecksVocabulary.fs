@@ -93,6 +93,10 @@ module internal ChecksVocabulary =
             let target = Some(NavigationTarget.Terrain terrain.Id)
             if String.IsNullOrWhiteSpace terrain.Name then
                 sink.Warning("terrain.emptyName", path + ".name", sprintf "Terrain \"%s\" has no name" terrain.Id, target)
+            match terrain.Damage with
+            | Some damage when damage < 0.0 ->
+                sink.Error("terrain.damage", path + ".damage", sprintf "Terrain \"%s\" does %g damage; damage cannot be negative" terrain.Name damage, target)
+            | _ -> ()
             terrain.Transforms
             |> List.iteri (fun k transform ->
                 let tp = sprintf "%s.transforms[%d]" path k

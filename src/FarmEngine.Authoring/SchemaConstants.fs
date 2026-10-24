@@ -73,7 +73,11 @@ module ToolActions =
     [<Literal>]
     let Plant = "plant"
 
-    let All : string list = [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant ]
+    /// Hits the monsters ahead (a weapon, M7): the item's `ToolPower` is the damage.
+    [<Literal>]
+    let Attack = "attack"
+
+    let All : string list = [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant; Attack ]
 
     /// The actions a terrain transform can name.
     let Transforming : string list = [ Till; Transform; Break ]
@@ -518,7 +522,15 @@ module EventOutcomeTypes =
     [<Literal>]
     let SetRelationship = "setRelationship"
 
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene; SetVariable; AddVariable; MoveNpc; SetWeather; GiveExperience; AddShopStock; RemoveShopStock; PlaceNode; RemoveNode; PlaceMachine; RemoveMachine; SetRelationship ]
+    /// Send a letter (`mailId`, M6): it arrives the next morning.
+    [<Literal>]
+    let SendMail = "sendMail"
+
+    /// Restore (or, negative, take) `amount` health (M7).
+    [<Literal>]
+    let ModifyHealth = "modifyHealth"
+
+    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene; SetVariable; AddVariable; MoveNpc; SetWeather; GiveExperience; AddShopStock; RemoveShopStock; PlaceNode; RemoveNode; PlaceMachine; RemoveMachine; SetRelationship; SendMail; ModifyHealth ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -568,10 +580,26 @@ module EventTriggers =
     [<Literal>]
     let Quest = "quest"
 
-    let All : string list = [ Enter; Interact; Tick; DayStart; Time; Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest ]
+    /// A building was finished or upgraded (subject: the building kind, M5).
+    [<Literal>]
+    let Build = "build"
 
-    /// The triggers whose events may name a `Subject` (M3).
-    let WithSubject : string list = [ Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest ]
+    /// A bundle was completed (subject: the bundle, M6).
+    [<Literal>]
+    let Bundle = "bundle"
+
+    /// An achievement was unlocked (subject: the achievement, M6).
+    [<Literal>]
+    let Achievement = "achievement"
+
+    /// A monster was slain (subject: the monster kind, M7).
+    [<Literal>]
+    let Slay = "slay"
+
+    let All : string list = [ Enter; Interact; Tick; DayStart; Time; Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest; Build; Bundle; Achievement; Slay ]
+
+    /// The triggers whose events may name a `Subject` (M3, M5–M7).
+    let WithSubject : string list = [ Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest; Build; Bundle; Achievement; Slay ]
 
 /// How a `variable` condition compares (M3).
 [<RequireQualifiedAccess>]
@@ -612,6 +640,53 @@ module RelationshipStatuses =
     let Married = "married"
 
     let All : string list = [ Single; Dating; Engaged; Married ]
+
+/// What a placed object does to the tiles around it (M5).
+[<RequireQualifiedAccess>]
+module AreaEffects =
+    /// Each morning the soil in the area is watered (a sprinkler).
+    [<Literal>]
+    let Water = "water"
+
+    /// Overnight, crops in the area escape storm damage and pests (a scarecrow).
+    [<Literal>]
+    let Protect = "protect"
+
+    let All : string list = [ Water; Protect ]
+
+/// How an item joins a collection (M6).
+[<RequireQualifiedAccess>]
+module CollectionKinds =
+    /// The first time the player holds it.
+    [<Literal>]
+    let Found = "found"
+
+    /// The first time a shipping bin sells it.
+    [<Literal>]
+    let Shipped = "shipped"
+
+    /// When the player hands one in (`donateItem`; it is taken).
+    [<Literal>]
+    let Donated = "donated"
+
+    let All : string list = [ Found; Shipped; Donated ]
+
+/// How a monster moves (M7).
+[<RequireQualifiedAccess>]
+module MonsterMovements =
+    /// Ambles about.
+    [<Literal>]
+    let Wander = "wander"
+
+    /// Wanders until the player comes within `sight`, then comes at them.
+    [<Literal>]
+    let Chase = "chase"
+
+    /// Stays where it is (a turret, a slime that waits).
+    [<Literal>]
+    let Still = "still"
+
+    let All : string list = [ Wander; Chase; Still ]
 
 /// The places clothing is worn (M4).
 [<RequireQualifiedAccess>]
@@ -744,6 +819,25 @@ module SettingsSchema =
             | Some day when day <> 0.0 -> day
             | _ -> snd (naturalDate calendar absoluteDay)
         max 1.0 (min current.Days day)
+
+/// Limits of M5's placed objects and buildings (Rust `schema::farm`).
+[<RequireQualifiedAccess>]
+module FarmSchema =
+    /// The largest building side the engine places, in tiles (`MAX_BUILDING_SIZE`).
+    [<Literal>]
+    let MaxBuildingSize = 16.0
+
+    /// The largest area effect radius the engine applies (`MAX_AREA_RADIUS`).
+    [<Literal>]
+    let MaxAreaRadius = 32.0
+
+    /// The slots a shipping bin holds when its type sets no `storage` (`DEFAULT_SHIPPING_SLOTS`).
+    [<Literal>]
+    let DefaultShippingSlots = 24.0
+
+    /// The largest storage an object has (`MAX_STORAGE_SLOTS`).
+    [<Literal>]
+    let MaxStorageSlots = 256.0
 
 [<RequireQualifiedAccess>]
 module ProjectSchema =

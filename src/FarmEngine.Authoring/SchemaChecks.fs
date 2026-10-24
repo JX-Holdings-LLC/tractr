@@ -135,6 +135,17 @@ module SchemaChecks =
                 | Some minDay, Some maxDay when minDay > maxDay -> lint cp "minDay is greater than maxDay"
                 | _ -> []
             | EventCondition.Relationship r -> oneOf (cp + ".status") r.Status RelationshipStatuses.All
+            // M5–M7: ids may be empty (anything); counts saturate as the engine reads them.
+            | EventCondition.Money _
+            | EventCondition.SkillLevel _
+            | EventCondition.MineFloor _
+            | EventCondition.Collection _
+            | EventCondition.Bundle _
+            | EventCondition.Achievement _
+            | EventCondition.Shipped _
+            | EventCondition.Building _
+            | EventCondition.Slain _
+            | EventCondition.Birthday _
             | EventCondition.Scene _
             | EventCondition.Season _
             | EventCondition.Weather _ -> [])

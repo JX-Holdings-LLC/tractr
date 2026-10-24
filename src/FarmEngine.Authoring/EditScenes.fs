@@ -166,6 +166,16 @@ module internal EditScenes =
             if scene.Dark = dark && scene.Temperature = temperature && scene.Tags = tags && scene.Music = music && scene.Atmosphere = atmosphere then scene
             else { scene with Dark = dark; Temperature = temperature; Tags = tags; Music = music; Atmosphere = atmosphere }) project
 
+    /// A greenhouse (M5): crops grow in every season; off is stored as an absent key.
+    let setSceneAllSeasons (sceneId: string) (allSeasons: bool) (project: GameProject) =
+        let value = if allSeasons then Some true else None
+        Proj.mapScene sceneId (fun scene -> if scene.AllSeasons = value then scene else { scene with AllSeasons = value }) project
+
+    /// The monsters a scene has each morning (M7); none is stored as an absent key.
+    let setSceneMonsters (sceneId: string) (monsters: MonsterSpawn list) (project: GameProject) =
+        let value = if monsters.IsEmpty then None else Some monsters
+        Proj.mapScene sceneId (fun scene -> if scene.Monsters = value then scene else { scene with Monsters = value }) project
+
     /// The largest scene side (the game cuts bigger scenes when it loads them).
     [<Literal>]
     let MaxSceneSize = 256

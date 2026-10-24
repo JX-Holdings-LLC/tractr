@@ -219,14 +219,16 @@ let ``cutscene actors and speakers pick the player or an NPC and keep an unknown
 let ``condition and outcome types are pinned`` () =
     Assert.Equal<string list>(
         [ "enterTile"; "interactTile"; "friendship"; "weather"; "inventorySpace"; "hasItem"; "flag"; "dayRange"; "season"; "yearRange"; "timeOfDay"; "questStatus"; "festivalId"
-          "variable"; "all"; "any"; "not"; "chance"; "scene"; "hearts"; "dayOfSeason"; "relationship" ],
+          "variable"; "all"; "any"; "not"; "chance"; "scene"; "hearts"; "dayOfSeason"; "relationship"
+          "money"; "skillLevel"; "mineFloor"; "collection"; "bundle"; "achievement"; "shipped"; "building"; "slain"; "birthday" ],
         Vocabulary.conditionTypes |> List.map fst)
     Assert.Equal("Has item ≥ n", Vocabulary.conditionLabel "hasItem")
     Assert.Equal<string list>(
         [ "modifyFriendship"; "modifyEnergy"; "waterArea"; "message"; "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "clearFlag"
           "startQuest"; "completeQuest"; "spawnNPC"; "removeNPC"; "changeTile"; "warpPlayer"; "startDialogue"; "lockTransition"; "unlockTransition"
           "playSound"; "performAction"; "startMinigame"; "playMusic"; "startCutscene"; "setVariable"; "addVariable"; "moveNpc"; "setWeather"
-          "giveExperience"; "addShopStock"; "removeShopStock"; "placeNode"; "removeNode"; "placeMachine"; "removeMachine"; "setRelationship" ],
+          "giveExperience"; "addShopStock"; "removeShopStock"; "placeNode"; "removeNode"; "placeMachine"; "removeMachine"; "setRelationship"
+          "sendMail"; "modifyHealth" ],
         Vocabulary.outcomeTypes |> List.map fst)
     Assert.Equal("Water nearby soil (magic)", Vocabulary.outcomeLabel "waterArea")
     // Every outcome type the vocabulary offers is a schema outcome type.
@@ -258,7 +260,17 @@ let ``each condition type shows the web fields`` () =
           "scene", [ "sceneIds" ]
           "hearts", [ "npcId"; "min"; "max" ]
           "dayOfSeason", [ "minDay"; "maxDay" ]
-          "relationship", [ "npcId"; "status" ] ]
+          "relationship", [ "npcId"; "status" ]
+          "money", [ "min" ]
+          "skillLevel", [ "skill"; "min" ]
+          "mineFloor", [ "min" ]
+          "collection", [ "collectionId"; "min" ]
+          "bundle", [ "bundleId" ]
+          "achievement", [ "achievementId" ]
+          "shipped", [ "itemId"; "min" ]
+          "building", [ "buildingId"; "min" ]
+          "slain", [ "monsterId"; "min" ]
+          "birthday", [ "npcId" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.conditionTypes.Length)
@@ -309,7 +321,9 @@ let ``each outcome type shows the web fields`` () =
           "removeNode", [ "sceneId"; "tileX"; "tileY" ]
           "placeMachine", [ "sceneId"; "tileX"; "tileY"; "machineTypeId" ]
           "removeMachine", [ "sceneId"; "tileX"; "tileY" ]
-          "setRelationship", [ "npcId"; "status" ] ]
+          "setRelationship", [ "npcId"; "status" ]
+          "sendMail", [ "mailId" ]
+          "modifyHealth", [ "amount" ] ]
     for kind, fields in expected do
         Assert.Equal<string list>(fields, keys kind)
     Assert.Equal(expected.Length, Vocabulary.outcomeTypes.Length)

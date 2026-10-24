@@ -3,6 +3,7 @@ using System.Globalization;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
+using Tractr.App.Localization;
 using Tractr.App.Mvvm;
 using Tractr.App.Projects;
 
@@ -386,6 +387,8 @@ public sealed class SettingsViewModel : ObservableObject
     {
         if (_workspace.Current is not { } project) return;
         PeopleChanged?.Invoke();
+        FarmChanged?.Invoke();
+        CombatChanged?.Invoke();
         var kept = new List<string>();
         foreach (var section in Enum.GetValues<SettingsSection>())
         {
@@ -871,6 +874,84 @@ public sealed class SettingsViewModel : ObservableObject
         var saved = _workspace.Apply(SettingsForm.People(project, characterCreator, relationships));
         PeopleMessage = saved ? _workspace.SavedText(what) : "No changes were made.";
         PeopleChanged?.Invoke();
+        return saved;
+    }
+
+    // ---- Farm (M5), combat (M7) and the mine's depth bands ----
+    // Like People: the switches take effect when clicked, and each form has its own Save.
+
+    private string _farmMessage = "";
+    private string _combatMessage = "";
+    private string _mineBandsMessage = "";
+
+    /// <summary>Raised when the project's farm settings may have changed (the view rebuilds its form).</summary>
+    public event Action? FarmChanged;
+
+    /// <summary>Raised when the project's combat settings or mine bands may have changed (the view rebuilds those forms).</summary>
+    public event Action? CombatChanged;
+
+    public string FarmMessage { get => _farmMessage; private set => SetProperty(ref _farmMessage, value); }
+
+    public string CombatMessage { get => _combatMessage; private set => SetProperty(ref _combatMessage, value); }
+
+    public string MineBandsMessage { get => _mineBandsMessage; private set => SetProperty(ref _mineBandsMessage, value); }
+
+    public void ReportFarm(string text) => FarmMessage = text;
+
+    public void ReportCombat(string text) => CombatMessage = text;
+
+    public void ReportMineBands(string text) => MineBandsMessage = text;
+
+    /// <summary>The farm scene, its layouts and pests, or null when the game has none.</summary>
+    public FarmSettings? Farm => _workspace.Current?.Settings.Farm.OrNull();
+
+    /// <summary>The combat rules, or null when the game has no combat.</summary>
+    public CombatSettings? Combat => _workspace.Current?.Settings.Combat.OrNull();
+
+    /// <summary>The mine's depth bands as stored.</summary>
+    public IReadOnlyList<MineBand> MineBands => _workspace.Current is { } project ? [.. project.Mine.Bands] : [];
+
+    /// <summary>Turns the farm settings on (the start scene is the farm) or off.</summary>
+    public void SetFarmOn(bool on)
+    {
+        if (_workspace.Current is not { } project) return;
+        ApplyFarm(on ? Farm ?? SettingsForm.DefaultFarm(project) : null);
+    }
+
+    /// <summary>Saves the farm settings as the form holds them.</summary>
+    public bool SaveFarm(FarmSettings farm) => ApplyFarm(farm);
+
+    /// <summary>Turns combat on (the built-in health and fainting) or off.</summary>
+    public void SetCombatOn(bool on) => ApplyCombat(on ? Combat ?? SettingsForm.DefaultCombat : null);
+
+    /// <summary>Saves the combat rules as the form holds them.</summary>
+    public bool SaveCombat(CombatSettings combat) => ApplyCombat(combat);
+
+    /// <summary>Saves the mine's depth bands as their forms hold them (one undo step).</summary>
+    public bool SaveMineBands(IEnumerable<MineBand> bands)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.MineBands(project, bands));
+        MineBandsMessage = saved ? _workspace.SavedText(EditorStrings.Get("settings.mineBandsWhat")) : EditorStrings.Get("common.noChanges");
+        CombatChanged?.Invoke();
+        return saved;
+    }
+
+    private bool ApplyFarm(FarmSettings? farm)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.Farm(project, farm));
+        FarmMessage = saved ? _workspace.SavedText(EditorStrings.Get("settings.farmWhat")) : EditorStrings.Get("common.noChanges");
+        FarmChanged?.Invoke();
+        return saved;
+    }
+
+    private bool ApplyCombat(CombatSettings? combat)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.Combat(project, combat));
+        CombatMessage = saved ? _workspace.SavedText(EditorStrings.Get("settings.combatWhat")) : EditorStrings.Get("common.noChanges");
+        CombatChanged?.Invoke();
         return saved;
     }
 
