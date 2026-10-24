@@ -18,7 +18,7 @@ public sealed class GitHubReleaseNotesClientTests
         Assert.Equal("Tractr 0.3.0-beta.1", beta.Name);
         Assert.True(beta.Prerelease);
         Assert.Equal(new DateTimeOffset(2026, 9, 21, 10, 5, 0, TimeSpan.Zero), beta.PublishedAt);
-        Assert.Equal("https://github.com/jxburros/farm-game-engine-native/releases/tag/v0.3.0-beta.1", beta.HtmlUrl);
+        Assert.Equal("https://github.com/JX-Holdings-LLC/tractr/releases/tag/v0.3.0-beta.1", beta.HtmlUrl);
         Assert.Contains("**mines**", beta.Body, StringComparison.Ordinal);
         Assert.Null(releases[2].Body);
         Assert.Null(releases[2].Name);

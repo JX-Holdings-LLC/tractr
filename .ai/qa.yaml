@@ -1,7 +1,7 @@
 # QA profile for automated QA runs (human notes: .ai/qa.md). The commands are the ones CI runs
 # (.github/workflows/ci.yml); CONTRIBUTING.md explains them.
 version: 1
-repo: jxburros/farm-game-engine-native
+repo: JX-Holdings-LLC/tractr
 kind: native-desktop # Rust engine + F# authoring + C# Avalonia editor; no web dev server
 
 prerequisites:

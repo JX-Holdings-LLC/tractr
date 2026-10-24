@@ -1,7 +1,7 @@
 [
   {
-    "url": "https://api.github.com/repos/jxburros/farm-game-engine-native/releases/3",
-    "html_url": "https://github.com/jxburros/farm-game-engine-native/releases/tag/v0.3.0-beta.1",
+    "url": "https://api.github.com/repos/JX-Holdings-LLC/tractr/releases/3",
+    "html_url": "https://github.com/JX-Holdings-LLC/tractr/releases/tag/v0.3.0-beta.1",
     "id": 3,
     "tag_name": "v0.3.0-beta.1",
     "target_commitish": "main",
@@ -11,12 +11,12 @@
     "created_at": "2026-09-21T10:00:00Z",
     "published_at": "2026-09-21T10:05:00Z",
     "assets": [
-      { "name": "Tractr-win-Setup.exe", "size": 51234567, "browser_download_url": "https://github.com/jxburros/farm-game-engine-native/releases/download/v0.3.0-beta.1/Tractr-win-Setup.exe" }
+      { "name": "Tractr-win-Setup.exe", "size": 51234567, "browser_download_url": "https://github.com/JX-Holdings-LLC/tractr/releases/download/v0.3.0-beta.1/Tractr-win-Setup.exe" }
     ],
     "body": "## Beta\r\n\r\n- Try the new **mines** editor"
   },
   {
-    "html_url": "https://github.com/jxburros/farm-game-engine-native/releases/tag/v0.2.0",
+    "html_url": "https://github.com/JX-Holdings-LLC/tractr/releases/tag/v0.2.0",
     "id": 2,
     "tag_name": "v0.2.0",
     "name": "Tractr 0.2.0",
@@ -29,7 +29,7 @@
     "body": "## What's new\n\n- Fishing mini-game\n- Faster loading"
   },
   {
-    "html_url": "https://github.com/jxburros/farm-game-engine-native/releases/tag/untagged-1",
+    "html_url": "https://github.com/JX-Holdings-LLC/tractr/releases/tag/untagged-1",
     "id": 99,
     "tag_name": "v0.4.0",
     "name": "Draft",
@@ -40,7 +40,7 @@
     "body": "not yet"
   },
   {
-    "html_url": "https://github.com/jxburros/farm-game-engine-native/releases/tag/v0.1.0",
+    "html_url": "https://github.com/JX-Holdings-LLC/tractr/releases/tag/v0.1.0",
     "id": 1,
     "tag_name": "v0.1.0",
     "name": null,

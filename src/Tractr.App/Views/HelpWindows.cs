@@ -29,7 +29,7 @@ public static class HelpContent
         ArgumentNullException.ThrowIfNull(version);
         var dev = version.Length == 0 || version == "0.0.0";
         var reference = dev ? "main" : "v" + Uri.EscapeDataString(version);
-        return $"https://github.com/jxburros/farm-game-engine-native/blob/{reference}/docs/";
+        return $"https://github.com/JX-Holdings-LLC/tractr/blob/{reference}/docs/";
     }
 
     /// <summary>The creator guide's Markdown.</summary>

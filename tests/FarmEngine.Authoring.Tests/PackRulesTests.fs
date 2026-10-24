@@ -104,7 +104,7 @@ let ``the registry ships the demo mod and the starter template, validated`` () =
     Assert.Equal<string list>([ "demo-glow-farm"; "my-first-mod" ], entries |> List.map (fun e -> e.Id))
     let demo = entries.Head
     Assert.Equal("Glow Farm Demo Mod", demo.Name)
-    Assert.Equal("farm-game-engine", demo.Author)
+    Assert.Equal("Tractr", demo.Author)
     Assert.NotEmpty demo.Pack.Plugins
     Assert.Equal("you", entries.[1].Author)
     // The embedded packs are the fixture files, value for value.

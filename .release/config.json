@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "bumpPolicy": "every-main-change",
   "apps": {
-    "farming-rpg-maker": {
+    "tractr": {
       "tagPrefix": "v",
       "paths": [
         "**"

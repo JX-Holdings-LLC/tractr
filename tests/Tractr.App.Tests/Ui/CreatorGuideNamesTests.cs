@@ -92,7 +92,7 @@ public sealed partial class CreatorGuideNamesTests
     [Fact]
     public void GuideLinks_OpenTheDocsOfTheInstalledRelease()
     {
-        const string Repo = "https://github.com/jxburros/farm-game-engine-native/blob/";
+        const string Repo = "https://github.com/JX-Holdings-LLC/tractr/blob/";
         Assert.Equal(Repo + "v0.3.0/docs/", HelpContent.DocsBaseUrlFor("0.3.0"));
         Assert.Equal(Repo + "v0.4.0-beta.1/docs/", HelpContent.DocsBaseUrlFor("0.4.0-beta.1"));
         Assert.Equal(Repo + "main/docs/", HelpContent.DocsBaseUrlFor(""));

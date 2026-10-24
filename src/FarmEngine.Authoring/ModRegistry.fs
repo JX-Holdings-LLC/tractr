@@ -25,7 +25,7 @@ module ModRegistry =
     "name": "Glow Farm Demo Mod",
     "version": "1.0.0",
     "description": "The M5 acceptance demo: a new crop, a new machine + recipe, and a plugin that reacts to onDayStart.",
-    "author": "farm-game-engine",
+    "author": "Tractr",
     "engineCompatibility": ">=0.5.0",
     "base": false,
     "dependencies": [],

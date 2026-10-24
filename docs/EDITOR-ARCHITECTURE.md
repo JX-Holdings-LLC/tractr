@@ -80,7 +80,7 @@ Problems, Settings, Mods, Workshop, Interface and Content):
   model) replaces the callbacks the tabs pass around today (`PickOnMap`, the
   Workshop's tab keys, the Problems row handler).
 - **Strings go through `EditorStrings`** so every tab can follow the
-  editor's language ([#59](https://github.com/jxburros/farm-game-engine-native/issues/59)).
+  editor's language ([#59](https://github.com/JX-Holdings-LLC/tractr/issues/59)).
 
 ## Remaining steps
 

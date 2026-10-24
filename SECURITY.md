@@ -8,7 +8,7 @@ Only the latest release gets security fixes. The app updates itself through
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through GitHub's
-[private vulnerability reporting](https://github.com/jxburros/farm-game-engine-native/security/advisories/new)
+[private vulnerability reporting](https://github.com/JX-Holdings-LLC/tractr/security/advisories/new)
 rather than in a public issue. Include the version (Help → About Tractr), what you did, and what happened; a project file, content pack or
 cartridge that shows the problem helps most.
 

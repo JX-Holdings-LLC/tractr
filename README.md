@@ -78,7 +78,7 @@ give the same game, on the desktop, in exported games and in the browser.
 ## Install
 
 Download `Tractr-win-Setup.exe` from the
-[latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
+[latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest)
 and run it. It installs per-user and needs no admin rights. A portable zip is
 attached to the release too.
 
@@ -159,7 +159,7 @@ is not code-signed yet. Choose **More info → Run anyway** (see
 **The Update Center says "Updates are available only in the installed app".**
 You are running a development or source build, which Velopack cannot
 update. Install with `Tractr-win-Setup.exe`
-from the [latest release](https://github.com/jxburros/farm-game-engine-native/releases/latest)
+from the [latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest)
 to get updates; your projects stay where they are.
 
 ![The Update Center in a development build](docs/media/update-center-not-installed.png)

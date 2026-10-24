@@ -36,7 +36,7 @@ public sealed class ModsRegistryTests
         var install = FindByName<Button>(host.Window, "RegistryInstall_demo-glow-farm");
         Assert.True(install.IsEnabled);
         Assert.True(FindByName<Button>(host.Window, "RegistryInstall_my-first-mod").IsEnabled);
-        Assert.Contains("Glow Farm Demo Mod · by farm-game-engine", AllVisibleText(host.Window));
+        Assert.Contains("Glow Farm Demo Mod · by Tractr", AllVisibleText(host.Window));
 
         Press(host, "RegistryInstall_demo-glow-farm");
         Assert.Empty(host.Workspace.Current!.ContentPacks);
