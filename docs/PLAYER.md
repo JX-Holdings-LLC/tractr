@@ -354,7 +354,9 @@ under one lock, so plugin hooks never block the editor. Editor shortcuts
 
 1. Input is routed: bound keys become the engine's keys, and the UI gets
    navigation, pointer and raw keys.
-2. The session steps (fixed timestep) unless a menu pauses the game.
+2. The session steps (fixed timestep) unless a menu pauses the game. The
+   camera centres on the player as drawn between the last two ticks, or on
+   where a cutscene's camera looks, which pans between ticks the same way.
 3. `farm-render` builds the world snapshot of the tiles the camera shows (a
    tile window, one tile of margin and the row below for tall objects), so a
    256×256 farm costs about what a small one does; image URLs are shared
