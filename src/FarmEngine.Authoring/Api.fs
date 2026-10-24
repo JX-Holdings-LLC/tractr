@@ -737,6 +737,11 @@ type SettingsForm =
     /// `settings` with the game's words (null: the built-in words).
     static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
 
+    /// `settings` without the sky looks of `seasonIds`, as removing those seasons leaves it
+    /// (`Cleanup.dropSeason`).
+    static member WithoutSeasonLooks(settings: ProjectSettings, seasonIds: seq<string>) : ProjectSettings =
+        seasonIds |> Seq.fold (fun settings id -> Cleanup.dropSeasonLook id settings) settings
+
     /// `time` with its day length (null: the built-in 1440 minutes).
     static member WithDayMinutes(time: TimeConfig, minutes: System.Nullable<float>) : TimeConfig =
         { time with DayMinutes = Option.ofNullable minutes }

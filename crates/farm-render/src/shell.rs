@@ -99,29 +99,68 @@ fn snapshot_terrains(content: &GameContent) -> Vec<SnapshotTerrain> {
         .collect()
 }
 
-/// The atmosphere of `scene` at the clock: the game's look for the scene and season (M1), its day
-/// length, and today's weather overlay resolved from the weather type.
+/// The atmosphere of `scene` at the clock (see [`scene_atmosphere`]).
 fn snapshot_atmosphere(content: &GameContent, state: &GameState, scene: &Scene) -> SnapshotAtmosphere {
     let clock = &state.clock;
+    let time_minutes = units::to_f64::<MicroMinutes>(clock.time_minutes);
+    scene_atmosphere(content, scene, time_minutes, &clock.season, Some(&clock.weather_id))
+}
+
+/// The atmosphere of `scene` at `time_minutes` of a day in `season` under the weather type
+/// `weather_id`: the game's look for the scene and season (M1), its day length, and the weather's
+/// overlay resolved from the weather type. An indoor scene keeps the weather out: no particles and
+/// no weather tint, only the day/night tint. Play Mode builds its frames with it from the clock,
+/// and Edit Mode's sky preview from the time, season and weather the creator picks
+/// ([`SkyPreview`]), so the two look the same.
+pub fn scene_atmosphere(
+    content: &GameContent,
+    scene: &Scene,
+    time_minutes: f64,
+    season: &str,
+    weather_id: Option<&str>,
+) -> SnapshotAtmosphere {
     let settings = &content.settings;
-    let look = AtmosphereSettings::resolve(settings.atmosphere.as_ref(), &clock.season, scene.atmosphere.as_ref());
+    let look = AtmosphereSettings::resolve(settings.atmosphere.as_ref(), season, scene.atmosphere.as_ref());
     let day_minutes = settings.time.minutes_per_day();
-    let overlay_id = content
-        .weather
-        .types
-        .iter()
-        .find(|weather| weather.id == clock.weather_id)
+    let weather_id = weather_id.filter(|_| !scene.is_indoor());
+    let overlay_id = weather_id
+        .and_then(|id| content.weather.types.iter().find(|weather| weather.id == id))
         .and_then(|weather| weather.overlay.clone());
     SnapshotAtmosphere {
-        time_minutes: units::to_f64::<MicroMinutes>(clock.time_minutes),
-        weather_id: Some(clock.weather_id.clone()),
-        season: Some(clock.season.clone()),
+        time_minutes,
+        weather_id: weather_id.map(str::to_owned),
+        season: Some(season.to_owned()),
         overlay: overlay_id.as_deref().and_then(|id| content.weather.overlay(id)),
         weather_overlay: overlay_id,
         day_minutes: (day_minutes != units::MINUTES_PER_DAY).then_some(f64::from(day_minutes)),
         daylight: (!look.daylight.is_empty()).then_some(look.daylight),
         foliage_tint: look.foliage_tint,
     }
+}
+
+/// What Edit Mode's sky preview draws a scene under (editor view state, never saved): a minute of
+/// the day, a season id and a weather type id (`None`: clear). The particles stand still, so the
+/// preview never moves (and nothing changes with reduced motion).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SkyPreview {
+    pub time_minutes: f64,
+    /// Empty: the project's starting season.
+    pub season: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weather_id: Option<String>,
+}
+
+/// [`scene_atmosphere`] for Edit Mode's sky preview of `scene` in `project`.
+pub fn preview_atmosphere(
+    project: &GameProject,
+    content: &GameContent,
+    scene: &Scene,
+    sky: &SkyPreview,
+) -> SnapshotAtmosphere {
+    let season = if sky.season.is_empty() { project.current_season.as_str() } else { sky.season.as_str() };
+    let time_minutes = if sky.time_minutes.is_finite() { sky.time_minutes } else { 0.0 };
+    scene_atmosphere(content, scene, time_minutes, season, sky.weather_id.as_deref())
 }
 
 fn build_tiles(
@@ -579,6 +618,105 @@ mod tests {
         assert_eq!(atmosphere(&state, &scene).overlay, None);
         state.clock.weather_id = "rain".into();
         assert_eq!(atmosphere(&state, &scene).overlay.map(|overlay| overlay.id), Some("rain".to_owned()));
+    }
+
+    #[test]
+    fn the_sky_preview_draws_the_tint_and_overlay_play_draws() {
+        use crate::draw::DrawCmd;
+        use farm_sim::schema::{AtmosphereLook, AtmosphereSettings, DaylightKey, WeatherOverlayDefinition};
+        let mut project = starter();
+        // The game's own look: a winter curve, an autumn foliage tint and an acid rain.
+        let mut settings = AtmosphereSettings::default();
+        settings.seasons.insert(
+            "winter".to_owned(),
+            AtmosphereLook { daylight: vec![DaylightKey { minute: 0.0, color: "#405080".into() }], foliage_tint: None },
+        );
+        settings
+            .seasons
+            .insert("fall".to_owned(), AtmosphereLook { daylight: Vec::new(), foliage_tint: Some("#c08040".into()) });
+        project.settings.atmosphere = Some(settings);
+        project.weather.overlays = Some(vec![WeatherOverlayDefinition {
+            id: "acid".into(),
+            style: "rain".into(),
+            color: "#80ff80".into(),
+            tint: Some("#c0e0a0".into()),
+            ..WeatherOverlayDefinition::default()
+        }]);
+        project.weather.types[0].overlay = Some("acid".into());
+        let acid = project.weather.types[0].id.clone();
+        let content = farm_sim::state::create_content_from_project(&project);
+        let mut state = farm_sim::state::create_game_state(&project, None);
+        let scene_id = state.player.scene_id.clone();
+        // The tint of a frame, and whether its weather draws streaks (rain) or flakes (snow):
+        // more lines or circles than the same frame without an atmosphere.
+        let sky_of = |snapshot: &WorldSnapshot| {
+            let count = |snapshot: &WorldSnapshot, circles: bool| {
+                let list = crate::build_world(snapshot, None, &mut crate::ImageStore::default());
+                list.commands
+                    .iter()
+                    .filter(|command| match command {
+                        DrawCmd::FillCircle { .. } => circles,
+                        DrawCmd::Line { .. } => !circles,
+                        _ => false,
+                    })
+                    .count()
+            };
+            let list = crate::build_world(snapshot, None, &mut crate::ImageStore::default());
+            let tint = list.commands.iter().find_map(|command| match command {
+                DrawCmd::ModulateRect { color, .. } => Some(*color),
+                _ => None,
+            });
+            let bare = WorldSnapshot { atmosphere: None, ..snapshot.clone() };
+            let rain = count(snapshot, false) > count(&bare, false);
+            let snow = count(snapshot, true) > count(&bare, true);
+            (tint, rain, snow)
+        };
+
+        for (minutes, season, weather) in [
+            (420.0, "spring", "rain"),
+            (720.0, "summer", "sun"),
+            (1120.0, "fall", acid.as_str()),
+            (1320.0, "winter", "snow"),
+        ] {
+            state.clock.time_minutes = units::time_of_day(minutes);
+            state.clock.season = season.into();
+            state.clock.weather_id = weather.into();
+            let play_scene = state.world.scenes.iter().find(|scene| scene.id == scene_id).unwrap();
+            let play = shell_snapshot(&content, &state, play_scene, &SnapshotOptions::default());
+            let sky = SkyPreview { time_minutes: minutes, season: season.into(), weather_id: Some(weather.into()) };
+            let scene = project.scenes.iter().find(|scene| scene.id == scene_id).unwrap();
+            let mut edit = editor_snapshot(&project, &content, scene, 28.0, 12.0);
+            assert_eq!(sky_of(&edit), (None, false, false), "no sky without the preview");
+            edit.atmosphere = Some(preview_atmosphere(&project, &content, scene, &sky));
+            assert_eq!(edit.atmosphere, play.atmosphere, "{minutes} {season} {weather}");
+            let (_, rain, snow) = sky_of(&edit);
+            assert_eq!((rain, snow), (weather == "rain" || weather == acid, weather == "snow"), "{weather}");
+            assert_eq!(sky_of(&edit), sky_of(&play), "{minutes} {season} {weather}");
+        }
+
+        // Indoors, neither draws the weather; the day/night tint stays.
+        state.clock.time_minutes = units::time_of_day(1320.0);
+        state.clock.weather_id = "rain".into();
+        let mut indoor = project.scenes.iter().find(|scene| scene.id == scene_id).unwrap().clone();
+        indoor.indoor = Some(true);
+        let sky = SkyPreview { time_minutes: 1320.0, season: "winter".into(), weather_id: Some("rain".into()) };
+        let preview = preview_atmosphere(&project, &content, &indoor, &sky);
+        assert_eq!(preview, shell_snapshot(&content, &state, &indoor, &SnapshotOptions::default()).atmosphere.unwrap());
+        assert_eq!((preview.weather_id, preview.overlay), (None, None));
+        let mut edit = editor_snapshot(&project, &content, &indoor, 28.0, 12.0);
+        edit.atmosphere = Some(preview_atmosphere(&project, &content, &indoor, &sky));
+        let (tint, rain, snow) = sky_of(&edit);
+        assert!(tint.is_some() && !rain && !snow);
+
+        // A scene's own look wins over the season's, and no season means the starting one.
+        indoor.atmosphere = Some(AtmosphereLook {
+            daylight: vec![DaylightKey { minute: 0.0, color: "#102030".into() }],
+            foliage_tint: None,
+        });
+        let own = preview_atmosphere(&project, &content, &indoor, &sky);
+        assert_eq!(own.daylight.unwrap()[0].color, "#102030");
+        let start = preview_atmosphere(&project, &content, &indoor, &SkyPreview::default());
+        assert_eq!(start.season.as_deref(), Some(project.current_season.as_str()));
     }
 
     #[test]

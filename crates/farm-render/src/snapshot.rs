@@ -265,7 +265,7 @@ pub struct SnapshotCamera {
 }
 
 /// Time of day, weather and season for the atmosphere pass (day/night tint, seasonal foliage,
-/// rain and snow). `None` on a snapshot means no atmosphere (Edit Mode).
+/// rain and snow). `None` on a snapshot means no atmosphere (Edit Mode without its sky preview).
 ///
 /// The game's own look (M1) rides along already resolved, so the renderer never reads content:
 /// the daylight keyframes and foliage tint of the scene and season, the day length and today's
@@ -275,7 +275,7 @@ pub struct SnapshotCamera {
 pub struct SnapshotAtmosphere {
     /// Minute of day of the game clock (360 = 6:00).
     pub time_minutes: f64,
-    /// Today's weather id (`sun`, `rain`, `storm`, `snow`, …).
+    /// Today's weather id (`sun`, `rain`, `storm`, `snow`, …); `None` indoors.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weather_id: Option<String>,
     /// Season id (`spring`, `summer`, `fall`, `winter`, …).

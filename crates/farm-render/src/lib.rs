@@ -49,7 +49,7 @@ pub use graphics::{apply_graphics, resolve_visual, ArtAsset, GraphicsSource};
 pub use images::{Image, ImageError, ImageId, ImageStore};
 #[cfg(feature = "raster")]
 pub use raster::{encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
-pub use shell::{editor_snapshot, shell_snapshot, SnapshotOptions};
+pub use shell::{editor_snapshot, preview_atmosphere, scene_atmosphere, shell_snapshot, SkyPreview, SnapshotOptions};
 pub use snapshot::{
     SnapshotAtmosphere, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem, SnapshotMachine,
     SnapshotNode, SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow,

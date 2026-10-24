@@ -42,6 +42,14 @@ focus, letter keys pick the tools: `V` Inspect, `B` Brush, `R` Rectangle,
 Unblock, `D` Door and `P` Player start. Screen readers announce the tile
 under the cursor. Picking a brush is not an undo step.
 
+The **Sky** box above the map previews the scene as the game draws it: tick
+it, pick a time of day (**Morning**, **Noon**, **Evening** or **Night**), a
+season and a weather, and the map shows the day/night tint, the foliage tint
+and the weather overlay for them (the scene's own look first, then the
+season's and the game's; an indoor scene has no weather). The rain and snow
+stand still. It starts off so the map stays easy to read, and it is only a
+view: it isn't saved and isn't an undo step.
+
 Markers on the map show doors (`D`), where doors from other scenes arrive
 (`A`), event triggers (`!`, with their region outlined), the mine entrance
 (`M`) and the player start (`S`); the **Markers** box above the map hides
@@ -68,7 +76,7 @@ The side panel holds the tools (drag its edge to make it wider):
 - **Scene**: add a scene, rename, resize, duplicate or delete it, **Set as
   start**, **Fill scene** with one tile, **Clear crops/items** and **Reset soil**.
   **Indoor (no weather)** marks a greenhouse or interior: rain doesn't water its
-  soil and storms don't damage its crops.
+  soil, storms don't damage its crops, and no rain or snow falls on screen.
   Under the size boxes, the calculator shows the tile count and aspect ratio,
   and warns when a resize would cut tiles off. Shrinking moves the player
   start, NPCs (with their schedules and waypoints), animals, door arrivals,
