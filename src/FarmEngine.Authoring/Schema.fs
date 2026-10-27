@@ -117,13 +117,15 @@ and BuildingDefinition =
         /// The building this one is an upgrade of: it is never built new, only by upgrading one of
         /// those (the house upgrades the same way).
         UpgradeOf: string option
+        /// The light its windows give at night once it stands (M8).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `BuildingDefinition` with every field at its schema default.
     static member Default : BuildingDefinition =
-        { Id = ""; Name = ""; Description = ""; Visual = None; Color = "#b5651d"; Width = 3.0; Height = 2.0; Door = None; InteriorSceneId = None; InteriorDoor = None; Cost = 0.0; Materials = []; BuildDays = 2.0; Scenes = []; Capacity = 0.0; UpgradeOf = None; Extra = [] }
+        { Id = ""; Name = ""; Description = ""; Visual = None; Color = "#b5651d"; Width = 3.0; Height = 2.0; Door = None; InteriorSceneId = None; InteriorDoor = None; Cost = 0.0; Materials = []; BuildDays = 2.0; Scenes = []; Capacity = 0.0; UpgradeOf = None; Light = None; Extra = [] }
 
 /// A building on the map (M5), from the project's start (`GameProject.Buildings`) or built in play.
 and BuildingState =
@@ -807,13 +809,15 @@ and CropDefinition =
         HarvestItemId: string option
         /// What it needs beyond water and its seasons (M1).
         Requirements: GrowthRequirements option
+        /// The light it gives at night once grown (M8: glowing crops).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CropDefinition` with every field at its schema default.
     static member Default : CropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Light = None; Extra = [] }
 
 /// TS `CropDefinitionSchema.multiTile` (inline object).
 and CropMultiTile =
@@ -919,13 +923,15 @@ and CustomCropDefinition =
         HarvestItemId: string option
         /// What it needs beyond water and its seasons (M1).
         Requirements: GrowthRequirements option
+        /// The light it gives at night once grown (M8: glowing crops).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `CustomCropDefinition` with every field at its schema default.
     static member Default : CustomCropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Light = None; Extra = [] }
 
 /// A day/night tint keyframe: at `Minute` of the day the scene is multiplied by `Color`.
 and DaylightKey =
@@ -1603,13 +1609,15 @@ and MachineTypeDefinition =
         Gate: bool option
         /// What it does to the tiles around it (M5): sprinklers, scarecrows.
         AreaEffects: (AreaEffect list) option
+        /// The light it gives at night (M8).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `MachineTypeDefinition` with every field at its schema default.
     static member Default : MachineTypeDefinition =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Color = "#9a7b4f"; ItemId = None; BlocksMovement = true; StationCategories = []; Storage = None; Shipping = None; Gate = None; AreaEffects = None; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Description = ""; Color = "#9a7b4f"; ItemId = None; BlocksMovement = true; StationCategories = []; Storage = None; Shipping = None; Gate = None; AreaEffects = None; Light = None; Extra = [] }
 
 and MineBand =
     {
@@ -1770,13 +1778,15 @@ and NodeTypeDefinition =
         Color: string
         /// Whether the node blocks movement while present.
         BlocksMovement: bool
+        /// The light it gives at night while standing (M8).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `NodeTypeDefinition` with every field at its schema default.
     static member Default : NodeTypeDefinition =
-        { Id = ""; Name = ""; Visual = None; Health = 0.0; RequiredTool = ""; RequiredToolTier = 1.0; Drops = []; RespawnDays = None; Color = "#7a5a3a"; BlocksMovement = true; Extra = [] }
+        { Id = ""; Name = ""; Visual = None; Health = 0.0; RequiredTool = ""; RequiredToolTier = 1.0; Drops = []; RespawnDays = None; Color = "#7a5a3a"; BlocksMovement = true; Light = None; Extra = [] }
 
 /// TS `NPC` (`NPCSchema`).
 and Npc =
@@ -2284,6 +2294,42 @@ and RngState =
     static member Default : RngState =
         { Algorithm = "xoshiro128ss"; S = [ 0u; 0u; 0u; 0u ] }
 
+
+/// A light that glows at night (M8): lamps, glowing crops, lit windows. Drawn by the game, never
+/// read by the simulation.
+and LightSource =
+    {
+        /// How far the light reaches, in tiles. int, 1..16.
+        Radius: float
+        /// `#rrggbb`; empty: a warm lamp light.
+        Color: string
+        /// How strong it is at its centre, in percent. int, 1..100.
+        Brightness: float
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `LightSource` with every field at its schema default.
+    static member Default : LightSource =
+        { Radius = 3.0; Color = ""; Brightness = 100.0; Extra = [] }
+
+/// An extra layer of a scene (M8), painted with terrains like the three fixed layers: drawn over
+/// the object layer, or (`Above`) over the player and everything standing. Scenery: it never
+/// blocks and is never farmed.
+and SceneLayer =
+    {
+        Id: string
+        Name: string
+        /// Drawn over the player and everything standing; absent: over the object layer.
+        Above: bool option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `SceneLayer` with every field at its schema default.
+    static member Default : SceneLayer =
+        { Id = ""; Name = ""; Above = None; Extra = [] }
+
 and Scene =
     {
         Id: string
@@ -2316,13 +2362,15 @@ and Scene =
         Building: string option
         /// Monsters it has each morning (M7).
         Monsters: (MonsterSpawn list) option
+        /// Its extra layers beyond background, overlay and object, in drawing order (M8).
+        Layers: (SceneLayer list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Scene` with every field at its schema default.
     static member Default : Scene =
-        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; AllSeasons = None; Building = None; Monsters = None; Extra = [] }
+        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; AllSeasons = None; Building = None; Monsters = None; Layers = None; Extra = [] }
 
 and SceneTransition =
     {
@@ -2442,13 +2490,15 @@ and Tile =
         SoilState: string option
         SoilMoisture: float
         SoilFertility: float
+        /// The terrain painted on each of the scene's extra layers (`Scene.Layers`, M8), by layer id.
+        Decor: ((string * string) list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Tile` with every field at its schema default.
     static member Default : Tile =
-        { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Extra = [] }
+        { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Decor = None; Extra = [] }
 
 /// Live machine instance on a tile.
 /// A kind of ground, path or object a tile can be (M1), and its rules. The built-in terrains are
@@ -2481,13 +2531,19 @@ and TerrainDefinition =
         Damage: float option
         /// What tools turn it into.
         Transforms: TerrainTransform list
+        /// Joins up with its neighbours of the same terrain (M8): with art, frame `n` of its `autotile` clip, where `n` adds 1 for the same terrain above, 2 right, 4 below and 8 left; without art, its edges are drawn where it meets another terrain.
+        Autotile: bool option
+        /// On the object layer: how many tiles it rises above its own (M8), drawn standing, in front of what is behind it and behind what is in front. int, 0..8.
+        Tall: float option
+        /// The light it gives at night (M8).
+        Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `TerrainDefinition` with every field at its schema default.
     static member Default : TerrainDefinition =
-        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Damage = None; Transforms = []; Extra = [] }
+        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Damage = None; Transforms = []; Autotile = None; Tall = None; Light = None; Extra = [] }
 
 /// A terrain change a tool makes.
 and TerrainTransform =

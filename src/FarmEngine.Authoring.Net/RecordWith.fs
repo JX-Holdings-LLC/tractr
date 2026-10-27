@@ -184,6 +184,8 @@ type RecordWith =
     [<Extension>]
     static member WithUpgradeOf(record: BuildingDefinition, value: string | null) : BuildingDefinition = { record with UpgradeOf = Option.ofObj value }
     [<Extension>]
+    static member WithLight(record: BuildingDefinition, value: LightSource | null) : BuildingDefinition = { record with Light = Option.ofObj value }
+    [<Extension>]
     static member WithId(record: BuildingState, value: string) : BuildingState = { record with Id = value }
     [<Extension>]
     static member WithBuildingId(record: BuildingState, value: string) : BuildingState = { record with BuildingId = value }
@@ -354,6 +356,8 @@ type RecordWith =
     [<Extension>]
     static member WithRequirements(record: CropDefinition, value: GrowthRequirements | null) : CropDefinition = { record with Requirements = Option.ofObj value }
     [<Extension>]
+    static member WithLight(record: CropDefinition, value: LightSource | null) : CropDefinition = { record with Light = Option.ofObj value }
+    [<Extension>]
     static member WithWidth(record: CropMultiTile, value: float) : CropMultiTile = { record with Width = value }
     [<Extension>]
     static member WithHeight(record: CropMultiTile, value: float) : CropMultiTile = { record with Height = value }
@@ -431,6 +435,8 @@ type RecordWith =
     static member WithHarvestItemId(record: CustomCropDefinition, value: string | null) : CustomCropDefinition = { record with HarvestItemId = Option.ofObj value }
     [<Extension>]
     static member WithRequirements(record: CustomCropDefinition, value: GrowthRequirements | null) : CustomCropDefinition = { record with Requirements = Option.ofObj value }
+    [<Extension>]
+    static member WithLight(record: CustomCropDefinition, value: LightSource | null) : CustomCropDefinition = { record with Light = Option.ofObj value }
     [<Extension>]
     static member WithId(record: Cutscene, value: string) : Cutscene = { record with Id = value }
     [<Extension>]
@@ -1042,6 +1048,12 @@ type RecordWith =
     [<Extension>]
     static member WithSellable(record: ItemCategoryDefinition, value: bool) : ItemCategoryDefinition = { record with Sellable = value }
     [<Extension>]
+    static member WithRadius(record: LightSource, value: float) : LightSource = { record with Radius = value }
+    [<Extension>]
+    static member WithColor(record: LightSource, value: string) : LightSource = { record with Color = value }
+    [<Extension>]
+    static member WithBrightness(record: LightSource, value: float) : LightSource = { record with Brightness = value }
+    [<Extension>]
     static member WithRecipeId(record: MachineProcessing, value: string) : MachineProcessing = { record with RecipeId = value }
     [<Extension>]
     static member WithCompletesAtMinute(record: MachineProcessing, value: float) : MachineProcessing = { record with CompletesAtMinute = value }
@@ -1069,6 +1081,8 @@ type RecordWith =
     static member WithGate(record: MachineTypeDefinition, value: Nullable<bool>) : MachineTypeDefinition = { record with Gate = Option.ofNullable value }
     [<Extension>]
     static member WithAreaEffects(record: MachineTypeDefinition, value: seq<AreaEffect> | null) : MachineTypeDefinition = { record with AreaEffects = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithLight(record: MachineTypeDefinition, value: LightSource | null) : MachineTypeDefinition = { record with Light = Option.ofObj value }
     [<Extension>]
     static member WithId(record: MailDefinition, value: string) : MailDefinition = { record with Id = value }
     [<Extension>]
@@ -1239,6 +1253,8 @@ type RecordWith =
     static member WithColor(record: NodeTypeDefinition, value: string) : NodeTypeDefinition = { record with Color = value }
     [<Extension>]
     static member WithBlocksMovement(record: NodeTypeDefinition, value: bool) : NodeTypeDefinition = { record with BlocksMovement = value }
+    [<Extension>]
+    static member WithLight(record: NodeTypeDefinition, value: LightSource | null) : NodeTypeDefinition = { record with Light = Option.ofObj value }
     [<Extension>]
     static member WithConditions(record: NotCondition, value: seq<EventCondition>) : NotCondition = { record with Conditions = List.ofSeq value }
     [<Extension>]
@@ -1702,7 +1718,15 @@ type RecordWith =
     [<Extension>]
     static member WithMonsters(record: Scene, value: seq<MonsterSpawn> | null) : Scene = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithLayers(record: Scene, value: seq<SceneLayer> | null) : Scene = { record with Layers = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithSceneIds(record: SceneCondition, value: seq<string>) : SceneCondition = { record with SceneIds = List.ofSeq value }
+    [<Extension>]
+    static member WithId(record: SceneLayer, value: string) : SceneLayer = { record with Id = value }
+    [<Extension>]
+    static member WithName(record: SceneLayer, value: string) : SceneLayer = { record with Name = value }
+    [<Extension>]
+    static member WithAbove(record: SceneLayer, value: Nullable<bool>) : SceneLayer = { record with Above = Option.ofNullable value }
     [<Extension>]
     static member WithFromX(record: SceneTransition, value: float) : SceneTransition = { record with FromX = value }
     [<Extension>]
@@ -1798,6 +1822,12 @@ type RecordWith =
     [<Extension>]
     static member WithTransforms(record: TerrainDefinition, value: seq<TerrainTransform>) : TerrainDefinition = { record with Transforms = List.ofSeq value }
     [<Extension>]
+    static member WithAutotile(record: TerrainDefinition, value: Nullable<bool>) : TerrainDefinition = { record with Autotile = Option.ofNullable value }
+    [<Extension>]
+    static member WithTall(record: TerrainDefinition, value: Nullable<float>) : TerrainDefinition = { record with Tall = Option.ofNullable value }
+    [<Extension>]
+    static member WithLight(record: TerrainDefinition, value: LightSource | null) : TerrainDefinition = { record with Light = Option.ofObj value }
+    [<Extension>]
     static member WithAction(record: TerrainTransform, value: string) : TerrainTransform = { record with Action = value }
     [<Extension>]
     static member WithTool(record: TerrainTransform, value: string | null) : TerrainTransform = { record with Tool = Option.ofObj value }
@@ -1835,6 +1865,8 @@ type RecordWith =
     static member WithSoilMoisture(record: Tile, value: float) : Tile = { record with SoilMoisture = value }
     [<Extension>]
     static member WithSoilFertility(record: Tile, value: float) : Tile = { record with SoilFertility = value }
+    [<Extension>]
+    static member WithDecor(record: Tile, value: seq<(string * string)> | null) : Tile = { record with Decor = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithTypeId(record: TileMachine, value: string) : TileMachine = { record with TypeId = value }
     [<Extension>]

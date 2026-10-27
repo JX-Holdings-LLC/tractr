@@ -57,6 +57,9 @@ pub struct CropDefinition {
     /// What it needs beyond water and its seasons (M1).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<GrowthRequirements>,
+    /// The light it gives at night once grown (M8: glowing crops).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -101,6 +104,9 @@ pub struct CustomCropDefinition {
     /// What it needs beyond water and its seasons (M1).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub requirements: Option<GrowthRequirements>,
+    /// The light it gives at night once grown (M8: glowing crops).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

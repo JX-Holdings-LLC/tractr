@@ -206,6 +206,7 @@ module TileRules =
             | Background -> visuals.Background
             | Overlay -> visuals.Overlay
             | Object -> visuals.Object
+            | Decor _ -> None
 
     /// Set one layer's art override (`None` clears it); `Visuals` becomes absent when all three are empty.
     let withVisual (layer: TileLayer) (visual: VisualRef option) (tile: Tile) : Tile =
@@ -215,6 +216,8 @@ module TileRules =
             | Background -> { current with Background = visual }
             | Overlay -> { current with Overlay = visual }
             | Object -> { current with Object = visual }
+            // An extra layer shows its terrain's own art.
+            | Decor _ -> current
         let visuals = if next.Background.IsNone && next.Overlay.IsNone && next.Object.IsNone then None else Some next
         if visuals = tile.Visuals then tile else { tile with Visuals = visuals }
 
@@ -222,6 +225,17 @@ module TileRules =
     /// (`setTileLayer` + no crop, no node). On another layer the type is written there and still
     /// becomes the tile's effective `Type`, so the eyedropper picks up what was painted last.
     let paintIn (terrains: TerrainDefinition list) (layer: TileLayer) (tileType: string) (visual: VisualRef option) (tile: Tile) : Tile =
+        match layer with
+        | Decor layerId ->
+            // Scenery (M8): it never blocks and leaves crops and nodes where they are.
+            let decor = defaultArg tile.Decor []
+            if List.contains (layerId, tileType) decor then tile
+            else
+                let decor =
+                    if decor |> List.exists (fun (id, _) -> id = layerId) then decor |> List.map (fun (id, t) -> if id = layerId then id, tileType else id, t)
+                    else decor @ [ layerId, tileType ]
+                { tile with Decor = Some decor }
+        | _ ->
         let painted =
             if layerIn terrains tileType = layer then
                 AuthoringTiles.SetTileLayerIn(terrains, tile, tileType, visual)
@@ -231,6 +245,7 @@ module TileRules =
                     | Background -> { tile with Type = tileType; Background = tileType }
                     | Overlay -> { tile with Type = tileType; Overlay = Some tileType }
                     | Object -> { tile with Type = tileType; Object = Some tileType; Collision = not (AuthoringTiles.WalkableIn(terrains, tileType)) }
+                    | Decor _ -> tile
                 withVisual layer visual byLayer
         { painted with Crop = None; Node = None }
 
@@ -248,11 +263,20 @@ module TileRules =
 
     /// Clear a layer: background resets to grass, overlay and object to nothing (walls stop blocking).
     let erase (layer: TileLayer) (tile: Tile) : Tile =
+        match layer with
+        | Decor layerId ->
+            match tile.Decor with
+            | Some decor when decor |> List.exists (fun (id, _) -> id = layerId) ->
+                let rest = decor |> List.filter (fun (id, _) -> id <> layerId)
+                { tile with Decor = (if rest.IsEmpty then None else Some rest) }
+            | _ -> tile
+        | _ ->
         let cleared =
             match layer with
             | Background -> { tile with Background = TileTypes.Grass }
             | Overlay -> { tile with Overlay = None }
             | Object -> { tile with Object = None; Collision = false }
+            | Decor _ -> tile
         let cleared = withVisual layer None cleared
         let effective = effectiveType cleared
         if cleared.Type = effective then cleared else { cleared with Type = effective }
@@ -270,6 +294,36 @@ module TileRules =
         [ for y in minY .. maxY do
               for x in minX .. maxX do
                   yield (x, y) ]
+
+    /// What a flood fill on `layer` compares: the tile's `Type` (web `floodFill`), or on an extra
+    /// layer what is painted there.
+    let private fillKey (layer: TileLayer) (tile: Tile) : string =
+        match layer with
+        | Decor layerId -> tile.Decor |> Option.bind (List.tryFind (fun (id, _) -> id = layerId)) |> Option.map snd |> Option.defaultValue ""
+        | _ -> tile.Type
+
+    /// The 4-connected region of tiles sharing the start tile's `fillKey` on `layer`.
+    let regionCellsOn (layer: TileLayer) (scene: Scene) (startX: int) (startY: int) : (int * int) list =
+        let tiles = Proj.rows scene
+        let inBounds x y = y >= 0 && y < tiles.Length && x >= 0 && x < tiles.[y].Length
+        if not (inBounds startX startY) then
+            []
+        else
+            let source = fillKey layer tiles.[startY].[startX]
+            let seen = HashSet<int * int>()
+            let queue = Queue<int * int>()
+            seen.Add((startX, startY)) |> ignore
+            queue.Enqueue((startX, startY))
+            let result = ResizeArray<int * int>()
+            while queue.Count > 0 do
+                let (x, y) = queue.Dequeue()
+                result.Add((x, y))
+                for (dx, dy) in [ (0, -1); (0, 1); (-1, 0); (1, 0) ] do
+                    let nx, ny = x + dx, y + dy
+                    if inBounds nx ny && not (seen.Contains((nx, ny))) && fillKey layer tiles.[ny].[nx] = source then
+                        seen.Add((nx, ny)) |> ignore
+                        queue.Enqueue((nx, ny))
+            List.ofSeq result
 
     /// The 4-connected region of tiles sharing the start tile's `Type` (web `floodFill`).
     let regionCells (scene: Scene) (startX: int) (startY: int) : (int * int) list =

@@ -236,6 +236,7 @@ module References =
           optional "Tile" "Overlay" ReferenceKind.Terrain
           optional "Tile" "Object" ReferenceKind.Terrain
           optionalOneOf "Tile" "SoilState" (same SoilStates.All)
+          plain "Tile" "Decor" "terrain ids by extra layer id (M8); checked by `scene.unknownTerrain` and `scene.unknownLayer`"
           reference "Crop" "Type" ReferenceKind.Crop
           reference "Crop" "Quality" ReferenceKind.CropQuality
           optional "Crop" "Mutation" ReferenceKind.CropMutation

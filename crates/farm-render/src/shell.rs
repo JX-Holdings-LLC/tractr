@@ -7,13 +7,15 @@
 use crate::builtin_art::BuiltinArt;
 use crate::num::to_int;
 use crate::snapshot::{
-    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem,
-    SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotDecor, SnapshotEmote, SnapshotEntity,
+    SnapshotItem, SnapshotLight, SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotTerrain, SnapshotTile,
+    TileWindow, WorldSnapshot, MAX_TALL,
 };
 use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
 use farm_sim::schema::{
-    directions, soil_states, tile_types, wear_slots, AtmosphereSettings, GameContent, GameProject, GameState, Scene,
+    directions, soil_states, tile_types, wear_slots, AtmosphereSettings, BuildingDefinition, GameContent, GameProject,
+    GameState, LightSource, Scene,
 };
 use farm_sim::units::{self, MicroMinutes};
 use farm_sim::vocabulary;
@@ -54,6 +56,7 @@ fn unbuilt_tile() -> SnapshotTile {
         tilled: false,
         watered: false,
         fertilized: false,
+        decor: Vec::new(),
     }
 }
 
@@ -95,8 +98,97 @@ fn snapshot_terrains(content: &GameContent) -> Vec<SnapshotTerrain> {
             id: terrain.id.clone(),
             color: terrain.color.clone(),
             plantable: terrain.plantable,
+            autotile: terrain.autotile == Some(true),
+            tall: terrain.tall.unwrap_or(0).min(MAX_TALL),
         })
         .collect()
+}
+
+/// The lights of `scene` (M8) near the tiles of `window` (all of them without one): terrains on
+/// any layer, standing nodes, machines, grown crops and standing buildings that give light.
+fn scene_lights(
+    content: &GameContent,
+    scene: &Scene,
+    buildings: &[(i32, i32, &BuildingDefinition)],
+    window: Option<TileWindow>,
+) -> Vec<SnapshotLight> {
+    let terrains = vocabulary::terrains(content);
+    let mut lights = Vec::new();
+    let near = |x: i32, y: i32, radius: u32| {
+        window.is_none_or(|w| {
+            let r = i32::try_from(radius).unwrap_or(i32::MAX);
+            x >= w.x0.saturating_sub(r)
+                && x <= w.x1.saturating_add(r)
+                && y >= w.y0.saturating_sub(r)
+                && y <= w.y1.saturating_add(r)
+        })
+    };
+    let mut push = |x: f64, y: f64, light: &LightSource| {
+        lights.push(SnapshotLight {
+            x,
+            y,
+            radius: f64::from(light.radius.clamp(1, 16)),
+            color: light.color.clone(),
+            brightness: f64::from(light.brightness.clamp(1, 100)) / 100.0,
+        });
+    };
+    // A light reaches 16 tiles at most: rows farther from the window give none.
+    let (first_row, last_row) = window.map_or((0, cells(scene.height)), |w| {
+        (cells(w.y0.saturating_sub(16)), cells(w.y1.saturating_add(17)).min(cells(scene.height)))
+    });
+    for (y, row) in scene.tiles.iter().enumerate().take(last_row).skip(first_row) {
+        for (x, tile) in row.iter().enumerate() {
+            let (tx, ty) = (x as i32, y as i32);
+            let centre = (x as f64 + 0.5, y as f64 + 0.5);
+            let layers = [Some(tile.background.as_str()), tile.overlay.as_deref(), tile.object.as_deref()];
+            let decor = tile.decor.iter().flatten().map(|(_, terrain)| Some(terrain.as_str()));
+            for id in layers.into_iter().chain(decor).flatten() {
+                if let Some(light) = vocabulary::find_terrain(terrains, id).and_then(|t| t.light.as_ref()) {
+                    if near(tx, ty, light.radius) {
+                        push(centre.0, centre.1, light);
+                    }
+                }
+            }
+            let node = tile.node.as_ref().filter(|node| node.remaining_health > 0);
+            if let Some(light) = node
+                .and_then(|node| last_by_id(&content.node_types, &node.type_id, |d| &d.id))
+                .and_then(|d| d.light.as_ref())
+            {
+                if near(tx, ty, light.radius) {
+                    push(centre.0, centre.1, light);
+                }
+            }
+            let machine = tile
+                .machine
+                .as_ref()
+                .and_then(|machine| last_by_id(&content.machine_types, &machine.type_id, |d| &d.id));
+            if let Some(light) = machine.and_then(|d| d.light.as_ref()) {
+                if near(tx, ty, light.radius) {
+                    push(centre.0, centre.1, light);
+                }
+            }
+            if let Some(crop) = tile.crop.as_ref().filter(|crop| crop.withered != Some(true)) {
+                let definition = content.crops.get(&crop.r#type);
+                let grown = definition.is_some_and(|d| crops::is_crop_mature_by_days(crop, d));
+                if let Some(light) = definition.and_then(|d| d.light.as_ref()).filter(|_| grown) {
+                    if near(tx, ty, light.radius) {
+                        push(centre.0, centre.1, light);
+                    }
+                }
+            }
+        }
+    }
+    // A building's windows: along its front, a tile above the door row.
+    for (bx, by, definition) in buildings {
+        if let Some(light) = &definition.light {
+            let width = f64::from(definition.width.max(1));
+            let height = f64::from(definition.height.max(1));
+            if near(*bx, *by, light.radius.saturating_add(definition.width.max(definition.height))) {
+                push(f64::from(*bx) + (width / 2.0), f64::from(*by) + height - 0.5, light);
+            }
+        }
+    }
+    lights
 }
 
 /// The atmosphere of `scene` at the clock (see [`scene_atmosphere`]).
@@ -232,6 +324,20 @@ fn build_tiles(
                 .as_ref()
                 .filter(|_| !hide_item_at(x, y))
                 .map(|item| SnapshotItem { sprite: None, item_type: Some(item.r#type.clone()) });
+            // The scene's extra layers (M8), in its order; a layer the scene lacks is not drawn.
+            let decor = match (&tile.decor, &scene.layers) {
+                (Some(painted), Some(layers)) => layers
+                    .iter()
+                    .filter_map(|layer| {
+                        painted.get(&layer.id).map(|terrain| SnapshotDecor {
+                            terrain: terrain.clone(),
+                            above: layer.above == Some(true),
+                            sprite: None,
+                        })
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
             row.push(SnapshotTile {
                 background,
                 overlay: tile.overlay.clone(),
@@ -245,6 +351,7 @@ fn build_tiles(
                 tilled: soil,
                 watered,
                 fertilized,
+                decor,
             });
         }
         rows.push(row);
@@ -261,7 +368,10 @@ pub fn shell_snapshot(
     scene: &Scene,
     options: &SnapshotOptions,
 ) -> WorldSnapshot {
-    let tiles = build_tiles(scene, content, |_, _| false, options.tile_window);
+    // A tall terrain (M8) below the view reaches into it: its rows are built too.
+    let tallest = vocabulary::terrains(content).iter().filter_map(|terrain| terrain.tall).max().unwrap_or(0);
+    let window = options.tile_window.map(|window| window.with_tall(tallest));
+    let tiles = build_tiles(scene, content, |_, _| false, window);
     // A cutscene (M2) turns and walks characters and shows emotes over them.
     let cutscene = (scene.id == state.player.scene_id).then(|| cutscenes::view(content, state)).flatten();
     let directed = |actor: &str| cutscene_actor(cutscene.as_ref(), actor);
@@ -354,6 +464,15 @@ pub fn shell_snapshot(
             }
         })
         .collect();
+    let standing: Vec<(i32, i32, &BuildingDefinition)> = state
+        .buildings
+        .iter()
+        .filter(|building| building.scene_id == scene.id && building.built())
+        .filter_map(|building| {
+            last_by_id(&content.building_types, &building.building_id, |d| &d.id).map(|d| (building.x, building.y, d))
+        })
+        .collect();
+    let lights = scene_lights(content, scene, &standing, window);
     let buildings = state
         .buildings
         .iter()
@@ -395,6 +514,7 @@ pub fn shell_snapshot(
         npcs,
         monsters,
         buildings,
+        lights,
         player: SnapshotEntity {
             x: tiles_of(state.player.x),
             y: tiles_of(state.player.y),
@@ -421,7 +541,7 @@ pub fn shell_snapshot(
                 })
                 .collect()
         }),
-        tile_window: options.tile_window,
+        tile_window: window,
     }
 }
 
@@ -488,6 +608,8 @@ pub fn editor_snapshot(
         npcs,
         monsters: Vec::new(),
         buildings: Vec::new(),
+        // The sky preview shows them at night (M8).
+        lights: scene_lights(content, scene, &[], None),
         player: SnapshotEntity {
             x: if on_scene { tiles_of(player.x) } else { -1000.0 },
             y: if on_scene { tiles_of(player.y) } else { -1000.0 },

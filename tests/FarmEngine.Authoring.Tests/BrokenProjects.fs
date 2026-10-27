@@ -115,6 +115,12 @@ let private parseCases =
       nullCase "tile background missing" "scenes.0.tiles.1.2.background: Expected string, received null" [ set "scenes.0.tiles.1.2.background" "null" ]
       case "tile overlay unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][3]") ] [ set "scenes.0.tiles.1.3.overlay" "\"lava\"" ]
       case "tile object unknown" [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][4]") ] [ set "scenes.0.tiles.1.4.object" "\"lava\"" ]
+      case "tile decor on a missing layer with a missing terrain"
+          [ Problem("scene.unknownTerrain", "scenes[0].tiles[1][6]"); Problem("scene.unknownLayer", "scenes[0].tiles[1][6]") ]
+          [ set "scenes.0.tiles.1.6.decor" "{ \"canopy\": \"leaves\" }" ]
+      case "light out of range"
+          [ Lint "nodeTypes.0.light.radius: Expected a whole number from 1 to 16, received 40" ]
+          [ set "nodeTypes" "[ { \"id\": \"lamp\", \"name\": \"Lamp\", \"health\": 1, \"requiredTool\": \"pickaxe\", \"requiredToolTier\": 1, \"drops\": [], \"color\": \"#ffcc66\", \"blocksMovement\": true, \"light\": { \"radius\": 40, \"color\": \"\", \"brightness\": 80 } } ]" ]
       case "tile soilState unknown" [ Parse "scenes.0.tiles.1.5.soilState: Invalid enum value. Expected 'dry' | 'watered' | 'fertilized' | 'tilled', received 'mud'" ] [ set "scenes.0.tiles.1.5.soilState" "\"mud\"" ]
       case "crop quality and mutation unknown"
           [ Problem("scene.unknownQuality", "scenes[0].tiles[2][2]"); Problem("scene.unknownMutation", "scenes[0].tiles[2][2]") ]

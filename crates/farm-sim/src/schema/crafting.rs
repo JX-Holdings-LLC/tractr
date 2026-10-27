@@ -114,6 +114,9 @@ pub struct MachineTypeDefinition {
     /// What it does to the tiles around it (M5): sprinklers, scarecrows.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub area_effects: Vec<AreaEffect>,
+    /// The light it gives at night (M8: a lamp, a brazier, a furnace).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -145,6 +148,7 @@ impl Default for MachineTypeDefinition {
             shipping: false,
             gate: false,
             area_effects: Vec::new(),
+            light: None,
             extra: Map::new(),
         }
     }

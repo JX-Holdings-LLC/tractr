@@ -6,6 +6,7 @@ use super::crafting::TileMachine;
 use super::graphics::VisualRef;
 use super::nodes::TileNode;
 use super::settings::AtmosphereLook;
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -24,6 +25,44 @@ pub struct SceneTransition {
     /// Locked transitions don't fire; events can lock/unlock them (M3).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locked: Option<bool>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+/// A light that glows at night (M8): lamps, glowing crops, lit windows. Drawn by the game, never
+/// read by the simulation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct LightSource {
+    /// How far the light reaches, in tiles. int, 1..=16.
+    #[serde(with = "crate::units::count")]
+    pub radius: u32,
+    /// `#rrggbb`; empty: a warm lamp light.
+    pub color: String,
+    /// How strong it is at its centre, in percent. int, 1..=100.
+    #[serde(with = "crate::units::count")]
+    pub brightness: u32,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+impl Default for LightSource {
+    fn default() -> Self {
+        Self { radius: 3, color: String::new(), brightness: 100, extra: Map::new() }
+    }
+}
+
+/// An extra layer of a scene (M8), painted with terrains like the three fixed layers. It is
+/// drawn over the object layer, or (`above`) over the player and everything standing: roofs,
+/// treetops, the railings of a bridge. It is scenery: it never blocks and is never farmed.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SceneLayer {
+    pub id: String,
+    pub name: String,
+    /// Drawn over the player and everything standing; absent: over the object layer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub above: Option<bool>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -78,6 +117,10 @@ pub struct Tile {
     pub soil_moisture: i32,
     #[serde(with = "crate::units::int")]
     pub soil_fertility: i32,
+    /// The terrain painted on each of the scene's extra layers ([`Scene::layers`], M8), by
+    /// layer id.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decor: Option<IndexMap<String, String>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -132,6 +175,9 @@ pub struct Scene {
     /// Monsters it has each morning (M7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monsters: Option<Vec<MonsterSpawn>>,
+    /// Its extra layers beyond background, overlay and object, in drawing order (M8).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layers: Option<Vec<SceneLayer>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -143,7 +189,7 @@ fn plain_bool<S: serde::Serializer>(value: &Option<bool>, serializer: S) -> Resu
 
 /// The largest scene side, in tiles: the editor's size limit, and what the engine accepts when a
 /// game or save loads (larger scenes are cut down to it).
-pub const MAX_SCENE_SIZE: i32 = 256;
+pub const MAX_SCENE_SIZE: i32 = 512;
 
 impl Scene {
     /// Whether `(x, y)` lies inside the scene's declared size.

@@ -464,7 +464,7 @@ let ``scene grids, sizes and scene ids the game would have to fix are errors`` (
     Assert.Equal(sprintf "scenes[%d].tiles[3]" index, width.Path)
     Assert.True width.IsError
     Assert.Equal(sprintf "scenes[%d].tiles" index, (has "scene.gridRows" (withFarm { scene with Tiles = List.truncate 5 scene.Tiles })).Path)
-    Assert.True((has "scene.tooLarge" (withFarm { scene with Width = 300.0 })).IsError)
+    Assert.True((has "scene.tooLarge" (withFarm { scene with Width = 600.0 })).IsError)
     Assert.True((has "duplicate.scene" { project with Scenes = project.Scenes @ [ scene ] }).IsError)
     Assert.True(Problems.blocksExport (Problems.collect ragged))
 

@@ -13,7 +13,7 @@ module internal ChecksWorld =
 
     /// The largest scene side the game accepts (the editor's size limit); larger scenes are cut
     /// down when a game loads.
-    let maxSceneSize = 256.0
+    let maxSceneSize = 512.0
 
     /// The smallest mine floor side: a wall ring around the entry tile.
     let minMineFloorSize = 3.0
@@ -100,7 +100,7 @@ module internal ChecksWorld =
                 | _ -> ()))
 
     /// Scene sizes and grids. The game fixes a grid that doesn't match its scene's size when it
-    /// loads (cutting it, or padding it with grass) and cuts scenes larger than 256 tiles a side;
+    /// loads (cutting it, or padding it with grass) and cuts scenes larger than 512 tiles a side;
     /// the editor never makes either, so they come from a hand edit or an import. Packs' scenes
     /// are checked the same way.
     let private grids (context: Context) (sink: Sink) =

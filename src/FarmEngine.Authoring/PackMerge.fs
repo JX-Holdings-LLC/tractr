@@ -153,9 +153,9 @@ module PackMerge =
         if List.isEmpty own && not (List.isEmpty (defaultArg added [])) then builtins () else own
 
     /// The largest scene side the engine accepts (Rust `MAX_SCENE_SIZE`).
-    let private maxSceneSize = 256.0
+    let private maxSceneSize = 512.0
 
-    /// Rust `tiles::normalize_scene_grid`: the scene's size clamped to 1..256 and its grid cut or
+    /// Rust `tiles::normalize_scene_grid`: the scene's size clamped to 1..512 and its grid cut or
     /// padded with grass to match. `None` when it already fits.
     let normalizeSceneGrid (scene: Scene) : Scene option =
         let width = max 1.0 (min maxSceneSize scene.Width)
@@ -301,7 +301,7 @@ module PackMerge =
           RegrowthDays = crop.RegrowthDays
           CanRegrow = crop.CanRegrow; MultiTile = crop.MultiTile
           MutationChance = crop.MutationChance; YieldMin = crop.YieldMin
-          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Requirements = crop.Requirements; Extra = crop.Extra }
+          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Requirements = crop.Requirements; Light = crop.Light; Extra = crop.Extra }
 
     /// A pack's art (`PackRules.packAssets`) added to the project's custom assets: assets with an
     /// id the project lacks are appended in pack order. An id the project already has keeps the

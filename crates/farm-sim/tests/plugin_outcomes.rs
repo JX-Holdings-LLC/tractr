@@ -112,3 +112,13 @@ fn save_data_keeps_each_plugins_data_in_the_state() {
     let (_, fresh) = make_engine(|_| {}, "data");
     assert!(serde_json::to_value(&fresh).expect("state").get("pluginData").is_none());
 }
+
+#[test]
+fn keep_changes_carries_what_the_plugins_saved_into_the_next_playtest() {
+    let (ctx, mut state) = make_engine(|_| {}, "kept");
+    mutate(&ctx, &mut state, PluginMutation::SaveData { data: json!({"visits": 3}) });
+    let project = common::make_project();
+    let kept = farm_sim::state::apply_state_to_project(&project, &state);
+    let next = farm_sim::state::create_game_state(&kept, Some("kept"));
+    assert_eq!(next.plugin_data.get("glow:p"), Some(&json!({"visits": 3})));
+}

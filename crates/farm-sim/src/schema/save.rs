@@ -384,6 +384,9 @@ pub struct KeptState {
     /// The goals and the world beyond the project's fields (M5–M7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goals: Option<KeptGoals>,
+    /// [`GameState::plugin_data`] (M9): what the plugins saved.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub plugin_data: IndexMap<String, Value>,
 }
 
 /// What [`KeptState`] carries of M5–M7 (the buildings themselves go to the project's
@@ -493,6 +496,7 @@ impl KeptState {
             children: state.children.clone(),
             shop_changes: state.shop_changes.clone(),
             goals: KeptGoals::of_state(state),
+            plugin_data: state.plugin_data.clone(),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -508,6 +512,7 @@ impl KeptState {
         state.music.clone_from(&self.music);
         state.children.clone_from(&self.children);
         state.shop_changes.clone_from(&self.shop_changes);
+        state.plugin_data.clone_from(&self.plugin_data);
         if let Some(goals) = &self.goals {
             goals.apply_to(state);
         }

@@ -408,7 +408,7 @@ mod tests {
         let parsed = parse_mutation(&json!({"type":"warpPlayer","sceneId":"s","x":255,"y":0})).unwrap();
         assert_eq!(parsed, PluginMutation::WarpPlayer { scene_id: "s".to_owned(), x: 255, y: 0 });
         // Warps stay within the largest scene.
-        assert_eq!(reason(json!({"type":"warpPlayer","sceneId":"s","x":1e6,"y":0})), "warpPlayer: x: must be <= 255");
+        assert_eq!(reason(json!({"type":"warpPlayer","sceneId":"s","x":1e6,"y":0})), "warpPlayer: x: must be <= 511");
     }
 
     #[test]

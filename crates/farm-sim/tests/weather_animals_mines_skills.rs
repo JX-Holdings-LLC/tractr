@@ -472,9 +472,9 @@ fn oversized_mine_floors_are_cut_to_the_largest_scene_and_tiny_ones_grown() {
         project.mine.floor_height = 50_000;
     });
     let floor = mines::generate_mine_floor(&ctx, "seed", 1);
-    assert_eq!((floor.width, floor.height), (256, 256));
-    assert_eq!(floor.tiles.len(), 256);
-    assert!(floor.tiles.iter().all(|row| row.len() == 256));
+    assert_eq!((floor.width, floor.height), (512, 512));
+    assert_eq!(floor.tiles.len(), 512);
+    assert!(floor.tiles.iter().all(|row| row.len() == 512));
 
     let (ctx, mut current) = make_engine(|project| {
         project.mine.floor_width = 1;

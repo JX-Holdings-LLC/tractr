@@ -120,6 +120,9 @@ pub struct SnapshotTile {
     pub watered: bool,
     /// Fertilizer applied: a speckle marker is drawn over the soil.
     pub fertilized: bool,
+    /// The scene's extra layers on this tile (M8), in the scene's layer order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub decor: Vec<SnapshotDecor>,
 }
 
 impl Default for SnapshotTile {
@@ -137,6 +140,7 @@ impl Default for SnapshotTile {
             tilled: false,
             watered: false,
             fertilized: false,
+            decor: Vec::new(),
         }
     }
 }
@@ -399,7 +403,51 @@ pub struct SnapshotTerrain {
     /// `#rrggbb`; empty or unparseable: the built-in colour of the id.
     pub color: String,
     pub plantable: bool,
+    /// Joins up with neighbours of the same terrain (M8): without art its edges are drawn where
+    /// it meets another terrain (with art, [`crate::apply_graphics`] picks the frame).
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub autotile: bool,
+    /// On the object layer, the tiles it rises above its own (M8): drawn standing, y-sorted with
+    /// the player.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub tall: u32,
 }
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
+}
+
+/// What one of a scene's extra layers (M8) shows on a tile.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotDecor {
+    /// The terrain painted on it.
+    pub terrain: String,
+    /// Drawn over the player and everything standing.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub above: bool,
+    /// The terrain's art ([`crate::apply_graphics`]); without it, the terrain's colour.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sprite: Option<SnapshotSprite>,
+}
+
+/// A light that glows at night (M8), at a point of the scene.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotLight {
+    /// The centre, in tiles.
+    pub x: f64,
+    pub y: f64,
+    /// How far it reaches, in tiles.
+    pub radius: f64,
+    /// `#rrggbb`; empty: a warm lamp light.
+    pub color: String,
+    /// How strong it is at its centre, 0 to 1.
+    pub brightness: f64,
+}
+
+/// The most tiles a terrain rises above its own ([`SnapshotTerrain::tall`]).
+pub const MAX_TALL: u32 = 8;
 
 /// The tiles a snapshot holds: columns `x0..=x1` of rows `y0..=y1`. Rows outside are empty, and
 /// cells left of `x0` are blank stand-ins (indices stay `tiles[y][x]`); the renderer only reads
@@ -415,7 +463,8 @@ pub struct TileWindow {
 impl TileWindow {
     /// The tiles [`crate::build_world`] reads for `camera` (world pixels): the visible range,
     /// rounded out, and the row below it (tall objects there poke into view), plus `margin`
-    /// tiles around (a host that draws with a slightly larger camera than it built for).
+    /// tiles around (a host that draws with a slightly larger camera than it built for). A game
+    /// with tall terrains adds the rows they rise from ([`TileWindow::with_tall`]).
     pub fn for_camera(camera: &SnapshotCamera, padding: f64, pitch: f64, margin: i32) -> Self {
         let pitch = if pitch > 0.0 { pitch } else { 1.0 };
         let first = |pixel: f64| crate::num::to_int(((pixel - padding) / pitch).floor());
@@ -426,6 +475,13 @@ impl TileWindow {
             x1: last(camera.x + camera.width).saturating_add(margin),
             y1: last(camera.y + camera.height).saturating_add(1).saturating_add(margin),
         }
+    }
+
+    /// The window with `tall` more rows below (M8): a terrain that rises `tall` tiles stands
+    /// that far below the view and still reaches into it.
+    pub fn with_tall(self, tall: u32) -> Self {
+        let tall = i32::try_from(tall.min(MAX_TALL)).unwrap_or(0);
+        Self { y1: self.y1.saturating_add(tall), ..self }
     }
 
     pub fn contains(&self, x: usize, y: usize) -> bool {
@@ -470,6 +526,9 @@ pub struct WorldSnapshot {
     /// Buildings in the scene (M5).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub buildings: Vec<SnapshotBuilding>,
+    /// Lights near the tiles it holds (M8), drawn at night.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub lights: Vec<SnapshotLight>,
     pub player: SnapshotPlayer,
     /// Transient overlay effects; omitted under reduced motion.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -501,6 +560,7 @@ impl Default for WorldSnapshot {
             npcs: Vec::new(),
             monsters: Vec::new(),
             buildings: Vec::new(),
+            lights: Vec::new(),
             player: SnapshotEntity::default(),
             pops: None,
             emotes: None,

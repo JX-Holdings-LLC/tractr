@@ -103,6 +103,9 @@ pub struct BuildingDefinition {
     /// those (the house upgrades the same way).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub upgrade_of: Option<String>,
+    /// The light its windows give at night once it stands (M8).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -126,6 +129,7 @@ impl Default for BuildingDefinition {
             scenes: Vec::new(),
             capacity: 0,
             upgrade_of: None,
+            light: None,
             extra: Map::new(),
         }
     }

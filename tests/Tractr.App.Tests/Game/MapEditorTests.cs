@@ -316,10 +316,10 @@ public sealed class MapEditorTests
 
         height.Text = "abc";
         Pump();
-        Assert.Equal("Width and height must be whole numbers from 1 to 256.", info.Text);
-        height.Text = "300";
+        Assert.Equal("Width and height must be whole numbers from 1 to 512.", info.Text);
+        height.Text = "600";
         Pump();
-        Assert.Equal("Width and height must be whole numbers from 1 to 256.", info.Text);
+        Assert.Equal("Width and height must be whole numbers from 1 to 512.", info.Text);
 
         width.Text = "200";
         height.Text = "100";

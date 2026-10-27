@@ -6,7 +6,7 @@ use crate::num::{cs_max, cs_min};
 use crate::snapshot::{SnapshotSprite, WorldSnapshot};
 use farm_sim::schema::{
     AnimationClip, ArtFrame, CustomAsset, CustomCropDefinition, GameContent, GameProject, GameState, GraphicsSettings,
-    Scene, SpriteSheet, VisualRef,
+    Scene, SpriteSheet, Tile, VisualRef,
 };
 use farm_sim::vocabulary;
 use farm_sim::Presentation;
@@ -238,6 +238,47 @@ impl GraphicsSource {
     }
 }
 
+/// A layer of a tile, for reading what neighbours have on it.
+#[derive(Debug, Clone, Copy)]
+enum LayerKey<'a> {
+    Background,
+    Overlay,
+    Object,
+    /// One of the scene's extra layers (M8), by id.
+    Decor(&'a str),
+}
+
+impl LayerKey<'_> {
+    /// The terrain `tile` has on this layer.
+    fn of(self, tile: &Tile) -> Option<&str> {
+        match self {
+            Self::Background => Some(if tile.background.is_empty() { &tile.r#type } else { &tile.background }),
+            Self::Overlay => tile.overlay.as_deref(),
+            Self::Object => tile.object.as_deref(),
+            Self::Decor(id) => tile.decor.as_ref().and_then(|decor| decor.get(id)).map(String::as_str),
+        }
+    }
+}
+
+/// Which neighbours of tile (x, y) have the same terrain on the layer drawn (`same`), for a
+/// terrain that joins up (M8): 1 above, 2 right, 4 below, 8 left. Off the map counts as the same,
+/// so a field reaching the edge has no seam there.
+fn autotile_mask(scene: &Scene, x: usize, y: usize, same: impl Fn(&Tile) -> bool) -> usize {
+    let at = |dx: isize, dy: isize| -> bool {
+        let (Some(nx), Some(ny)) = (x.checked_add_signed(dx), y.checked_add_signed(dy)) else { return true };
+        scene.tiles.get(ny).and_then(|row| row.get(nx)).is_none_or(&same)
+    };
+    usize::from(at(0, -1)) | (usize::from(at(1, 0)) << 1) | (usize::from(at(0, 1)) << 2) | (usize::from(at(-1, 0)) << 3)
+}
+
+/// Frame `mask` of the `autotile` clip of `visual`'s asset (M8), when it has the 16 frames.
+fn autotile_visual(assets: &[ArtAsset], visual: &VisualRef, mask: usize) -> Option<VisualRef> {
+    let asset = assets.iter().find(|asset| asset.id == visual.asset_id)?;
+    let clip = asset.animations.as_ref()?.iter().find(|clip| clip.name == "autotile")?;
+    let frame = clip.frames.get(mask).filter(|_| clip.frames.len() >= 16)?;
+    Some(VisualRef { asset_id: visual.asset_id.clone(), animation: None, frame: Some(frame.clone()) })
+}
+
 /// JS `%` (the C# `JsMod` helper): NaN for a zero divisor.
 fn js_mod(x: f64, y: f64) -> f64 {
     if y == 0.0 {
@@ -382,13 +423,22 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
         building.sprite = art(building.visual.as_ref());
     }
 
+    // Terrains that join up with their neighbours (M8).
+    let autotiled: Vec<String> = snapshot
+        .terrains
+        .iter()
+        .flatten()
+        .filter(|terrain| terrain.autotile)
+        .map(|terrain| terrain.id.clone())
+        .collect();
     let window = snapshot.tile_window;
     for (y, row) in scene.tiles.iter().enumerate() {
         let Some(targets) = snapshot.tiles.get_mut(y) else { continue };
         // Only the tiles the snapshot built (stand-ins left of its window are never drawn).
         let first = window.map_or(0, |window| usize::try_from(window.x0).unwrap_or(0));
-        for (tile, target) in row.iter().zip(targets.iter_mut()).skip(first) {
-            let layer = |tile_type: Option<&str>, visual: Option<&VisualRef>| {
+        for (x, (tile, target)) in row.iter().zip(targets.iter_mut()).enumerate().skip(first) {
+            // `on` reads what a tile has on the layer being drawn (for the autotile mask).
+            let layer = |tile_type: Option<&str>, visual: Option<&VisualRef>, on: LayerKey<'_>| {
                 let fallback = tile_type.and_then(|tile_type| {
                     assets
                         .iter()
@@ -396,14 +446,33 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
                 });
                 let fallback = fallback.map(|asset| VisualRef { asset_id: asset.id.clone(), ..VisualRef::default() });
                 let terrain = tile_type.and_then(|id| GraphicsSource::visual_of(&source.terrains, Some(id)));
-                art(visual.or(terrain).or(fallback.as_ref()))
+                let chosen = visual.or(terrain).or(fallback.as_ref());
+                match tile_type.filter(|id| visual.is_none() && autotiled.iter().any(|a| a == id)) {
+                    Some(id) => {
+                        let mask = autotile_mask(scene, x, y, |neighbour| on.of(neighbour) == Some(id));
+                        let joined = chosen.and_then(|visual| autotile_visual(assets, visual, mask));
+                        art(joined.as_ref().or(chosen))
+                    }
+                    None => art(chosen),
+                }
             };
             let visuals = tile.visuals.as_ref();
             target.art_layers = Some(vec![
-                layer(Some(&tile.background), visuals.and_then(|v| v.background.as_ref())),
-                layer(tile.overlay.as_deref(), visuals.and_then(|v| v.overlay.as_ref())),
-                layer(tile.object.as_deref(), visuals.and_then(|v| v.object.as_ref())),
+                layer(Some(&tile.background), visuals.and_then(|v| v.background.as_ref()), LayerKey::Background),
+                layer(tile.overlay.as_deref(), visuals.and_then(|v| v.overlay.as_ref()), LayerKey::Overlay),
+                layer(tile.object.as_deref(), visuals.and_then(|v| v.object.as_ref()), LayerKey::Object),
             ]);
+            // The scene's extra layers (M8) draw their terrains' art.
+            let layer_ids: Vec<&str> = scene
+                .layers
+                .iter()
+                .flatten()
+                .filter(|l| tile.decor.as_ref().is_some_and(|d| d.contains_key(&l.id)))
+                .map(|l| l.id.as_str())
+                .collect();
+            for (decor, layer_id) in target.decor.iter_mut().zip(layer_ids) {
+                decor.sprite = layer(Some(&decor.terrain), None, LayerKey::Decor(layer_id));
+            }
 
             if let (Some(target_crop), Some(crop)) = (target.crop.as_mut(), tile.crop.as_ref()) {
                 let definition = source.custom_crops.iter().find(|c| c.id == crop.r#type);

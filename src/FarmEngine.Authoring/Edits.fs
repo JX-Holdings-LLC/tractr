@@ -3,11 +3,13 @@ namespace FarmEngine.Authoring
 open FarmEngine.Schemas
 
 /// A tile's three art layers (web `classifyTileType`: path → overlay, wall/door → object, the
-/// rest → background).
+/// rest → background), and the scene's own extra layers (M8, `Scene.Layers`).
 type TileLayer =
     | Background
     | Overlay
     | Object
+    /// One of the scene's extra layers, by id: scenery painted with terrains (`Tile.Decor`).
+    | Decor of layerId: string
 
 /// What an art binding attaches to (web `ArtBindings.tsx` target select).
 type VisualTarget =
@@ -73,6 +75,9 @@ type Edit =
     | SetSceneAllSeasons of sceneId: string * allSeasons: bool
     /// The monsters the scene has each morning (M7); none is absent.
     | SetSceneMonsters of sceneId: string * monsters: MonsterSpawn list
+    /// The scene's extra layers (M8); none is absent. A layer left out takes what was painted on
+    /// it with it.
+    | SetSceneLayers of sceneId: string * layers: SceneLayer list
     /// SceneManager `applyResize`: the overlap keeps its tiles, new tiles are grass.
     | ResizeScene of sceneId: string * width: int * height: int
     /// SceneManager `duplicateScene`: a deep copy with a new id, "(Copy)" name and no NPC list.
