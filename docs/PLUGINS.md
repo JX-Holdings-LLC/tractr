@@ -156,7 +156,9 @@ api.on('onSceneEnter', p => {
   this game, or `null`. It comes when a new game starts and when a save
   loads (and when Play Mode starts a playtest, whose **Keep changes**
   carries the data into the next one), before any other hook.
-  Answers to it apply before the first tick like any other.
+  Answers to it apply before the first tick like any other. A plugin rebuilt
+  after a strike (its JavaScript state starts over) hears it again before
+  the next tick, with what it has saved up to then.
 - The saved data is part of the game state, so it is in the command log and
   replays the same; a plugin's data stays when its pack is turned off and
   comes back with it.
@@ -387,8 +389,9 @@ twice the fuel its first start used.
   starts over when the game loads, when Play Mode restarts, and when the
   plugin is rebuilt after a strike, so a plugin's answers can depend on the
   session's history; what must last goes in `saveData` and comes back in
-  `onLoad` ([Saved data](#saved-data)), though not after a rebuild within a
-  session. Replays are not affected: the command log, with the plugins'
+  `onLoad` ([Saved data](#saved-data)), also after a rebuild: a plugin
+  rebuilt after a strike hears `onLoad` again before the next tick, with
+  the data it has saved so far. Replays are not affected: the command log, with the plugins'
   answers in it, is the replay.
 - In the web player (`farm-wasm`) plugins run on the calling thread (a page
   that wants them off the main thread runs the whole player in a Worker), and

@@ -180,11 +180,36 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// saved (`saveData`) as `{"data": …}` (`null` when it saved nothing). Answers are queued
     /// like a game step's (M9).
     pub fn restore(&mut self, saved: &indexmap::IndexMap<String, serde_json::Value>) -> Vec<PluginError> {
+        // Rebuilds before the game starts or loads hear this `onLoad` anyway.
+        self.host.take_rebuilt();
+        let listeners = self.load_listeners.clone();
+        self.load(&listeners, saved)
+    }
+
+    /// The plugins the host rebuilt after an overrun since the last call start over with fresh
+    /// JavaScript state: each that is granted `onLoad` hears it again, alone, with what it has
+    /// saved so far (`saved`: the state's plugin data now). A session calls this at the fixed
+    /// point before each tick, after the queued mutations ran, so a plugin's own `saveData`
+    /// answers are in `saved`; the `onLoad` answers apply at the next fixed point.
+    pub fn restore_rebuilt(&mut self, saved: &indexmap::IndexMap<String, serde_json::Value>) -> Vec<PluginError> {
+        let rebuilt = self.host.take_rebuilt();
+        if rebuilt.is_empty() {
+            return Vec::new();
+        }
+        let listeners: Vec<String> = self.load_listeners.iter().filter(|id| rebuilt.contains(id)).cloned().collect();
+        self.load(&listeners, saved)
+    }
+
+    fn load(
+        &mut self,
+        plugin_ids: &[String],
+        saved: &indexmap::IndexMap<String, serde_json::Value>,
+    ) -> Vec<PluginError> {
         let mut errors = Vec::new();
-        for plugin_id in self.load_listeners.clone() {
-            let data = saved.get(&plugin_id).cloned().unwrap_or(serde_json::Value::Null);
+        for plugin_id in plugin_ids {
+            let data = saved.get(plugin_id).cloned().unwrap_or(serde_json::Value::Null);
             let payload = crate::payload::to_engine_json(&serde_json::json!({ "data": data }));
-            let Some(result) = self.host.dispatch_to(&plugin_id, hook_names::ON_LOAD, &payload) else { continue };
+            let Some(result) = self.host.dispatch_to(plugin_id, hook_names::ON_LOAD, &payload) else { continue };
             self.queue.enqueue_at(std::slice::from_ref(&result), 0);
             errors.extend(result.errors);
         }

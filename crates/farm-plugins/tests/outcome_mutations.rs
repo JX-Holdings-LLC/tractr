@@ -152,3 +152,51 @@ fn each_plugin_hears_onload_alone_with_the_data_it_saved() {
         .collect();
     assert_eq!(texts, ["count 7", "count 0", "count 0"]);
 }
+
+#[test]
+fn a_plugin_rebuilt_after_an_overrun_hears_onload_again_with_what_it_saved() {
+    // Day 2 overruns (an endless loop), so the instance is rebuilt from source and loses
+    // `restored`; it hears onLoad again with the data saved so far and keeps counting from it.
+    let source = "var restored = null;\
+        api.on('onLoad', p => { restored = p.data; return []; });\
+        api.on('onDayStart', p => {\
+            if (p.day === 2) { for (;;) {} }\
+            var count = (restored ? restored.count : 0) + 1;\
+            restored = { count: count };\
+            return [{ type: 'message', text: 'count ' + count }, { type: 'saveData', data: restored }];\
+        });";
+    let pack = scoped_pack(&["message"], source);
+    let specs = plugin_specs_from_packs([&pack]);
+    let host = WasmPluginHost::new(
+        specs.clone(),
+        PluginHostOptions { fuel_per_call: 5_000_000, ..PluginHostOptions::default() },
+    );
+    let mut runtime = PluginRuntime::new(host, &specs);
+    let mut saved = IndexMap::new();
+    saved.insert("glow:p".to_owned(), json!({"count": 7}));
+    runtime.restore(&saved);
+    runtime.drain();
+
+    let day = |runtime: &mut PluginRuntime, saved: &mut IndexMap<String, serde_json::Value>, day: u32| {
+        runtime.dispatch("onDayStart", &format!(r#"{{"day":{day},"season":"spring","year":1}}"#));
+        let mut texts = Vec::new();
+        for queued in runtime.drain() {
+            match queued.mutation {
+                PluginMutation::Message { text } => texts.push(text),
+                PluginMutation::SaveData { data } => {
+                    saved.insert(queued.plugin_id.clone(), data);
+                }
+                _ => {}
+            }
+        }
+        texts
+    };
+    assert_eq!(day(&mut runtime, &mut saved, 1), ["count 8"]);
+    assert_eq!(day(&mut runtime, &mut saved, 2), Vec::<String>::new());
+    // The rebuilt plugin hears what it saved before the overrun.
+    assert!(runtime.restore_rebuilt(&saved).is_empty());
+    runtime.drain();
+    assert_eq!(day(&mut runtime, &mut saved, 3), ["count 9"]);
+    // Each rebuild is told once.
+    assert!(runtime.host_mut().take_rebuilt().is_empty());
+}

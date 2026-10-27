@@ -64,7 +64,7 @@ Every new field is optional: games made before play as they did.
   - **Saved data**: `saveData` keeps up to 16 KiB of a plugin's own JSON in
     the save, and each plugin hears it back in `onLoad`, so a plugin can run
     a system of its own across saves. Keep changes carries it into the next
-    playtest.
+    playtest, and a plugin rebuilt after a strike hears it again.
   - The county fair example pack (`fixtures/projects/county-fair-mod.json`)
     shows the new content and a pack panel.
 - **Fuzzing** covers the new plugin mutations.

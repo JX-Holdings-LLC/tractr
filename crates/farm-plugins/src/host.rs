@@ -25,6 +25,13 @@ pub trait PluginHost {
     /// Plugins that failed to initialize (they are disabled).
     fn init_errors(&self) -> &[PluginError];
 
+    /// Ids of the plugins rebuilt from source after an overrun since the last call, each once,
+    /// in rebuild order. A rebuilt plugin starts with fresh JavaScript state, so the runtime
+    /// tells it its saved data again ([`crate::PluginRuntime::restore_rebuilt`]).
+    fn take_rebuilt(&mut self) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Start a new budget window (see [`PluginHostOptions::fuel_per_window`]). Sessions start
     /// one every second of game time ([`crate::BUDGET_WINDOW_TICKS`]).
     fn begin_window(&mut self) {}
@@ -164,6 +171,8 @@ pub struct WasmPluginHost {
     sandbox: Option<Sandbox>,
     entries: Vec<Entry>,
     init_errors: Vec<PluginError>,
+    /// Plugins rebuilt since the last [`PluginHost::take_rebuilt`].
+    rebuilt: Vec<String>,
 }
 
 impl fmt::Debug for WasmPluginHost {
@@ -225,7 +234,7 @@ impl WasmPluginHost {
                 }
             }
         };
-        let mut host = Self { options, sandbox, entries, init_errors };
+        let mut host = Self { options, sandbox, entries, init_errors, rebuilt: Vec::new() };
         let mut init_fuel_used: u64 = 0;
         let mut memory_used: usize = 0;
         for index in 0..host.entries.len() {
@@ -484,9 +493,13 @@ impl WasmPluginHost {
         } else {
             self.entries[index].rebuilds += 1;
             let fuel = self.entries[index].rebuild_fuel;
-            if let Err(error) = self.initialize(index, fuel) {
-                self.entries[index].disabled = true;
-                errors.push(PluginError { hook: Some(hook.to_owned()), ..error });
+            match self.initialize(index, fuel) {
+                Err(error) => {
+                    self.entries[index].disabled = true;
+                    errors.push(PluginError { hook: Some(hook.to_owned()), ..error });
+                }
+                Ok(()) if !self.rebuilt.contains(&id) => self.rebuilt.push(id.clone()),
+                Ok(()) => {}
             }
         }
         PluginDispatchResult { plugin_id: id, mutations: Vec::new(), errors }
@@ -536,6 +549,10 @@ impl PluginHost for WasmPluginHost {
 
     fn init_errors(&self) -> &[PluginError] {
         &self.init_errors
+    }
+
+    fn take_rebuilt(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.rebuilt)
     }
 
     fn begin_window(&mut self) {
