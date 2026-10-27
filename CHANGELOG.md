@@ -33,11 +33,14 @@ Every new field is optional: games made before play as they did.
     tile and is drawn y-sorted with the player, NPCs and nodes.
 - **Lights at night**: terrains, node types, machine types, crops and
   building types can give light (a radius, a colour and a brightness): it
-  glows over the scene as the day/night tint darkens, in the game and in
+  lights the scene back up through the day/night tint, in the game and in
   Edit Mode's Sky preview at night. Lamps, braziers, glowing crops (once
-  grown), crystals (until broken), lava and lit windows. Both renderers draw
-  it with the soft glows they already had; a GPU light-map pass is still
-  under [Later](ROADMAP.md#later).
+  grown), crystals (until broken), lava and lit windows. The tint and the
+  lights are one light map that multiplies the scene, so a lamp shows the
+  grass under it in its own colours rather than a glow painted over it.
+  The CPU rasterizer and the wgpu renderer compute the same map (a
+  `LightRect` draw command, a pass of `farm-gpu`'s shader) and match pixel
+  for pixel in the parity tests.
 - **More power for content packs.**
   - Packs add **building types, collections, bundles, achievements, letters
     and monsters**, namespaced with every reference between them, and an

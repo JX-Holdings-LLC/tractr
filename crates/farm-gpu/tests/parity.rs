@@ -253,6 +253,44 @@ fn images_match_the_cpu_rasterizer() {
     check("images", &mut renderer, 400, 220, &list, &store);
 }
 
+/// A night scene under a light map (M8): lights overlapping, one cut by a clip, one under a scale.
+fn light_map() -> DrawList {
+    use farm_render::LightSpot;
+    let mut list = DrawList::new();
+    for (i, color) in
+        [Color::rgb(90, 160, 70), Color::rgb(180, 150, 110), Color::rgb(60, 110, 200)].into_iter().enumerate()
+    {
+        list.fill_rect(rect(i as f32 * 140.0, 0.0, 140.0, 300.0), color);
+    }
+    let spot = |x: f32, y: f32, radius: f32, color: Color, strength: f32| LightSpot { x, y, radius, color, strength };
+    list.push(DrawCmd::LightRect {
+        rect: rect(0.0, 0.0, 420.0, 200.0),
+        ambient: Color::rgb(50, 60, 110),
+        lights: vec![
+            spot(100.0, 90.0, 70.0, Color::rgb(255, 210, 122), 1.0),
+            spot(150.0, 110.0, 50.0, Color::rgb(255, 120, 60), 0.7),
+            spot(330.0, 60.0, 90.5, Color::rgb(140, 255, 200), 0.45),
+        ],
+    });
+    list.save();
+    list.clip_rect(rect(0.0, 200.0, 300.0, 100.0));
+    list.translate(10.0, 200.0);
+    list.scale(1.5, 1.5);
+    list.push(DrawCmd::LightRect {
+        rect: rect(0.0, 0.0, 300.0, 80.0),
+        ambient: Color::rgb(30, 30, 60),
+        lights: vec![spot(60.0, 30.0, 40.0, Color::rgb(255, 230, 160), 0.9)],
+    });
+    list.restore();
+    list
+}
+
+#[test]
+fn light_maps_match_the_cpu_rasterizer() {
+    let Some(mut renderer) = gpu() else { return };
+    check("light map", &mut renderer, 420, 300, &light_map(), &ImageStore::default());
+}
+
 #[test]
 fn frames_reuse_the_atlases_and_survive_resizes() {
     let Some(mut renderer) = gpu() else { return };

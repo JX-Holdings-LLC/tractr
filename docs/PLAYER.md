@@ -447,10 +447,12 @@ The desktop game draws its frames with one of two renderers:
   backdrop tints, then the frame at the window's size (the letterbox colour,
   the world scaled up with nearest neighbour through the CPU path's own
   column and row maps, the UI at full resolution), then a copy into the
-  window's surface. Later lighting, palette-swap or particle passes go
-  between those. Rectangles, rounded rectangles, nearest and bilinear images
-  (with tints and opacity), glyphs and the day/night modulate are drawn by
-  the shader with the CPU rasterizer's integer arithmetic. Glyphs come from
+  window's surface. Later palette-swap or particle passes go between
+  those. Rectangles, rounded rectangles, nearest and bilinear images (with
+  tints and opacity), glyphs, the day/night modulate and the light map (the
+  tint plus up to 64 lights, summed per pixel in the CPU rasterizer's order
+  and multiplied into the world) are drawn by the shader with the CPU
+  rasterizer's arithmetic. Glyphs come from
   farm-render's own coverage masks, in a glyph atlas. Everything else
   (strokes, circles, ovals, lines, blurred shadows, outlined or very large
   text) is rasterized once by the CPU rasterizer into a sprite atlas, keyed

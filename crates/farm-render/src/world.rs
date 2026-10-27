@@ -18,7 +18,7 @@ use crate::atmosphere::{self, WeatherLook, WeatherOverlay};
 use crate::builtin_art::{BuiltinArt, BuiltinArtEntry};
 use crate::canvas2d::{self, entity_pixel_origin};
 use crate::css_color::{self, Color};
-use crate::draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
+use crate::draw::{DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke, MAX_LIGHTS};
 use crate::images::{ImageId, ImageStore};
 use crate::num::{cs_clamp, cs_compare, cs_max, cs_min, round_half_even, to_byte, to_int};
 use crate::snapshot::{
@@ -580,9 +580,15 @@ impl<'a, 'l> Builder<'a, 'l> {
             }
             if !atmosphere::is_neutral(tint) {
                 // Modulate multiplies color (and alpha) so the padding and letterbox stay untouched.
-                self.push(DrawCmd::ModulateRect { rect: world_rect, color: tint });
+                // With lights near (M8) the multiply is a light map: they show the scene's own
+                // colours where they shine, as strong as the tint is dark.
+                let spots = self.light_spots(camera.map(|camera| (camera.x, camera.y, camera.width, camera.height)));
+                if spots.is_empty() {
+                    self.push(DrawCmd::ModulateRect { rect: world_rect, color: tint });
+                } else {
+                    self.push(DrawCmd::LightRect { rect: world_rect, ambient: tint, lights: spots });
+                }
             }
-            self.lights(tint, camera.map(|camera| (camera.x, camera.y, camera.width, camera.height)));
             if let Some(overlay) = overlay {
                 let (origin_x, origin_y) = camera.map_or((0.0, 0.0), |camera| (camera.x, camera.y));
                 self.weather(overlay, tick, origin_x, origin_y, view_width, view_height, world_rect);
@@ -725,21 +731,12 @@ impl<'a, 'l> Builder<'a, 'l> {
         }
     }
 
-    /// The scene's lights (M8) glowing over the darkened scene: as strong as the day/night tint
-    /// is dark (none at noon), each a soft disc of its colour with a brighter core. Lights whose
-    /// glow misses the camera are left out.
-    fn lights(&mut self, tint: Color, camera: Option<(f64, f64, f64, f64)>) {
-        let snapshot = self.snapshot;
-        if snapshot.lights.is_empty() {
-            return;
-        }
-        let luminance = (0.299 * f64::from(tint.r)) + (0.587 * f64::from(tint.g)) + (0.114 * f64::from(tint.b));
-        let darkness = 1.0 - (luminance / 255.0);
-        if darkness < 0.08 {
-            return;
-        }
+    /// The scene's lights (M8) near the camera, in world pixels, for the light map: at most
+    /// [`MAX_LIGHTS`], the strongest when there are more.
+    fn light_spots(&self, camera: Option<(f64, f64, f64, f64)>) -> Vec<LightSpot> {
         let (padding, pitch) = (self.padding, self.pitch);
-        for light in &snapshot.lights {
+        let mut spots: Vec<LightSpot> = Vec::new();
+        for light in &self.snapshot.lights {
             let cx = padding + (light.x * pitch);
             let cy = padding + (light.y * pitch);
             let reach = cs_max(0.5, light.radius) * pitch;
@@ -749,16 +746,19 @@ impl<'a, 'l> Builder<'a, 'l> {
                 }
             }
             let color = if light.color.is_empty() { parse("#ffd27a") } else { parse(&light.color) };
-            let strength = cs_clamp(light.brightness, 0.0, 1.0) * darkness;
-            for (scale, alpha) in [(1.0, 0.5), (0.4, 0.45)] {
-                let r = reach * scale;
-                self.push(DrawCmd::BlurOval {
-                    rect: rect(cx - r, cy - r, r * 2.0, r * 2.0),
-                    color: color.with_opacity(strength * alpha),
-                    sigma: (r / 2.5) as f32,
-                });
-            }
+            spots.push(LightSpot {
+                x: cx as f32,
+                y: cy as f32,
+                radius: reach as f32,
+                color,
+                strength: cs_clamp(light.brightness, 0.0, 1.0) as f32,
+            });
         }
+        if spots.len() > MAX_LIGHTS {
+            spots.sort_by(|a, b| (b.strength * b.radius).total_cmp(&(a.strength * a.radius)));
+            spots.truncate(MAX_LIGHTS);
+        }
+        spots
     }
 
     /// One tile's extra layers (M8): those `above` the player or those under it, in the scene's

@@ -110,7 +110,7 @@ fn an_autotiled_terrain_without_art_shows_where_it_meets_another() {
 }
 
 #[test]
-fn lights_glow_at_night_only() {
+fn lights_show_the_scene_at_night_only() {
     let mut snapshot = grass(5, 5);
     snapshot.lights = vec![SnapshotLight { x: 2.5, y: 2.5, radius: 2.0, color: "#ffcc66".into(), brightness: 1.0 }];
     let at = |time_minutes: f64| {
@@ -122,10 +122,46 @@ fn lights_glow_at_night_only() {
     };
     let (lit, dark) = at(23.0 * 60.0);
     assert!(brightness(lit) > brightness(dark) + 60, "{lit} vs {dark}");
-    // The light's own colour: warmer than the night around it.
-    assert!(lit.r > lit.b);
     let (noon_lit, noon) = at(12.0 * 60.0);
     assert_eq!(noon_lit, noon);
+    // A light map, not a glow: at a full light's centre the grass shows its own colour (the
+    // daytime one), and the night around it stays dark.
+    assert_color("#5b9a4a", lit);
+    let mut far = snapshot.clone();
+    far.atmosphere = Some(SnapshotAtmosphere { time_minutes: 23.0 * 60.0, ..SnapshotAtmosphere::default() });
+    let bitmap = render(&far);
+    let mut unlit = far.clone();
+    unlit.lights.clear();
+    assert_eq!(pixel(&bitmap, 0.2 * TS, 0.2 * TS), pixel(&render(&unlit), 0.2 * TS, 0.2 * TS));
+    // Halfway out, between the two.
+    let half = brightness(pixel(&bitmap, 3.5 * TS, 2.5 * TS));
+    assert!(half > brightness(dark) && half < brightness(lit), "{half}");
+}
+
+#[test]
+fn the_world_draws_its_lights_as_one_light_map_over_the_tint() {
+    use farm_render::{build_world, DrawCmd, ImageStore};
+    let mut snapshot = grass(4, 4);
+    snapshot.atmosphere = Some(SnapshotAtmosphere { time_minutes: 23.0 * 60.0, ..SnapshotAtmosphere::default() });
+    let commands = |snapshot: &WorldSnapshot| build_world(snapshot, None, &mut ImageStore::default()).commands;
+    // No lights: the plain day/night multiply.
+    assert!(commands(&snapshot).iter().any(|c| matches!(c, DrawCmd::ModulateRect { .. })));
+    snapshot.lights = vec![
+        SnapshotLight { x: 1.5, y: 1.5, radius: 2.0, color: String::new(), brightness: 0.5 },
+        // Far off the camera: left out.
+        SnapshotLight { x: 300.0, y: 300.0, radius: 1.0, color: String::new(), brightness: 1.0 },
+    ];
+    snapshot.camera = Some(farm_render::SnapshotCamera { x: 0.0, y: 0.0, width: 4.0 * TS, height: 4.0 * TS });
+    let list = commands(&snapshot);
+    assert!(!list.iter().any(|c| matches!(c, DrawCmd::ModulateRect { .. })));
+    let lights = list.iter().find_map(|c| match c {
+        DrawCmd::LightRect { lights, .. } => Some(lights.clone()),
+        _ => None,
+    });
+    let lights = lights.expect("a light map");
+    assert_eq!(lights.len(), 1);
+    assert_eq!((lights[0].x, lights[0].y, lights[0].radius, lights[0].strength), (48.0, 48.0, 64.0, 0.5));
+    assert_eq!(lights[0].color, css_color::parse(Some("#ffd27a")));
 }
 
 #[test]

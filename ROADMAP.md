@@ -650,10 +650,11 @@ Done in 0.10.0 ([Creator Guide](docs/CREATOR-GUIDE.md#1-start-a-project),
   a 16-frame `autotile` clip with art, edges without); and tall objects
   (`TerrainDefinition.tall`) drawn y-sorted in front of or behind the player.
 - [x] **Light sources** at night: `light` on terrains, node types, machine
-  types, crops and building types (lamps, glowing crops, lit windows), drawn
-  as soft glows that grow as the day/night tint darkens. They use the draw
-  commands both renderers already had; the GPU light-map pass (true
-  relighting rather than glows) stays under [Later](#later).
+  types, crops and building types (lamps, glowing crops, lit windows). The
+  day/night tint and the lights are one light map (`DrawCmd::LightRect`)
+  that multiplies the scene: a light pass of the wgpu renderer with the
+  same arithmetic in the CPU rasterizer, checked pixel for pixel by
+  `farm-gpu`'s parity tests.
 
 ### M9: More power for content packs
 
@@ -732,8 +733,7 @@ What 0.7.0 left out of the world vocabulary, sound and cutscenes. Done in
   (they show in play, and their tiles are picked on the map); the toolbar
   keeps one row at 1280×800 when a game has Goals and Mail.
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
-- **Player polish.** GPU effects: day/night lighting (a light map for M8's
-  light sources, which are drawn as glows today), season palette swaps
+- **Player polish.** GPU effects: season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws
   the CPU renderer's frames today and falls back to it; docs/PLAYER.md
   "Renderers"), each with a CPU equivalent or a clear "GPU only" rule;

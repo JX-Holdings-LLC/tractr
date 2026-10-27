@@ -28,6 +28,13 @@ pub const SPRITE: u32 = 6;
 pub const TINT: u32 = 7;
 pub const UPSCALE: u32 = 8;
 pub const COPY: u32 = 9;
+/// A light map (`DrawCmd::LightRect`, M8): its lights are [`LIGHT_WORDS`] words each in the
+/// lookup texture, from the row its `p1.y` names, rows of `p1.x` words.
+pub const LIGHT: u32 = 10;
+
+/// Words of one light in the lookup texture: x, y, radius (f32 bits), colour (packed), strength
+/// (f32 bits), padding.
+pub const LIGHT_WORDS: usize = 6;
 
 /// One quad (the vertex buffer's per-instance layout, 64 bytes).
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -245,6 +252,9 @@ pub struct Encoder<'a> {
     pub height: u32,
     /// Largest texture side: larger images are drawn through the CPU rasterizer.
     pub max_side: u32,
+    /// The frame's light-map lights, [`LIGHT_WORDS`] words each (the renderer copies them into
+    /// the lookup texture and points the [`LIGHT`] instances at them).
+    pub lights: &'a mut Vec<u32>,
 }
 
 impl Encoder<'_> {
@@ -478,6 +488,37 @@ impl Encoder<'_> {
                 }
                 Ok(())
             }
+            DrawCmd::LightRect { rect, ambient, lights } => {
+                if !(rect.width > 0.0 && rect.height > 0.0) {
+                    return Ok(());
+                }
+                let bounds = map_rect(transform, rect);
+                if !finite(bounds) {
+                    return Ok(());
+                }
+                let quad = [center_edge(bounds.0), center_edge(bounds.1), center_edge(bounds.2), center_edge(bounds.3)];
+                if quad[0] < quad[2] && quad[1] < quad[3] {
+                    let spots = raster::device_lights(lights, transform);
+                    let start = (self.lights.len() / LIGHT_WORDS) as u32;
+                    for spot in &spots {
+                        self.lights.extend([
+                            spot.x.to_bits(),
+                            spot.y.to_bits(),
+                            spot.radius.to_bits(),
+                            pack(spot.color),
+                            spot.strength.to_bits(),
+                            0,
+                        ]);
+                    }
+                    let instance = Instance {
+                        rect: quad,
+                        data: [LIGHT, pack(*ambient), spots.len() as u32, start],
+                        ..Instance::default()
+                    };
+                    self.push(instance, Blend::Modulate, None, scissor);
+                }
+                Ok(())
+            }
             DrawCmd::Text { text, x, y, font, size, color, stroke, align } => {
                 if size.is_nan() || *size <= 0.0 || text.is_empty() {
                     return Ok(());
@@ -627,7 +668,8 @@ fn local_bounds(command: &DrawCmd) -> Option<Rect> {
         | DrawCmd::FillOval { rect, .. }
         | DrawCmd::BlurOval { rect, .. }
         | DrawCmd::BlurRect { rect, .. }
-        | DrawCmd::ModulateRect { rect, .. } => *rect,
+        | DrawCmd::ModulateRect { rect, .. }
+        | DrawCmd::LightRect { rect, .. } => *rect,
         DrawCmd::StrokeRect { rect, width, .. } | DrawCmd::StrokeRoundRect { rect, width, .. } => {
             grow(rect, width.abs())
         }
@@ -730,6 +772,16 @@ fn command_key(command: &DrawCmd, images: &ImageStore) -> Vec<u32> {
             key.push(12);
             rect(&mut key, r);
             color(&mut key, c);
+        }
+        DrawCmd::LightRect { rect: r, ambient, lights } => {
+            key.push(14);
+            rect(&mut key, r);
+            color(&mut key, ambient);
+            key.push(lights.len() as u32);
+            for light in lights {
+                key.extend([light.x.to_bits(), light.y.to_bits(), light.radius.to_bits(), light.strength.to_bits()]);
+                color(&mut key, &light.color);
+            }
         }
         DrawCmd::Text { text, x, y, font, size, color: c, stroke, align } => {
             key.extend([13, x.to_bits(), y.to_bits(), *font as u32, size.to_bits(), *align as u32]);

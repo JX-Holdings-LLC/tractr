@@ -266,11 +266,13 @@ opens a menu, and requirements that name what doesn't exist.
   tile still blocks the way its terrain says.
 - *Lights*: terrains, node types, machine types, crops and building types
   can have a **Light**: a radius in tiles (1 to 16), a colour (empty is a
-  warm lamp) and a brightness (1 to 100). At night the light glows over the
-  darkened scene: lamps and braziers (machines), glowing mushrooms (a crop,
+  warm lamp) and a brightness (1 to 100). At night the light lights the
+  darkened scene back up, in its colour, so the grass under a lamp shows as
+  it does by day: lamps and braziers (machines), glowing mushrooms (a crop,
   once grown), glowing crystals (a node, until broken), lava (a terrain,
   even on an extra layer) and a building's lit windows (once it stands). The
-  darker the day/night tint, the brighter the glow; at noon there is none.
+  darker the day/night tint, the more a light stands out; at noon it adds
+  nothing.
   The Sky box above the map shows them at **Night**.
 
 Problems lists a tile painted on a layer its scene doesn't have, a light
