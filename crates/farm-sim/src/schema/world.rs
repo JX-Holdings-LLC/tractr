@@ -29,7 +29,7 @@ pub struct SceneTransition {
     pub extra: Map<String, Value>,
 }
 
-/// A light that glows at night (M8): lamps, glowing crops, lit windows. Drawn by the game, never
+/// A light that shines at night (M8): lamps, glowing crops, lit windows. Drawn by the game, never
 /// read by the simulation.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]

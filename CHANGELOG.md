@@ -21,7 +21,10 @@ Every new field is optional: games made before play as they did.
   the projects folder is picked up, and `farmc` compiles and exports a
   folder.
 - **Bigger and richer maps.**
-  - Scenes can be up to 512×512 tiles (256 before).
+  - Scenes can be up to 512×512 tiles (256 before). `farm-bench` times
+    them: the overnight pass on a 512×512 farm full of crops (budget
+    120 ms) and 1080p frames on a 512×512 map and at night under 64 lights
+    (one 60 Hz frame on the CPU rasterizer), checked in CI.
   - **Extra layers**: a scene lists its own layers beyond background,
     overlay and object, painted with terrains from the map's Layer list; a
     layer marked `above` is drawn over the player (roofs, treetops). They
