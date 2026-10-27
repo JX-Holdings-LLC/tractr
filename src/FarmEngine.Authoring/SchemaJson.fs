@@ -3409,6 +3409,7 @@ module SchemaJson =
         let mutable vAchievements = None
         let mutable vMail = None
         let mutable vMonsters = None
+        let mutable vGamePanels = None
         let mutable vStrings = []
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
@@ -3443,9 +3444,10 @@ module SchemaJson =
             | "achievements" -> vAchievements <- Decode.optional (Decode.list decodeAchievementDefinition) (key :: path) value
             | "mail" -> vMail <- Decode.optional (Decode.list decodeMailDefinition) (key :: path) value
             | "monsters" -> vMonsters <- Decode.optional (Decode.list decodeMonsterDefinition) (key :: path) value
+            | "gamePanels" -> vGamePanels <- Decode.optional (Decode.list decodeGamePanel) (key :: path) value
             | "strings" -> vStrings <- (Decode.dict (Decode.dict Decode.string)) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Crops = vCrops; Items = vItems; Recipes = vRecipes; MachineTypes = vMachineTypes; NodeTypes = vNodeTypes; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; WeatherTypes = vWeatherTypes; Npcs = vNpcs; Dialogues = vDialogues; Scenes = vScenes; Events = vEvents; Quests = vQuests; Shops = vShops; Actions = vActions; Minigames = vMinigames; PlayerStart = vPlayerStart; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; Strings = vStrings; Extra = List.ofSeq extra }
+        { Crops = vCrops; Items = vItems; Recipes = vRecipes; MachineTypes = vMachineTypes; NodeTypes = vNodeTypes; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; WeatherTypes = vWeatherTypes; Npcs = vNpcs; Dialogues = vDialogues; Scenes = vScenes; Events = vEvents; Quests = vQuests; Shops = vShops; Actions = vActions; Minigames = vMinigames; PlayerStart = vPlayerStart; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; GamePanels = vGamePanels; Strings = vStrings; Extra = List.ofSeq extra }
 
     and encodePackContent (value: PackContent) : Json =
         JObject(
@@ -3507,6 +3509,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Monsters with
                 | Some v -> yield "monsters", (Encode.list encodeMonsterDefinition) v
+                | None -> ()
+                match value.GamePanels with
+                | Some v -> yield "gamePanels", (Encode.list encodeGamePanel) v
                 | None -> ()
                 yield "strings", (Encode.dict (Encode.dict JString)) value.Strings
                 yield! value.Extra

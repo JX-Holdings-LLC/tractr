@@ -47,6 +47,8 @@ pub const BUDGET_WINDOW_TICKS: u64 = farm_sim::engine::TICKS_PER_SECOND as u64;
 pub struct PluginRuntime<H: PluginHost = WasmPluginHost> {
     host: H,
     hook_names: Vec<String>,
+    /// The plugins granted `onLoad`, in spec order.
+    load_listeners: Vec<String>,
     queue: PluginMutationQueue,
     recent_errors: VecDeque<PluginError>,
     window: Option<u64>,
@@ -81,8 +83,16 @@ impl<H: PluginHost> PluginRuntime<H> {
                 hook_names.push(hook.clone());
             }
         }
-        let mut runtime =
-            Self { host, hook_names, queue: PluginMutationQueue::new(), recent_errors: VecDeque::new(), window: None };
+        let load_listeners =
+            specs.iter().filter(|spec| spec.is_granted(hook_names::ON_LOAD)).map(|spec| spec.id.clone()).collect();
+        let mut runtime = Self {
+            host,
+            hook_names,
+            load_listeners,
+            queue: PluginMutationQueue::new(),
+            recent_errors: VecDeque::new(),
+            window: None,
+        };
         let init_errors = runtime.host.init_errors().to_vec();
         runtime.record(&init_errors);
         runtime
@@ -162,6 +172,22 @@ impl<H: PluginHost> PluginRuntime<H> {
         }
         self.queue.enqueue_at(&results, depth);
         let errors: Vec<PluginError> = results.into_iter().flat_map(|result| result.errors).collect();
+        self.record(&errors);
+        errors
+    }
+
+    /// The game started or loaded: each plugin granted `onLoad` hears it alone, with what it
+    /// saved (`saveData`) as `{"data": …}` (`null` when it saved nothing). Answers are queued
+    /// like a game step's (M9).
+    pub fn restore(&mut self, saved: &indexmap::IndexMap<String, serde_json::Value>) -> Vec<PluginError> {
+        let mut errors = Vec::new();
+        for plugin_id in self.load_listeners.clone() {
+            let data = saved.get(&plugin_id).cloned().unwrap_or(serde_json::Value::Null);
+            let payload = crate::payload::to_engine_json(&serde_json::json!({ "data": data }));
+            let Some(result) = self.host.dispatch_to(&plugin_id, hook_names::ON_LOAD, &payload) else { continue };
+            self.queue.enqueue_at(std::slice::from_ref(&result), 0);
+            errors.extend(result.errors);
+        }
         self.record(&errors);
         errors
     }

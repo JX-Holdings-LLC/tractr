@@ -26,6 +26,9 @@ pub const MAX_ID_LENGTH: usize = 256;
 /// Longest string flag value, in UTF-16 code units.
 pub const MAX_FLAG_VALUE_LENGTH: usize = 4096;
 
+/// Largest `saveData` payload, as compact JSON text in bytes (M9).
+pub const MAX_SAVED_DATA_BYTES: usize = 16 * 1024;
+
 /// Longest unknown `type` quoted back in an error.
 const MAX_QUOTED_TYPE_LENGTH: usize = 64;
 
@@ -110,6 +113,60 @@ pub fn parse_mutation(entry: &Value) -> Result<PluginMutation, String> {
         "playSound" => PluginMutation::PlaySound { sound_id: fields.id("soundId") },
         "performAction" => PluginMutation::PerformAction { action_id: fields.id("actionId") },
         "startMinigame" => PluginMutation::StartMinigame { minigame_id: fields.id("minigameId") },
+        // The M3–M7 outcomes (M9).
+        "moveNpc" => {
+            let npc_id = fields.id("npcId");
+            let scene_id = fields.optional_id("sceneId");
+            let x = fields.int("x", 0.0, MAX_TILE) as i32;
+            PluginMutation::MoveNpc { npc_id, scene_id, x, y: fields.int("y", 0.0, MAX_TILE) as i32 }
+        }
+        "startCutscene" => PluginMutation::StartCutscene { cutscene_id: fields.id("cutsceneId") },
+        "setVariable" => {
+            let variable = fields.id("variable");
+            PluginMutation::SetVariable { variable, value: fields.variable_value() }
+        }
+        "addVariable" => {
+            let variable = fields.id("variable");
+            PluginMutation::AddVariable { variable, amount: fields.int("amount", -1_000_000.0, 1_000_000.0) as i32 }
+        }
+        "addShopStock" => {
+            let shop_id = fields.id("shopId");
+            let item_id = fields.id("itemId");
+            let price = fields.optional_int("price", 0.0, 1_000_000.0).map(|price| price as i64);
+            let daily_limit = fields.optional_int("dailyLimit", 1.0, 999.0).map(|limit| limit as u32);
+            PluginMutation::AddShopStock { shop_id, item_id, price, daily_limit }
+        }
+        "removeShopStock" => {
+            let shop_id = fields.id("shopId");
+            PluginMutation::RemoveShopStock { shop_id, item_id: fields.id("itemId") }
+        }
+        "placeNode" | "removeNode" | "placeMachine" | "removeMachine" => {
+            let scene_id = fields.optional_id("sceneId");
+            let x = fields.int("x", 0.0, MAX_TILE) as i32;
+            let y = fields.int("y", 0.0, MAX_TILE) as i32;
+            match kind.as_str() {
+                "placeNode" => PluginMutation::PlaceNode { scene_id, x, y, node_type_id: fields.id("nodeTypeId") },
+                "removeNode" => PluginMutation::RemoveNode { scene_id, x, y },
+                "placeMachine" => {
+                    PluginMutation::PlaceMachine { scene_id, x, y, machine_type_id: fields.id("machineTypeId") }
+                }
+                _ => PluginMutation::RemoveMachine { scene_id, x, y },
+            }
+        }
+        "setRelationship" => {
+            let npc_id = fields.id("npcId");
+            let status = fields.string("status");
+            if !status.is_empty() && !farm_sim::schema::relationship_statuses::ALL.contains(&status.as_str()) {
+                fields.failures.push(format!(
+                    "status: expected one of {}",
+                    farm_sim::schema::relationship_statuses::ALL.join(", ")
+                ));
+            }
+            PluginMutation::SetRelationship { npc_id, status }
+        }
+        "sendMail" => PluginMutation::SendMail { mail_id: fields.id("mailId") },
+        "modifyHealth" => PluginMutation::ModifyHealth { delta: fields.int("delta", -1000.0, 1000.0) as i32 },
+        "saveData" => PluginMutation::SaveData { data: fields.saved_data() },
         other => {
             return Err(format!("invalid discriminator value (type '{}')", crate::clip(other, MAX_QUOTED_TYPE_LENGTH)))
         }
@@ -187,6 +244,38 @@ impl Fields<'_> {
             self.failures.push(format!("{key}: must be <= {}", units::format_number(max)));
         }
         n
+    }
+
+    /// An optional integer: absent is fine, otherwise like [`Fields::int`].
+    fn optional_int(&mut self, key: &str, min: f64, max: f64) -> Option<f64> {
+        self.object.contains_key(key).then(|| self.int(key, min, max))
+    }
+
+    /// A variable's value: a finite number or a string of at most [`MAX_FLAG_VALUE_LENGTH`]
+    /// characters (true or false is a flag: `setFlag`).
+    fn variable_value(&mut self) -> Value {
+        match self.object.get("value") {
+            Some(Value::String(text)) => {
+                self.max_length(text, MAX_FLAG_VALUE_LENGTH, "value");
+                Value::String(text.clone())
+            }
+            Some(value @ Value::Number(number)) if number.as_f64().is_some_and(|n| n.abs() <= 1e9) => value.clone(),
+            _ => {
+                self.failures.push("value: expected a number (at most 1e9 either way) or a string".to_owned());
+                Value::Null
+            }
+        }
+    }
+
+    /// `saveData`'s `data`: any JSON, at most [`MAX_SAVED_DATA_BYTES`] as compact text.
+    fn saved_data(&mut self) -> Value {
+        let data = self.object.get("data").cloned().unwrap_or(Value::Null);
+        let size = serde_json::to_string(&data).map_or(usize::MAX, |text| text.len());
+        if size > MAX_SAVED_DATA_BYTES {
+            self.failures.push(format!("data: at most {MAX_SAVED_DATA_BYTES} bytes as JSON ({size} given)"));
+            return Value::Null;
+        }
+        data
     }
 
     /// `z.union([z.boolean(), z.number(), z.string()])`, strings at most

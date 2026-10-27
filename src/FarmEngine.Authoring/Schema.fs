@@ -1911,6 +1911,8 @@ and PackContent =
         Mail: (MailDefinition list) option
         /// Monsters the pack adds or replaces (M9: the M7 content).
         Monsters: (MonsterDefinition list) option
+        /// Game panels the pack adds (M9), shown only with `permissions.uiPanels`.
+        GamePanels: (GamePanel list) option
         /// Per-locale string tables for game text (M7 i18n). Keys address content fields: `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`, `quest:{id}:description`. The authored text is the fallback locale.
         Strings: (string * (string * string) list) list
         /// Undeclared keys, in order.
@@ -1919,7 +1921,7 @@ and PackContent =
 
     /// A `PackContent` with every field at its schema default.
     static member Default : PackContent =
-        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; Strings = []; Extra = [] }
+        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; GamePanels = None; Strings = []; Extra = [] }
 
 and PackDependency =
     {
@@ -1973,7 +1975,7 @@ and PackPermissions =
         /// May contribute content definitions, a player start and string tables (the normal case).
         /// When off, none of the pack's content loads; its plugins still run.
         ContentInject: bool
-        /// Reserved: declarative UI panels. Packs cannot add game panels yet, so this grants nothing.
+        /// May add game panels (`content.gamePanels`, M9): shown after the game's own, whatever `contentInject` says.
         UiPanels: bool
         /// Mutation capabilities the pack's plugins may use (`message`, `giveItem`, `setFlag:any`,
         /// `*`, … — see docs/PLUGINS.md). None: the defaults, and onEffect/onCommand answers are dropped.

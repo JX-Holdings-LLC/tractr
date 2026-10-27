@@ -108,6 +108,24 @@ module PackMerge =
                     (sprintf "Pack '%s' ships content but does not have the contentInject permission — its content is not loaded" pack.Manifest.Id))
             true
 
+    /// Whether the pack ships game panels it may not show (no `permissions.uiPanels`, M9): a
+    /// warning, so the Problems panel shows it (Rust `packs::merge_packs`).
+    let private panelsBlocked (pack: ContentPack) (problems: ResizeArray<PackProblem>) =
+        let ships = not (List.isEmpty (defaultArg pack.Content.GamePanels []))
+        if ships && not pack.Manifest.Permissions.UiPanels then
+            problems.Add(problem pack.Manifest.Id "warning"
+                (sprintf "Pack '%s' ships game panels but does not have the uiPanels permission — they are not shown" pack.Manifest.Id))
+            true
+        else not ships
+
+    /// The game panels of the enabled packs with the `uiPanels` permission, in load order and
+    /// namespaced (M9; Rust `packs::pack_game_panels`). The game shows them after its own.
+    let gamePanels (installs: PackInstallation list) : GamePanel list =
+        let packs, _ = resolveOrder installs
+        packs
+        |> List.filter (fun pack -> pack.Manifest.Permissions.UiPanels && not (List.isEmpty (defaultArg pack.Content.GamePanels [])))
+        |> List.collect (fun pack -> defaultArg (PackRules.namespacePack pack).Content.GamePanels [])
+
     /// Appends new definitions, replaces declared overrides and warns about undeclared collisions.
     let private mergeArray
         (pack: ContentPack)
@@ -162,6 +180,7 @@ module PackMerge =
         else
             let problems = ResizeArray<PackProblem>(orderProblems)
             let merge (content: GameContent) (rawPack: ContentPack) =
+                panelsBlocked rawPack problems |> ignore
                 if contentBlocked rawPack problems then content
                 else
                     let pack = PackRules.namespacePack rawPack
@@ -393,7 +412,11 @@ module PackMerge =
                     Bundles = story "bundle" (fun (d: BundleDefinition) -> d.Id) project.Bundles content.Bundles
                     Achievements = story "achievement" (fun (d: AchievementDefinition) -> d.Id) project.Achievements content.Achievements
                     Mail = story "letter" (fun (d: MailDefinition) -> d.Id) project.Mail content.Mail
-                    Monsters = story "monster" (fun (d: MonsterDefinition) -> d.Id) project.Monsters content.Monsters }
+                    Monsters = story "monster" (fun (d: MonsterDefinition) -> d.Id) project.Monsters content.Monsters
+                    // Its game panels, when it may show them (M9).
+                    GamePanels =
+                        if panelsBlocked rawPack problems then project.GamePanels
+                        else story "game panel" (fun (d: GamePanel) -> d.Id) project.GamePanels content.GamePanels }
 
             match content.PlayerStart with
             | None -> next, List.ofSeq problems

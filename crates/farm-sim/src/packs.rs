@@ -5,8 +5,8 @@
 use crate::content_builtin;
 use crate::inventory;
 use crate::schema::{
-    is_engine_compatible, ContentPack, CropDefinition, GameContent, GameProject, GameState, InventorySlot, Item,
-    PackContent, PackInstallation, SavePackRef, ENGINE_VERSION,
+    is_engine_compatible, ContentPack, CropDefinition, GameContent, GamePanel, GameProject, GameState, InventorySlot,
+    Item, PackContent, PackInstallation, SavePackRef, ENGINE_VERSION,
 };
 use crate::world::tiles;
 use indexmap::{IndexMap, IndexSet};
@@ -288,6 +288,7 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         achievements: source.achievements.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         mail: source.mail.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         monsters: source.monsters.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        game_panels: source.game_panels.as_ref().map(|panels| namespace_panels(panels, pack_id, &local_ids)),
         strings: source.strings.clone(),
         extra: source.extra.clone(),
     };
@@ -316,6 +317,43 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         content.strings = strings;
     }
     ContentPack { manifest: pack.manifest.clone(), content, plugins: pack.plugins.clone(), extra: pack.extra.clone() }
+}
+
+/// A pack's game panels with their ids namespaced, and the items and actions their entries show
+/// or run when the pack defines them (flags are named as written: a plugin's are `packId:flag`).
+fn namespace_panels(panels: &[GamePanel], pack_id: &str, local_ids: &IndexSet<String>) -> Vec<GamePanel> {
+    use crate::schema::game_panel_entry_kinds as kinds;
+    panels
+        .iter()
+        .map(|panel| GamePanel {
+            id: namespaced_id(pack_id, &panel.id),
+            entries: panel
+                .entries
+                .iter()
+                .map(|entry| {
+                    let mut entry = entry.clone();
+                    if (entry.kind == kinds::ITEM || entry.kind == kinds::ACTION) && local_ids.contains(&entry.value) {
+                        entry.value = namespaced_id(pack_id, &entry.value);
+                    }
+                    entry
+                })
+                .collect(),
+            ..panel.clone()
+        })
+        .collect()
+}
+
+/// The game panels of the enabled packs with the `uiPanels` permission, in load order, namespaced
+/// (M9). The game shows them after its own.
+pub fn pack_game_panels(installs: &[PackInstallation]) -> Vec<GamePanel> {
+    let packs = resolve_pack_order(installs).packs;
+    packs
+        .iter()
+        .filter(|pack| {
+            pack.manifest.permissions.ui_panels && pack.content.game_panels.as_ref().is_some_and(|p| !p.is_empty())
+        })
+        .flat_map(|pack| namespace_pack(pack).content.game_panels.unwrap_or_default())
+        .collect()
 }
 
 /// Apply per-locale string tables from enabled packs to game content (M7 i18n). Authored text is
@@ -694,6 +732,15 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
     let mut content = base.clone();
     let mut strings: IndexMap<String, String> = IndexMap::new();
     for raw_pack in &packs {
+        if !raw_pack.manifest.permissions.ui_panels
+            && raw_pack.content.game_panels.as_ref().is_some_and(|p| !p.is_empty())
+        {
+            let id = &raw_pack.manifest.id;
+            problems.push(PackProblem::warning(
+                id,
+                format!("Pack '{id}' ships game panels but does not have the uiPanels permission — they are not shown"),
+            ));
+        }
         if content_blocked(raw_pack, &mut problems) {
             continue;
         }
@@ -954,6 +1001,19 @@ mod tests {
         assert_eq!(content.monsters[0].id, "county-fair:field-mouse");
         assert_eq!(content.monsters[0].drops[0].item_id, "county-fair:ribbon");
         assert_eq!(content.events[0].subject.as_deref(), Some("county-fair:fair-barn"));
+
+        // Its game panel shows with the uiPanels permission, namespaced; without it, the merge
+        // says so.
+        let panels = pack_game_panels(std::slice::from_ref(&install));
+        assert_eq!(panels.len(), 1);
+        assert_eq!(panels[0].id, "county-fair:fair-board");
+        assert_eq!(panels[0].entries[0].value, "county-fair:ribbon");
+        assert_eq!(panels[0].entries[1].value, "county-fair:barn-raised");
+        let mut hidden = install.clone();
+        hidden.pack.manifest.permissions.ui_panels = false;
+        assert!(pack_game_panels(std::slice::from_ref(&hidden)).is_empty());
+        let problems = merge_packs_into_content(&GameContent::default(), std::slice::from_ref(&hidden)).problems;
+        assert!(problems.iter().any(|p| p.message.contains("does not have the uiPanels permission")), "{problems:?}");
 
         // A second copy of the pack's content collides and keeps the first.
         let merged = merge_packs_into_content(&merged.content, std::slice::from_ref(&install));

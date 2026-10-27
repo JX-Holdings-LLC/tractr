@@ -845,6 +845,7 @@ dependencies = [
  "farm-ui",
  "gilrs",
  "hound",
+ "indexmap",
  "lewton",
  "serde",
  "serde_json",
@@ -860,6 +861,7 @@ version = "0.9.1"
 dependencies = [
  "farm-runtime",
  "farm-sim",
+ "indexmap",
  "serde",
  "serde_json",
  "sha2",

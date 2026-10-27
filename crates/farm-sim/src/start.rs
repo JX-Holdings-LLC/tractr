@@ -168,7 +168,14 @@ impl Presentation {
             custom_crops: project.custom_crops.clone(),
             player_visual: project.player_visual.clone(),
             graphics: project.graphics.clone(),
-            game_panels: project.game_panels.clone().unwrap_or_default(),
+            // The game's own panels, then those its packs add (M9).
+            game_panels: project
+                .game_panels
+                .iter()
+                .flatten()
+                .cloned()
+                .chain(crate::packs::pack_game_panels(&project.content_packs))
+                .collect(),
             show_made_with_credit: project.settings.show_made_with_credit,
         }
     }

@@ -75,7 +75,8 @@ type CartridgeCompiler =
               yield! optional "customCrops" project.CustomCrops (Encode.list SchemaJson.encodeCustomCropDefinition)
               yield! optional "playerVisual" project.PlayerVisual SchemaJson.encodeVisualRef
               yield! optional "graphics" project.Graphics SchemaJson.encodeGraphicsSettings
-              yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [])
+              // The game's own panels, then those its packs add (M9).
+              yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [] @ PackMerge.gamePanels project.ContentPacks)
               yield "showMadeWithCredit", JBool project.Settings.ShowMadeWithCredit ]
 
     /// Moves every base64 `data:` URL string inside `json` into `assets` (id → mime, bytes) and

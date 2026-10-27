@@ -33,6 +33,7 @@ farm-ui = { path = "../farm-ui" }
 farm-gpu = { path = "../farm-gpu", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+indexmap.workspace = true
 toml = { version = "1", default-features = false, features = ["parse", "display", "serde"] }
 # A game's own sounds and music (M2): Ogg Vorbis and WAV, decoded once when the game loads.
 lewton = "0.10"

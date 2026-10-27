@@ -3,7 +3,7 @@
     "id": "county-fair",
     "name": "County Fair",
     "version": "0.1.0",
-    "description": "Adds a fair barn, a ribbon collection, a prize bundle, an achievement, a letter and a field mouse: a pack bringing building, goals and combat content.",
+    "description": "Adds a fair barn, a ribbon collection, a prize bundle, an achievement, a letter, a field mouse and a fair board panel: a pack bringing building, goals, combat and interface content.",
     "author": "Farm Engine",
     "engineCompatibility": "*",
     "base": false,
@@ -12,7 +12,7 @@
     "permissions": {
       "hooks": [],
       "contentInject": true,
-      "uiPanels": false
+      "uiPanels": true
     }
   },
   "content": {
@@ -136,6 +136,17 @@
         "experience": 2
       }
     ],
+    "gamePanels": [
+      {
+        "id": "fair-board",
+        "title": "County Fair",
+        "entries": [
+          { "label": "Ribbons", "kind": "item", "value": "ribbon" },
+          { "label": "Barn raised", "kind": "flag", "value": "county-fair:barn-raised" },
+          { "label": "Day", "kind": "day", "value": "" }
+        ]
+      }
+    ],
     "events": [
       {
         "id": "barn-raised",
@@ -144,7 +155,10 @@
         "trigger": "build",
         "subject": "fair-barn",
         "conditions": [{ "type": "building", "buildingId": "fair-barn" }],
-        "outcomes": [{ "type": "message", "message": "The fair barn stands!" }],
+        "outcomes": [
+          { "type": "message", "message": "The fair barn stands!" },
+          { "type": "setFlag", "flagName": "county-fair:barn-raised" }
+        ],
         "active": true,
         "repeatable": false
       }

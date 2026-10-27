@@ -7,6 +7,7 @@
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
 use crate::events;
+use crate::hooks::{HookEvent, ItemSellHookPayload};
 use crate::inventory;
 use crate::messages;
 use crate::quests;
@@ -274,6 +275,13 @@ pub fn handle_sell_item(
 
     state.player.inventory = inventory;
     state.player.money = state.player.money.saturating_add(total);
+    ctx.emit(HookEvent::ItemSell(ItemSellHookPayload {
+        item_id: item_id.to_owned(),
+        quantity: quantity - remaining,
+        money: total,
+        via: "shop".to_owned(),
+        shop_id: Some(shop.id.clone()),
+    }));
     let mut effects = vec![Effect::say(message_levels::SUCCESS, messages::SOLD.with(&[&quantity, &item_name, &total]))];
     effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::SELL, &[item_id])));
     effects

@@ -30,6 +30,25 @@ pub mod hook_names {
     pub const ON_ACTION: &str = "onAction";
     /// A minigame resolved with a score in [0, 1].
     pub const ON_MINIGAME_RESOLVE: &str = "onMinigameResolve";
+    /// Items were sold, at a shop or from a shipping bin overnight (M9).
+    pub const ON_ITEM_SELL: &str = "onItemSell";
+    /// A fish was caught (M9).
+    pub const ON_FISH_CATCH: &str = "onFishCatch";
+    /// The player entered another scene, by any means (M9).
+    pub const ON_SCENE_ENTER: &str = "onSceneEnter";
+    /// The clock reached a full hour (M9).
+    pub const ON_TIME_OF_DAY: &str = "onTimeOfDay";
+    /// A building was finished or upgraded (M9).
+    pub const ON_BUILD: &str = "onBuild";
+    /// A bundle was completed (M9).
+    pub const ON_BUNDLE_COMPLETE: &str = "onBundleComplete";
+    /// An achievement was unlocked (M9).
+    pub const ON_ACHIEVEMENT_UNLOCK: &str = "onAchievementUnlock";
+    /// A monster was slain (M9).
+    pub const ON_MONSTER_SLAY: &str = "onMonsterSlay";
+    /// The game started or loaded with plugins attached: each plugin hears it alone, with the
+    /// data it saved (`saveData`). The engine never emits it; the plugin host does (M9).
+    pub const ON_LOAD: &str = "onLoad";
 
     pub const ALL: &[&str] = &[
         ON_DAY_START,
@@ -47,6 +66,15 @@ pub mod hook_names {
         ON_EFFECT,
         ON_ACTION,
         ON_MINIGAME_RESOLVE,
+        ON_ITEM_SELL,
+        ON_FISH_CATCH,
+        ON_SCENE_ENTER,
+        ON_TIME_OF_DAY,
+        ON_BUILD,
+        ON_BUNDLE_COMPLETE,
+        ON_ACHIEVEMENT_UNLOCK,
+        ON_MONSTER_SLAY,
+        ON_LOAD,
     ];
 }
 
@@ -164,6 +192,72 @@ pub struct MinigameResolveHookPayload {
     pub score: u64,
 }
 
+/// Items sold: at a shop (`via: "shop"`, with its id) or shipped overnight (`via: "shipping"`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemSellHookPayload {
+    pub item_id: String,
+    #[serde(with = "crate::units::count")]
+    pub quantity: u32,
+    /// The money they brought, in gold.
+    #[serde(with = "crate::units::money")]
+    pub money: i64,
+    pub via: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shop_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FishCatchHookPayload {
+    pub item_id: String,
+    pub fish_table_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SceneEnterHookPayload {
+    pub scene_id: String,
+    pub from_scene_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimeOfDayHookPayload {
+    /// The hour reached (past midnight the clock counts on: 24, 25, …).
+    #[serde(with = "crate::units::count")]
+    pub hour: u32,
+    #[serde(with = "crate::units::count")]
+    pub day: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildHookPayload {
+    /// The kind that now stands (an upgrade's new kind).
+    pub building_id: String,
+    pub scene_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleCompleteHookPayload {
+    pub bundle_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AchievementUnlockHookPayload {
+    pub achievement_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonsterSlayHookPayload {
+    pub monster_id: String,
+    pub scene_id: String,
+}
+
 /// One emitted hook: the hook name plus its typed payload, as `{"hook": …, "payload": …}`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "hook", content = "payload")]
@@ -198,6 +292,22 @@ pub enum HookEvent {
     Action(ActionHookPayload),
     #[serde(rename = "onMinigameResolve")]
     MinigameResolve(MinigameResolveHookPayload),
+    #[serde(rename = "onItemSell")]
+    ItemSell(ItemSellHookPayload),
+    #[serde(rename = "onFishCatch")]
+    FishCatch(FishCatchHookPayload),
+    #[serde(rename = "onSceneEnter")]
+    SceneEnter(SceneEnterHookPayload),
+    #[serde(rename = "onTimeOfDay")]
+    TimeOfDay(TimeOfDayHookPayload),
+    #[serde(rename = "onBuild")]
+    Build(BuildHookPayload),
+    #[serde(rename = "onBundleComplete")]
+    BundleComplete(BundleCompleteHookPayload),
+    #[serde(rename = "onAchievementUnlock")]
+    AchievementUnlock(AchievementUnlockHookPayload),
+    #[serde(rename = "onMonsterSlay")]
+    MonsterSlay(MonsterSlayHookPayload),
 }
 
 impl HookEvent {
@@ -219,6 +329,14 @@ impl HookEvent {
             Self::Effect(_) => hook_names::ON_EFFECT,
             Self::Action(_) => hook_names::ON_ACTION,
             Self::MinigameResolve(_) => hook_names::ON_MINIGAME_RESOLVE,
+            Self::ItemSell(_) => hook_names::ON_ITEM_SELL,
+            Self::FishCatch(_) => hook_names::ON_FISH_CATCH,
+            Self::SceneEnter(_) => hook_names::ON_SCENE_ENTER,
+            Self::TimeOfDay(_) => hook_names::ON_TIME_OF_DAY,
+            Self::Build(_) => hook_names::ON_BUILD,
+            Self::BundleComplete(_) => hook_names::ON_BUNDLE_COMPLETE,
+            Self::AchievementUnlock(_) => hook_names::ON_ACHIEVEMENT_UNLOCK,
+            Self::MonsterSlay(_) => hook_names::ON_MONSTER_SLAY,
         }
     }
 }

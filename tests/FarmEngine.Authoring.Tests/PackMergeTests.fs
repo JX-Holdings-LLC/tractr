@@ -246,3 +246,24 @@ let ``importing a pack writes its building goals and combat content into the pro
     // Importing it again keeps the first copy and says so.
     let _, again = PackMerge.applyToProject project (countyFair ())
     Assert.Contains(again, fun p -> p.Message.Contains "redefines building type 'county-fair:fair-barn'")
+
+[<Fact>]
+let ``packs with the uiPanels permission add game panels after the games own`` () =
+    let install = { PackInstallation.Default with Pack = countyFair () }
+    let panels = PackMerge.gamePanels [ install ]
+    Assert.Equal<string list>([ "county-fair:fair-board" ], panels |> List.map (fun p -> p.Id))
+    // Items and actions the pack defines are namespaced; flags are named as written.
+    Assert.Equal<string list>([ "county-fair:ribbon"; "county-fair:barn-raised"; "" ], panels.Head.Entries |> List.map (fun e -> e.Value))
+    // The game's own panels come first in what the game shows.
+    let project = { blank () with GamePanels = Some [ { GamePanel.Default with Id = "own"; Title = "Own" } ]; ContentPacks = [ install ] }
+    match CartridgeCompiler.PresentationSection project |> Json.get "gamePanels" with
+    | JArray shown -> Assert.Equal<string list>([ "own"; "county-fair:fair-board" ], shown |> List.choose (Json.get "id" >> Json.asString))
+    | other -> failwithf "expected a list, got %A" other
+    // Without the permission they are not shown, and the merge says why.
+    let hidden = { install with Pack = { install.Pack with Manifest = { install.Pack.Manifest with Permissions = { install.Pack.Manifest.Permissions with UiPanels = false } } } }
+    Assert.Empty(PackMerge.gamePanels [ hidden ])
+    let _, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ hidden ]
+    Assert.Contains(problems, fun p -> p.Message.Contains "does not have the uiPanels permission")
+    // Importing the pack writes its panel into the project.
+    let imported, _ = PackMerge.applyToProject (blank ()) (countyFair ())
+    Assert.Equal<string list>([ "county-fair:fair-board" ], imported.GamePanels |> Option.defaultValue [] |> List.map (fun p -> p.Id))

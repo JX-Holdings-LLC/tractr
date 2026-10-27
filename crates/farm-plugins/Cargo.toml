@@ -15,6 +15,7 @@ farm-sim = { path = "../farm-sim" }
 farm-runtime = { path = "../farm-runtime" }
 serde.workspace = true
 serde_json.workspace = true
+indexmap.workspace = true
 # Pure-Rust interpreter: no JIT (works where JITs are forbidden), fast instantiation. No `wat`
 # (text format) and no memory64; `validate` checks the guest when it loads; `deterministic`
 # canonicalizes NaNs. Its optimized builds must not have debug assertions (see the root

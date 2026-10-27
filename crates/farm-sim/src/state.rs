@@ -220,6 +220,7 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
         monsters: Vec::new(),
         next_monster: 0,
         slain: IndexMap::new(),
+        plugin_data: IndexMap::new(),
     };
 
     // Grids that don't match their scene's size (a hand-edited project, an import) are fixed

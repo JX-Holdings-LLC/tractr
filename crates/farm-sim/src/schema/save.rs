@@ -327,6 +327,9 @@ pub struct GameState {
     /// Monsters slain, by monster id (M7).
     #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
     pub slain: IndexMap<String, u32>,
+    /// What each plugin saved (`saveData`), by plugin id (`packId:pluginId`, M9).
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub plugin_data: IndexMap<String, Value>,
 }
 
 /// What events changed in a shop's stock (M3).

@@ -1374,6 +1374,8 @@ type RecordWith =
     [<Extension>]
     static member WithMonsters(record: PackContent, value: seq<MonsterDefinition> | null) : PackContent = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithGamePanels(record: PackContent, value: seq<GamePanel> | null) : PackContent = { record with GamePanels = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithStrings(record: PackContent, value: ((string * ((string * string) list)) list)) : PackContent = { record with Strings = value }
     [<Extension>]
     static member WithStrings(record: PackContent, value: seq<KeyValuePair<string, ((string * string) list)>>) : PackContent = { record with Strings = [ for pair in value -> pair.Key, pair.Value ] }

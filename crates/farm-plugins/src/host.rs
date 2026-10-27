@@ -16,6 +16,12 @@ pub trait PluginHost {
     /// returns. `payload_json` is the hook payload as JSON text.
     fn dispatch(&mut self, hook: &str, payload_json: &str) -> Vec<PluginDispatchResult>;
 
+    /// Dispatch `hook` to the one plugin `plugin_id`, if it is granted the hook (`onLoad`, which
+    /// each plugin hears with its own saved data). `None` when it has nothing to say.
+    fn dispatch_to(&mut self, _plugin_id: &str, _hook: &str, _payload_json: &str) -> Option<PluginDispatchResult> {
+        None
+    }
+
     /// Plugins that failed to initialize (they are disabled).
     fn init_errors(&self) -> &[PluginError];
 
@@ -521,6 +527,11 @@ impl PluginHost for WasmPluginHost {
             .filter_map(|index| self.call(index, hook, payload_json))
             .filter(|result| !result.mutations.is_empty() || !result.errors.is_empty())
             .collect()
+    }
+
+    fn dispatch_to(&mut self, plugin_id: &str, hook: &str, payload_json: &str) -> Option<PluginDispatchResult> {
+        let index = self.entries.iter().position(|entry| entry.spec.id == plugin_id)?;
+        self.call(index, hook, payload_json).filter(|result| !result.mutations.is_empty() || !result.errors.is_empty())
     }
 
     fn init_errors(&self) -> &[PluginError] {
