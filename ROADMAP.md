@@ -456,7 +456,8 @@ game on an alien planet would need to change.
 
 The milestones below are roughly in priority order. M1 came first because
 later milestones build on data-driven terrain, tools and items; M1 and M2 are
-done (0.7.0), M3, M4 and M11 (0.8.0), and M5, M6 and M7 (0.9.0). Each change to
+done (0.7.0), M3, M4 and M11 (0.8.0), M5, M6 and M7 (0.9.0), and M8 and M9
+(0.10.0). Each change to
 the content model goes through the usual path: F# records and checks, Rust
 serde types and parity tests, a schema version bump, and goldens. (Tractr
 has no project migrations since 0.5.0; add one when a schema change has
@@ -630,29 +631,47 @@ off until `settings.combat.enabled`.
 
 ### M8: Projects at full size
 
-- [ ] **Assets as files.** Images live as base64 `dataUrl` strings inside
-  the project JSON (`CustomAsset.DataUrl`), so a game with hundreds of
-  sprites makes a huge file that is slow to open and impossible to review in
-  git. Move to a project folder: project JSON plus one file per asset,
-  with single-file JSON import and export kept for sharing a project.
-- [ ] **Split project files** (scenes, NPCs, dialogue, items) so teams can
-  work on a game together through version control.
-- [ ] **Bigger and richer maps**: scenes above 256×256 tiles, more than the
-  three fixed layers, autotiling, and tall objects drawn in front of or
-  behind the player.
-- [ ] **Light sources** at night (lamps, glowing crops, windows), with the
-  GPU lighting pass from [Later](#later).
+Done in 0.10.0 ([Creator Guide](docs/CREATOR-GUIDE.md#1-start-a-project),
+[Bigger maps, layers and lights](docs/CREATOR-GUIDE.md#bigger-maps-layers-and-lights)).
+
+- [x] **Assets as files.** A project is a folder (`ProjectFolder` in F#,
+  stored by the editor's `ProjectStore`): `project.json` plus one file per
+  art or sound asset in `assets/`, instead of base64 `dataUrl` strings in the
+  project JSON. Single-file JSON export and import stay for sharing; Import
+  also takes a folder's `project.json`, and `farmc` builds a folder.
+  Projects saved before 0.10 move into a folder on their next save.
+- [x] **Split project files**: one file per scene, NPC, dialogue and item
+  (`scenes/`, `npcs/`, `dialogue/`, `items/`), a scene's tiles as a palette
+  and one row string per map row, and saves that write only the files that
+  changed, so teams can review and merge a game in version control.
+- [x] **Bigger and richer maps**: scenes up to 512×512 tiles; a scene's own
+  extra layers (`Scene.layers`, painted into `Tile.decor`), drawn over the
+  object layer or over the player; autotiling (`TerrainDefinition.autotile`:
+  a 16-frame `autotile` clip with art, edges without); and tall objects
+  (`TerrainDefinition.tall`) drawn y-sorted in front of or behind the player.
+- [x] **Light sources** at night: `light` on terrains, node types, machine
+  types, crops and building types (lamps, glowing crops, lit windows), drawn
+  as soft glows that grow as the day/night tint darkens. They use the draw
+  commands both renderers already had; the GPU light-map pass (true
+  relighting rather than glows) stays under [Later](#later).
 
 ### M9: More power for content packs
 
-- [ ] **Game panels from packs** (the `uiPanels` permission is reserved and
-  grants nothing yet).
-- [ ] **More hooks and mutations**: hooks for harvest, sale, craft, catch,
-  scene entry and time of day; mutations for the M3 outcomes; plugins that
-  add their own systems with saved state.
-- [ ] **Packs add M5–M7 content**: buildings, collections, bundles,
+Done in 0.10.0 ([Mods](docs/CREATOR-GUIDE.md#mods),
+[PLUGINS.md](docs/PLUGINS.md)).
+
+- [x] **Game panels from packs**: `permissions.uiPanels` lets a pack add
+  `content.gamePanels`, namespaced and shown after the game's own.
+- [x] **More hooks and mutations**: hooks for selling (`onItemSell`),
+  catching (`onFishCatch`), scene entry (`onSceneEnter`), the time of day
+  (`onTimeOfDay`), building, bundles, achievements and slaying, besides the
+  existing harvest and craft hooks; mutations for the M3 outcomes and the
+  M4, M6 and M7 ones (`setRelationship`, `sendMail`, `modifyHealth`); and
+  plugins that add their own systems with saved state (`saveData`, heard
+  back in `onLoad`).
+- [x] **Packs add M5–M7 content**: buildings, collections, bundles,
   achievements, letters and monsters in content packs, namespaced like the
-  rest (projects have them since 0.9.0; packs don't yet).
+  rest.
 
 ### M10: Playing together
 
@@ -713,7 +732,8 @@ What 0.7.0 left out of the world vocabulary, sound and cutscenes. Done in
   (they show in play, and their tiles are picked on the map); the toolbar
   keeps one row at 1280×800 when a game has Goals and Mail.
 - **Code signing** for the Windows installer (see `docs/RELEASING.md`).
-- **Player polish.** GPU effects: day/night lighting, season palette swaps
+- **Player polish.** GPU effects: day/night lighting (a light map for M8's
+  light sources, which are drawn as glows today), season palette swaps
   and weather particles as passes of the wgpu renderer (`farm-gpu` draws
   the CPU renderer's frames today and falls back to it; docs/PLAYER.md
   "Renderers"), each with a CPU equivalent or a clear "GPU only" rule;

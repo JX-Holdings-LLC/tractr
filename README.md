@@ -164,9 +164,12 @@ to get updates; your projects stay where they are.
 
 ![The Update Center in a development build](docs/media/update-center-not-installed.png)
 
-**Where are my projects?** In `%APPDATA%\Tractr\projects\`, one
-`.json` file per project. **File → Export Project JSON** writes a copy anywhere,
-and **File → Import Project JSON** reads one back.
+**Where are my projects?** In `%APPDATA%\Tractr\projects\`, one folder
+per project: `project.json`, a file per scene, NPC, dialogue and item, and the
+art and sounds as image and sound files (a project from before 0.10 is one
+`.json` file until its next save). **File → Export Project JSON** writes the
+whole project as one file anywhere, and **File → Import Project JSON** reads
+one back, or the `project.json` of a project folder.
 
 **A project doesn't open.** The editor says why. A project saved by a newer
 version of the editor (its schema version is newer than this engine supports)

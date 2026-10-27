@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.10.0
+
+Roadmap milestones M8 (projects at full size) and M9 (more power for content
+packs). See the Creator Guide's [Start a project](docs/CREATOR-GUIDE.md#1-start-a-project),
+[Bigger maps, layers and lights](docs/CREATOR-GUIDE.md#bigger-maps-layers-and-lights)
+and [Mods](docs/CREATOR-GUIDE.md#mods), and [PLUGINS.md](docs/PLUGINS.md).
+Every new field is optional: games made before play as they did.
+
+- **Projects as folders.** The editor keeps each project in a folder:
+  `project.json`, a file per scene, NPC, dialogue and item, and every art
+  and sound asset as its own image or sound file instead of base64 text in
+  the project. A scene's tiles are a palette and one line per map row, so a
+  big map stays small and a change to it reviews and merges by row in git.
+  A save writes only the files that changed and leaves other files in the
+  folder alone; the version it replaces is kept as one importable file.
+  Projects from before 0.10 open as they are and move into a folder on
+  their next save. Export and Import Project JSON stay for sharing, Import
+  also takes the `project.json` of a project folder, a folder copied into
+  the projects folder is picked up, and `farmc` compiles and exports a
+  folder.
+- **Bigger and richer maps.**
+  - Scenes can be up to 512×512 tiles (256 before).
+  - **Extra layers**: a scene lists its own layers beyond background,
+    overlay and object, painted with terrains from the map's Layer list; a
+    layer marked `above` is drawn over the player (roofs, treetops). They
+    are scenery and never block.
+  - **Autotiling**: an autotile terrain joins up with its neighbours: with
+    art, the frame of its `autotile` clip for its four neighbours; without,
+    its edges where it meets another terrain.
+  - **Tall objects**: an object terrain can rise up to 8 tiles above its
+    tile and is drawn y-sorted with the player, NPCs and nodes.
+- **Lights at night**: terrains, node types, machine types, crops and
+  building types can give light (a radius, a colour and a brightness): it
+  glows over the scene as the day/night tint darkens, in the game and in
+  Edit Mode's Sky preview at night. Lamps, braziers, glowing crops (once
+  grown), crystals (until broken), lava and lit windows. Both renderers draw
+  it with the soft glows they already had; a GPU light-map pass is still
+  under [Later](ROADMAP.md#later).
+- **More power for content packs.**
+  - Packs add **building types, collections, bundles, achievements, letters
+    and monsters**, namespaced with every reference between them, and an
+    event's trigger subject is namespaced too. Importing a pack writes them
+    into the project.
+  - **Game panels from packs**: `permissions.uiPanels` now lets a pack add
+    `content.gamePanels`, shown after the game's own.
+  - **Hooks**: `onItemSell` (shops and shipping bins), `onFishCatch`,
+    `onSceneEnter`, `onTimeOfDay` (each full hour), `onBuild`,
+    `onBundleComplete`, `onAchievementUnlock`, `onMonsterSlay` and
+    `onLoad`.
+  - **Mutations for the event outcomes**: `moveNpc`, `startCutscene`,
+    `setVariable`, `addVariable`, `addShopStock`, `removeShopStock`,
+    `placeNode`, `removeNode`, `placeMachine`, `removeMachine`,
+    `setRelationship`, `sendMail` and `modifyHealth`, each a capability in
+    `permissions.mutations` and scoped to the pack's own content unless
+    granted with `:any`.
+  - **Saved data**: `saveData` keeps up to 16 KiB of a plugin's own JSON in
+    the save, and each plugin hears it back in `onLoad`, so a plugin can run
+    a system of its own across saves. Keep changes carries it into the next
+    playtest.
+  - The county fair example pack (`fixtures/projects/county-fair-mod.json`)
+    shows the new content and a pack panel.
+- **Fuzzing** covers the new plugin mutations.
+
 ## 0.9.1
 
 The project moved to `JX-Holdings-LLC/tractr` and the repository was renamed. No

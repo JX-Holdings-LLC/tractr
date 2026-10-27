@@ -20,9 +20,21 @@ code. The editor shows this guide under **Help → Creator Guide** (F1).
 
 **File → Open Project** (Ctrl+O) lists your projects. They are saved
 automatically in the app's data folder (`%APPDATA%\Tractr` on
-Windows, `~/.config/Tractr` on Linux). **File → Export Project JSON**
-writes a backup you can keep anywhere, and **Import Project JSON** brings one
-back as a new project.
+Windows, `~/.config/Tractr` on Linux), one *project folder* each under
+`projects/`: `project.json`, a file per scene, NPC, dialogue and item
+(`scenes/`, `npcs/`, `dialogue/`, `items/`), and your art and sounds as
+ordinary image and sound files in `assets/`. A big game opens quickly, and a
+team can keep the folder in git and review and merge each other's changes:
+a scene's tiles are one line of the map per row. A save writes only the
+files that changed and leaves anything else you keep in the folder (a
+README, `.git`) alone. A project from before 0.10 moves into its folder the
+next time it is saved.
+
+**File → Export Project JSON** writes the whole project as one file you can
+keep anywhere or send to someone, and **Import Project JSON** brings one back
+as a new project; it also takes the `project.json` of a project folder (a
+teammate's checkout, say) and imports the whole folder. A project folder
+copied into `projects/` shows up in Open Project by itself.
 
 ## 2. Build the world in Edit Mode
 
@@ -67,7 +79,10 @@ The side panel holds the tools (drag its edge to make it wider):
   **Rectangle** fills a rectangle, **Fill area** floods connected tiles,
   **Pick** takes the terrain under the cursor as the brush, **Select** marks
   an area for **Copy selection** and **Paste on map**, and **Erase layer**
-  clears the chosen layer (Background, Overlay or Object).
+  clears the chosen layer (Background, Overlay or Object, or one of the
+  scene's extra layers, see [Bigger maps, layers and
+  lights](#bigger-maps-layers-and-lights)). Choose the brush first: a brush
+  picks its terrain's own layer, and the **Layer** list then switches it.
 - **Block** and **Unblock** set where the player can walk. **Player start**
   moves the player's starting tile.
 - **Place**: put an **NPC**, a gathering **Node** (trees, rocks, weeds), an
@@ -77,6 +92,7 @@ The side panel holds the tools (drag its edge to make it wider):
   start**, **Fill scene** with one tile, **Clear crops/items** and **Reset soil**.
   **Indoor (no weather)** marks a greenhouse or interior: rain doesn't water its
   soil, storms don't damage its crops, and no rain or snow falls on screen.
+  Scenes can be up to 512×512 tiles.
   Under the size boxes, the calculator shows the tile count and aspect ratio,
   and warns when a resize would cut tiles off. Shrinking moves the player
   start, NPCs (with their schedules and waypoints), animals, door arrivals,
@@ -221,6 +237,44 @@ vocabulary; change any of it in the Content tab.
 Problems lists a tile, item, node type or event that names a terrain, tool,
 kind or tier the game doesn't have, a tool whose key moves the player or
 opens a menu, and requirements that name what doesn't exist.
+
+### Bigger maps, layers and lights
+
+- *Size*: a scene can be up to 512 tiles a side (256 before 0.10). The
+  game only draws and builds what the camera shows, so a big map costs
+  little more than a small one to play.
+- *Extra layers*: besides background, overlay and object, a scene can have
+  its own layers. List them in the scene panel's **Extra layers (one per line)** box, one
+  per line: an id (`rugs`), or an id and `above` (`treetops above`) for a
+  layer drawn over the player and everything standing on the map (roofs, the
+  tops of trees, the railings of a bridge you walk under). **Save
+  surroundings** adds them to the map tools' **Layer** list, where you paint
+  them with any terrain like the fixed layers. They are scenery: they never
+  block the player and never hold crops. Removing a layer from the list
+  removes what was painted on it (one undo step).
+- *Autotiling*: tick a terrain's **Autotile** and it joins up with its
+  neighbours of the same terrain. Without art, the game draws its edges
+  where it meets another terrain, so a pond or a path has a shore or a
+  border. With art, give the terrain's asset an animation clip named
+  `autotile` with 16 frames: the game draws frame `n`, where `n` adds 1 when
+  the tile above is the same terrain, 2 for the one to the right, 4 below
+  and 8 to the left (frame 0 stands alone, frame 15 is surrounded).
+- *Tall objects*: an object-layer terrain's **Tall** (0 to 8) is how many
+  tiles it rises above its own tile: a tree, a lamp post, a high fence. It is
+  drawn standing, in front of what is behind it and behind what is in front,
+  so the player walks behind a tree's crown and in front of its trunk. Its
+  tile still blocks the way its terrain says.
+- *Lights*: terrains, node types, machine types, crops and building types
+  can have a **Light**: a radius in tiles (1 to 16), a colour (empty is a
+  warm lamp) and a brightness (1 to 100). At night the light glows over the
+  darkened scene: lamps and braziers (machines), glowing mushrooms (a crop,
+  once grown), glowing crystals (a node, until broken), lava (a terrain,
+  even on an extra layer) and a building's lit windows (once it stands). The
+  darker the day/night tint, the brighter the glow; at noon there is none.
+  The Sky box above the map shows them at **Night**.
+
+Problems lists a tile painted on a layer its scene doesn't have, a light
+outside its ranges and two extra layers with one id.
 
 ### Sound and music
 
@@ -544,7 +598,18 @@ qualities, crop mutations, cutscenes and heart events. Vocabulary keeps the
 ids it was written with (a pack's `lava` is painted as `lava`), and a pack
 replaces a built-in or an earlier pack's definition only when its manifest
 lists that id in `overrides`; otherwise Problems warns and the earlier one
-stays. Cutscenes and heart events are namespaced like other content.
+stays. Cutscenes and heart events are namespaced like other content, and so
+are the farm-building, goal and combat content packs can add: building
+types, collections, bundles, achievements, letters and monsters, with the
+references between them (a building's upgrade and materials, a builder
+shop's buildings, a collection's items, a letter's attachments, a monster's
+drops, a condition's or outcome's building, bundle, achievement, letter or
+monster, and the subject of an event's trigger).
+
+A pack with the UI panels permission (`permissions.uiPanels`) adds its
+own **game panels** (`content.gamePanels`, the same panels as the Interface
+tab's) to the game screen, after your game's own. Without the permission
+they are not shown, and Problems says so.
 
 A pack's plugins only change your game in the ways its manifest declares
 (`permissions.mutations`): by default they can show messages, play sounds
@@ -585,7 +650,8 @@ Game panels appear on the game screen: live counters, story status or action
 buttons. Give a panel a title, optionally a story flag that must be set before
 it shows, and entries: a label, what it shows (text, money, energy, day, an
 item count, a flag or an action button), and for items and actions a pick
-from your game's list.
+from your game's list. Installed packs with the UI panels permission add
+theirs after yours (see [Mods](#mods)).
 
 ### If something goes wrong
 
