@@ -44,6 +44,7 @@
     <Compile Include="ChecksExport.fs" />
     <Compile Include="Problems.fs" />
     <Compile Include="ProjectLoad.fs" />
+    <Compile Include="ProjectFolder.fs" />
     <Compile Include="AssetUsage.fs" />
     <Compile Include="ArtLibrary.fs" />
     <Compile Include="PackExport.fs" />
