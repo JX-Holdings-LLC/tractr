@@ -7,13 +7,17 @@
 
 use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
+use super::combat::MonsterDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
 use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
+use super::farm::BuildingDefinition;
 use super::fishing::FishTable;
+use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
+use super::interface::GamePanel;
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
 use super::relationships::HeartEvent;
@@ -35,8 +39,8 @@ pub struct PackPermissions {
     /// When off, none of the pack's content loads and the Problems panel warns if it has some;
     /// its plugins still run.
     pub content_inject: bool,
-    /// Reserved: declarative UI panels. Packs cannot add game panels yet, so this grants
-    /// nothing either way.
+    /// May add game panels (`content.gamePanels`, M9): shown after the game's own, whatever
+    /// `contentInject` says.
     pub ui_panels: bool,
     /// Mutation capabilities the pack's plugins may use: `message`, `giveItem` (own items),
     /// `giveItem:any`, `*`, … (`farm_plugins::MutationGrants`). `None`: the defaults, and the
@@ -208,6 +212,27 @@ pub struct PackContent {
     /// Heart events the pack adds or replaces (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heart_events: Option<Vec<HeartEvent>>,
+    /// Building types the pack adds or replaces (M9: the M5 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building_types: Option<Vec<BuildingDefinition>>,
+    /// Collections the pack adds or replaces (M9: the M6 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collections: Option<Vec<CollectionDefinition>>,
+    /// Bundles the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundles: Option<Vec<BundleDefinition>>,
+    /// Achievements the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub achievements: Option<Vec<AchievementDefinition>>,
+    /// Letters the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mail: Option<Vec<MailDefinition>>,
+    /// Monsters the pack adds or replaces (M9: the M7 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monsters: Option<Vec<MonsterDefinition>>,
+    /// Game panels the pack adds (M9), shown only with `permissions.uiPanels`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub game_panels: Option<Vec<GamePanel>>,
     /// Per-locale string tables for game text (M7 i18n). Keys address content fields:
     /// `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`,
     /// `quest:{id}:description`. The authored text is the fallback locale.
@@ -338,6 +363,97 @@ pub enum PluginMutation {
     PerformAction { action_id: String },
     #[serde(rename = "startMinigame")]
     StartMinigame { minigame_id: String },
+    // The M3, M4, M6 and M7 outcomes (M9), with the outcome's meaning.
+    /// Put an NPC on a tile (`sceneId` absent: the scene it is in).
+    #[serde(rename = "moveNpc")]
+    MoveNpc {
+        npc_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+    },
+    #[serde(rename = "startCutscene")]
+    StartCutscene { cutscene_id: String },
+    /// Set a variable to a number or a text (`boolean` is refused: that is `setFlag`).
+    #[serde(rename = "setVariable")]
+    SetVariable { variable: String, value: Value },
+    #[serde(rename = "addVariable")]
+    AddVariable {
+        variable: String,
+        /// int, -1_000_000..1_000_000.
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
+    #[serde(rename = "addShopStock")]
+    AddShopStock {
+        shop_id: String,
+        item_id: String,
+        /// Whole gold; absent: the item's price.
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::money::opt")]
+        price: Option<i64>,
+        /// Units a day; absent: no limit.
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+        daily_limit: Option<u32>,
+    },
+    #[serde(rename = "removeShopStock")]
+    RemoveShopStock { shop_id: String, item_id: String },
+    /// Place a node of `nodeTypeId` on tile (x, y) of `sceneId` (absent: the player's scene).
+    #[serde(rename = "placeNode")]
+    PlaceNode {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+        node_type_id: String,
+    },
+    #[serde(rename = "removeNode")]
+    RemoveNode {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+    },
+    #[serde(rename = "placeMachine")]
+    PlaceMachine {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+        machine_type_id: String,
+    },
+    #[serde(rename = "removeMachine")]
+    RemoveMachine {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+    },
+    /// One of [`super::relationship_statuses`].
+    #[serde(rename = "setRelationship")]
+    SetRelationship { npc_id: String, status: String },
+    #[serde(rename = "sendMail")]
+    SendMail { mail_id: String },
+    #[serde(rename = "modifyHealth")]
+    ModifyHealth {
+        /// int, -1000..1000.
+        #[serde(with = "crate::units::int")]
+        delta: i32,
+    },
+    /// Keep the plugin's own data in the save: any JSON, at most 16 KiB as text. The plugin
+    /// hears it again in `onLoad` (M9).
+    #[serde(rename = "saveData")]
+    SaveData { data: Value },
 }
 
 impl PluginMutation {
@@ -360,6 +476,20 @@ impl PluginMutation {
             Self::PlaySound { .. } => "playSound",
             Self::PerformAction { .. } => "performAction",
             Self::StartMinigame { .. } => "startMinigame",
+            Self::MoveNpc { .. } => "moveNpc",
+            Self::StartCutscene { .. } => "startCutscene",
+            Self::SetVariable { .. } => "setVariable",
+            Self::AddVariable { .. } => "addVariable",
+            Self::AddShopStock { .. } => "addShopStock",
+            Self::RemoveShopStock { .. } => "removeShopStock",
+            Self::PlaceNode { .. } => "placeNode",
+            Self::RemoveNode { .. } => "removeNode",
+            Self::PlaceMachine { .. } => "placeMachine",
+            Self::RemoveMachine { .. } => "removeMachine",
+            Self::SetRelationship { .. } => "setRelationship",
+            Self::SendMail { .. } => "sendMail",
+            Self::ModifyHealth { .. } => "modifyHealth",
+            Self::SaveData { .. } => "saveData",
         }
     }
 }

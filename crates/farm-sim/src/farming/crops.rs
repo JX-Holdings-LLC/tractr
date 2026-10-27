@@ -40,6 +40,7 @@ pub fn to_crop_definition(custom: &CustomCropDefinition) -> CropDefinition {
         yield_max: custom.yield_max,
         harvest_item_id: custom.harvest_item_id.clone(),
         requirements: custom.requirements.clone(),
+        light: custom.light.clone(),
         extra: custom.extra.clone(),
     }
 }
@@ -63,6 +64,7 @@ pub fn to_custom_crop_definition(crop: &CropDefinition) -> CustomCropDefinition 
         yield_max: crop.yield_max,
         harvest_item_id: crop.harvest_item_id.clone(),
         requirements: crop.requirements.clone(),
+        light: crop.light.clone(),
         extra: crop.extra.clone(),
     }
 }

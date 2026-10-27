@@ -93,7 +93,10 @@ module PackMerge =
              && List.isEmpty (defaultArg content.Terrains []) && List.isEmpty (defaultArg content.Tools [])
              && List.isEmpty (defaultArg content.ItemCategories []) && List.isEmpty (defaultArg content.CropQualities [])
              && List.isEmpty (defaultArg content.CropMutations []) && List.isEmpty (defaultArg content.Cutscenes [])
-             && List.isEmpty (defaultArg content.HeartEvents []))
+             && List.isEmpty (defaultArg content.HeartEvents []) && List.isEmpty (defaultArg content.BuildingTypes [])
+             && List.isEmpty (defaultArg content.Collections []) && List.isEmpty (defaultArg content.Bundles [])
+             && List.isEmpty (defaultArg content.Achievements []) && List.isEmpty (defaultArg content.Mail [])
+             && List.isEmpty (defaultArg content.Monsters []))
 
     /// `permissions.contentInject` is off: none of the pack's content loads (its plugins still
     /// run). A pack that ships content anyway gets a warning (Rust `packs::content_blocked`).
@@ -104,6 +107,24 @@ module PackMerge =
                 problems.Add(problem pack.Manifest.Id "warning"
                     (sprintf "Pack '%s' ships content but does not have the contentInject permission — its content is not loaded" pack.Manifest.Id))
             true
+
+    /// Whether the pack ships game panels it may not show (no `permissions.uiPanels`, M9): a
+    /// warning, so the Problems panel shows it (Rust `packs::merge_packs`).
+    let private panelsBlocked (pack: ContentPack) (problems: ResizeArray<PackProblem>) =
+        let ships = not (List.isEmpty (defaultArg pack.Content.GamePanels []))
+        if ships && not pack.Manifest.Permissions.UiPanels then
+            problems.Add(problem pack.Manifest.Id "warning"
+                (sprintf "Pack '%s' ships game panels but does not have the uiPanels permission — they are not shown" pack.Manifest.Id))
+            true
+        else not ships
+
+    /// The game panels of the enabled packs with the `uiPanels` permission, in load order and
+    /// namespaced (M9; Rust `packs::pack_game_panels`). The game shows them after its own.
+    let gamePanels (installs: PackInstallation list) : GamePanel list =
+        let packs, _ = resolveOrder installs
+        packs
+        |> List.filter (fun pack -> pack.Manifest.Permissions.UiPanels && not (List.isEmpty (defaultArg pack.Content.GamePanels [])))
+        |> List.collect (fun pack -> defaultArg (PackRules.namespacePack pack).Content.GamePanels [])
 
     /// Appends new definitions, replaces declared overrides and warns about undeclared collisions.
     let private mergeArray
@@ -132,9 +153,9 @@ module PackMerge =
         if List.isEmpty own && not (List.isEmpty (defaultArg added [])) then builtins () else own
 
     /// The largest scene side the engine accepts (Rust `MAX_SCENE_SIZE`).
-    let private maxSceneSize = 256.0
+    let private maxSceneSize = 512.0
 
-    /// Rust `tiles::normalize_scene_grid`: the scene's size clamped to 1..256 and its grid cut or
+    /// Rust `tiles::normalize_scene_grid`: the scene's size clamped to 1..512 and its grid cut or
     /// padded with grass to match. `None` when it already fits.
     let normalizeSceneGrid (scene: Scene) : Scene option =
         let width = max 1.0 (min maxSceneSize scene.Width)
@@ -159,6 +180,7 @@ module PackMerge =
         else
             let problems = ResizeArray<PackProblem>(orderProblems)
             let merge (content: GameContent) (rawPack: ContentPack) =
+                panelsBlocked rawPack problems |> ignore
                 if contentBlocked rawPack problems then content
                 else
                     let pack = PackRules.namespacePack rawPack
@@ -186,6 +208,12 @@ module PackMerge =
                                         pack.Manifest.Id crop.Id))
                         | None -> crops <- crops @ [ crop.Id, crop ]
                     let mergeInto label idOf target definitions = mergeArray pack problems overrides label idOf target definitions
+                    // Lists the content leaves out when empty (Rust `skip_serializing_if = "Vec::is_empty"`).
+                    let mergeOptional label idOf (target: 'T list option) (definitions: 'T list option) =
+                        match definitions with
+                        | None
+                        | Some [] -> target
+                        | Some definitions -> Some(mergeInto label idOf (defaultArg target []) definitions)
                     { content with
                         Crops = crops
                         Items = mergeInto "item" (fun (d: Item) -> d.Id) content.Items added.Items
@@ -223,7 +251,14 @@ module PackMerge =
                             mergeInto "crop mutation" (fun (d: CropMutationDefinition) -> d.Id)
                                 (seeded Builtin.cropMutations content.CropMutations added.CropMutations) (defaultArg added.CropMutations [])
                         Cutscenes = mergeInto "cutscene" (fun (d: Cutscene) -> d.Id) content.Cutscenes (defaultArg added.Cutscenes [])
-                        HeartEvents = mergeInto "heart event" (fun (d: HeartEvent) -> d.Id) content.HeartEvents (defaultArg added.HeartEvents []) }
+                        HeartEvents = mergeInto "heart event" (fun (d: HeartEvent) -> d.Id) content.HeartEvents (defaultArg added.HeartEvents [])
+                        // Building the farm, long-term goals and combat (M9).
+                        BuildingTypes = mergeOptional "building type" (fun (d: BuildingDefinition) -> d.Id) content.BuildingTypes added.BuildingTypes
+                        Collections = mergeOptional "collection" (fun (d: CollectionDefinition) -> d.Id) content.Collections added.Collections
+                        Bundles = mergeOptional "bundle" (fun (d: BundleDefinition) -> d.Id) content.Bundles added.Bundles
+                        Achievements = mergeOptional "achievement" (fun (d: AchievementDefinition) -> d.Id) content.Achievements added.Achievements
+                        Mail = mergeOptional "letter" (fun (d: MailDefinition) -> d.Id) content.Mail added.Mail
+                        Monsters = mergeOptional "monster" (fun (d: MonsterDefinition) -> d.Id) content.Monsters added.Monsters }
             let merged = List.fold merge baseContent packs
             merged, List.ofSeq problems
 
@@ -266,7 +301,7 @@ module PackMerge =
           RegrowthDays = crop.RegrowthDays
           CanRegrow = crop.CanRegrow; MultiTile = crop.MultiTile
           MutationChance = crop.MutationChance; YieldMin = crop.YieldMin
-          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Requirements = crop.Requirements; Extra = crop.Extra }
+          YieldMax = crop.YieldMax; HarvestItemId = crop.HarvestItemId; Requirements = crop.Requirements; Light = crop.Light; Extra = crop.Extra }
 
     /// A pack's art (`PackRules.packAssets`) added to the project's custom assets: assets with an
     /// id the project lacks are appended in pack order. An id the project already has keeps the
@@ -371,7 +406,17 @@ module PackMerge =
                     CropMutations =
                         vocabulary "crop mutation" (fun (d: CropMutationDefinition) -> d.Id) Builtin.cropMutations project.CropMutations content.CropMutations
                     Cutscenes = story "cutscene" (fun (d: Cutscene) -> d.Id) project.Cutscenes content.Cutscenes
-                    HeartEvents = story "heart event" (fun (d: HeartEvent) -> d.Id) project.HeartEvents content.HeartEvents }
+                    HeartEvents = story "heart event" (fun (d: HeartEvent) -> d.Id) project.HeartEvents content.HeartEvents
+                    BuildingTypes = story "building type" (fun (d: BuildingDefinition) -> d.Id) project.BuildingTypes content.BuildingTypes
+                    Collections = story "collection" (fun (d: CollectionDefinition) -> d.Id) project.Collections content.Collections
+                    Bundles = story "bundle" (fun (d: BundleDefinition) -> d.Id) project.Bundles content.Bundles
+                    Achievements = story "achievement" (fun (d: AchievementDefinition) -> d.Id) project.Achievements content.Achievements
+                    Mail = story "letter" (fun (d: MailDefinition) -> d.Id) project.Mail content.Mail
+                    Monsters = story "monster" (fun (d: MonsterDefinition) -> d.Id) project.Monsters content.Monsters
+                    // Its game panels, when it may show them (M9).
+                    GamePanels =
+                        if panelsBlocked rawPack problems then project.GamePanels
+                        else story "game panel" (fun (d: GamePanel) -> d.Id) project.GamePanels content.GamePanels }
 
             match content.PlayerStart with
             | None -> next, List.ofSeq problems

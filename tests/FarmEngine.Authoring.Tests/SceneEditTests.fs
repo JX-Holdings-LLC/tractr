@@ -375,12 +375,13 @@ let ``shrinking the starter farm leaves no out-of-bounds problems`` () =
         Assert.True(after.IsEmpty, sprintf "%dx%d:\n%s" width height (describe after))
 
 [<Fact>]
-let ``resize ignores sizes outside 1 to 256`` () =
+let ``resize ignores sizes outside 1 to 512`` () =
     let project = starter ()
     Assert.Same(project, project |> apply (ResizeScene(farmId, 0, 5)))
-    Assert.Same(project, project |> apply (ResizeScene(farmId, 257, 5)))
-    Assert.Same(project, project |> apply (ResizeScene(farmId, 5, 300)))
-    Assert.Equal(256.0, (farm (project |> apply (ResizeScene(farmId, 256, 12)))).Width)
+    Assert.Same(project, project |> apply (ResizeScene(farmId, 513, 5)))
+    Assert.Same(project, project |> apply (ResizeScene(farmId, 5, 600)))
+    // Bigger than the 256 tiles a side of before M8.
+    Assert.Equal(512.0, (farm (project |> apply (ResizeScene(farmId, 512, 12)))).Width)
 
 [<Fact>]
 let ``a resize keeps the rows that keep their width`` () =

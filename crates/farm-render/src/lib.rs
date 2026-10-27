@@ -44,16 +44,19 @@ pub use builtin_art::{BuiltinArt, BuiltinArtEntry, BuiltinArtManifest};
 pub use canvas2d::{compute_camera, entity_pixel_origin};
 pub use compose::{Composition, Upscale, WorldLayer};
 pub use css_color::Color;
-pub use draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
+pub use draw::{
+    light_add, light_factor, light_round, DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke,
+    MAX_LIGHTS,
+};
 pub use graphics::{apply_graphics, resolve_visual, ArtAsset, GraphicsSource};
 pub use images::{Image, ImageError, ImageId, ImageStore};
 #[cfg(feature = "raster")]
-pub use raster::{encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
+pub use raster::{device_lights, encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
 pub use shell::{editor_snapshot, preview_atmosphere, scene_atmosphere, shell_snapshot, SkyPreview, SnapshotOptions};
 pub use snapshot::{
-    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotEmote, SnapshotEntity, SnapshotItem,
-    SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain,
-    SnapshotTile, TileWindow, WorldSnapshot,
+    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotDecor, SnapshotEmote, SnapshotEntity,
+    SnapshotItem, SnapshotLight, SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotPlayer, SnapshotPop,
+    SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot, MAX_TALL,
 };
 #[cfg(feature = "raster")]
 pub use tiny_skia;

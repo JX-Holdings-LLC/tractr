@@ -757,6 +757,7 @@ fn plantable_terrains_draw_built_in_soil_and_unknown_ones_fall_back() {
         id: id.into(),
         color: color.into(),
         plantable,
+        ..Default::default()
     };
     // A plantable terrain draws exactly what soil draws (tilled, wet, fertilized).
     let mut clay = scene(&[&["clay", "clay"]]);

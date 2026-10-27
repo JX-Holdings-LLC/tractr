@@ -95,7 +95,7 @@ public sealed class AvaloniaProjectDialogs : IProjectDialogs
 
         var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import Project JSON",
+            Title = "Import Project (a project file, or the project.json of a project folder)",
             AllowMultiple = false,
             FileTypeFilter = [JsonFiles, FilePickerFileTypes.All],
         }).ConfigureAwait(true);
@@ -106,6 +106,20 @@ public sealed class AvaloniaProjectDialogs : IProjectDialogs
 
         try
         {
+            // The project.json of a project folder (M8) imports the whole folder.
+            if (files[0].Name == FarmEngine.Authoring.ProjectFolder.MainFile && files[0].TryGetLocalPath() is { } local
+                && Path.GetDirectoryName(local) is { } folder)
+            {
+                var (json, errors) = ProjectStore.ReadFolderAsJson(folder);
+                if (json is null)
+                {
+                    await ShowErrorsAsync(shell, $"{Path.GetFileName(folder)} could not be imported", errors).ConfigureAwait(true);
+                    return null;
+                }
+
+                return (Path.GetFileName(folder), json);
+            }
+
             return (files[0].Name, await PickedFiles.ReadTextAsync(files[0], PickedFiles.MaxProjectBytes, "project files").ConfigureAwait(true));
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)

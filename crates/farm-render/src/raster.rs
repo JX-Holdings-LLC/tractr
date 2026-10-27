@@ -24,7 +24,9 @@
 
 use crate::builtin_art::BuiltinArt;
 use crate::css_color::Color;
-use crate::draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
+use crate::draw::{
+    light_add, light_round, DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke, MAX_LIGHTS,
+};
 use crate::images::{mul_div_255_round, Image, ImageId, ImageStore};
 use crate::snapshot::WorldSnapshot;
 use crate::text;
@@ -584,6 +586,70 @@ fn fill_device_rect(
     }
 }
 
+/// [`DrawCmd::LightRect`]: the pixels whose centres are in `rect` (device space, cut to the
+/// clip) times the light map. Each light adds to the pixels its radius reaches, in list order, so
+/// every pixel sums the same terms in the same order as the GPU shader's loop.
+fn draw_light_rect(
+    target: &mut PixmapMut<'_>,
+    rect: &Rect,
+    ambient: Color,
+    lights: &[LightSpot],
+    transform: Transform,
+    clip: Option<ClipBox>,
+) {
+    let (left, top, right, bottom) = map_rect(transform, rect);
+    if !(left.is_finite() && top.is_finite() && right.is_finite() && bottom.is_finite()) {
+        return;
+    }
+    let edge = |v: f32| (v - 0.5).ceil().clamp(-(1 << 30) as f32, (1 << 30) as f32) as i64;
+    let Some(area) = pixel_box(target, edge(left), edge(top), edge(right), edge(bottom), clip) else { return };
+    let lights = device_lights(lights, transform);
+    let (width, height) = ((area.x1 - area.x0) as usize, (area.y1 - area.y0) as usize);
+    let mut sums = vec![[f32::from(ambient.r), f32::from(ambient.g), f32::from(ambient.b)]; width * height];
+    for light in &lights {
+        let reach = |centre: f32, low: i32, high: i32| {
+            let first = ((centre - light.radius - 0.5).floor() as i64).max(i64::from(low)) as i32;
+            let last = ((centre + light.radius + 0.5).ceil() as i64).min(i64::from(high)) as i32;
+            (first, last)
+        };
+        let (x0, x1) = reach(light.x, area.x0, area.x1);
+        let (y0, y1) = reach(light.y, area.y0, area.y1);
+        for y in y0..y1 {
+            for x in x0..x1 {
+                let index = (y - area.y0) as usize * width + (x - area.x0) as usize;
+                light_add(&mut sums[index], light, x as f32 + 0.5, y as f32 + 0.5);
+            }
+        }
+    }
+    let stride = target.width() as usize * 4;
+    let data = target.data_mut();
+    for row in 0..height {
+        let start = (area.y0 as usize + row) * stride + area.x0 as usize * 4;
+        for (column, out) in data[start..start + width * 4].chunks_exact_mut(4).enumerate() {
+            let factor = sums[row * width + column].map(light_round);
+            // tiny-skia's modulate (`div255`), so the ambient alone is exactly a ModulateRect.
+            for (channel, f) in out.iter_mut().zip(factor) {
+                *channel = ((u32::from(*channel) * f + 255) >> 8) as u8;
+            }
+        }
+    }
+}
+
+/// A light map's lights in device space (at most [`MAX_LIGHTS`]): centres mapped, radii scaled.
+pub fn device_lights(lights: &[LightSpot], transform: Transform) -> Vec<LightSpot> {
+    let scale = ((transform.sx * transform.sy) - (transform.kx * transform.ky)).abs().sqrt();
+    lights
+        .iter()
+        .take(MAX_LIGHTS)
+        .filter(|light| light.radius > 0.0 && light.strength > 0.0 && light.x.is_finite() && light.y.is_finite())
+        .map(|light| {
+            let mut centre = [Point::from_xy(light.x, light.y)];
+            transform.map_points(&mut centre);
+            LightSpot { x: centre[0].x, y: centre[0].y, radius: light.radius * scale, ..*light }
+        })
+        .collect()
+}
+
 /// An anti-aliased rounded rectangle (device pixels): each pixel's coverage comes from its
 /// centre's signed distance to the shape, so only the corners need square roots.
 fn fill_device_round_rect(
@@ -891,6 +957,9 @@ fn draw(
                 paint.blend_mode = BlendMode::Modulate;
                 target.fill_rect(rect, &paint, transform, clip.mask());
             }
+        }
+        DrawCmd::LightRect { rect, ambient, lights } => {
+            draw_light_rect(target, rect, *ambient, lights, transform, clip.clip);
         }
         DrawCmd::Text { text, x, y, font, size, color, stroke, align } => {
             let run = TextRun {

@@ -135,7 +135,7 @@ const DIRECTIONS: [&str; 5] = ["up", "down", "left", "right", "sideways"];
 /// A plugin mutation with arguments from `ids` (the schema bounds of `validate_mutations`, and
 /// past them).
 pub fn plugin_mutation(ids: &Ids, c: &mut Choices<'_>) -> PluginMutation {
-    match c.below(16) {
+    match c.below(30) {
         0 => PluginMutation::GiveItem { item_id: c.pick(&ids.items), quantity: c.int(1, 999) as u32 },
         1 => PluginMutation::TakeItem { item_id: c.pick(&ids.items), quantity: c.int(1, 999) as u32 },
         2 => PluginMutation::GiveMoney { amount: i64::from(c.int(1, 1_000_000)) },
@@ -160,7 +160,48 @@ pub fn plugin_mutation(ids: &Ids, c: &mut Choices<'_>) -> PluginMutation {
         12 => PluginMutation::StartDialogue { npc_id: c.pick(&ids.npcs), dialogue_id: None },
         13 => PluginMutation::PlaySound { sound_id: "sound".to_owned() },
         14 => PluginMutation::PerformAction { action_id: c.pick(&ids.actions) },
-        _ => PluginMutation::StartMinigame { minigame_id: c.pick(&ids.minigames) },
+        15 => PluginMutation::StartMinigame { minigame_id: c.pick(&ids.minigames) },
+        // The M3–M7 outcomes (M9).
+        16 => PluginMutation::MoveNpc {
+            npc_id: c.pick(&ids.npcs),
+            scene_id: (c.byte().is_multiple_of(2)).then(|| c.pick(&ids.scenes)),
+            x: c.int(-2, 300),
+            y: c.int(-2, 300),
+        },
+        17 => PluginMutation::StartCutscene { cutscene_id: c.pick(&ids.cutscenes) },
+        18 => PluginMutation::SetVariable {
+            variable: c.pick_str(&["var-a", "var-b"]),
+            value: if c.byte().is_multiple_of(2) { Value::from(c.int(-1000, 1000)) } else { Value::from("text") },
+        },
+        19 => PluginMutation::AddVariable { variable: c.pick_str(&["var-a", "var-b"]), amount: c.int(-1000, 1000) },
+        20 => PluginMutation::AddShopStock {
+            shop_id: c.pick(&ids.shops),
+            item_id: c.pick(&ids.items),
+            price: (c.byte().is_multiple_of(2)).then(|| i64::from(c.int(0, 1000))),
+            daily_limit: (c.byte().is_multiple_of(2)).then(|| c.int(1, 999) as u32),
+        },
+        21 => PluginMutation::RemoveShopStock { shop_id: c.pick(&ids.shops), item_id: c.pick(&ids.items) },
+        22 => PluginMutation::PlaceNode {
+            scene_id: (c.byte().is_multiple_of(2)).then(|| c.pick(&ids.scenes)),
+            x: c.int(-2, 40),
+            y: c.int(-2, 40),
+            node_type_id: c.pick_str(&["node-tree", "node-rock", "node-missing"]),
+        },
+        23 => PluginMutation::RemoveNode { scene_id: None, x: c.int(-2, 40), y: c.int(-2, 40) },
+        24 => PluginMutation::PlaceMachine {
+            scene_id: None,
+            x: c.int(-2, 40),
+            y: c.int(-2, 40),
+            machine_type_id: c.pick(&ids.machines),
+        },
+        25 => PluginMutation::RemoveMachine { scene_id: None, x: c.int(-2, 40), y: c.int(-2, 40) },
+        26 => PluginMutation::SetRelationship {
+            npc_id: c.pick(&ids.npcs),
+            status: c.pick_str(&["single", "dating", "engaged", "married", "rival"]),
+        },
+        27 => PluginMutation::SendMail { mail_id: c.pick_str(&["mail-a", "mail-missing"]) },
+        28 => PluginMutation::ModifyHealth { delta: c.int(-1000, 1000) },
+        _ => PluginMutation::SaveData { data: serde_json::json!({ "n": c.int(0, 100) }) },
     }
 }
 

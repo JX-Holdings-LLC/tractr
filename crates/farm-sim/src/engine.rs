@@ -6,7 +6,7 @@ use crate::effects::{message_levels, Effect};
 use crate::engine_types::{CommandRules, Effects, EngineContext};
 use crate::farming::farming_actions;
 use crate::game_time::SleepOptions;
-use crate::hooks::{CommandHookPayload, HookEvent};
+use crate::hooks::{CommandHookPayload, HookEvent, SceneEnterHookPayload, TimeOfDayHookPayload};
 use crate::messages;
 use crate::npcs::npc_movement;
 use crate::schema::{event_triggers, EventOutcome, GameState, MoveIntent, OutcomeKind, PluginMutation};
@@ -29,11 +29,24 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
         }
     }
     ctx.emit(HookEvent::Command(CommandHookPayload { command_type: command.type_name().to_owned() }));
+    let scene_before = state.player.scene_id.clone();
     let mut effects = run_command(ctx, state, command);
     objects::forget_gone(ctx, state);
     // Items found and achievements reached (M6).
     effects.extend(goals::after_step(ctx, state));
+    emit_scene_enter(ctx, state, scene_before);
     effects
+}
+
+/// `onSceneEnter` when the step left the player in another scene than it found them in (doors,
+/// warps, the mine, fainting, sleeping, outcomes: however they got there, M9).
+fn emit_scene_enter(ctx: &EngineContext, state: &GameState, scene_before: String) {
+    if state.player.scene_id != scene_before {
+        ctx.emit(HookEvent::SceneEnter(SceneEnterHookPayload {
+            scene_id: state.player.scene_id.clone(),
+            from_scene_id: scene_before,
+        }));
+    }
 }
 
 fn run_command(ctx: &EngineContext, state: &mut GameState, command: &Command) -> Effects {
@@ -165,7 +178,7 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
     }
 }
 
-/// A whole-gold plugin amount as an outcome `amount` (thousandths).
+/// A whole plugin amount (gold, a variable's step, health) as an outcome `amount` (thousandths).
 fn money_amount(gold: i64) -> i64 {
     gold.saturating_mul(i64::from(units::MILLI_ONE))
 }
@@ -271,7 +284,115 @@ fn apply_plugin_mutation(
 
         PluginMutation::PerformAction { action_id } => events::perform_action(ctx, state, action_id).effects,
         PluginMutation::StartMinigame { minigame_id } => extensibility::handle_start_minigame(ctx, state, minigame_id),
+
+        // The M3–M7 outcomes (M9): the outcome executor, so they mean exactly what the outcome
+        // means (including failing soft on unknown ids).
+        PluginMutation::MoveNpc { npc_id, scene_id, x, y } => run_outcome(
+            state,
+            EventOutcome {
+                npc_id: Some(npc_id.clone()),
+                scene_id: scene_id.clone(),
+                x: Some(*x),
+                y: Some(*y),
+                ..EventOutcome::of(OutcomeKind::MoveNpc)
+            },
+        ),
+        PluginMutation::StartCutscene { cutscene_id } => run_outcome(
+            state,
+            EventOutcome { cutscene_id: Some(cutscene_id.clone()), ..EventOutcome::of(OutcomeKind::StartCutscene) },
+        ),
+        PluginMutation::SetVariable { variable, value } => {
+            let (amount, text) = match value {
+                serde_json::Value::String(text) => (None, Some(text.clone())),
+                other => {
+                    (Some(<units::SignedMilli as units::Unit>::from_authoring(other.as_f64().unwrap_or(0.0))), None)
+                }
+            };
+            run_outcome(
+                state,
+                EventOutcome {
+                    variable: Some(variable.clone()),
+                    amount,
+                    text,
+                    ..EventOutcome::of(OutcomeKind::SetVariable)
+                },
+            )
+        }
+        PluginMutation::AddVariable { variable, amount } => run_outcome(
+            state,
+            EventOutcome {
+                variable: Some(variable.clone()),
+                amount: Some(money_amount(i64::from(*amount))),
+                ..EventOutcome::of(OutcomeKind::AddVariable)
+            },
+        ),
+        PluginMutation::AddShopStock { shop_id, item_id, price, daily_limit } => run_outcome(
+            state,
+            EventOutcome {
+                shop_id: Some(shop_id.clone()),
+                item_id: Some(item_id.clone()),
+                amount: price.map(money_amount),
+                item_quantity: *daily_limit,
+                ..EventOutcome::of(OutcomeKind::AddShopStock)
+            },
+        ),
+        PluginMutation::RemoveShopStock { shop_id, item_id } => run_outcome(
+            state,
+            EventOutcome {
+                shop_id: Some(shop_id.clone()),
+                item_id: Some(item_id.clone()),
+                ..EventOutcome::of(OutcomeKind::RemoveShopStock)
+            },
+        ),
+        PluginMutation::PlaceNode { scene_id, x, y, node_type_id } => run_outcome(
+            state,
+            EventOutcome {
+                node_type_id: Some(node_type_id.clone()),
+                ..tile_outcome(OutcomeKind::PlaceNode, scene_id, *x, *y)
+            },
+        ),
+        PluginMutation::RemoveNode { scene_id, x, y } => {
+            run_outcome(state, tile_outcome(OutcomeKind::RemoveNode, scene_id, *x, *y))
+        }
+        PluginMutation::PlaceMachine { scene_id, x, y, machine_type_id } => run_outcome(
+            state,
+            EventOutcome {
+                machine_type_id: Some(machine_type_id.clone()),
+                ..tile_outcome(OutcomeKind::PlaceMachine, scene_id, *x, *y)
+            },
+        ),
+        PluginMutation::RemoveMachine { scene_id, x, y } => {
+            run_outcome(state, tile_outcome(OutcomeKind::RemoveMachine, scene_id, *x, *y))
+        }
+        PluginMutation::SetRelationship { npc_id, status } => run_outcome(
+            state,
+            EventOutcome {
+                npc_id: Some(npc_id.clone()),
+                status: Some(status.clone()),
+                ..EventOutcome::of(OutcomeKind::SetRelationship)
+            },
+        ),
+        PluginMutation::SendMail { mail_id } => run_outcome(
+            state,
+            EventOutcome { mail_id: Some(mail_id.clone()), ..EventOutcome::of(OutcomeKind::SendMail) },
+        ),
+        PluginMutation::ModifyHealth { delta } => run_outcome(
+            state,
+            EventOutcome {
+                amount: Some(money_amount(i64::from(*delta))),
+                ..EventOutcome::of(OutcomeKind::ModifyHealth)
+            },
+        ),
+        PluginMutation::SaveData { data } => {
+            state.plugin_data.insert(plugin_id.to_owned(), units::canonical_json(data.clone()));
+            vec![]
+        }
     }
+}
+
+/// An outcome on tile (x, y) of `scene_id` (absent: the player's scene).
+fn tile_outcome(kind: OutcomeKind, scene_id: &Option<String>, x: i32, y: i32) -> EventOutcome {
+    EventOutcome { scene_id: scene_id.clone(), tile_x: Some(x), tile_y: Some(y), ..EventOutcome::of(kind) }
 }
 
 /// `modifyFriendship` from a plugin: whole points, clamped to the friendship range.
@@ -318,6 +439,13 @@ pub fn modal_open(state: &GameState) -> bool {
 }
 
 fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
+    let scene_before = state.player.scene_id.clone();
+    let effects = advance_single_tick_inner(ctx, state);
+    emit_scene_enter(ctx, state, scene_before);
+    effects
+}
+
+fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effects {
     // An invalid day window would collapse the player every tick (#24).
     let time = game_time::time_config(&ctx.content.settings.time);
     state.clock.tick = state.clock.tick.saturating_add(1);
@@ -350,6 +478,10 @@ fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let after_minute = units::whole_minute(state.clock.time_minutes);
     if after_minute > before_minute {
         advance_npcs_per_minute(ctx, state, before_minute, after_minute);
+        // `onTimeOfDay` for each full hour the clock just reached (M9).
+        for hour in (before_minute / 60 + 1)..=(after_minute / 60) {
+            ctx.emit(HookEvent::TimeOfDay(TimeOfDayHookPayload { hour, day: state.clock.day }));
+        }
         crafting::settle_machines(ctx, state);
         effects.extend(events::evaluate_events(ctx, state, "tick", None));
         // `time` events whose minute the clock just reached (M3).

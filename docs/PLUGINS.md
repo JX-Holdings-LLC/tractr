@@ -43,7 +43,7 @@ the pack. The Mods tab's install review shows them.
 | `hooks` | none | The hooks the pack's plugins may hear. A plugin hears the hooks in its own `hooks` list that the manifest also lists. |
 | `mutations` | see below | What the plugins may answer with. |
 | `contentInject` | `true` | Whether the pack's content (definitions, `playerStart`, string tables) loads. When it is `false`, nothing of it loads, the Problems panel warns if the pack has content, and its plugins still run. |
-| `uiPanels` | `false` | Reserved. Packs cannot add game panels yet, so this allows nothing. |
+| `uiPanels` | `false` | Whether the pack's game panels (`content.gamePanels`) show on the game screen, after the game's own ([Game panels](#game-panels)). Without it they are not shown, and the Problems panel warns if the pack has some. It does not depend on `contentInject`. |
 | `minigames` | none | The minigame kinds the pack's plugins may define ([Minigames](#minigames)). A plugin defines the kinds in its own `minigames` list that the manifest also lists. |
 
 ### Mutation capabilities
@@ -55,6 +55,8 @@ Each entry of `permissions.mutations` allows one mutation type:
 | `"message"`, `"playSound"` | Messages and sounds. |
 | `"giveMoney"`, `"takeMoney"`, `"modifyEnergy"`, `"grantXp"`, `"setWeather"` | That change, with any value the schema allows. |
 | `"setFlag"`, `"giveItem"`, `"takeItem"`, `"modifyFriendship"`, `"startQuest"`, `"warpPlayer"`, `"startDialogue"`, `"performAction"`, `"startMinigame"` | That change, for the pack's **own** content only (see below). `"giveItem:own"` means the same. |
+| `"moveNpc"`, `"startCutscene"`, `"setVariable"`, `"addVariable"`, `"addShopStock"`, `"removeShopStock"`, `"placeNode"`, `"removeNode"`, `"placeMachine"`, `"removeMachine"`, `"setRelationship"`, `"sendMail"` | The event outcome of that name ([Outcome mutations](#outcome-mutations)), for the pack's own content only, like the row above. |
+| `"modifyHealth"` | The `modifyHealth` outcome, with any value the schema allows. |
 | `"giveItem:any"` (any of the types above with `:any`) | That change for any id: your game's content, base content and other packs. |
 | `"*"` | Everything, with any ids. |
 
@@ -73,9 +75,120 @@ their own content, and their answers to `onEffect` and `onCommand` are
 dropped: those hooks are for watching unless the pack declares what its
 plugins do.
 
-**Never allowed:** flags starting with `event:`. The engine keeps one-shot
-events there (`event:<id>:fired`), so a plugin could re-arm or switch off the
-game's events.
+**Never allowed:** flags (and variables, which are flags) starting with
+`event:`. The engine keeps one-shot events there (`event:<id>:fired`), so a
+plugin could re-arm or switch off the game's events.
+
+**Always allowed:** `saveData` ([Saved data](#saved-data)): it keeps only the
+plugin's own data.
+
+### Outcome mutations
+
+These run the event outcome of the same name (Creator Guide, [Event
+logic](CREATOR-GUIDE.md#event-logic)), with its meaning: an unknown id does
+nothing, a node or machine goes only on a free tile, and so on. Coordinates
+are tiles of the largest scene (0 to 511); a `sceneId` left out means the
+scene the NPC is in (`moveNpc`) or the player's (the tile mutations).
+
+| Mutation | Fields |
+|---|---|
+| `moveNpc` | `npcId`, `sceneId` (optional), `x`, `y` |
+| `startCutscene` | `cutsceneId` |
+| `setVariable` | `variable`, `value`: a number (at most 1e9 either way) or a string (at most 4096 characters). `true`/`false` is `setFlag`. |
+| `addVariable` | `variable`, `amount`: an integer, -1,000,000 to 1,000,000 |
+| `addShopStock` | `shopId`, `itemId`, `price` (optional, whole gold, 0 to 1,000,000; absent: the item's price), `dailyLimit` (optional, 1 to 999) |
+| `removeShopStock` | `shopId`, `itemId` |
+| `placeNode` / `removeNode` | `sceneId` (optional), `x`, `y`; `nodeTypeId` for `placeNode` |
+| `placeMachine` / `removeMachine` | `sceneId` (optional), `x`, `y`; `machineTypeId` for `placeMachine` |
+| `setRelationship` | `npcId`, `status`: `single`, `dating`, `engaged` or `married` |
+| `sendMail` | `mailId`: the letter arrives the next morning |
+| `modifyHealth` | `delta`: an integer, -1000 to 1000 (with combat on) |
+
+Variables count toward the plugin's 256 different flags per session.
+
+## Hooks
+
+A plugin hears the hooks in its `hooks` list that the manifest's
+`permissions.hooks` also lists. Payloads are plain JSON objects, keys in the
+order below.
+
+| Hook | When | Payload |
+|---|---|---|
+| `onDayStart`, `onDayEnd` | Each morning; each night before it | `{ day, season, year }` |
+| `onSeasonChange` | A new season | `{ season, previousSeason, year }` |
+| `onYearStart` | A new year | `{ year }` |
+| `onTimeOfDay` | The clock reaches a full hour (the hours past midnight count on: 24, 25, …) | `{ hour, day }` |
+| `onSceneEnter` | The player is in another scene than before the step: a door, a warp, the mine, fainting, sleeping, an outcome | `{ sceneId, fromSceneId }` |
+| `onCropHarvest` | A crop was harvested | `{ cropType, quantity, quality }` |
+| `onItemSell` | Items sold at a shop, or from a shipping bin overnight (one per item and quality) | `{ itemId, quantity, money, via, shopId }`: `via` is `shop` (with `shopId`) or `shipping` |
+| `onRecipeCraft` | A recipe was crafted | `{ recipeId }` |
+| `onFishCatch` | A fish was caught | `{ itemId, fishTableId }` |
+| `onResourceGather` | A node broke and dropped items | `{ nodeTypeId, drops: [{ itemId, quantity }] }` |
+| `onNPCInteract`, `onGiftGiven`, `onRelationshipChange` | Talking to an NPC, a gift, a friendship change | `{ npcId }`; `{ npcId, itemId, reaction }`; `{ npcId, friendship }` |
+| `onBuild` | A building was finished or upgraded | `{ buildingId, sceneId }` |
+| `onBundleComplete` | A bundle was completed | `{ bundleId }` |
+| `onAchievementUnlock` | An achievement was unlocked | `{ achievementId }` |
+| `onMonsterSlay` | A monster was slain | `{ monsterId, sceneId }` |
+| `onAction`, `onMinigameResolve` | A creator action ran; a minigame ended | `{ actionId }`; `{ minigameId, score }` |
+| `onWeatherRoll` | The night rolled the weather ([Timing](#timing)) | `{ weatherId, day }` |
+| `onCommand`, `onEffect` | Every player command; every effect of a step | `{ commandType }`; `{ effectType }` |
+| `onLoad` | The game started or was loaded with the plugin attached ([Saved data](#saved-data)) | `{ data }` |
+
+## Saved data
+
+A plugin can run a system of its own across saves: its JavaScript
+variables start over whenever the game loads, but what it answers with
+`saveData` is kept in the save.
+
+```js
+var visits = 0;
+api.on('onLoad', p => { visits = p.data ? p.data.visits : 0; return []; });
+api.on('onSceneEnter', p => {
+  visits++;
+  return [{ type: 'saveData', data: { visits: visits } }, { type: 'message', text: 'Visit ' + visits }];
+});
+```
+
+- `{ type: 'saveData', data }` keeps `data` (any JSON, at most 16 KiB as
+  compact text) as the plugin's saved data, replacing what it saved before.
+  It needs no capability: it touches nothing but the plugin's own data.
+- `onLoad` is heard by each plugin alone, with `{ data }`: what it saved in
+  this game, or `null`. It comes when a new game starts and when a save
+  loads (and when Play Mode starts a playtest, whose **Keep changes**
+  carries the data into the next one), before any other hook.
+  Answers to it apply before the first tick like any other. A plugin rebuilt
+  after a strike (its JavaScript state starts over) hears it again before
+  the next tick, with what it has saved up to then.
+- The saved data is part of the game state, so it is in the command log and
+  replays the same; a plugin's data stays when its pack is turned off and
+  comes back with it.
+
+## Game panels
+
+A pack with `permissions.uiPanels` can add game panels, the same panels the
+editor's Interface tab makes: a title, an optional flag that must be set
+before the panel shows, and entries (`text`, `money`, `energy`, `day`, an
+`item` count, a `flag` or an `action` button).
+
+```json
+"content": {
+  "gamePanels": [{
+    "id": "fair-board", "title": "County Fair",
+    "entries": [
+      { "label": "Ribbons", "kind": "item", "value": "ribbon" },
+      { "label": "Barn raised", "kind": "flag", "value": "county-fair:barn-raised" }
+    ]
+  }]
+}
+```
+
+Panel ids are namespaced (`county-fair:fair-board`), and so are the items and
+actions entries name when the pack defines them. Flags are named as written:
+a plugin's own flags are `packId:flag`, so a panel can show what the pack's
+plugins keep there. The game shows the panels of its enabled packs, in load
+order, after its own. [fixtures/projects/county-fair-mod.json](../fixtures/projects/county-fair-mod.json)
+is an example pack with a panel and the building, goal and combat content packs
+can add.
 
 A refused or malformed mutation is dropped; the others in the same answer
 still run. The plugin errors list (the editor's Play Mode drawer, the game's
@@ -275,8 +388,11 @@ twice the fuel its first start used.
 - Plugin JavaScript state (variables kept between calls) is not saved. It
   starts over when the game loads, when Play Mode restarts, and when the
   plugin is rebuilt after a strike, so a plugin's answers can depend on the
-  session's history. Replays are not affected: the command log, with the
-  plugins' answers in it, is the replay.
+  session's history; what must last goes in `saveData` and comes back in
+  `onLoad` ([Saved data](#saved-data)), also after a rebuild: a plugin
+  rebuilt after a strike hears `onLoad` again before the next tick, with
+  the data it has saved so far. Replays are not affected: the command log, with the plugins'
+  answers in it, is the replay.
 - In the web player (`farm-wasm`) plugins run on the calling thread (a page
   that wants them off the main thread runs the whole player in a Worker), and
   the budgets above were measured natively: wasmi inside WebAssembly is

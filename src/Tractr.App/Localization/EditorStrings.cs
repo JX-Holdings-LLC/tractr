@@ -222,6 +222,11 @@ public static class EditorStrings
         ["scene.monstersName"] = "Scene monsters",
         ["scene.monstersTip"] = "With combat on: a monster id and how many, and optionally where (slime 3, bat 2 at 4,4, slime 3 in 2,2-10,8). Saved with the surroundings.",
         ["scene.monstersPlaceholder"] = "slime 3 in 2,2-10,8",
+        ["scene.layers"] = "Extra layers (one per line)",
+        ["scene.layersName"] = "Scene layers",
+        ["scene.layersTip"] = "Layers beyond background, overlay and object, painted with terrains from the Layer list: an id, then above for one drawn over the player (roofs, treetops). Scenery: they never block. Saved with the surroundings.",
+        ["scene.layersPlaceholder"] = "treetops above",
+        ["map.extraLayer"] = "Layer: {0}",
     };
 
     private static readonly Dictionary<string, string> Es = new(StringComparer.Ordinal)
@@ -411,6 +416,11 @@ public static class EditorStrings
         ["scene.monstersName"] = "Monstruos de la escena",
         ["scene.monstersTip"] = "Con el combate encendido: el id de un monstruo y cuántos, y si se quiere dónde (slime 3, bat 2 at 4,4, slime 3 in 2,2-10,8). Se guarda con el entorno.",
         ["scene.monstersPlaceholder"] = "slime 3 in 2,2-10,8",
+        ["scene.layers"] = "Capas extra (una por línea)",
+        ["scene.layersName"] = "Capas de la escena",
+        ["scene.layersTip"] = "Capas además del fondo, la superposición y el objeto, pintadas con terrenos de la lista Capa: un id, y above para una que se dibuja sobre el jugador (tejados, copas de árboles). Son decorado: nunca bloquean. Se guarda con el entorno.",
+        ["scene.layersPlaceholder"] = "treetops above",
+        ["map.extraLayer"] = "Capa: {0}",
     };
 
     private static readonly Dictionary<string, Dictionary<string, string>> Tables = new(StringComparer.Ordinal)

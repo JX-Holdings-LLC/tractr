@@ -12,10 +12,11 @@ let private usageText =
     String.concat
         Environment.NewLine
         [ "Usage:"
-          "  farmc compile <project.json> --out <game.cart>"
-          "  farmc export <project.json> [--target windows-x64|linux-x64|web]... --out <dir> [--templates <dir>] [--no-archive]"
+          "  farmc compile <project> --out <game.cart>"
+          "  farmc export <project> [--target windows-x64|linux-x64|web]... --out <dir> [--templates <dir>] [--no-archive]"
           "  farmc --help | --version"
           ""
+          "<project> is a project folder (or the project.json in one) or a single-file project."
           "Options may come in any order. export does what Export Game does in the editor"
           "(docs/EXPORT.md). Without --target it exports the project's saved targets. Templates"
           "come from --templates, then the FARM_PLAYER_TEMPLATES variable, then players/ next to"
@@ -71,9 +72,26 @@ let rec parseArguments (args: string list) (acc: Arguments) : Result<Arguments, 
     | option :: _ when isOption option -> Error(sprintf "Unknown option %s." option)
     | positional :: rest -> parseArguments rest { acc with Positional = positional :: acc.Positional }
 
-/// The loaded project, or why it could not be loaded.
+/// A project folder's files (`ProjectFolder.load`): the project files under `folder`, by their
+/// `/`-separated paths.
+let private readFolder (folder: string) : Collections.Generic.IReadOnlyDictionary<string, byte[]> =
+    let files = Collections.Generic.Dictionary<string, byte[]>(StringComparer.Ordinal)
+    for file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories) do
+        let relative = Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/')
+        if ProjectFolder.isProjectFile relative then files.[relative] <- File.ReadAllBytes file
+    files
+
+/// The loaded project (a folder, the `project.json` of one, or a single file), or why it could
+/// not be loaded.
 let private load (projectPath: string) : Result<GameProject, string list> =
-    let loaded = ProjectJson.loadProjectText (File.ReadAllText projectPath)
+    let folder =
+        if Directory.Exists projectPath then Some projectPath
+        elif Path.GetFileName projectPath = ProjectFolder.MainFile then Option.ofObj (Path.GetDirectoryName(Path.GetFullPath projectPath))
+        else None
+    let loaded =
+        match folder with
+        | Some folder -> ProjectFolder.load (readFolder folder)
+        | None -> ProjectJson.loadProjectText (File.ReadAllText projectPath)
     if not loaded.Ok then Error(List.ofSeq loaded.Errors)
     else
         match loaded.Data with

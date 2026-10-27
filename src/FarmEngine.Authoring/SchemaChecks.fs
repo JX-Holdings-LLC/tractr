@@ -478,6 +478,39 @@ module SchemaChecks =
           | None -> ()
           | Some rng -> yield! rngState (Some rng.Algorithm) (Some rng.S) ]
 
+    /// A whole number in `min`..`max`, as a lint (Problems), never a load error.
+    let private lintWhole path (value: float) (min: float) (max: float) =
+        if not (isInteger value && value >= min && value <= max) then lint path $"Expected a whole number from {num min} to {num max}, received {num value}" else []
+
+    /// A light (M8): radius 1–16 tiles, brightness 1–100 percent, a colour or none.
+    let private light path (value: LightSource option) =
+        match value with
+        | None -> []
+        | Some light ->
+            [ yield! lintWhole (path + ".radius") light.Radius 1.0 16.0
+              yield! lintWhole (path + ".brightness") light.Brightness 1.0 100.0
+              if light.Color.Length > 0 then yield! color (path + ".color") light.Color ]
+
+    /// Lights, tall terrains and extra scene layers (M8).
+    let private richerMaps (p: GameProject) =
+        [ yield!
+              each (defaultArg p.Terrains []) (fun t terrain ->
+                  [ yield! light $"terrains.{t}.light" terrain.Light
+                    match terrain.Tall with
+                    | Some tall -> yield! lintWhole $"terrains.{t}.tall" tall 0.0 8.0
+                    | None -> () ])
+          yield! each p.NodeTypes (fun n node -> light $"nodeTypes.{n}.light" node.Light)
+          yield! each p.MachineTypes (fun m machine -> light $"machineTypes.{m}.light" machine.Light)
+          yield! each (defaultArg p.CustomCrops []) (fun c crop -> light $"customCrops.{c}.light" crop.Light)
+          yield! each (defaultArg p.BuildingTypes []) (fun b building -> light $"buildingTypes.{b}.light" building.Light)
+          yield!
+              each p.Scenes (fun s scene ->
+                  let layers = defaultArg scene.Layers []
+                  each layers (fun l layer ->
+                      [ yield! nonEmpty $"scenes.{s}.layers.{l}.id" layer.Id
+                        if layers |> List.take l |> List.exists (fun earlier -> earlier.Id = layer.Id) then
+                            yield! lint $"scenes.{s}.layers.{l}.id" $"Duplicate layer id '{layer.Id}'" ])) ]
+
     /// Every finding, parse- and lint-level interleaved in the C# order.
     let private findings (p: GameProject) : Finding list =
         [ yield! integer "schemaVersion" p.SchemaVersion
@@ -492,6 +525,7 @@ module SchemaChecks =
                     | Some l -> yield! look $"scenes.{s}.atmosphere" l
                     | None -> () ])
           yield! vocabulary p
+          yield! richerMaps p
           yield! cutscenes p
           yield! player p
           yield! items p

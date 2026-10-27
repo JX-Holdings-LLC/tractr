@@ -229,6 +229,40 @@ module SettingsForms =
             | _ -> fail ())
         |> List.ofArray
 
+    /// A scene's extra layers as text (M8), one per line: the id, then `above` for a layer drawn
+    /// over the player.
+    let sceneLayersText (layers: SceneLayer list) : string =
+        layers |> List.map (fun layer -> if layer.Above = Some true then layer.Id + " above" else layer.Id) |> String.concat "\n"
+
+    /// A scene's extra layers from their text (`sceneLayersText`). A line that is not an id, or
+    /// an id with anything but `above` after it, or an id given twice, is refused with a
+    /// `FormatException` naming the line. A layer that was there keeps its name and undeclared keys.
+    let parseSceneLayers (existing: SceneLayer list) (text: string | null) : SceneLayer list =
+        let lines =
+            (match text with
+             | null -> ""
+             | text -> text).Split('\n')
+            |> Array.mapi (fun i line -> i + 1, line.Trim())
+            |> Array.filter (fun (_, line) -> line.Length > 0)
+        let layers =
+            lines
+            |> Array.map (fun (number, line) ->
+                let parts = line.Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries)
+                let fail () = raise (FormatException(sprintf "Layers line %d needs a layer id, then above for a layer over the player, like treetops above." number))
+                let id, above =
+                    match parts with
+                    | [| id |] -> id, false
+                    | [| id; "above" |] -> id, true
+                    | _ -> fail ()
+                if id.Contains ':' then fail ()
+                match existing |> List.tryFind (fun layer -> layer.Id = id) with
+                | Some layer -> { layer with Above = (if above then Some true else None) }
+                | None -> { SceneLayer.Default with Id = id; Name = id; Above = (if above then Some true else None) })
+            |> List.ofArray
+        match layers |> List.countBy (fun layer -> layer.Id) |> List.tryFind (fun (_, count) -> count > 1) with
+        | Some(id, _) -> raise (FormatException(sprintf "The layer \"%s\" is listed twice." id))
+        | None -> layers
+
     /// A weather overlay from its fields. An empty id, a style that is not one of
     /// `OverlayStyles` or a colour that is not one is refused with a `FormatException` naming it.
     let overlay (id: string) (style: string) (particles: string) (density: float) (speed: float) (tint: string | null) : WeatherOverlayDefinition =

@@ -4,14 +4,16 @@
 //! their own:
 //!
 //! - **overnight**: the `sleep` command on the starter farm grown to 64×64 tiles full of crops,
-//!   and to 256×256 full of crops plus 50 machines with a job finishing overnight;
+//!   to 256×256 full of crops plus 50 machines with a job finishing overnight, and to 512×512
+//!   (the largest scene) full of crops plus 100 machines;
 //! - **save**: a mid-size state (the starter farm grown to 64×64 with a 32×32 crop field and ten
 //!   machines) serialized as stable JSON (the part that runs on the simulation thread), as a
 //!   binary `FGSV` save and as a JSON save, and saved then loaded again;
 //! - **cart load**: every cartridge in `fixtures/golden/cartridges`, parsed, and started as a new
 //!   game in the player;
 //! - **frame**: a gameplay frame of the starter farm at 1280×800 and 1920×1080, composed by the
-//!   CPU rasterizer;
+//!   CPU rasterizer, on its own map, grown to 256×256 and to 512×512, and at night under 64 lamps
+//!   (the light map);
 //! - **npcs**: 1,000 ticks of the starter farm grown to 64×64 with 20 NPCs walking to a
 //!   schedule target, once reachable and once walled off (every path search fails and explores
 //!   the whole farm, every game minute).
@@ -28,7 +30,7 @@ use farm_cart::LoadedCartridge;
 use farm_player::{InputEvent, Player, PlayerOptions};
 use farm_sim::farming::crops;
 use farm_sim::schema::{
-    soil_states, tile_types, MachineProcessing, Npc, NpcScheduleEntry, NpcState, Scene, Tile, TileMachine,
+    soil_states, tile_types, LightSource, MachineProcessing, Npc, NpcScheduleEntry, NpcState, Scene, Tile, TileMachine,
 };
 use farm_sim::{stable_json, Command, EngineContext, GameContent, GameProject, GameState};
 use std::hint::black_box;
@@ -44,6 +46,9 @@ pub mod budgets {
     pub const OVERNIGHT_64: f64 = 2.0;
     /// Overnight pass, 256×256 farm, full crops + 50 machines.
     pub const OVERNIGHT_256: f64 = 30.0;
+    /// Overnight pass, 512×512 farm (the largest scene), full crops + 100 machines: four times
+    /// the tiles of [`OVERNIGHT_256`], so four times its budget.
+    pub const OVERNIGHT_512: f64 = 120.0;
     /// Save: serializing the state on the simulation thread.
     pub const SAVE: f64 = 1.0;
     /// What CI holds the save to until the serializer meets [`SAVE`]: about 1.5x the stable
@@ -102,6 +107,8 @@ impl FarmSpec {
     pub const OVERNIGHT_64: Self = Self { size: 64, crop_field: 64, machines: 0 };
     /// Overnight, 256×256 farm, full crops + 50 machines.
     pub const OVERNIGHT_256: Self = Self { size: 256, crop_field: 256, machines: 50 };
+    /// Overnight, 512×512 farm (the largest scene), full crops + 100 machines.
+    pub const OVERNIGHT_512: Self = Self { size: 512, crop_field: 512, machines: 100 };
     /// The mid-size state the save scenarios write: a 64×64 farm, a 32×32 crop field, ten
     /// machines.
     pub const MID_SIZE: Self = Self { size: 64, crop_field: 32, machines: 10 };
@@ -321,12 +328,51 @@ pub fn gameplay_player(width: u32, height: u32) -> Player {
 /// The starter farm with its farm scene grown to [`FarmSpec::OVERNIGHT_256`] (65,536 tiles, full
 /// crops, 50 machines), in play: a frame must cost what the camera shows, not the scene's size.
 pub fn large_map_player(width: u32, height: u32) -> Player {
+    grown_player(FarmSpec::OVERNIGHT_256, width, height)
+}
+
+/// [`large_map_player`] on the largest scene, [`FarmSpec::OVERNIGHT_512`] (262,144 tiles).
+pub fn largest_map_player(width: u32, height: u32) -> Player {
+    grown_player(FarmSpec::OVERNIGHT_512, width, height)
+}
+
+fn grown_player(spec: FarmSpec, width: u32, height: u32) -> Player {
     let mut project = starter_project();
     let content = farm_sim::create_content_from_project(&project);
     let scene_id = project.player.scene_id.clone();
     let scene = project.scenes.iter_mut().find(|scene| scene.id == scene_id).expect("the player's scene exists");
-    grow_scene(scene, &content, FarmSpec::OVERNIGHT_256);
+    grow_scene(scene, &content, spec);
     playing(project, width, height)
+}
+
+/// The minute of day of [`night_player`] (22:00, fully dark).
+pub const NIGHT_MINUTE: u32 = 22 * 60;
+
+/// The starter farm grown to 64×64 grass at [`NIGHT_MINUTE`], with a lamp (a machine that gives
+/// light, radius 4) every 5 tiles: more lamps in view than a light map takes, so every frame
+/// draws the most a light map takes (64).
+pub fn night_player(width: u32, height: u32) -> Player {
+    let mut project = starter_project();
+    let lamp = project.machine_types.first_mut().expect("the starter farm has machine types");
+    lamp.light = Some(LightSource { radius: 4, brightness: 80, ..LightSource::default() });
+    let lamp_id = lamp.id.clone();
+    let content = farm_sim::create_content_from_project(&project);
+    let scene_id = project.player.scene_id.clone();
+    let scene = project.scenes.iter_mut().find(|scene| scene.id == scene_id).expect("the player's scene exists");
+    grow_scene(scene, &content, FarmSpec { size: 64, crop_field: 0, machines: 0 });
+    for tile in scene.tiles.iter_mut().flatten().filter(|tile| tile.x % 5 == 2 && tile.y % 5 == 2) {
+        tile.collision = true;
+        tile.machine = Some(TileMachine { type_id: lamp_id.clone(), ..TileMachine::default() });
+    }
+    let options = PlayerOptions { seed: Some(SEED.to_owned()), ..PlayerOptions::embedded() };
+    let mut player = Player::from_project(project, options).unwrap_or_else(|error| panic!("{error:?}"));
+    let mut state = player.state().expect("the game started").clone();
+    state.clock.time_minutes = NIGHT_MINUTE * farm_sim::units::MINUTE;
+    player.replace_state(state).unwrap_or_else(|error| panic!("{error:?}"));
+    for frame in 0..30 {
+        render_frame(&mut player, frame, width, height);
+    }
+    player
 }
 
 /// A player in play at a frame size ([`gameplay_player`], [`large_map_player`]).
@@ -499,6 +545,17 @@ pub fn scenarios(scale: f64) -> Vec<Scenario> {
                 },
             )
         }),
+        Scenario::new("overnight/512x512 full crops + 100 machines", Some(budgets::OVERNIGHT_512), runs(8), |runs| {
+            let farm = farm(FarmSpec::OVERNIGHT_512);
+            sample(
+                runs,
+                || farm.state.clone(),
+                |mut state| {
+                    sleep(&farm.ctx, &mut state);
+                    state
+                },
+            )
+        }),
         // Missed by about 2.5x: see `budgets::SAVE_CEILING`.
         Scenario::new("save/stable json (sim thread)", Some(budgets::SAVE), runs(60), |runs| {
             let save = SaveFixture::mid_size();
@@ -548,12 +605,14 @@ pub fn scenarios(scale: f64) -> Vec<Scenario> {
     }
     // High resolutions are reported only: the CPU path recomposes the whole frame (see
     // docs/PLAYER.md "How a frame is drawn").
-    let frames: [(&str, u32, u32, Option<f64>, NewPlayer); 5] = [
+    let frames: [(&str, u32, u32, Option<f64>, NewPlayer); 7] = [
         ("", 1280, 800, Some(budgets::CPU_FRAME), gameplay_player),
         ("", 1920, 1080, Some(budgets::CPU_FRAME), gameplay_player),
         ("", 2560, 1600, None, gameplay_player),
         ("", 3840, 2160, None, gameplay_player),
         (" 256x256 map", 1920, 1080, Some(budgets::CPU_FRAME), large_map_player),
+        (" 512x512 map", 1920, 1080, Some(budgets::CPU_FRAME), largest_map_player),
+        (" night 64 lights", 1920, 1080, Some(budgets::CPU_FRAME), night_player),
     ];
     for (map, width, height, budget, player) in frames {
         all.push(Scenario::new(format!("frame/{width}x{height}{map} cpu"), budget, runs(120), move |runs| {
@@ -617,6 +676,14 @@ mod tests {
         let large = large_map_player(320, 200);
         let scene = large.session().unwrap().current_scene().unwrap();
         assert_eq!((scene.width, scene.height), (256, 256));
+        let largest = largest_map_player(320, 200);
+        let scene = largest.session().unwrap().current_scene().unwrap();
+        assert_eq!((scene.width, scene.height), (512, 512));
+
+        // The night frame is at night.
+        let night = night_player(320, 200);
+        let minute = night.state().unwrap().clock.time_minutes / farm_sim::units::MINUTE;
+        assert!((NIGHT_MINUTE..NIGHT_MINUTE + 60).contains(&minute), "{minute}");
 
         assert!(!scenarios(1.0).is_empty());
         assert_eq!(median(&[3.0, 1.0, 2.0]), 2.0);

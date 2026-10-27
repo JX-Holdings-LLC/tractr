@@ -5,8 +5,8 @@
 use crate::content_builtin;
 use crate::inventory;
 use crate::schema::{
-    is_engine_compatible, ContentPack, CropDefinition, GameContent, GameProject, GameState, InventorySlot, Item,
-    PackContent, PackInstallation, SavePackRef, ENGINE_VERSION,
+    is_engine_compatible, ContentPack, CropDefinition, GameContent, GamePanel, GameProject, GameState, InventorySlot,
+    Item, PackContent, PackInstallation, SavePackRef, ENGINE_VERSION,
 };
 use crate::world::tiles;
 use indexmap::{IndexMap, IndexSet};
@@ -97,10 +97,20 @@ const REFERENCE_KEYS: &[&str] = &[
     "minigameId",
     "useActionId",
     "cutsceneId",
+    // M5–M7 content (M9).
+    "buildingId",
+    "upgradeOf",
+    "collectionId",
+    "bundleId",
+    "achievementId",
+    "mailId",
+    "monsterId",
 ];
 
-/// Keys holding arrays of reference strings.
-const REFERENCE_LIST_KEYS: &[&str] = &["prerequisites"];
+/// Keys holding arrays of reference strings: quest prerequisites, a shop's buildings and
+/// animals, a species' housing and a collection's items (M9). Objects in such a list (a bundle's
+/// lines) are rewritten like any other value.
+const REFERENCE_LIST_KEYS: &[&str] = &["prerequisites", "buildings", "animals", "housing", "items"];
 
 fn rewrite_references(value: &Value, pack_id: &str, local_ids: &IndexSet<String>) -> Value {
     match value {
@@ -120,7 +130,7 @@ fn rewrite_references(value: &Value, pack_id: &str, local_ids: &IndexSet<String>
                         list.iter()
                             .map(|item| match item {
                                 Value::String(s) if local_ids.contains(s) => Value::String(namespaced_id(pack_id, s)),
-                                other => other.clone(),
+                                other => rewrite_references(other, pack_id, local_ids),
                             })
                             .collect(),
                     ),
@@ -187,6 +197,12 @@ fn collection_ids(content: &PackContent) -> Vec<&str> {
     ids.extend(content.minigames.iter().map(|d| d.id.as_str()));
     ids.extend(content.cutscenes.iter().flatten().map(|d| d.id.as_str()));
     ids.extend(content.heart_events.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.building_types.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.collections.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.bundles.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.achievements.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.mail.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.monsters.iter().flatten().map(|d| d.id.as_str()));
     ids
 }
 
@@ -243,7 +259,17 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         npcs: rewrite_collection(&source.npcs, pack_id, &local_ids),
         dialogues: rewrite_collection(&source.dialogues, pack_id, &local_ids),
         scenes: rewrite_collection(&source.scenes, pack_id, &local_ids),
-        events: rewrite_collection(&source.events, pack_id, &local_ids),
+        events: rewrite_collection(&source.events, pack_id, &local_ids)
+            .into_iter()
+            .map(|mut event| {
+                // A trigger's subject names the pack's crop, item, NPC, quest, building, bundle,
+                // achievement or monster like a reference (M9).
+                if let Some(subject) = event.subject.as_mut().filter(|subject| local_ids.contains(subject.as_str())) {
+                    *subject = namespaced_id(pack_id, subject);
+                }
+                event
+            })
+            .collect(),
         quests: rewrite_collection(&source.quests, pack_id, &local_ids),
         shops: rewrite_collection(&source.shops, pack_id, &local_ids),
         actions: rewrite_collection(&source.actions, pack_id, &local_ids),
@@ -256,6 +282,13 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         crop_mutations: source.crop_mutations.clone(),
         cutscenes: source.cutscenes.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         heart_events: source.heart_events.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        building_types: source.building_types.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        collections: source.collections.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        bundles: source.bundles.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        achievements: source.achievements.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        mail: source.mail.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        monsters: source.monsters.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        game_panels: source.game_panels.as_ref().map(|panels| namespace_panels(panels, pack_id, &local_ids)),
         strings: source.strings.clone(),
         extra: source.extra.clone(),
     };
@@ -284,6 +317,43 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         content.strings = strings;
     }
     ContentPack { manifest: pack.manifest.clone(), content, plugins: pack.plugins.clone(), extra: pack.extra.clone() }
+}
+
+/// A pack's game panels with their ids namespaced, and the items and actions their entries show
+/// or run when the pack defines them (flags are named as written: a plugin's are `packId:flag`).
+fn namespace_panels(panels: &[GamePanel], pack_id: &str, local_ids: &IndexSet<String>) -> Vec<GamePanel> {
+    use crate::schema::game_panel_entry_kinds as kinds;
+    panels
+        .iter()
+        .map(|panel| GamePanel {
+            id: namespaced_id(pack_id, &panel.id),
+            entries: panel
+                .entries
+                .iter()
+                .map(|entry| {
+                    let mut entry = entry.clone();
+                    if (entry.kind == kinds::ITEM || entry.kind == kinds::ACTION) && local_ids.contains(&entry.value) {
+                        entry.value = namespaced_id(pack_id, &entry.value);
+                    }
+                    entry
+                })
+                .collect(),
+            ..panel.clone()
+        })
+        .collect()
+}
+
+/// The game panels of the enabled packs with the `uiPanels` permission, in load order, namespaced
+/// (M9). The game shows them after its own.
+pub fn pack_game_panels(installs: &[PackInstallation]) -> Vec<GamePanel> {
+    let packs = resolve_pack_order(installs).packs;
+    packs
+        .iter()
+        .filter(|pack| {
+            pack.manifest.permissions.ui_panels && pack.content.game_panels.as_ref().is_some_and(|p| !p.is_empty())
+        })
+        .flat_map(|pack| namespace_pack(pack).content.game_panels.unwrap_or_default())
+        .collect()
 }
 
 /// Apply per-locale string tables from enabled packs to game content (M7 i18n). Authored text is
@@ -540,6 +610,12 @@ struct MergeSlots<'a> {
     crop_mutations: &'a mut Vec<crate::schema::CropMutationDefinition>,
     cutscenes: &'a mut Vec<crate::schema::Cutscene>,
     heart_events: &'a mut Vec<crate::schema::HeartEvent>,
+    building_types: &'a mut Vec<crate::schema::BuildingDefinition>,
+    collections: &'a mut Vec<crate::schema::CollectionDefinition>,
+    bundles: &'a mut Vec<crate::schema::BundleDefinition>,
+    achievements: &'a mut Vec<crate::schema::AchievementDefinition>,
+    mail: &'a mut Vec<crate::schema::MailDefinition>,
+    monsters: &'a mut Vec<crate::schema::MonsterDefinition>,
 }
 
 fn merge_pack(
@@ -590,6 +666,18 @@ fn merge_pack(
     );
     merger.merge_array(c.cutscenes.as_deref().unwrap_or_default(), |d| &d.id, slots.cutscenes, "cutscene");
     merger.merge_array(c.heart_events.as_deref().unwrap_or_default(), |d| &d.id, slots.heart_events, "heart event");
+    // Building the farm, long-term goals and combat (M9).
+    merger.merge_array(
+        c.building_types.as_deref().unwrap_or_default(),
+        |d| &d.id,
+        slots.building_types,
+        "building type",
+    );
+    merger.merge_array(c.collections.as_deref().unwrap_or_default(), |d| &d.id, slots.collections, "collection");
+    merger.merge_array(c.bundles.as_deref().unwrap_or_default(), |d| &d.id, slots.bundles, "bundle");
+    merger.merge_array(c.achievements.as_deref().unwrap_or_default(), |d| &d.id, slots.achievements, "achievement");
+    merger.merge_array(c.mail.as_deref().unwrap_or_default(), |d| &d.id, slots.mail, "letter");
+    merger.merge_array(c.monsters.as_deref().unwrap_or_default(), |d| &d.id, slots.monsters, "monster");
 }
 
 /// Whether a pack declares any content: definitions, a player start or string tables.
@@ -644,6 +732,15 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
     let mut content = base.clone();
     let mut strings: IndexMap<String, String> = IndexMap::new();
     for raw_pack in &packs {
+        if !raw_pack.manifest.permissions.ui_panels
+            && raw_pack.content.game_panels.as_ref().is_some_and(|p| !p.is_empty())
+        {
+            let id = &raw_pack.manifest.id;
+            problems.push(PackProblem::warning(
+                id,
+                format!("Pack '{id}' ships game panels but does not have the uiPanels permission — they are not shown"),
+            ));
+        }
         if content_blocked(raw_pack, &mut problems) {
             continue;
         }
@@ -694,6 +791,12 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
                 crop_mutations: &mut content.crop_mutations,
                 cutscenes: &mut content.cutscenes,
                 heart_events: &mut content.heart_events,
+                building_types: &mut content.building_types,
+                collections: &mut content.collections,
+                bundles: &mut content.bundles,
+                achievements: &mut content.achievements,
+                mail: &mut content.mail,
+                monsters: &mut content.monsters,
             },
             &mut problems,
         );
@@ -862,6 +965,59 @@ mod tests {
         let mut plugins_only = pack("plugins-only", &[]);
         plugins_only.pack.manifest.permissions.content_inject = false;
         assert!(merge_packs_into_content(&base, &[plugins_only]).problems.is_empty());
+    }
+
+    #[test]
+    fn packs_add_building_goals_and_combat_content_namespaced() {
+        use crate::schema::EventCondition;
+        let fair: ContentPack = serde_json::from_str(include_str!("../../../fixtures/projects/county-fair-mod.json"))
+            .expect("the fixture pack");
+        let install = PackInstallation { pack: fair, enabled: true };
+        let merged = merge_packs_into_content(&GameContent::default(), std::slice::from_ref(&install));
+        assert!(merged.problems.is_empty(), "{:?}", merged.problems);
+        let content = &merged.content;
+        let ids = |list: Vec<&str>| list.into_iter().map(str::to_owned).collect::<Vec<_>>();
+        assert_eq!(
+            content.building_types.iter().map(|b| b.id.as_str()).collect::<Vec<_>>(),
+            ["county-fair:fair-barn", "county-fair:grand-barn"]
+        );
+        assert_eq!(content.building_types[1].upgrade_of.as_deref(), Some("county-fair:fair-barn"));
+        assert_eq!(content.building_types[0].materials[0].item_id, "county-fair:ribbon");
+        assert_eq!(content.shops[0].buildings, ids(vec!["county-fair:fair-barn", "county-fair:grand-barn"]));
+        assert_eq!(content.collections[0].items, ids(vec!["county-fair:ribbon"]));
+        assert_eq!(content.collections[0].rewards[0].outcomes[0].mail_id.as_deref(), Some("county-fair:fair-letter"));
+        assert_eq!(content.bundles[0].items[0].item_id, "county-fair:ribbon");
+        assert!(matches!(
+            &content.achievements[0].conditions[0],
+            EventCondition::Bundle { bundle_id, .. } if bundle_id == "county-fair:prize-table"
+        ));
+        assert!(matches!(
+            &content.achievements[1].conditions[0],
+            EventCondition::Slain { monster_id, .. } if monster_id == "county-fair:field-mouse"
+        ));
+        assert_eq!(content.mail[0].id, "county-fair:fair-letter");
+        assert_eq!(content.mail[0].subject, "See you at the fair");
+        assert_eq!(content.mail[0].attachments[0].item_id, "county-fair:ribbon");
+        assert_eq!(content.monsters[0].id, "county-fair:field-mouse");
+        assert_eq!(content.monsters[0].drops[0].item_id, "county-fair:ribbon");
+        assert_eq!(content.events[0].subject.as_deref(), Some("county-fair:fair-barn"));
+
+        // Its game panel shows with the uiPanels permission, namespaced; without it, the merge
+        // says so.
+        let panels = pack_game_panels(std::slice::from_ref(&install));
+        assert_eq!(panels.len(), 1);
+        assert_eq!(panels[0].id, "county-fair:fair-board");
+        assert_eq!(panels[0].entries[0].value, "county-fair:ribbon");
+        assert_eq!(panels[0].entries[1].value, "county-fair:barn-raised");
+        let mut hidden = install.clone();
+        hidden.pack.manifest.permissions.ui_panels = false;
+        assert!(pack_game_panels(std::slice::from_ref(&hidden)).is_empty());
+        let problems = merge_packs_into_content(&GameContent::default(), std::slice::from_ref(&hidden)).problems;
+        assert!(problems.iter().any(|p| p.message.contains("does not have the uiPanels permission")), "{problems:?}");
+
+        // A second copy of the pack's content collides and keeps the first.
+        let merged = merge_packs_into_content(&merged.content, std::slice::from_ref(&install));
+        assert!(merged.problems.iter().any(|p| p.message.contains("redefines monster 'county-fair:field-mouse'")));
     }
 
     #[test]

@@ -286,6 +286,10 @@ pub fn advance_construction(ctx: &EngineContext, state: &mut GameState) -> Effec
         let Some(definition) = definition(ctx, &building.building_id) else { continue };
         stand(ctx, state, index, definition);
         effects.push(Effect::say(message_levels::SUCCESS, messages::BUILDING_DONE.with(&[&definition.name])));
+        ctx.emit(crate::hooks::HookEvent::Build(crate::hooks::BuildHookPayload {
+            building_id: building.building_id.clone(),
+            scene_id: building.scene_id.clone(),
+        }));
         let kinds = lineage(ctx, &building.building_id);
         effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::BUILD, &kinds)));
     }

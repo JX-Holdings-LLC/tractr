@@ -154,6 +154,9 @@ struct Encoded {
     /// The lookup rows: width, then `rows` rows of `width` values.
     lut_width: u32,
     lut: Vec<u32>,
+    /// The light maps' lights (`encode::LIGHT_WORDS` words each), appended to `lut` after the
+    /// encode.
+    lights: Vec<u32>,
     native: Option<(u32, u32)>,
 }
 
@@ -479,6 +482,7 @@ impl GpuRenderer {
         encoded.frame.clear();
         encoded.images.clear();
         encoded.lut.clear();
+        encoded.lights.clear();
         encoded.native = None;
         encoded.lut_width = 1;
         let (width, height) = (composition.width.max(1), composition.height.max(1));
@@ -494,6 +498,7 @@ impl GpuRenderer {
                 width: native_w,
                 height: native_h,
                 max_side: self.max_side,
+                lights: &mut encoded.lights,
             };
             encoder.list(world.list, world.images, Transform::identity())?;
             for index in 0..world.tints.len() {
@@ -539,6 +544,7 @@ impl GpuRenderer {
             width,
             height,
             max_side: self.max_side,
+            lights: &mut encoded.lights,
         };
         if let Some(rect) = upscale {
             let instance = Instance {
@@ -549,7 +555,30 @@ impl GpuRenderer {
             };
             encoder.push(instance, Blend::Replace, Some(ImageRef::Native), [0, 0, width, height]);
         }
-        encoder.list(composition.ui, composition.ui_images, Transform::identity())
+        encoder.list(composition.ui, composition.ui_images, Transform::identity())?;
+        Self::place_lights(encoded);
+        Ok(())
+    }
+
+    /// The light maps' lights as whole rows after the lookup rows, and each `LIGHT` instance
+    /// told where: `p1` is the row width and the first row.
+    fn place_lights(encoded: &mut Encoded) {
+        if encoded.lights.is_empty() {
+            return;
+        }
+        // Without a world the lookup is one word: give the lights rows of their own width.
+        if (encoded.lut_width as usize) < encode::LIGHT_WORDS * 8 && encoded.lut.len() <= 1 {
+            encoded.lut_width = (encode::LIGHT_WORDS * 8) as u32;
+            encoded.lut = vec![0; encoded.lut_width as usize];
+        }
+        let width = encoded.lut_width as usize;
+        let base_row = encoded.lut.len().div_ceil(width);
+        encoded.lut.resize(base_row * width, 0);
+        encoded.lut.extend_from_slice(&encoded.lights);
+        encoded.lut.resize(encoded.lut.len().div_ceil(width) * width, 0);
+        for instance in encoded.instances.iter_mut().filter(|instance| instance.data[0] == encode::LIGHT) {
+            instance.p1 = [width as f32, base_row as f32, 0.0, 0.0];
+        }
     }
 
     /// Encodes with room in the atlases: a full atlas is cleared and the frame encoded again, then

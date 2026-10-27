@@ -78,7 +78,7 @@ pub use host::{PluginHost, PluginHostOptions, WasmPluginHost};
 pub use minigame::{
     MinigameControls, MinigameFrame, MinigameLimits, PackMinigame, MAX_FRAME_SECONDS, MINIGAME_HOOK_PREFIX, PRELUDE,
 };
-pub use mutations::{parse_mutation, validate_mutations, MAX_FLAG_VALUE_LENGTH, MAX_ID_LENGTH};
+pub use mutations::{parse_mutation, validate_mutations, MAX_FLAG_VALUE_LENGTH, MAX_ID_LENGTH, MAX_SAVED_DATA_BYTES};
 pub use payload::{effect_events, hook_payload_json, to_engine_json};
 pub use queue::{PluginMutationQueue, QueuedPluginMutation};
 pub use runtime::{PluginRuntime, BUDGET_WINDOW_TICKS, MAX_RECENT_ERRORS};

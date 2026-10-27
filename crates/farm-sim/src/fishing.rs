@@ -122,6 +122,10 @@ pub fn resolve_fishing(ctx: &EngineContext, state: &mut GameState, rod_tier: i32
 
     if caught {
         effects.extend(skills::grant_xp(ctx, state, "fishing", 8));
+        ctx.emit(crate::hooks::HookEvent::FishCatch(crate::hooks::FishCatchHookPayload {
+            item_id: entry.item_id.clone(),
+            fish_table_id: table.id.clone(),
+        }));
         effects.extend(quests::progress_quests(ctx, state, "collect", &entry.item_id, 1));
         effects.extend(crate::events::fire_trigger(
             ctx,

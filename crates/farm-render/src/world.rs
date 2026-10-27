@@ -18,10 +18,12 @@ use crate::atmosphere::{self, WeatherLook, WeatherOverlay};
 use crate::builtin_art::{BuiltinArt, BuiltinArtEntry};
 use crate::canvas2d::{self, entity_pixel_origin};
 use crate::css_color::{self, Color};
-use crate::draw::{DrawCmd, DrawList, FontId, Rect, Sampling, TextAlign, TextStroke};
+use crate::draw::{DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke, MAX_LIGHTS};
 use crate::images::{ImageId, ImageStore};
 use crate::num::{cs_clamp, cs_compare, cs_max, cs_min, round_half_even, to_byte, to_int};
-use crate::snapshot::{SnapshotEmote, SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot};
+use crate::snapshot::{
+    SnapshotEmote, SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot, MAX_TALL,
+};
 use std::sync::Arc;
 
 const BACKGROUND_TINT: Color = Color::rgba(0x1a, 0x1a, 0x2e, 0x10);
@@ -85,11 +87,41 @@ struct Terrain<'a> {
     id: &'a str,
     color: Option<Color>,
     plantable: bool,
+    /// Joins up with its neighbours (M8).
+    autotile: bool,
+    /// Tiles it rises above its own on the object layer (M8).
+    tall: u32,
 }
 
 impl<'a> Terrain<'a> {
     fn new(terrain: &'a SnapshotTerrain) -> Self {
-        Self { id: &terrain.id, color: css_color::try_parse(&terrain.color), plantable: terrain.plantable }
+        Self {
+            id: &terrain.id,
+            color: css_color::try_parse(&terrain.color),
+            plantable: terrain.plantable,
+            autotile: terrain.autotile,
+            tall: terrain.tall.min(MAX_TALL),
+        }
+    }
+}
+
+/// Which layer of a tile an autotile edge is drawn for.
+#[derive(Debug, Clone, Copy)]
+enum EdgeLayer<'a> {
+    Background,
+    Overlay,
+    Object,
+    Decor(&'a str),
+}
+
+impl EdgeLayer<'_> {
+    fn of(self, tile: &SnapshotTile) -> Option<&str> {
+        match self {
+            Self::Background => Some(&tile.background),
+            Self::Overlay => tile.overlay.as_deref(),
+            Self::Object => tile.object.as_deref(),
+            Self::Decor(terrain) => tile.decor.iter().find(|d| d.terrain == terrain).map(|d| d.terrain.as_str()),
+        }
     }
 }
 
@@ -105,6 +137,8 @@ enum DrawKind {
     Building,
     /// A monster (M7).
     Monster,
+    /// An object-layer terrain that rises above its tile (M8), y-sorted like a node.
+    Tall,
 }
 
 /// One thing to draw in the y-sorted pass.
@@ -176,6 +210,54 @@ impl<'a, 'l> Builder<'a, 'l> {
         match self.terrain(id).and_then(|terrain| terrain.color) {
             Some(color) => color,
             None => canvas2d::tile_color(Some(id), fallback),
+        }
+    }
+
+    /// How many tiles a terrain rises above its own (M8); 0 lies flat.
+    fn tall(&self, id: &str) -> u32 {
+        self.terrain(id).map_or(0, |terrain| terrain.tall)
+    }
+
+    fn autotile(&self, id: &str) -> bool {
+        self.terrain(id).is_some_and(|terrain| terrain.autotile)
+    }
+
+    /// Without art, an autotiled terrain (M8) shows where it meets another: a darker band on
+    /// each side whose neighbour has something else on the layer.
+    fn autotile_edges(&mut self, x: i32, y: i32, id: &str, layer: EdgeLayer<'_>, color: Color, tile_rect: Rect) {
+        if !self.autotile(id) {
+            return;
+        }
+        let snapshot = self.snapshot;
+        let same = |dx: i32, dy: i32| {
+            let (nx, ny) = (x + dx, y + dy);
+            if nx < 0 || ny < 0 {
+                return true;
+            }
+            let Some(row) = snapshot.tiles.get(ny as usize) else { return true };
+            // A neighbour the snapshot did not build (outside its window) counts as the same.
+            match row.get(nx as usize) {
+                Some(tile) if !tile.background.is_empty() => layer.of(tile) == Some(id),
+                _ => true,
+            }
+        };
+        let band = cs_max(2.0, (self.ts / 10.0).floor()) as f32;
+        let edge = Color::rgba(
+            (f32::from(color.r) * 0.62) as u8,
+            (f32::from(color.g) * 0.62) as u8,
+            (f32::from(color.b) * 0.62) as u8,
+            color.a,
+        );
+        let (left, top, width, height) = (tile_rect.x, tile_rect.y, tile_rect.width, tile_rect.height);
+        for (dx, dy, rect) in [
+            (0, -1, Rect::new(left, top, width, band)),
+            (1, 0, Rect::new(left + width - band, top, band, height)),
+            (0, 1, Rect::new(left, top + height - band, width, band)),
+            (-1, 0, Rect::new(left, top, band, height)),
+        ] {
+            if !same(dx, dy) {
+                self.fill_rect(rect, edge);
+            }
         }
     }
 
@@ -316,9 +398,11 @@ impl<'a, 'l> Builder<'a, 'l> {
         self.ground(x_start, x_end, y_start, y_end);
 
         // ---- Collect everything that stands on the ground ------------------------------------
-        // One extra row below the viewport: tall objects there poke into view.
+        // Rows below the viewport: tall objects there poke into view (one row for nodes and
+        // machines, as many as the tallest terrain rises for tall objects, M8).
         let mut drawables: Vec<Drawable<'a>> = Vec::new();
-        let objects_end = (snapshot.height - 1).min(y_end.saturating_add(1));
+        let tallest = self.terrains.as_ref().map_or(0, |terrains| terrains.iter().map(|t| t.tall).max().unwrap_or(0));
+        let objects_end = (snapshot.height - 1).min(y_end.saturating_add(1 + tallest as i32));
         let mut y = y_start;
         while y <= objects_end && (y as usize) < snapshot.tiles.len() {
             let row = &snapshot.tiles[y as usize];
@@ -327,7 +411,9 @@ impl<'a, 'l> Builder<'a, 'l> {
                 let tile = &row[x as usize];
                 let px = padding + (f64::from(x) * pitch);
                 let py = padding + (f64::from(y) * pitch);
+                let tall = tile.object.as_deref().is_some_and(|object| self.tall(object) > 0);
                 for (present, kind) in [
+                    (tall, DrawKind::Tall),
                     (tile.node.is_some(), DrawKind::Node),
                     (tile.machine.is_some(), DrawKind::Machine),
                     (tile.crop.is_some(), DrawKind::Crop),
@@ -462,6 +548,15 @@ impl<'a, 'l> Builder<'a, 'l> {
                 DrawKind::Player => self.player(d),
                 DrawKind::Building => self.building(d),
                 DrawKind::Monster => self.monster(d),
+                DrawKind::Tall => self.tall_object(d),
+            }
+        }
+
+        // ---- The scene's extra layers over the player (M8): roofs, treetops ------------------
+        for y in y_start..=y_end {
+            let Some(row) = snapshot.tiles.get(y as usize) else { break };
+            for x in x_start..=x_end.min(i32::try_from(row.len()).unwrap_or(i32::MAX) - 1) {
+                self.decor(&row[x as usize], x, y, true);
             }
         }
 
@@ -485,7 +580,14 @@ impl<'a, 'l> Builder<'a, 'l> {
             }
             if !atmosphere::is_neutral(tint) {
                 // Modulate multiplies color (and alpha) so the padding and letterbox stay untouched.
-                self.push(DrawCmd::ModulateRect { rect: world_rect, color: tint });
+                // With lights near (M8) the multiply is a light map: they show the scene's own
+                // colours where they shine, as strong as the tint is dark.
+                let spots = self.light_spots(camera.map(|camera| (camera.x, camera.y, camera.width, camera.height)));
+                if spots.is_empty() {
+                    self.push(DrawCmd::ModulateRect { rect: world_rect, color: tint });
+                } else {
+                    self.push(DrawCmd::LightRect { rect: world_rect, ambient: tint, lights: spots });
+                }
             }
             if let Some(overlay) = overlay {
                 let (origin_x, origin_y) = camera.map_or((0.0, 0.0), |camera| (camera.x, camera.y));
@@ -556,7 +658,8 @@ impl<'a, 'l> Builder<'a, 'l> {
                 let py = padding + (f64::from(y) * pitch);
                 let tile_rect = rect(px, py, ts, ts);
 
-                self.fill_rect(tile_rect, self.terrain_color(&tile.background, "grass"));
+                let ground_color = self.terrain_color(&tile.background, "grass");
+                self.fill_rect(tile_rect, ground_color);
                 if !self.draw_sprite(tile.art_layer(0), px, py, ts, ts, 1.0) {
                     if let Some(art) = art {
                         if self.plantable(&tile.background) {
@@ -576,25 +679,31 @@ impl<'a, 'l> Builder<'a, 'l> {
                             );
                         }
                     }
+                    self.autotile_edges(x, y, &tile.background, EdgeLayer::Background, ground_color, tile_rect);
                 }
 
                 if let Some(overlay) = &tile.overlay {
-                    if !self.draw_sprite(tile.art_layer(1), px, py, ts, ts, 1.0)
-                        && !art.is_some_and(|art| {
+                    if !self.draw_sprite(tile.art_layer(1), px, py, ts, ts, 1.0) {
+                        let color = self.terrain_color(overlay, "path");
+                        if !art.is_some_and(|art| {
                             self.draw_builtin(art.tile(Some(overlay), None, x, y, tick), px, py, 1.0, false, true)
-                        })
-                    {
-                        self.fill_rect(tile_rect, self.terrain_color(overlay, "path").with_opacity(0.7));
+                        }) {
+                            self.fill_rect(tile_rect, color.with_opacity(0.7));
+                        }
+                        self.autotile_edges(x, y, overlay, EdgeLayer::Overlay, color, tile_rect);
                     }
                 }
 
-                if let Some(object) = &tile.object {
-                    if !self.draw_sprite(tile.art_layer(2), px, py, ts, ts, 1.0)
-                        && !art.is_some_and(|art| {
+                // A tall object (M8) stands among the player and NPCs instead (see `tall_object`).
+                if let Some(object) = tile.object.as_ref().filter(|object| self.tall(object) == 0) {
+                    if !self.draw_sprite(tile.art_layer(2), px, py, ts, ts, 1.0) {
+                        let color = self.terrain_color(object, "wall");
+                        if !art.is_some_and(|art| {
                             self.draw_builtin(art.tile(Some(object), None, x, y, tick), px, py, 1.0, false, true)
-                        })
-                    {
-                        self.fill_rect(tile_rect, self.terrain_color(object, "wall"));
+                        }) {
+                            self.fill_rect(tile_rect, color);
+                        }
+                        self.autotile_edges(x, y, object, EdgeLayer::Object, color, tile_rect);
                     }
                 }
 
@@ -614,8 +723,83 @@ impl<'a, 'l> Builder<'a, 'l> {
                         self.push(DrawCmd::Line { x0: x, y0: top, x1: x, y1: bottom, color, width: 2.0 });
                     }
                 }
+
+                // The scene's extra layers under the player (M8).
+                self.decor(tile, x, y, false);
                 x += 1;
             }
+        }
+    }
+
+    /// The scene's lights (M8) near the camera, in world pixels, for the light map: at most
+    /// [`MAX_LIGHTS`], the strongest when there are more.
+    fn light_spots(&self, camera: Option<(f64, f64, f64, f64)>) -> Vec<LightSpot> {
+        let (padding, pitch) = (self.padding, self.pitch);
+        let mut spots: Vec<LightSpot> = Vec::new();
+        for light in &self.snapshot.lights {
+            let cx = padding + (light.x * pitch);
+            let cy = padding + (light.y * pitch);
+            let reach = cs_max(0.5, light.radius) * pitch;
+            if let Some((x, y, width, height)) = camera {
+                if cx + reach < x || cy + reach < y || cx - reach > x + width || cy - reach > y + height {
+                    continue;
+                }
+            }
+            let color = if light.color.is_empty() { parse("#ffd27a") } else { parse(&light.color) };
+            spots.push(LightSpot {
+                x: cx as f32,
+                y: cy as f32,
+                radius: reach as f32,
+                color,
+                strength: cs_clamp(light.brightness, 0.0, 1.0) as f32,
+            });
+        }
+        if spots.len() > MAX_LIGHTS {
+            spots.sort_by(|a, b| (b.strength * b.radius).total_cmp(&(a.strength * a.radius)));
+            spots.truncate(MAX_LIGHTS);
+        }
+        spots
+    }
+
+    /// One tile's extra layers (M8): those `above` the player or those under it, in the scene's
+    /// layer order, each its terrain's art or colour.
+    fn decor(&mut self, tile: &SnapshotTile, x: i32, y: i32, above: bool) {
+        if tile.decor.is_empty() {
+            return;
+        }
+        let (ts, padding, pitch) = (self.ts, self.padding, self.pitch);
+        let px = padding + (f64::from(x) * pitch);
+        let py = padding + (f64::from(y) * pitch);
+        let tile_rect = rect(px, py, ts, ts);
+        for decor in tile.decor.iter().filter(|d| d.above == above) {
+            if !self.draw_sprite(decor.sprite.as_ref(), px, py, ts, ts, 1.0) {
+                let color = self.terrain_color(&decor.terrain, "path");
+                self.fill_rect(tile_rect, color);
+                self.autotile_edges(x, y, &decor.terrain, EdgeLayer::Decor(&decor.terrain), color, tile_rect);
+            }
+        }
+    }
+
+    /// An object-layer terrain that rises `tall` tiles above its own (M8): its art or colour
+    /// standing on the tile's bottom edge, drawn in the y-sorted pass.
+    fn tall_object(&mut self, d: &Drawable<'_>) {
+        let Some(tile) = d.tile else { return };
+        let Some(object) = tile.object.as_deref() else { return };
+        let tall = f64::from(self.tall(object));
+        let (ts, pitch) = (self.ts, self.pitch);
+        let height = ts + (tall * pitch);
+        let top = d.py + ts - height;
+        if !self.draw_sprite(tile.art_layer(2), d.px, top, ts, height, 1.0) {
+            let color = self.terrain_color(object, "wall");
+            self.fill_rect(rect(d.px, top, ts, height), color);
+            // A lighter top face, so it reads as standing rather than painted on.
+            let lighter = Color::rgba(
+                color.r.saturating_add((255 - color.r) / 4),
+                color.g.saturating_add((255 - color.g) / 4),
+                color.b.saturating_add((255 - color.b) / 4),
+                color.a,
+            );
+            self.fill_rect(rect(d.px, top, ts, cs_min(ts * 0.3, height)), lighter);
         }
     }
 

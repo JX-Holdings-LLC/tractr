@@ -122,6 +122,11 @@ pub trait SessionPlugins: Send {
     fn drain_commands(&mut self) -> Vec<(Command, u32)>;
     /// The game is about to run tick `tick` (plugin budgets follow the game clock).
     fn begin_tick(&mut self, _tick: u64) {}
+    /// The game started or loaded: each plugin hears `onLoad` with the data it saved (M9).
+    fn restore(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
+    /// Plugins rebuilt after an overrun since the last call hear `onLoad` again with what they
+    /// have saved so far (`saved`).
+    fn restore_rebuilt(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
     /// The most recent plugin errors (init failures, throws, overruns), oldest first.
     fn recent_errors(&self) -> Vec<String> {
         Vec::new()
@@ -303,10 +308,14 @@ impl PlaySession {
         session
     }
 
-    /// Attach the plugin sandbox. Hook events not yet delivered (those of a new game's
-    /// auto-started quests) go to it first; then it sees every later step.
+    /// Attach the plugin sandbox. Each plugin first hears `onLoad` with the data it saved in
+    /// this game (M9); then the hook events not yet delivered (those of a new game's
+    /// auto-started quests) go to it; then it sees every later step.
     pub fn set_plugins(&mut self, plugins: Option<Box<dyn SessionPlugins>>) {
         self.plugins = plugins;
+        if let Some(plugins) = self.plugins.as_mut() {
+            plugins.restore(&self.state.plugin_data);
+        }
         self.dispatch_hooks(&[], 0);
     }
 
@@ -425,12 +434,16 @@ impl PlaySession {
     }
 
     /// The fixed point before each tick: queued plugin mutations enter the command log, each
-    /// as a step one level deeper than the mutation.
+    /// as a step one level deeper than the mutation. Then a plugin rebuilt after an overrun
+    /// hears `onLoad` again with the data it has saved, its own `saveData` answers included.
     fn apply_plugin_mutations(&mut self) {
         let Some(plugins) = self.plugins.as_mut() else { return };
         plugins.begin_tick(self.state.clock.tick);
         for (command, depth) in plugins.drain_commands() {
             self.run_step(&command, depth.saturating_add(1));
+        }
+        if let Some(plugins) = self.plugins.as_mut() {
+            plugins.restore_rebuilt(&self.state.plugin_data);
         }
     }
 

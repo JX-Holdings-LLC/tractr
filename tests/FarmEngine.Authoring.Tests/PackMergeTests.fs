@@ -196,3 +196,74 @@ let ``importing a pack writes its vocabulary and story into the project`` () =
     Assert.Equal<string list>([ "volcano:eruption" ], project.Cutscenes |> Option.defaultValue [] |> List.map (fun c -> c.Id))
     Assert.Equal<string list>([ "volcano:lava-walk" ], project.HeartEvents |> Option.defaultValue [] |> List.map (fun h -> h.Id))
     Assert.Equal("Ash Grass", (ContentCompiler.terrains project |> List.find (fun t -> t.Id = "grass")).Name)
+
+// ── Building, goals and combat content (M9) ──────────────────────────────────
+
+let private countyFair () = validPack (readJson [ "Fixtures"; "county-fair-mod.json" ])
+
+[<Fact>]
+let ``packs add buildings collections bundles achievements letters and monsters namespaced`` () =
+    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = countyFair () } ]
+    Assert.Empty problems
+    let buildings = defaultArg merged.BuildingTypes []
+    Assert.Equal<string list>([ "county-fair:fair-barn"; "county-fair:grand-barn" ], buildings |> List.map (fun b -> b.Id))
+    Assert.Equal(Some "county-fair:fair-barn", (buildings |> List.last).UpgradeOf)
+    Assert.Equal("county-fair:ribbon", (buildings |> List.head).Materials.Head.ItemId)
+    let builder = merged.Shops |> List.find (fun s -> s.Id = "county-fair:fair-builder")
+    Assert.Equal<string list>([ "county-fair:fair-barn"; "county-fair:grand-barn" ], defaultArg builder.Buildings [])
+    let ribbons = (defaultArg merged.Collections []).Head
+    Assert.Equal("county-fair:ribbons", ribbons.Id)
+    Assert.Equal<string list>([ "county-fair:ribbon" ], ribbons.Items)
+    Assert.Equal(Some "county-fair:fair-letter", ribbons.Rewards.Head.Outcomes.Head.MailId)
+    let prize = (defaultArg merged.Bundles []).Head
+    Assert.Equal("county-fair:ribbon", prize.Items.Head.ItemId)
+    let achievements = defaultArg merged.Achievements []
+    Assert.Equal<string list>([ "county-fair:blue-ribbon"; "county-fair:pest-control" ], achievements |> List.map (fun a -> a.Id))
+    match achievements.Head.Conditions.Head with
+    | EventCondition.Bundle condition -> Assert.Equal("county-fair:prize-table", condition.BundleId)
+    | other -> failwithf "expected a bundle condition, got %A" other
+    let letter = (defaultArg merged.Mail []).Head
+    Assert.Equal("county-fair:fair-letter", letter.Id)
+    Assert.Equal("See you at the fair", letter.Subject)
+    Assert.Equal("county-fair:ribbon", letter.Attachments.Head.ItemId)
+    let mouse = (defaultArg merged.Monsters []).Head
+    Assert.Equal("county-fair:field-mouse", mouse.Id)
+    Assert.Equal("county-fair:ribbon", mouse.Drops.Head.ItemId)
+    // A trigger's subject is namespaced like a reference.
+    let raised = merged.Events |> List.find (fun e -> e.Id = "county-fair:barn-raised")
+    Assert.Equal(Some "county-fair:fair-barn", raised.Subject)
+
+[<Fact>]
+let ``importing a pack writes its building goals and combat content into the project`` () =
+    let project, problems = PackMerge.applyToProject (blank ()) (countyFair ())
+    Assert.Empty problems
+    Assert.Equal<string list>([ "county-fair:fair-barn"; "county-fair:grand-barn" ], project.BuildingTypes |> Option.defaultValue [] |> List.map (fun b -> b.Id))
+    Assert.Equal<string list>([ "county-fair:ribbons" ], project.Collections |> Option.defaultValue [] |> List.map (fun c -> c.Id))
+    Assert.Equal<string list>([ "county-fair:prize-table" ], project.Bundles |> Option.defaultValue [] |> List.map (fun b -> b.Id))
+    Assert.Equal(2, project.Achievements |> Option.defaultValue [] |> List.length)
+    Assert.Equal<string list>([ "county-fair:fair-letter" ], project.Mail |> Option.defaultValue [] |> List.map (fun m -> m.Id))
+    Assert.Equal<string list>([ "county-fair:field-mouse" ], project.Monsters |> Option.defaultValue [] |> List.map (fun m -> m.Id))
+    // Importing it again keeps the first copy and says so.
+    let _, again = PackMerge.applyToProject project (countyFair ())
+    Assert.Contains(again, fun p -> p.Message.Contains "redefines building type 'county-fair:fair-barn'")
+
+[<Fact>]
+let ``packs with the uiPanels permission add game panels after the games own`` () =
+    let install = { PackInstallation.Default with Pack = countyFair () }
+    let panels = PackMerge.gamePanels [ install ]
+    Assert.Equal<string list>([ "county-fair:fair-board" ], panels |> List.map (fun p -> p.Id))
+    // Items and actions the pack defines are namespaced; flags are named as written.
+    Assert.Equal<string list>([ "county-fair:ribbon"; "county-fair:barn-raised"; "" ], panels.Head.Entries |> List.map (fun e -> e.Value))
+    // The game's own panels come first in what the game shows.
+    let project = { blank () with GamePanels = Some [ { GamePanel.Default with Id = "own"; Title = "Own" } ]; ContentPacks = [ install ] }
+    match CartridgeCompiler.PresentationSection project |> Json.get "gamePanels" with
+    | JArray shown -> Assert.Equal<string list>([ "own"; "county-fair:fair-board" ], shown |> List.choose (Json.get "id" >> Json.asString))
+    | other -> failwithf "expected a list, got %A" other
+    // Without the permission they are not shown, and the merge says why.
+    let hidden = { install with Pack = { install.Pack with Manifest = { install.Pack.Manifest with Permissions = { install.Pack.Manifest.Permissions with UiPanels = false } } } }
+    Assert.Empty(PackMerge.gamePanels [ hidden ])
+    let _, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ hidden ]
+    Assert.Contains(problems, fun p -> p.Message.Contains "does not have the uiPanels permission")
+    // Importing the pack writes its panel into the project.
+    let imported, _ = PackMerge.applyToProject (blank ()) (countyFair ())
+    Assert.Equal<string list>([ "county-fair:fair-board" ], imported.GamePanels |> Option.defaultValue [] |> List.map (fun p -> p.Id))

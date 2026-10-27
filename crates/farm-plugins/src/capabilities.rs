@@ -47,7 +47,25 @@ pub const MUTATION_TYPES: &[&str] = &[
     "playSound",
     "performAction",
     "startMinigame",
+    // The M3–M7 outcomes (M9).
+    "moveNpc",
+    "startCutscene",
+    "setVariable",
+    "addVariable",
+    "addShopStock",
+    "removeShopStock",
+    "placeNode",
+    "removeNode",
+    "placeMachine",
+    "removeMachine",
+    "setRelationship",
+    "sendMail",
+    "modifyHealth",
 ];
+
+/// The mutation every plugin may answer without a capability: it keeps only the plugin's own
+/// data (M9).
+pub const ALWAYS_ALLOWED_MUTATION: &str = "saveData";
 
 /// The mutation types that name pack content, and so are limited to the plugin's own pack
 /// unless `type:any` is granted.
@@ -61,6 +79,18 @@ pub const SCOPED_MUTATION_TYPES: &[&str] = &[
     "startDialogue",
     "performAction",
     "startMinigame",
+    "moveNpc",
+    "startCutscene",
+    "setVariable",
+    "addVariable",
+    "addShopStock",
+    "removeShopStock",
+    "placeNode",
+    "removeNode",
+    "placeMachine",
+    "removeMachine",
+    "setRelationship",
+    "sendMail",
 ];
 
 /// Flags no plugin may write: `event:<id>:fired` re-arms or disables one-shot events.
@@ -153,7 +183,7 @@ impl MutationGrants {
 
     /// Whether `mutation_type` is allowed at all.
     pub fn allows(&self, mutation_type: &str) -> bool {
-        self.own.contains(mutation_type)
+        mutation_type == ALWAYS_ALLOWED_MUTATION || self.own.contains(mutation_type)
     }
 
     /// Whether `mutation_type` may name any ids (not only the plugin's own pack's).
@@ -212,6 +242,59 @@ impl MutationGrants {
             PluginMutation::StartMinigame { minigame_id } => {
                 PluginMutation::StartMinigame { minigame_id: scope.resolve("minigameId", minigame_id)? }
             }
+            PluginMutation::MoveNpc { npc_id, scene_id, x, y } => PluginMutation::MoveNpc {
+                npc_id: scope.resolve("npcId", npc_id)?,
+                scene_id: scene_id.map(|id| scope.resolve("sceneId", id)).transpose()?,
+                x,
+                y,
+            },
+            PluginMutation::StartCutscene { cutscene_id } => {
+                PluginMutation::StartCutscene { cutscene_id: scope.resolve("cutsceneId", cutscene_id)? }
+            }
+            PluginMutation::SetVariable { variable, value } => {
+                PluginMutation::SetVariable { variable: scope.variable(variable)?, value }
+            }
+            PluginMutation::AddVariable { variable, amount } => {
+                PluginMutation::AddVariable { variable: scope.variable(variable)?, amount }
+            }
+            PluginMutation::AddShopStock { shop_id, item_id, price, daily_limit } => PluginMutation::AddShopStock {
+                shop_id: scope.resolve("shopId", shop_id)?,
+                item_id: scope.resolve("itemId", item_id)?,
+                price,
+                daily_limit,
+            },
+            PluginMutation::RemoveShopStock { shop_id, item_id } => PluginMutation::RemoveShopStock {
+                shop_id: scope.resolve("shopId", shop_id)?,
+                item_id: scope.resolve("itemId", item_id)?,
+            },
+            PluginMutation::PlaceNode { scene_id, x, y, node_type_id } => PluginMutation::PlaceNode {
+                scene_id: scene_id.map(|id| scope.resolve("sceneId", id)).transpose()?,
+                x,
+                y,
+                node_type_id: scope.resolve("nodeTypeId", node_type_id)?,
+            },
+            PluginMutation::RemoveNode { scene_id, x, y } => PluginMutation::RemoveNode {
+                scene_id: scene_id.map(|id| scope.resolve("sceneId", id)).transpose()?,
+                x,
+                y,
+            },
+            PluginMutation::PlaceMachine { scene_id, x, y, machine_type_id } => PluginMutation::PlaceMachine {
+                scene_id: scene_id.map(|id| scope.resolve("sceneId", id)).transpose()?,
+                x,
+                y,
+                machine_type_id: scope.resolve("machineTypeId", machine_type_id)?,
+            },
+            PluginMutation::RemoveMachine { scene_id, x, y } => PluginMutation::RemoveMachine {
+                scene_id: scene_id.map(|id| scope.resolve("sceneId", id)).transpose()?,
+                x,
+                y,
+            },
+            PluginMutation::SetRelationship { npc_id, status } => {
+                PluginMutation::SetRelationship { npc_id: scope.resolve("npcId", npc_id)?, status }
+            }
+            PluginMutation::SendMail { mail_id } => {
+                PluginMutation::SendMail { mail_id: scope.resolve("mailId", mail_id)? }
+            }
             other => other,
         };
         Ok(authorized)
@@ -226,6 +309,15 @@ struct Scope<'a> {
 }
 
 impl Scope<'_> {
+    /// A variable is a flag (M3): resolved like one, and never an `event:` flag.
+    fn variable(&self, variable: String) -> Result<String, String> {
+        let variable = self.resolve("variable", variable)?;
+        if variable.starts_with(RESERVED_FLAG_PREFIX) {
+            return Err(format!("{}: variables starting with '{RESERVED_FLAG_PREFIX}' belong to events", self.kind));
+        }
+        Ok(variable)
+    }
+
     /// Own scope: a plain id is the pack's (`packId:id`), `packId:…` is kept, other packs' and
     /// global ids are refused. Any scope: as written.
     fn resolve(&self, key: &str, id: String) -> Result<String, String> {
@@ -256,7 +348,11 @@ pub(crate) struct KeyBudget {
 impl KeyBudget {
     fn admit(&mut self, mutation: &PluginMutation) -> Result<(), String> {
         let (keys, key, max, what) = match mutation {
-            PluginMutation::SetFlag { flag, .. } => (&mut self.flags, flag, MAX_FLAG_KEYS_PER_PLUGIN, "flags"),
+            PluginMutation::SetFlag { flag: key, .. }
+            | PluginMutation::SetVariable { variable: key, .. }
+            | PluginMutation::AddVariable { variable: key, .. } => {
+                (&mut self.flags, key, MAX_FLAG_KEYS_PER_PLUGIN, "flags")
+            }
             PluginMutation::GrantXp { skill, .. } => (&mut self.skills, skill, MAX_SKILL_KEYS_PER_PLUGIN, "skills"),
             _ => return Ok(()),
         };

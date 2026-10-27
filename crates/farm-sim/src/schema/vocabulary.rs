@@ -74,6 +74,19 @@ pub struct TerrainDefinition {
     #[serde(skip_serializing_if = "super::is_zero_i32", with = "crate::units::int")]
     pub damage: i32,
     pub transforms: Vec<TerrainTransform>,
+    /// Joins up with its neighbours of the same terrain (M8): with art, frame `n` of its
+    /// `autotile` clip, where `n` adds 1 for the same terrain above, 2 right, 4 below and 8
+    /// left; without art, its edges are drawn where it meets another terrain.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub autotile: Option<bool>,
+    /// On the object layer: how many tiles it rises above its own (M8, a tree, a lamp post, a
+    /// tall fence). It is drawn standing, in front of what is behind it and behind what is in
+    /// front, the player included. int, 0..=8.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub tall: Option<u32>,
+    /// The light it gives at night (M8, a lamp, glowing moss).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -95,6 +108,9 @@ impl Default for TerrainDefinition {
             indoor: false,
             damage: 0,
             transforms: Vec::new(),
+            autotile: None,
+            tall: None,
+            light: None,
             extra: Map::new(),
         }
     }

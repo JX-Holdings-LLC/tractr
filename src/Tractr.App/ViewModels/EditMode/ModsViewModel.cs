@@ -180,11 +180,11 @@ public sealed class ModsViewModel : ObservableObject
         var manifest = pack.Manifest;
         Message = $"Review {manifest.Name} before installing.";
         var permissions = manifest.Permissions;
-        // contentInject off means the pack's content is not loaded; packs cannot add UI panels
-        // yet, so uiPanels grants nothing.
+        // contentInject off means the pack's content is not loaded; uiPanels lets it add game
+        // panels to the game screen (M9).
         var permissionText = $"Permissions: content {(permissions.ContentInject ? "added to your game" : "off (none of the pack's content loads)")}; "
             + $"hooks {(permissions.Hooks.Length == 0 ? "none" : string.Join(", ", permissions.Hooks))}"
-            + (permissions.UiPanels ? "; UI panels requested (not supported, grants nothing)" : "");
+            + (permissions.UiPanels ? "; game panels shown on the game screen" : "");
         var content = pack.Content;
         string? art = null;
         string? artConflicts = null;

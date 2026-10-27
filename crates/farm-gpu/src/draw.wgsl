@@ -14,7 +14,8 @@ struct Target {
 // Shapes the CPU rasterized (premultiplied RGBA8).
 @group(0) @binding(2) var sprites: texture_2d<f32>;
 // Per-frame lookup rows (R32Uint): 0 = upscale columns, 1 = upscale rows, 2.. = tint colours per
-// native row (packed premultiplied RGBA, 0 = transparent).
+// native row (packed premultiplied RGBA, 0 = transparent), then the light maps' lights (six words
+// each: x, y, radius, colour, strength, padding).
 @group(0) @binding(3) var lut: texture_2d<u32>;
 // The image of image draws (premultiplied RGBA8), or the native world for the upscale.
 @group(1) @binding(0) var image: texture_2d<f32>;
@@ -29,6 +30,8 @@ const SPRITE: u32 = 6u;
 const TINT: u32 = 7u;
 const UPSCALE: u32 = 8u;
 const COPY: u32 = 9u;
+const LIGHT: u32 = 10u;
+const LIGHT_WORDS: u32 = 6u;
 
 struct Instance {
     // The quad: left, top, right, bottom in device pixels.
@@ -125,6 +128,35 @@ fn nearest(device: f32, axis: vec4<f32>) -> i32 {
     return i32(axis.z) + min(i32(max(u, 0.0)), length - 1);
 }
 
+// Word `index` of the lights, stored from row `base` in rows of `width` words.
+fn light_word(index: u32, width: u32, base: u32) -> u32 {
+    return textureLoad(lut, vec2<i32>(i32(index % width), i32(base + index / width)), 0).x;
+}
+
+// A light map's factor at a pixel centre: farm-render's `light_factor`, term by term in the same
+// order (the ambient, then each light that reaches the pixel), rounded and capped per channel.
+fn light_map(center: vec2<f32>, ambient: u32, count: u32, start: u32, width: u32, base: u32) -> vec3<f32> {
+    var sum = vec3<f32>(f32(channel(ambient, 0u)), f32(channel(ambient, 1u)), f32(channel(ambient, 2u)));
+    for (var k = 0u; k < count; k = k + 1u) {
+        let at = (start + k) * LIGHT_WORDS;
+        let x = bitcast<f32>(light_word(at, width, base));
+        let y = bitcast<f32>(light_word(at + 1u, width, base));
+        let radius = bitcast<f32>(light_word(at + 2u, width, base));
+        let color = light_word(at + 3u, width, base);
+        let strength = bitcast<f32>(light_word(at + 4u, width, base));
+        let dx = center.x - x;
+        let dy = center.y - y;
+        let r2 = radius * radius;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < r2) {
+            let t = 1.0 - d2 / r2;
+            let share = strength * t * t;
+            sum = sum + vec3<f32>(f32(channel(color, 0u)), f32(channel(color, 1u)), f32(channel(color, 2u))) * share;
+        }
+    }
+    return clamp(floor(sum + vec3<f32>(0.5)), vec3<f32>(0.0), vec3<f32>(255.0));
+}
+
 fn load_clamped(position: vec2<f32>, low: vec2<i32>, high: vec2<i32>) -> vec4<f32> {
     return textureLoad(image, clamp(vec2<i32>(floor(position)), low, high), 0);
 }
@@ -207,6 +239,11 @@ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
         }
         case COPY: {
             return textureLoad(image, vec2<i32>(pixel - in.p0.xy), 0);
+        }
+        case LIGHT: {
+            // Drawn with the modulate pipeline: the target times the factor, alpha kept.
+            let factor = light_map(center, color, in.data.z, in.data.w, u32(in.p1.x), u32(in.p1.y));
+            return vec4<f32>(factor / 255.0, 1.0);
         }
         default: {
             discard;

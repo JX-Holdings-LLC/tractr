@@ -435,6 +435,10 @@ pub fn attack(ctx: &EngineContext, state: &mut GameState, tiles: &[(i32, i32)], 
             },
         ));
         effects.extend(skills::grant_xp(ctx, state, "combat", definition.experience));
+        ctx.emit(crate::hooks::HookEvent::MonsterSlay(crate::hooks::MonsterSlayHookPayload {
+            monster_id: definition.id.clone(),
+            scene_id: state.player.scene_id.clone(),
+        }));
         effects.extend(events::fire_trigger(
             ctx,
             state,

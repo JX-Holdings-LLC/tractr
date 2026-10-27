@@ -70,6 +70,10 @@ type Edits =
     static member SetSceneAllSeasons(sceneId: string, allSeasons: bool) : Edit = SetSceneAllSeasons(sceneId, allSeasons)
     /// The monsters the scene has each morning (M7).
     static member SetSceneMonsters(sceneId: string, monsters: seq<MonsterSpawn>) : Edit = SetSceneMonsters(sceneId, List.ofSeq monsters)
+    /// The scene's extra layers (M8).
+    static member SetSceneLayers(sceneId: string, layers: seq<SceneLayer>) : Edit = SetSceneLayers(sceneId, List.ofSeq layers)
+    /// A scene's extra layer as the layer the map tools paint on.
+    static member DecorLayer(layerId: string) : TileLayer = Decor layerId
     static member ResizeScene(sceneId: string, width: int, height: int) : Edit = ResizeScene(sceneId, width, height)
     /// Largest scene side `ResizeScene` takes.
     static member MaxSceneSize = EditScenes.MaxSceneSize
@@ -806,6 +810,13 @@ type SettingsForm =
 
     /// A scene's monster spawns as text, one per line (`SettingsForms.monsterSpawnsText`).
     static member MonsterSpawnsText(spawns: seq<MonsterSpawn>) : string = SettingsForms.monsterSpawnsText (List.ofSeq spawns)
+
+    /// A scene's extra layers as text, one per line (`SettingsForms.sceneLayersText`).
+    static member SceneLayersText(layers: seq<SceneLayer>) : string = SettingsForms.sceneLayersText (List.ofSeq layers)
+
+    /// A scene's extra layers from their text; throws `FormatException` naming the line.
+    static member SceneLayers(existing: seq<SceneLayer>, text: string | null) : IReadOnlyList<SceneLayer> =
+        SettingsForms.parseSceneLayers (List.ofSeq existing) text |> Array.ofList :> IReadOnlyList<SceneLayer>
 
     /// A scene's monster spawns from their text; throws `FormatException` naming the line.
     static member MonsterSpawns(text: string | null) : IReadOnlyList<MonsterSpawn> =

@@ -190,6 +190,16 @@ pub enum DrawCmd {
         rect: Rect,
         color: Color,
     },
+    /// Multiplies what is already drawn by a light map (M8): at each pixel, per channel,
+    /// `min(255, ambient + Σ light)` / 255, alpha unchanged. A light adds its colour times its
+    /// strength times `(1 − d²/r²)²` within its radius `r` (`d`: the distance from its centre).
+    /// The day/night tint with the scene's lights: they show the scene's own colours where they
+    /// shine. See [`light_factor`].
+    LightRect {
+        rect: Rect,
+        ambient: Color,
+        lights: Vec<LightSpot>,
+    },
     /// A single line of text with its baseline at `y`, anchored at `x` by `align`. The stroke,
     /// when present, is drawn first.
     Text {
@@ -203,6 +213,52 @@ pub enum DrawCmd {
         stroke: Option<TextStroke>,
         align: TextAlign,
     },
+}
+
+/// One light of a [`DrawCmd::LightRect`], in the coordinates of the command.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LightSpot {
+    pub x: f32,
+    pub y: f32,
+    pub radius: f32,
+    /// Its colour; alpha is ignored.
+    pub color: Color,
+    /// 0 to 1.
+    pub strength: f32,
+}
+
+/// Most lights one [`DrawCmd::LightRect`] carries (the brightest are kept).
+pub const MAX_LIGHTS: usize = 64;
+
+/// The light map of a [`DrawCmd::LightRect`] at a pixel centre, in device space (`lights` mapped
+/// there), per channel 0..=255: the ambient plus each light in order, rounded and capped. The
+/// GPU shader (`farm-gpu`'s `draw.wgsl`, kind `LIGHT`) computes the same in `f32`.
+pub fn light_factor(ambient: Color, lights: &[LightSpot], x: f32, y: f32) -> [u32; 3] {
+    let mut sum = [f32::from(ambient.r), f32::from(ambient.g), f32::from(ambient.b)];
+    for light in lights {
+        light_add(&mut sum, light, x, y);
+    }
+    sum.map(light_round)
+}
+
+/// Adds one light's share at (x, y) to a pixel's sums (see [`light_factor`]).
+pub fn light_add(sum: &mut [f32; 3], light: &LightSpot, x: f32, y: f32) {
+    let (dx, dy) = (x - light.x, y - light.y);
+    let r2 = light.radius * light.radius;
+    let d2 = (dx * dx) + (dy * dy);
+    if d2 >= r2 || d2.is_nan() {
+        return;
+    }
+    let t = 1.0 - (d2 / r2);
+    let share = light.strength * t * t;
+    sum[0] += f32::from(light.color.r) * share;
+    sum[1] += f32::from(light.color.g) * share;
+    sum[2] += f32::from(light.color.b) * share;
+}
+
+/// A summed channel as a factor byte.
+pub fn light_round(sum: f32) -> u32 {
+    (sum + 0.5).floor().clamp(0.0, 255.0) as u32
 }
 
 /// An ordered list of [`DrawCmd`]s. Push commands directly or through the helpers.

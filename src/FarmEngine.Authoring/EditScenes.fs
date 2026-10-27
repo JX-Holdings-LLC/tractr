@@ -35,8 +35,8 @@ module internal EditScenes =
         match Proj.tryScene sceneId project with
         | None -> project
         | Some scene when not (Proj.inBounds scene x y) -> project
-        | Some scene when (Proj.tryTile scene x y |> Option.exists (fun t -> t.Type = tileType)) && (brushVisual project tileType).IsNone -> project
-        | Some scene -> paintCells sceneId layer (TileRules.regionCells scene x y) tileType project
+        | Some scene when (match layer with Decor _ -> false | _ -> true) && (Proj.tryTile scene x y |> Option.exists (fun t -> t.Type = tileType)) && (brushVisual project tileType).IsNone -> project
+        | Some scene -> paintCells sceneId layer (TileRules.regionCellsOn layer scene x y) tileType project
 
     /// Web `pasteTileRegion`: stamp with the top-left at (x, y); tiles outside the scene are skipped.
     let pasteTiles (sceneId: string) (x: int) (y: int) (region: Tile list list) (project: GameProject) =
@@ -176,13 +176,29 @@ module internal EditScenes =
         let value = if monsters.IsEmpty then None else Some monsters
         Proj.mapScene sceneId (fun scene -> if scene.Monsters = value then scene else { scene with Monsters = value }) project
 
+    let setSceneLayers (sceneId: string) (layers: SceneLayer list) (project: GameProject) =
+        let value = if layers.IsEmpty then None else Some layers
+        let kept = layers |> List.map (fun layer -> layer.Id) |> Set.ofList
+        let dropGone (tile: Tile) =
+            match tile.Decor with
+            | Some decor when decor |> List.exists (fun (id, _) -> not (kept.Contains id)) ->
+                let rest = decor |> List.filter (fun (id, _) -> kept.Contains id)
+                { tile with Decor = (if rest.IsEmpty then None else Some rest) }
+            | _ -> tile
+        Proj.mapScene sceneId (fun scene ->
+            if scene.Layers = value then scene
+            else
+                let removed = defaultArg scene.Layers [] |> List.exists (fun layer -> not (kept.Contains layer.Id))
+                let scene = { scene with Layers = value }
+                if removed then Proj.mapTiles dropGone scene else scene) project
+
     /// The largest scene side (the game cuts bigger scenes when it loads them).
     [<Literal>]
-    let MaxSceneSize = 256
+    let MaxSceneSize = 512
 
     /// SceneManager `applyResize`: tiles in the overlap are kept, new tiles are dry grass. Rows
     /// that keep their width are shared with the old scene. A shrink moves what stood on the cut
-    /// tiles inside (`Cleanup.clampToScene`, #44). Sizes outside 1–256 are ignored.
+    /// tiles inside (`Cleanup.clampToScene`, #44). Sizes outside 1–512 are ignored.
     let resizeScene (sceneId: string) (width: int) (height: int) (project: GameProject) =
         if width < 1 || height < 1 || width > MaxSceneSize || height > MaxSceneSize then project
         else

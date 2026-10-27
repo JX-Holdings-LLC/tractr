@@ -218,7 +218,7 @@ fn ragged_and_mis_sized_grids_are_normalized_when_a_game_starts() {
     project.scenes[0].width = 100_000;
     let game = state::create_game_state(&project, Some("wide"));
     assert_eq!(game.world.scenes[0].width, farm_sim::schema::MAX_SCENE_SIZE);
-    assert!(game.world.scenes[0].tiles.iter().all(|row| row.len() == 256));
+    assert!(game.world.scenes[0].tiles.iter().all(|row| row.len() == 512));
 }
 
 #[test]

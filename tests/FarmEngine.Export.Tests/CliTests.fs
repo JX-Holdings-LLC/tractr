@@ -20,7 +20,7 @@ let ``help and version print and exit 0`` () =
     for help in [ [ "--help" ]; [ "-h" ]; [ "help" ]; [ "compile"; "--help" ]; [ "export"; "x.json"; "-h" ] ] do
         let code, out, err = farmc help
         Assert.Equal(0, code)
-        Assert.Contains("farmc compile <project.json> --out <game.cart>", out)
+        Assert.Contains("farmc compile <project> --out <game.cart>", out)
         Assert.Equal("", err)
     let code, out, _ = farmc [ "--version" ]
     Assert.Equal(0, code)
@@ -89,3 +89,22 @@ let ``compile writes the cartridge with options in any order`` () =
     Assert.True((code = 0), err)
     Assert.Contains("Compiled", out)
     Assert.True(CartridgeReader.hasIdentifier (File.ReadAllBytes cart))
+
+[<Fact>]
+let ``compile reads a project folder or the project json in one`` () =
+    use temp = new TempDir()
+    let folder = temp.Sub "farm"
+    for path, bytes in ProjectFolder.toFiles (starter ()) do
+        let file = Path.Combine(folder, path.Replace('/', Path.DirectorySeparatorChar))
+        Directory.CreateDirectory(Path.GetDirectoryName file) |> ignore
+        File.WriteAllBytes(file, bytes)
+    for project in [ folder; Path.Combine(folder, ProjectFolder.MainFile) ] do
+        let cart = temp.Sub "folder.cart"
+        let code, _, err = farmc [ "compile"; project; "--out"; cart ]
+        Assert.True((code = 0), err)
+        Assert.True(CartridgeReader.hasIdentifier (File.ReadAllBytes cart))
+    // A folder missing a file it names says which.
+    File.Delete(Path.Combine(folder, "scenes", "scene-farm.json"))
+    let code, _, err = farmc [ "compile"; folder; "--out"; temp.Sub "broken.cart" ]
+    Assert.Equal(1, code)
+    Assert.Contains("scenes/scene-farm.json is missing from the project folder", err)

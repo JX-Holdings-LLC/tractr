@@ -14,7 +14,10 @@ module PackRules =
     /// Every plugin mutation type (Rust `farm_plugins::MUTATION_TYPES`).
     let MutationTypes =
         [ "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "message"; "setWeather"; "modifyFriendship"
-          "grantXp"; "modifyEnergy"; "startQuest"; "warpPlayer"; "startDialogue"; "playSound"; "performAction"; "startMinigame" ]
+          "grantXp"; "modifyEnergy"; "startQuest"; "warpPlayer"; "startDialogue"; "playSound"; "performAction"; "startMinigame"
+          // The M3–M7 outcomes (M9).
+          "moveNpc"; "startCutscene"; "setVariable"; "addVariable"; "addShopStock"; "removeShopStock"; "placeNode"
+          "removeNode"; "placeMachine"; "removeMachine"; "setRelationship"; "sendMail"; "modifyHealth" ]
 
     /// What a pack's plugins may answer when its manifest declares no `permissions.mutations`
     /// (Rust `farm_plugins::DEFAULT_MUTATION_CAPABILITIES`).
@@ -180,7 +183,8 @@ module PackRules =
     let private collections =
         [ "crops"; "items"; "recipes"; "machineTypes"; "nodeTypes"; "animalSpecies"
           "fishTables"; "weatherTypes"; "npcs"; "dialogues"; "scenes"; "events"
-          "quests"; "shops"; "actions"; "minigames"; "cutscenes"; "heartEvents" ]
+          "quests"; "shops"; "actions"; "minigames"; "cutscenes"; "heartEvents"
+          "buildingTypes"; "collections"; "bundles"; "achievements"; "mail"; "monsters" ]
 
     let private referenceKeys =
         Set.ofList
@@ -188,7 +192,13 @@ module PackRules =
               "npcId"; "dialogueId"; "nextDialogueId"; "openShopId"; "offerQuestId"
               "questId"; "targetNPCId"; "targetCropType"; "shopId"; "giver"; "typeId"
               "speciesId"; "recipeId"; "nodeTypeId"; "weatherId"; "targetItemId"
-              "requiredItemId"; "giftItemId"; "actionId"; "minigameId"; "useActionId"; "cutsceneId" ]
+              "requiredItemId"; "giftItemId"; "actionId"; "minigameId"; "useActionId"; "cutsceneId"
+              // M5–M7 content (M9).
+              "buildingId"; "upgradeOf"; "collectionId"; "bundleId"; "achievementId"; "mailId"; "monsterId" ]
+
+    /// Keys holding lists of references (Rust `REFERENCE_LIST_KEYS`); objects in them (a bundle's
+    /// lines) are rewritten like any other value.
+    let private referenceListKeys = Set.ofList [ "prerequisites"; "buildings"; "animals"; "housing"; "items" ]
 
     let private entries (json: Json) =
         match json with
@@ -225,9 +235,16 @@ module PackRules =
                                 match value with
                                 | JString _ -> reference value
                                 | _ -> rewrite value
-                            elif key = "prerequisites" then
+                            elif referenceListKeys.Contains key then
                                 match value with
-                                | JArray items -> JArray(List.map reference items)
+                                | JArray items ->
+                                    JArray(
+                                        items
+                                        |> List.map (fun item ->
+                                            match item with
+                                            | JString _ -> reference item
+                                            | other -> rewrite other)
+                                    )
                                 | _ -> rewrite value
                             else
                                 rewrite value)
@@ -268,7 +285,44 @@ module PackRules =
                     if List.contains key collections then
                         match value with
                         | JArray [] -> key, value
+                        | JArray items when key = "events" ->
+                            // A trigger's subject names the pack's content like a reference (M9).
+                            let subject (json: Json) =
+                                match json with
+                                | JObject members ->
+                                    match Json.get "subject" json with
+                                    | JString _ as value -> JObject(Json.setMember "subject" (reference value) members)
+                                    | _ -> json
+                                | other -> other
+                            key, JArray(List.map (definition >> subject) items)
                         | JArray items -> key, JArray(List.map definition items)
+                        | _ -> key, value
+                    elif key = "gamePanels" then
+                        // Ids namespaced, and the items and actions entries show or run when the
+                        // pack defines them (Rust `packs::namespace_panels`); flags as written.
+                        let entry (json: Json) =
+                            match json with
+                            | JObject members ->
+                                match Json.get "kind" json, Json.get "value" json with
+                                | JString kind, (JString _ as target) when kind = GamePanelEntryKinds.Item || kind = GamePanelEntryKinds.Action ->
+                                    JObject(Json.setMember "value" (reference target) members)
+                                | _ -> json
+                            | other -> other
+                        let panel (json: Json) =
+                            match json with
+                            | JObject members ->
+                                let members =
+                                    match Json.get "id" json with
+                                    | JString id -> Json.setMember "id" (JString(namespacedId packId id)) members
+                                    | _ -> members
+                                let members =
+                                    match Json.get "entries" (JObject members) with
+                                    | JArray entries -> Json.setMember "entries" (JArray(List.map entry entries)) members
+                                    | _ -> members
+                                JObject members
+                            | other -> other
+                        match value with
+                        | JArray panels -> key, JArray(List.map panel panels)
                         | _ -> key, value
                     elif key = "playerStart" && not (Json.isNullish value) then key, rewrite value
                     elif key = "strings" then key, strings value

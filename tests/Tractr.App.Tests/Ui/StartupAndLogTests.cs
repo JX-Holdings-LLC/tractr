@@ -22,7 +22,7 @@ public sealed class StartupAndLogTests
         var dir = Path.Combine(TestAppBuilder.DataDirectory, "startup-" + Guid.NewGuid().ToString("N"));
         var store = new ProjectStore(dir);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.WriteAllText(store.PathFor("broken"), "{ not json");
+        File.WriteAllText(store.LegacyPathFor("broken"), "{ not json");
         new AppSettingsStore(AppDataPaths.SettingsFile(dir)).Save(new WorkspaceSettings { LastProjectId = "broken" });
 
         var viewModel = new MainWindowViewModel(new UpdateCoordinator(new FakeUpdateService(), new InMemorySettingsStore()), ShellComposition.CreateDefault(dir));

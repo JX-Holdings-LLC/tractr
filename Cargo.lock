@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "farm-bench"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "criterion",
  "farm-cart",
@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "farm-cart"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-cart-schema",
  "farm-sim",
@@ -777,14 +777,14 @@ dependencies = [
 
 [[package]]
 name = "farm-cart-schema"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "flatbuffers",
 ]
 
 [[package]]
 name = "farm-ffi"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-cart",
  "farm-host",
@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "farm-fuzz"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-cart",
  "farm-host",
@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "farm-gpu"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-render",
  "wgpu",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "farm-host"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-cart",
  "farm-player",
@@ -831,7 +831,7 @@ dependencies = [
 
 [[package]]
 name = "farm-player"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "cpal",
  "directories",
@@ -845,6 +845,7 @@ dependencies = [
  "farm-ui",
  "gilrs",
  "hound",
+ "indexmap",
  "lewton",
  "serde",
  "serde_json",
@@ -856,10 +857,11 @@ dependencies = [
 
 [[package]]
 name = "farm-plugins"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-runtime",
  "farm-sim",
+ "indexmap",
  "serde",
  "serde_json",
  "sha2",
@@ -869,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "farm-render"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "base64",
  "farm-sim",
@@ -882,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "farm-runtime"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-sim",
  "indexmap",
@@ -892,7 +894,7 @@ dependencies = [
 
 [[package]]
 name = "farm-sim"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "proptest",
@@ -904,7 +906,7 @@ dependencies = [
 
 [[package]]
 name = "farm-ui"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "farm-render",
  "farm-runtime",
@@ -915,7 +917,7 @@ dependencies = [
 
 [[package]]
 name = "farm-wasm"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "base64",
  "farm-host",

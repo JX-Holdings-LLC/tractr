@@ -55,6 +55,11 @@ module internal ChecksVocabulary =
                     terrain tile.Background
                     tile.Overlay |> Option.iter terrain
                     tile.Object |> Option.iter terrain
+                    // Extra layers (M8): a terrain the game has, on a layer the scene has.
+                    for layerId, painted in defaultArg tile.Decor [] do
+                        terrain painted
+                        if not (defaultArg scene.Layers [] |> List.exists (fun layer -> layer.Id = layerId)) then
+                            report "scene.unknownLayer" "layer" layerId
                     match tile.Crop with
                     | Some crop ->
                         if crop.Quality.Length > 0 && not (context.QualityIds.Contains crop.Quality) then

@@ -19,7 +19,9 @@ public sealed class ProjectStoreTests
 
         store.Save(project);
 
-        Assert.True(File.Exists(Path.Combine(dir.Path, "projects", "proj-test.json")));
+        // A project is a folder (M8): its project file, a file per scene, and so on.
+        Assert.True(File.Exists(Path.Combine(dir.Path, "projects", "proj-test", "project.json")));
+        Assert.True(File.Exists(Path.Combine(dir.Path, "projects", "proj-test", "scenes", "scene-farm.json")));
         var loaded = store.Load("proj-test");
         Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
         Assert.Equal(ProjectStore.ToJson(project), ProjectStore.ToJson(loaded.Project!));
@@ -64,11 +66,12 @@ public sealed class ProjectStoreTests
         store.Save(project.WithName("Second"));
 
         var files = Directory.GetFiles(Path.Combine(dir.Path, "projects"));
-        Assert.Equal(["index.json", "proj-a.json"], files.Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Equal(["index.json"], files.Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "projects"), "*.tmp", SearchOption.AllDirectories));
         Assert.Equal("Second", store.Load("proj-a").Project!.Name);
         Assert.Equal("Second", Assert.Single(store.List()).Name);
         // Project JSON: camelCase, indented, at the current schema version.
-        var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a.json"));
+        var text = File.ReadAllText(Path.Combine(dir.Path, "projects", "proj-a", "project.json"));
         Assert.Contains($"\n  \"schemaVersion\": {ProjectSchema.CurrentProjectSchemaVersion}", text, StringComparison.Ordinal);
     }
 
@@ -78,7 +81,7 @@ public sealed class ProjectStoreTests
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.Copy(FixturePath, store.PathFor("fixture"));
+        File.Copy(FixturePath, store.LegacyPathFor("fixture"));
 
         // Files the index doesn't know are adopted (name read from the file).
         var summary = Assert.Single(store.List());
@@ -97,9 +100,9 @@ public sealed class ProjectStoreTests
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.WriteAllText(store.PathFor("broken"), "{ not json");
-        File.WriteAllText(store.PathFor("future"), """{ "schemaVersion": 999, "scenes": [] }""");
-        File.WriteAllText(store.PathFor("old"), """{ "schemaVersion": 0, "scenes": [] }""");
+        File.WriteAllText(store.LegacyPathFor("broken"), "{ not json");
+        File.WriteAllText(store.LegacyPathFor("future"), """{ "schemaVersion": 999, "scenes": [] }""");
+        File.WriteAllText(store.LegacyPathFor("old"), """{ "schemaVersion": 0, "scenes": [] }""");
 
         var broken = store.Load("broken");
         Assert.False(broken.Ok);
@@ -246,7 +249,7 @@ public sealed class ProjectStoreTests
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         store.Save(FarmEngine.Authoring.ProjectCatalog.CreateNewProject(ProjectTemplates.Blank, "Original", "proj-abc", 0));
-        File.Copy(store.PathFor("proj-abc"), Path.Combine(store.ProjectsDirectory, "proj-abc - Copy.json"));
+        CopyFolder(store.FolderFor("proj-abc"), Path.Combine(store.ProjectsDirectory, "proj-abc - Copy"));
 
         var copy = store.Load("proj-abc - Copy");
         Assert.True(copy.Ok, string.Join("; ", copy.Errors));
@@ -255,7 +258,7 @@ public sealed class ProjectStoreTests
 
         Assert.Equal("Original", store.Load("proj-abc").Project!.Name);
         Assert.Equal("Edited copy", store.Load("proj-abc - Copy").Project!.Name);
-        Assert.True(File.Exists(Path.Combine(store.ProjectsDirectory, "proj-abc - Copy.json")));
+        Assert.True(File.Exists(Path.Combine(store.ProjectsDirectory, "proj-abc - Copy", "project.json")));
     }
 
     [Fact]
@@ -268,7 +271,7 @@ public sealed class ProjectStoreTests
 
         var summary = Assert.Single(store.List());
         Assert.Equal(("100% farm", "Full Farm"), (summary.Id, summary.Name));
-        Assert.True(File.Exists(store.PathFor("100% farm")));
+        Assert.True(File.Exists(store.LegacyPathFor("100% farm")));
         Assert.Equal("Full Farm", store.Load("100% farm").Project!.Name);
     }
 
@@ -278,7 +281,7 @@ public sealed class ProjectStoreTests
         using var dir = new TempDir();
         var store = new ProjectStore(dir.Path);
         Directory.CreateDirectory(store.ProjectsDirectory);
-        File.Copy(FixturePath, store.PathFor("fixture"));
+        File.Copy(FixturePath, store.LegacyPathFor("fixture"));
 
         var loaded = store.Load("fixture");
         store.Save(loaded.Project!);
@@ -290,6 +293,106 @@ public sealed class ProjectStoreTests
         Assert.Single(store.List());
     }
 
+    private static void CopyFolder(string from, string to)
+    {
+        foreach (var file in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(to, Path.GetRelativePath(from, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+    }
+
+    [Fact]
+    public void ASingleFileProject_OpensAndMovesIntoAFolderOnItsNextSave()
+    {
+        using var dir = new TempDir();
+        var store = new ProjectStore(dir.Path);
+        Directory.CreateDirectory(store.ProjectsDirectory);
+        File.Copy(FixturePath, store.LegacyPathFor("fixture"));
+        var loaded = store.Load("fixture");
+        Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
+
+        store.Save(loaded.Project!);
+
+        Assert.False(File.Exists(store.LegacyPathFor("fixture")));
+        Assert.True(File.Exists(store.PathFor("fixture")));
+        Assert.Equal(ProjectStore.ToJson(loaded.Project!), ProjectStore.ToJson(store.Load("fixture").Project!));
+        Assert.Single(store.List());
+    }
+
+    [Fact]
+    public void Save_WritesOnlyWhatChanged_AndDropsWhatTheProjectNoLongerHas()
+    {
+        using var dir = new TempDir();
+        var store = new ProjectStore(dir.Path);
+        var project = FarmEngine.Authoring.ProjectCatalog.CreateNewProject(ProjectTemplates.Starter, "Farm", "proj-a", 0);
+        store.Save(project);
+        var folder = store.FolderFor("proj-a");
+        var farm = Path.Combine(folder, "scenes", "scene-farm.json");
+        var item = Directory.GetFiles(Path.Combine(folder, "items")).First();
+        File.SetLastWriteTimeUtc(farm, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        // A file of the creator's own (a README, a .git folder) is left alone.
+        File.WriteAllText(Path.Combine(folder, "README.md"), "notes");
+
+        var itemId = Path.GetFileNameWithoutExtension(item);
+        var fewer = project.WithItems(project.Items.Where(i => i.Id != itemId)).WithName("Renamed");
+        store.Save(fewer);
+
+        Assert.Equal(new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), File.GetLastWriteTimeUtc(farm));
+        Assert.False(File.Exists(item));
+        Assert.True(File.Exists(Path.Combine(folder, "README.md")));
+        var reloaded = store.Load("proj-a").Project!;
+        Assert.Equal("Renamed", reloaded.Name);
+        Assert.DoesNotContain(reloaded.Items, i => i.Id == itemId);
+        // What it replaced is kept as one file a creator can import.
+        Assert.Equal("Farm", ProjectStore.Parse(File.ReadAllText(store.PreviousVersionPath("proj-a"))).Project!.Name);
+    }
+
+    [Fact]
+    public void AProjectFolderCopiedIn_IsAdopted()
+    {
+        using var dir = new TempDir();
+        var source = new ProjectStore(Path.Combine(dir.Path, "elsewhere"));
+        source.Save(FarmEngine.Authoring.ProjectCatalog.CreateNewProject(ProjectTemplates.Blank, "Shared Farm", "proj-team", 0));
+        var store = new ProjectStore(Path.Combine(dir.Path, "mine"));
+        CopyFolder(source.FolderFor("proj-team"), store.FolderFor("proj-team"));
+
+        var summary = Assert.Single(store.List());
+        Assert.Equal(("proj-team", "Shared Farm"), (summary.Id, summary.Name));
+        Assert.True(store.Load("proj-team").Ok);
+        store.Delete("proj-team");
+        Assert.False(Directory.Exists(store.FolderFor("proj-team")));
+    }
+
+    [Fact]
+    public void AProjectFolderFromElsewhere_ImportsAsOneProject()
+    {
+        using var dir = new TempDir();
+        var source = new ProjectStore(Path.Combine(dir.Path, "team"));
+        var project = FarmEngine.Authoring.ProjectCatalog.CreateNewProject(ProjectTemplates.Starter, "Team Farm", "proj-team", 0);
+        source.Save(project);
+
+        var (json, errors) = ProjectStore.ReadFolderAsJson(source.FolderFor("proj-team"));
+        Assert.Empty(errors);
+        var imported = new ProjectStore(Path.Combine(dir.Path, "mine")).Import(json!);
+        Assert.True(imported.Ok, string.Join("; ", imported.Errors));
+        Assert.Equal("Team Farm", imported.Project!.Name);
+        Assert.Equal(project.Scenes.Length, imported.Project.Scenes.Length);
+
+        File.Delete(Path.Combine(source.FolderFor("proj-team"), "scenes", "scene-farm.json"));
+        var (missing, why) = ProjectStore.ReadFolderAsJson(source.FolderFor("proj-team"));
+        Assert.Null(missing);
+        Assert.Contains("scenes/scene-farm.json is missing from the project folder", why);
+    }
+
+    [Fact]
+    public void AProjectCalledBackups_DoesNotTakeTheBackupsFolder()
+    {
+        Assert.NotEqual("backups", ProjectStore.SafeFileName("backups"));
+        Assert.Equal("backups", ProjectStore.IdForFileName(ProjectStore.SafeFileName("backups")));
+    }
+
     [Fact]
     public void DeleteStaleTempFiles_CleansTheProjectsFolder()
     {
@@ -298,8 +401,10 @@ public sealed class ProjectStoreTests
         var store = new ProjectStore(dir.Path, time);
         Directory.CreateDirectory(store.ProjectsDirectory);
         File.WriteAllText(Path.Combine(store.ProjectsDirectory, $".proj-a.json.{Guid.NewGuid():N}.tmp"), "half a project");
+        Directory.CreateDirectory(Path.Combine(store.ProjectsDirectory, "proj-a", "scenes"));
+        File.WriteAllText(Path.Combine(store.ProjectsDirectory, "proj-a", "scenes", $".farm.json.{Guid.NewGuid():N}.tmp"), "half a scene");
 
-        Assert.Equal(1, store.DeleteStaleTempFiles());
+        Assert.Equal(2, store.DeleteStaleTempFiles());
         Assert.Empty(Directory.GetFiles(store.ProjectsDirectory));
     }
 }

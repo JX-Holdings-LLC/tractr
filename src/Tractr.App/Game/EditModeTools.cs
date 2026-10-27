@@ -48,8 +48,9 @@ public sealed partial class EditModeView
     private readonly TextBox _sceneDaylight = new() { Name = "SceneDaylight", AcceptsReturn = true, MinHeight = 54, PlaceholderText = "360 #ffd8a0" };
     private readonly CheckBox _sceneAllSeasons = new() { Name = "SceneAllSeasons", Content = EditorStrings.Get("scene.allSeasons") };
     private readonly TextBox _sceneMonsters = new() { Name = "SceneMonsters", AcceptsReturn = true, MinHeight = 40, PlaceholderText = EditorStrings.Get("scene.monstersPlaceholder") };
+    private readonly TextBox _sceneLayers = new() { Name = "SceneLayers", AcceptsReturn = true, MinHeight = 40, PlaceholderText = EditorStrings.Get("scene.layersPlaceholder") };
     /// <summary>The surroundings' text fields as last shown, so a project change refreshes only the untouched ones.</summary>
-    private (string Temperature, string Tags, string Foliage, string Daylight, string Monsters) _shownSurroundings;
+    private (string Temperature, string Tags, string Foliage, string Daylight, string Monsters, string Layers) _shownSurroundings;
     private readonly Button _removeDoor = new() { Name = "RemoveDoorButton", Content = "Remove door" };
     private readonly StackPanel _transitionList = new() { Name = "TransitionList", Spacing = 6 };
     private readonly TextBlock _transitionCount = Ui.Text("", "muted", "small");
@@ -283,6 +284,28 @@ public sealed partial class EditModeView
         return panel;
     }
 
+    /// <summary>
+    /// The Layer list: the three fixed layers, then the scene's extra layers (M8). A painted-on
+    /// extra layer the scene no longer has gives way to the background.
+    /// </summary>
+    private void RefreshLayerSelector(Scene scene)
+    {
+        var extra = scene.Layers.OrEmpty().Select(layer => Edits.DecorLayer(layer.Id)).ToList();
+        var shown = _layerSelector.Items.OfType<ComboBoxItem>().Skip(3).Select(item => item.Tag as TileLayer).ToList();
+        if (!shown.SequenceEqual(extra))
+        {
+            while (_layerSelector.Items.Count > 3) _layerSelector.Items.RemoveAt(3);
+            foreach (var (layer, definition) in extra.Zip(scene.Layers.OrEmpty()))
+            {
+                var name = string.IsNullOrWhiteSpace(definition.Name) ? definition.Id : definition.Name;
+                _layerSelector.Items.Add(new ComboBoxItem { Content = EditorStrings.Format("map.extraLayer", name), Tag = layer });
+            }
+        }
+
+        if (_selectedLayer.IsDecor && !extra.Contains(_selectedLayer)) _selectedLayer = Edits.LayerFor(TileTypes.Grass);
+        SyncLayerSelector();
+    }
+
     private void SyncLayerSelector()
     {
         _layerSelector.SelectedItem = _layerSelector.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, _selectedLayer));
@@ -325,6 +348,7 @@ public sealed partial class EditModeView
         _sceneDark.IsChecked = scene.Dark.OrNullable() == true;
         _sceneAllSeasons.IsChecked = scene.AllSeasons.OrNullable() == true;
         RefreshSurroundings(project, scene, sceneChanged);
+        RefreshLayerSelector(scene);
         _showingSceneIndoor = false;
         RefreshNewSceneTiles(project);
         RefreshSceneSizeInfo();
@@ -390,6 +414,10 @@ public sealed partial class EditModeView
         AutomationProperties.SetName(_sceneMonsters, EditorStrings.Get("scene.monstersName"));
         ToolTip.SetTip(_sceneMonsters, EditorStrings.Get("scene.monstersTip"));
         side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.monsters"), "muted", "small"), _sceneMonsters));
+        // Its extra layers (M8), painted from the Layer list.
+        AutomationProperties.SetName(_sceneLayers, EditorStrings.Get("scene.layersName"));
+        ToolTip.SetTip(_sceneLayers, EditorStrings.Get("scene.layersTip"));
+        side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.layers"), "muted", "small"), _sceneLayers));
         side.Children.Add(WrapButtons(NamedButton("SaveSurroundingsButton", EditorStrings.Get("scene.saveSurroundings"), () => ApplySurroundings(fields: true))));
     }
 
@@ -405,12 +433,14 @@ public sealed partial class EditModeView
             Tags: string.Join(", ", scene.Tags.OrEmpty()),
             Foliage: look?.FoliageTint.OrNull() ?? "",
             Daylight: look is null ? "" : SettingsForm.DaylightText(look.Daylight),
-            Monsters: SettingsForm.MonsterSpawnsText(scene.Monsters.OrEmpty()));
+            Monsters: SettingsForm.MonsterSpawnsText(scene.Monsters.OrEmpty()),
+            Layers: SettingsForm.SceneLayersText(scene.Layers.OrEmpty()));
         if (sceneChanged || _sceneTemperature.Text == _shownSurroundings.Temperature) _sceneTemperature.Text = stored.Temperature;
         if (sceneChanged || _sceneTags.Text == _shownSurroundings.Tags) _sceneTags.Text = stored.Tags;
         if (sceneChanged || _sceneFoliage.Text == _shownSurroundings.Foliage) _sceneFoliage.Text = stored.Foliage;
         if (sceneChanged || _sceneDaylight.Text == _shownSurroundings.Daylight) _sceneDaylight.Text = stored.Daylight;
         if (sceneChanged || _sceneMonsters.Text == _shownSurroundings.Monsters) _sceneMonsters.Text = stored.Monsters;
+        if (sceneChanged || _sceneLayers.Text == _shownSurroundings.Layers) _sceneLayers.Text = stored.Layers;
         _shownSurroundings = stored;
 
         var music = scene.Music.OrNull() ?? "";
@@ -439,6 +469,7 @@ public sealed partial class EditModeView
             IEnumerable<string> tags = scene.Tags.OrEmpty();
             var atmosphere = scene.Atmosphere.OrNull();
             IEnumerable<MonsterSpawn> monsters = scene.Monsters.OrEmpty();
+            IEnumerable<SceneLayer> layers = scene.Layers.OrEmpty();
             if (fields)
             {
                 var warmth = (_sceneTemperature.Text ?? "").Trim();
@@ -448,12 +479,14 @@ public sealed partial class EditModeView
                 tags = (_sceneTags.Text ?? "").Split(',');
                 atmosphere = SettingsForm.Look("Scene", _sceneDaylight.Text, _sceneFoliage.Text);
                 monsters = SettingsForm.MonsterSpawns(_sceneMonsters.Text);
+                layers = SettingsForm.SceneLayers(scene.Layers.OrEmpty(), _sceneLayers.Text);
             }
 
             var saved = _workspace.Apply(Edits.Batch(EditorStrings.Get("scene.saveSurroundings"),
             [
                 Edits.SetSceneEnvironment(scene.Id, dark ?? scene.Dark.OrNullable() == true, temperature, tags, music ?? scene.Music.OrNull(), atmosphere),
                 Edits.SetSceneMonsters(scene.Id, monsters),
+                Edits.SetSceneLayers(scene.Id, layers),
             ]));
             if (fields) _editorMessage.Text = saved ? EditorStrings.Format("scene.savedSurroundings", scene.Name) : EditorStrings.Get("common.noChanges");
         }
@@ -736,7 +769,7 @@ public sealed partial class EditModeView
         return ok;
     }
 
-    /// <summary>The size typed in the Size boxes, when both are whole numbers from 1 to 256.</summary>
+    /// <summary>The size typed in the Size boxes, when both are whole numbers from 1 to the largest scene size.</summary>
     private bool TypedSceneSize(out int width, out int height)
     {
         var validWidth = int.TryParse(_sceneWidth.Text, NumberStyles.None, CultureInfo.InvariantCulture, out width);

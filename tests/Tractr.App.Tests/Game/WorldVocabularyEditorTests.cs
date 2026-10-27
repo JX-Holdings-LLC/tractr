@@ -103,6 +103,45 @@ public sealed class WorldVocabularyEditorTests
     }
 
     [AvaloniaFact]
+    public void ASceneGainsExtraLayersThatTheMapToolsPaintOn()
+    {
+        using var host = new GameTestHost();
+        var edit = host.Surface.EditView;
+        var sceneId = edit.SceneId!;
+        FarmEngine.Schemas.Scene Scene() => host.Workspace.Current!.Scenes.First(scene => scene.Id == sceneId);
+        var layers = FindByName<ComboBox>(host.Window, "LayerSelector");
+        Assert.Equal(3, layers.Items.Count);
+
+        FindByName<TextBox>(host.Window, "SceneLayers").Text = "rugs\ntreetops above\nrugs";
+        Press(host.Window, "SaveSurroundingsButton");
+        Assert.Contains("listed twice", FindByName<TextBlock>(host.Window, "MapEditorMessage").Text, StringComparison.Ordinal);
+        FindByName<TextBox>(host.Window, "SceneLayers").Text = "rugs\ntreetops above";
+        Press(host.Window, "SaveSurroundingsButton");
+        Assert.Equal(["rugs", "treetops"], Scene().Layers.OrEmpty().Select(layer => layer.Id));
+        Assert.True(Scene().Layers.OrEmpty()[1].Above.OrNullable());
+        Pump();
+        Assert.Equal(["Layer: rugs", "Layer: treetops"], layers.Items.OfType<ComboBoxItem>().Skip(3).Select(item => item.Content as string));
+
+        // Painting on an extra layer keeps the tile's own layers and never blocks (a brush
+        // picks its terrain's own layer, so the extra layer is chosen after it).
+        edit.Brush = TileTypes.Grass;
+        layers.SelectedItem = layers.Items[4];
+        Assert.Equal(Edits.DecorLayer("treetops"), edit.Layer);
+        edit.PaintTile(2, 2);
+        var tile = Scene().Tiles[2][2];
+        Assert.Equal([("treetops", TileTypes.Grass)], tile.Decor.OrEmpty().Select(pair => (pair.Item1, pair.Item2)));
+        Assert.False(tile.Collision);
+
+        // Dropping the layer takes what was painted on it, and the Layer list follows.
+        FindByName<TextBox>(host.Window, "SceneLayers").Text = "rugs";
+        Press(host.Window, "SaveSurroundingsButton");
+        Pump();
+        Assert.Null(Scene().Tiles[2][2].Decor.OrNull());
+        Assert.Equal(4, layers.Items.Count);
+        Assert.Equal(Edits.LayerFor(TileTypes.Grass), edit.Layer);
+    }
+
+    [AvaloniaFact]
     public void CutsceneStepsShowTheFieldsOfTheirTypeAndMusicStepsPickMusic()
     {
         using var host = new GameTestHost();

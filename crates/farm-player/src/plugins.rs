@@ -27,6 +27,15 @@ impl SessionPlugins for PluginRuntime<WasmPluginHost> {
         PluginRuntime::begin_tick(self, tick);
     }
 
+    fn restore(&mut self, saved: &indexmap::IndexMap<String, Value>) {
+        // Errors are kept in the runtime's bounded recent-error list.
+        PluginRuntime::restore(self, saved);
+    }
+
+    fn restore_rebuilt(&mut self, saved: &indexmap::IndexMap<String, Value>) {
+        PluginRuntime::restore_rebuilt(self, saved);
+    }
+
     fn recent_errors(&self) -> Vec<String> {
         PluginRuntime::recent_errors(self).map(describe_plugin_error).collect()
     }

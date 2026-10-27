@@ -1,0 +1,168 @@
+{
+  "manifest": {
+    "id": "county-fair",
+    "name": "County Fair",
+    "version": "0.1.0",
+    "description": "Adds a fair barn, a ribbon collection, a prize bundle, an achievement, a letter, a field mouse and a fair board panel: a pack bringing building, goals, combat and interface content.",
+    "author": "Farm Engine",
+    "engineCompatibility": "*",
+    "base": false,
+    "dependencies": [],
+    "overrides": [],
+    "permissions": {
+      "hooks": [],
+      "contentInject": true,
+      "uiPanels": true
+    }
+  },
+  "content": {
+    "items": [
+      {
+        "id": "ribbon",
+        "name": "Blue Ribbon",
+        "description": "First prize at the county fair.",
+        "type": "material",
+        "stackable": true,
+        "maxStack": 99,
+        "value": 50
+      }
+    ],
+    "scenes": [],
+    "buildingTypes": [
+      {
+        "id": "fair-barn",
+        "name": "Fair Barn",
+        "description": "A red barn for show animals.",
+        "color": "#b0413e",
+        "width": 4,
+        "height": 3,
+        "door": { "x": 1, "y": 2 },
+        "cost": 1500,
+        "materials": [{ "itemId": "ribbon", "quantity": 1 }],
+        "buildDays": 2,
+        "scenes": ["scene-farm"],
+        "capacity": 4
+      },
+      {
+        "id": "grand-barn",
+        "name": "Grand Fair Barn",
+        "description": "The fair barn, twice the size.",
+        "color": "#8e2f2c",
+        "width": 4,
+        "height": 3,
+        "door": { "x": 1, "y": 2 },
+        "cost": 3000,
+        "materials": [],
+        "buildDays": 3,
+        "scenes": ["scene-farm"],
+        "capacity": 8,
+        "upgradeOf": "fair-barn"
+      }
+    ],
+    "shops": [
+      {
+        "id": "fair-builder",
+        "name": "Fair Builder",
+        "stock": [],
+        "sellPriceMultiplier": 0.5,
+        "buysItems": false,
+        "repairsTools": false,
+        "repairCostPerPoint": 0,
+        "buildings": ["fair-barn", "grand-barn"]
+      }
+    ],
+    "collections": [
+      {
+        "id": "ribbons",
+        "name": "Ribbons",
+        "description": "Every ribbon the fair gives out.",
+        "items": ["ribbon"],
+        "kind": "found",
+        "rewards": [{ "count": 1, "message": "Your first ribbon!", "outcomes": [{ "type": "sendMail", "mailId": "fair-letter" }] }]
+      }
+    ],
+    "bundles": [
+      {
+        "id": "prize-table",
+        "name": "Prize Table",
+        "description": "Bring the judges a ribbon.",
+        "group": "Fair",
+        "items": [{ "itemId": "ribbon", "quantity": 1 }],
+        "message": "The prize table is set.",
+        "outcomes": [{ "type": "giveMoney", "amount": 200 }]
+      }
+    ],
+    "achievements": [
+      {
+        "id": "blue-ribbon",
+        "name": "Blue Ribbon",
+        "description": "Finish the prize table.",
+        "conditions": [{ "type": "bundle", "bundleId": "prize-table" }],
+        "hidden": false
+      },
+      {
+        "id": "pest-control",
+        "name": "Pest Control",
+        "description": "Chase off a field mouse.",
+        "conditions": [{ "type": "slain", "monsterId": "field-mouse", "min": 1 }],
+        "hidden": true
+      }
+    ],
+    "mail": [
+      {
+        "id": "fair-letter",
+        "subject": "See you at the fair",
+        "from": "The Fair Committee",
+        "text": "Dear {player}, bring your best to the county fair!",
+        "attachments": [{ "itemId": "ribbon", "quantity": 1 }],
+        "money": 0,
+        "outcomes": [],
+        "conditions": [],
+        "repeat": false
+      }
+    ],
+    "monsters": [
+      {
+        "id": "field-mouse",
+        "name": "Field Mouse",
+        "color": "#9a8a78",
+        "health": 6,
+        "damage": 1,
+        "defense": 0,
+        "speed": 1,
+        "movement": "wander",
+        "sight": 4,
+        "drops": [{ "itemId": "ribbon", "min": 1, "max": 1, "weight": 1 }],
+        "experience": 2
+      }
+    ],
+    "gamePanels": [
+      {
+        "id": "fair-board",
+        "title": "County Fair",
+        "entries": [
+          { "label": "Ribbons", "kind": "item", "value": "ribbon" },
+          { "label": "Barn raised", "kind": "flag", "value": "county-fair:barn-raised" },
+          { "label": "Day", "kind": "day", "value": "" }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "id": "barn-raised",
+        "name": "Barn raised",
+        "sceneId": "scene-farm",
+        "trigger": "build",
+        "subject": "fair-barn",
+        "conditions": [{ "type": "building", "buildingId": "fair-barn" }],
+        "outcomes": [
+          { "type": "message", "message": "The fair barn stands!" },
+          { "type": "setFlag", "flagName": "county-fair:barn-raised" }
+        ],
+        "active": true,
+        "repeatable": false
+      }
+    ]
+  },
+  "plugins": []
+}

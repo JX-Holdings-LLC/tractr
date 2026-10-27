@@ -6,8 +6,8 @@
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
 use farm_bench::{
-    farm, gameplay_player, large_map_player, load_cartridge, npc_ticks, npc_town, render_frame, sample_cartridges,
-    sleep, start_cartridge, FarmSpec, NewPlayer, SaveFixture,
+    farm, gameplay_player, large_map_player, largest_map_player, load_cartridge, night_player, npc_ticks, npc_town,
+    render_frame, sample_cartridges, sleep, start_cartridge, FarmSpec, NewPlayer, SaveFixture,
 };
 use std::hint::black_box;
 use std::time::Duration;
@@ -17,6 +17,7 @@ fn overnight(c: &mut Criterion) {
     for (name, spec, samples) in [
         ("64x64 full crops", FarmSpec::OVERNIGHT_64, 100),
         ("256x256 full crops + 50 machines", FarmSpec::OVERNIGHT_256, 20),
+        ("512x512 full crops + 100 machines", FarmSpec::OVERNIGHT_512, 10),
     ] {
         let farm = farm(spec);
         group.sample_size(samples);
@@ -63,12 +64,14 @@ fn cartridges(c: &mut Criterion) {
 fn frames(c: &mut Criterion) {
     let mut group = c.benchmark_group("frame");
     group.sample_size(60).measurement_time(Duration::from_secs(8));
-    let frames: [(&str, u32, u32, NewPlayer); 5] = [
+    let frames: [(&str, u32, u32, NewPlayer); 7] = [
         ("", 1280, 800, gameplay_player),
         ("", 1920, 1080, gameplay_player),
         ("", 2560, 1600, gameplay_player),
         ("", 3840, 2160, gameplay_player),
         (" 256x256 map", 1920, 1080, large_map_player),
+        (" 512x512 map", 1920, 1080, largest_map_player),
+        (" night 64 lights", 1920, 1080, night_player),
     ];
     for (map, width, height, player) in frames {
         let mut player = player(width, height);

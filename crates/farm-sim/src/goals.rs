@@ -11,6 +11,7 @@
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{Effects, EngineContext};
 use crate::events::{self, ConditionScope};
+use crate::hooks::{AchievementUnlockHookPayload, BundleCompleteHookPayload, HookEvent, ItemSellHookPayload};
 use crate::messages;
 use crate::schema::{
     collection_kinds, event_triggers, BundleProgress, CollectionDefinition, GameState, InventorySlot, ShippedLine,
@@ -89,6 +90,15 @@ pub fn ship_overnight(ctx: &EngineContext, state: &mut GameState) -> Effects {
     state.player.money = state.player.money.saturating_add(total);
     let mut effects = vec![Effect::say(message_levels::SUCCESS, messages::SHIPPED.with(&[&units, &total]))];
     let item_ids: Vec<String> = lines.iter().map(|line| line.item_id.clone()).collect();
+    for line in &lines {
+        ctx.emit(HookEvent::ItemSell(ItemSellHookPayload {
+            item_id: line.item_id.clone(),
+            quantity: line.quantity,
+            money: line.money,
+            via: "shipping".to_owned(),
+            shop_id: None,
+        }));
+    }
     state.last_shipment = lines;
     for item_id in &item_ids {
         effects.extend(note(ctx, state, collection_kinds::SHIPPED, item_id));
@@ -180,6 +190,7 @@ pub fn check_achievements(ctx: &EngineContext, state: &mut GameState) -> Effects
         }
         state.achievements.insert(achievement.id.clone(), state.clock.day);
         effects.push(Effect::AchievementUnlocked { achievement_id: achievement.id.clone() });
+        ctx.emit(HookEvent::AchievementUnlock(AchievementUnlockHookPayload { achievement_id: achievement.id.clone() }));
         effects.push(Effect::say(message_levels::SUCCESS, messages::ACHIEVEMENT_UNLOCKED.with(&[&achievement.name])));
         effects.extend(events::fire_trigger(
             ctx,
@@ -277,6 +288,7 @@ pub fn handle_hand_in(ctx: &EngineContext, state: &mut GameState, bundle_id: &st
             )
         });
         effects.extend(events::apply_outcomes(ctx, state, &bundle.outcomes, 0));
+        ctx.emit(HookEvent::BundleComplete(BundleCompleteHookPayload { bundle_id: bundle_id.to_owned() }));
         effects.extend(events::fire_trigger(ctx, state, &events::Trigger::about(event_triggers::BUNDLE, &[bundle_id])));
     }
     effects

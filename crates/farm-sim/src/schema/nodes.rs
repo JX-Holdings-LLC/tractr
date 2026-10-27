@@ -51,6 +51,9 @@ pub struct NodeTypeDefinition {
     pub color: String,
     /// Whether the node blocks movement while present.
     pub blocks_movement: bool,
+    /// The light it gives at night while standing (M8: glowing crystals, a lantern tree).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub light: Option<super::world::LightSource>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -75,6 +78,7 @@ impl Default for NodeTypeDefinition {
             respawn_days: None,
             color: "#7a5a3a".to_owned(),
             blocks_movement: true,
+            light: None,
             extra: Map::new(),
         }
     }

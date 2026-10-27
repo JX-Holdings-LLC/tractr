@@ -569,9 +569,17 @@ New tests:
   |---|---|
   | Overnight pass, 64×64 farm, full crops | < 2 ms |
   | Overnight pass, 256×256 farm, full crops + 50 machines | < 30 ms |
+  | Overnight pass, 512×512 farm (the largest scene), full crops + 100 machines | < 120 ms |
   | Save (serialize on sim thread) | < 1 ms |
   | Cartridge load, sample games | < 50 ms |
   | Frame (draw list + wgpu), 1080p, integrated GPU (not measured: CI has no GPU; the CPU rasterizer is held to one 60 Hz frame) | < 4 ms |
+  | CPU frame, 1080p, on a 256×256 map, a 512×512 map, and at night under 64 lights (the light map) | < 16.7 ms |
+
+  On the 4-core cloud machine of the 0.10 measurement the 512×512
+  overnight pass took about 72 ms, a 1080p CPU frame about 4 ms on the
+  starter farm's own map, 6 ms on a 256×256 map, 6.5 ms on a 512×512 map
+  and 8.5 ms at night under 64 lights: a frame costs what the camera shows,
+  not the size of the scene.
 
 ## What still needs to be built, by language
 

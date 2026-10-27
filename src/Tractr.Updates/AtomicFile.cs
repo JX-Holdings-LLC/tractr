@@ -20,6 +20,13 @@ public static partial class AtomicFile
     /// </summary>
     public static void WriteAllText(string path, string contents, string? backupPath = null)
     {
+        ArgumentNullException.ThrowIfNull(contents);
+        WriteAllBytes(path, Utf8NoBom.GetBytes(contents), backupPath);
+    }
+
+    /// <summary><see cref="WriteAllText"/> for bytes (a project folder's art and sounds).</summary>
+    public static void WriteAllBytes(string path, byte[] contents, string? backupPath = null)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(contents);
         var fullPath = Path.GetFullPath(path);
@@ -30,7 +37,7 @@ public static partial class AtomicFile
         {
             using (var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                stream.Write(Utf8NoBom.GetBytes(contents));
+                stream.Write(contents);
                 // Without this the rename can reach the disk before the data does (NTFS and ext4
                 // journal metadata, not contents): a power cut would leave an empty file.
                 stream.Flush(flushToDisk: true);
@@ -60,9 +67,10 @@ public static partial class AtomicFile
     /// Deletes temp files a killed process left behind in <paramref name="directory"/>: only
     /// <see cref="WriteAllText"/>'s own <c>.name.guid.tmp</c> files, and only those older than
     /// <paramref name="minimumAge"/>, so a write in progress elsewhere is never touched.
-    /// Returns how many were deleted. Never throws.
+    /// With <paramref name="recursive"/>, its subfolders too. Returns how many were deleted.
+    /// Never throws.
     /// </summary>
-    public static int DeleteStaleTempFiles(string directory, TimeSpan minimumAge, TimeProvider? time = null)
+    public static int DeleteStaleTempFiles(string directory, TimeSpan minimumAge, TimeProvider? time = null, bool recursive = false)
     {
         var now = (time ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         var deleted = 0;
@@ -73,7 +81,7 @@ public static partial class AtomicFile
                 return 0;
             }
 
-            foreach (var file in Directory.EnumerateFiles(directory, ".*.tmp"))
+            foreach (var file in Directory.EnumerateFiles(directory, ".*.tmp", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
             {
                 if (!TempFileName().IsMatch(Path.GetFileName(file)) || now - File.GetLastWriteTimeUtc(file) < minimumAge)
                 {
