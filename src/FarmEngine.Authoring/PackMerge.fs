@@ -93,7 +93,10 @@ module PackMerge =
              && List.isEmpty (defaultArg content.Terrains []) && List.isEmpty (defaultArg content.Tools [])
              && List.isEmpty (defaultArg content.ItemCategories []) && List.isEmpty (defaultArg content.CropQualities [])
              && List.isEmpty (defaultArg content.CropMutations []) && List.isEmpty (defaultArg content.Cutscenes [])
-             && List.isEmpty (defaultArg content.HeartEvents []))
+             && List.isEmpty (defaultArg content.HeartEvents []) && List.isEmpty (defaultArg content.BuildingTypes [])
+             && List.isEmpty (defaultArg content.Collections []) && List.isEmpty (defaultArg content.Bundles [])
+             && List.isEmpty (defaultArg content.Achievements []) && List.isEmpty (defaultArg content.Mail [])
+             && List.isEmpty (defaultArg content.Monsters []))
 
     /// `permissions.contentInject` is off: none of the pack's content loads (its plugins still
     /// run). A pack that ships content anyway gets a warning (Rust `packs::content_blocked`).
@@ -186,6 +189,12 @@ module PackMerge =
                                         pack.Manifest.Id crop.Id))
                         | None -> crops <- crops @ [ crop.Id, crop ]
                     let mergeInto label idOf target definitions = mergeArray pack problems overrides label idOf target definitions
+                    // Lists the content leaves out when empty (Rust `skip_serializing_if = "Vec::is_empty"`).
+                    let mergeOptional label idOf (target: 'T list option) (definitions: 'T list option) =
+                        match definitions with
+                        | None
+                        | Some [] -> target
+                        | Some definitions -> Some(mergeInto label idOf (defaultArg target []) definitions)
                     { content with
                         Crops = crops
                         Items = mergeInto "item" (fun (d: Item) -> d.Id) content.Items added.Items
@@ -223,7 +232,14 @@ module PackMerge =
                             mergeInto "crop mutation" (fun (d: CropMutationDefinition) -> d.Id)
                                 (seeded Builtin.cropMutations content.CropMutations added.CropMutations) (defaultArg added.CropMutations [])
                         Cutscenes = mergeInto "cutscene" (fun (d: Cutscene) -> d.Id) content.Cutscenes (defaultArg added.Cutscenes [])
-                        HeartEvents = mergeInto "heart event" (fun (d: HeartEvent) -> d.Id) content.HeartEvents (defaultArg added.HeartEvents []) }
+                        HeartEvents = mergeInto "heart event" (fun (d: HeartEvent) -> d.Id) content.HeartEvents (defaultArg added.HeartEvents [])
+                        // Building the farm, long-term goals and combat (M9).
+                        BuildingTypes = mergeOptional "building type" (fun (d: BuildingDefinition) -> d.Id) content.BuildingTypes added.BuildingTypes
+                        Collections = mergeOptional "collection" (fun (d: CollectionDefinition) -> d.Id) content.Collections added.Collections
+                        Bundles = mergeOptional "bundle" (fun (d: BundleDefinition) -> d.Id) content.Bundles added.Bundles
+                        Achievements = mergeOptional "achievement" (fun (d: AchievementDefinition) -> d.Id) content.Achievements added.Achievements
+                        Mail = mergeOptional "letter" (fun (d: MailDefinition) -> d.Id) content.Mail added.Mail
+                        Monsters = mergeOptional "monster" (fun (d: MonsterDefinition) -> d.Id) content.Monsters added.Monsters }
             let merged = List.fold merge baseContent packs
             merged, List.ofSeq problems
 
@@ -371,7 +387,13 @@ module PackMerge =
                     CropMutations =
                         vocabulary "crop mutation" (fun (d: CropMutationDefinition) -> d.Id) Builtin.cropMutations project.CropMutations content.CropMutations
                     Cutscenes = story "cutscene" (fun (d: Cutscene) -> d.Id) project.Cutscenes content.Cutscenes
-                    HeartEvents = story "heart event" (fun (d: HeartEvent) -> d.Id) project.HeartEvents content.HeartEvents }
+                    HeartEvents = story "heart event" (fun (d: HeartEvent) -> d.Id) project.HeartEvents content.HeartEvents
+                    BuildingTypes = story "building type" (fun (d: BuildingDefinition) -> d.Id) project.BuildingTypes content.BuildingTypes
+                    Collections = story "collection" (fun (d: CollectionDefinition) -> d.Id) project.Collections content.Collections
+                    Bundles = story "bundle" (fun (d: BundleDefinition) -> d.Id) project.Bundles content.Bundles
+                    Achievements = story "achievement" (fun (d: AchievementDefinition) -> d.Id) project.Achievements content.Achievements
+                    Mail = story "letter" (fun (d: MailDefinition) -> d.Id) project.Mail content.Mail
+                    Monsters = story "monster" (fun (d: MonsterDefinition) -> d.Id) project.Monsters content.Monsters }
 
             match content.PlayerStart with
             | None -> next, List.ofSeq problems

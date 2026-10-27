@@ -1899,6 +1899,18 @@ and PackContent =
         Cutscenes: (Cutscene list) option
         /// Heart events the pack adds or replaces (M4).
         HeartEvents: (HeartEvent list) option
+        /// Building types the pack adds or replaces (M9: the M5 content).
+        BuildingTypes: (BuildingDefinition list) option
+        /// Collections the pack adds or replaces (M9: the M6 content).
+        Collections: (CollectionDefinition list) option
+        /// Bundles the pack adds or replaces (M9).
+        Bundles: (BundleDefinition list) option
+        /// Achievements the pack adds or replaces (M9).
+        Achievements: (AchievementDefinition list) option
+        /// Letters the pack adds or replaces (M9).
+        Mail: (MailDefinition list) option
+        /// Monsters the pack adds or replaces (M9: the M7 content).
+        Monsters: (MonsterDefinition list) option
         /// Per-locale string tables for game text (M7 i18n). Keys address content fields: `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`, `quest:{id}:description`. The authored text is the fallback locale.
         Strings: (string * (string * string) list) list
         /// Undeclared keys, in order.
@@ -1907,7 +1919,7 @@ and PackContent =
 
     /// A `PackContent` with every field at its schema default.
     static member Default : PackContent =
-        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; Strings = []; Extra = [] }
+        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; Strings = []; Extra = [] }
 
 and PackDependency =
     {

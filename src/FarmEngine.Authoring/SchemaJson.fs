@@ -3403,6 +3403,12 @@ module SchemaJson =
         let mutable vCropMutations = None
         let mutable vCutscenes = None
         let mutable vHeartEvents = None
+        let mutable vBuildingTypes = None
+        let mutable vCollections = None
+        let mutable vBundles = None
+        let mutable vAchievements = None
+        let mutable vMail = None
+        let mutable vMonsters = None
         let mutable vStrings = []
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
@@ -3431,9 +3437,15 @@ module SchemaJson =
             | "cropMutations" -> vCropMutations <- Decode.optional (Decode.list decodeCropMutationDefinition) (key :: path) value
             | "cutscenes" -> vCutscenes <- Decode.optional (Decode.list decodeCutscene) (key :: path) value
             | "heartEvents" -> vHeartEvents <- Decode.optional (Decode.list decodeHeartEvent) (key :: path) value
+            | "buildingTypes" -> vBuildingTypes <- Decode.optional (Decode.list decodeBuildingDefinition) (key :: path) value
+            | "collections" -> vCollections <- Decode.optional (Decode.list decodeCollectionDefinition) (key :: path) value
+            | "bundles" -> vBundles <- Decode.optional (Decode.list decodeBundleDefinition) (key :: path) value
+            | "achievements" -> vAchievements <- Decode.optional (Decode.list decodeAchievementDefinition) (key :: path) value
+            | "mail" -> vMail <- Decode.optional (Decode.list decodeMailDefinition) (key :: path) value
+            | "monsters" -> vMonsters <- Decode.optional (Decode.list decodeMonsterDefinition) (key :: path) value
             | "strings" -> vStrings <- (Decode.dict (Decode.dict Decode.string)) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Crops = vCrops; Items = vItems; Recipes = vRecipes; MachineTypes = vMachineTypes; NodeTypes = vNodeTypes; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; WeatherTypes = vWeatherTypes; Npcs = vNpcs; Dialogues = vDialogues; Scenes = vScenes; Events = vEvents; Quests = vQuests; Shops = vShops; Actions = vActions; Minigames = vMinigames; PlayerStart = vPlayerStart; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; Strings = vStrings; Extra = List.ofSeq extra }
+        { Crops = vCrops; Items = vItems; Recipes = vRecipes; MachineTypes = vMachineTypes; NodeTypes = vNodeTypes; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; WeatherTypes = vWeatherTypes; Npcs = vNpcs; Dialogues = vDialogues; Scenes = vScenes; Events = vEvents; Quests = vQuests; Shops = vShops; Actions = vActions; Minigames = vMinigames; PlayerStart = vPlayerStart; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; Strings = vStrings; Extra = List.ofSeq extra }
 
     and encodePackContent (value: PackContent) : Json =
         JObject(
@@ -3477,6 +3489,24 @@ module SchemaJson =
                 | None -> ()
                 match value.HeartEvents with
                 | Some v -> yield "heartEvents", (Encode.list encodeHeartEvent) v
+                | None -> ()
+                match value.BuildingTypes with
+                | Some v -> yield "buildingTypes", (Encode.list encodeBuildingDefinition) v
+                | None -> ()
+                match value.Collections with
+                | Some v -> yield "collections", (Encode.list encodeCollectionDefinition) v
+                | None -> ()
+                match value.Bundles with
+                | Some v -> yield "bundles", (Encode.list encodeBundleDefinition) v
+                | None -> ()
+                match value.Achievements with
+                | Some v -> yield "achievements", (Encode.list encodeAchievementDefinition) v
+                | None -> ()
+                match value.Mail with
+                | Some v -> yield "mail", (Encode.list encodeMailDefinition) v
+                | None -> ()
+                match value.Monsters with
+                | Some v -> yield "monsters", (Encode.list encodeMonsterDefinition) v
                 | None -> ()
                 yield "strings", (Encode.dict (Encode.dict JString)) value.Strings
                 yield! value.Extra

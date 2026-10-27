@@ -1362,6 +1362,18 @@ type RecordWith =
     [<Extension>]
     static member WithHeartEvents(record: PackContent, value: seq<HeartEvent> | null) : PackContent = { record with HeartEvents = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithBuildingTypes(record: PackContent, value: seq<BuildingDefinition> | null) : PackContent = { record with BuildingTypes = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithCollections(record: PackContent, value: seq<CollectionDefinition> | null) : PackContent = { record with Collections = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithBundles(record: PackContent, value: seq<BundleDefinition> | null) : PackContent = { record with Bundles = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithAchievements(record: PackContent, value: seq<AchievementDefinition> | null) : PackContent = { record with Achievements = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithMail(record: PackContent, value: seq<MailDefinition> | null) : PackContent = { record with Mail = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithMonsters(record: PackContent, value: seq<MonsterDefinition> | null) : PackContent = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithStrings(record: PackContent, value: ((string * ((string * string) list)) list)) : PackContent = { record with Strings = value }
     [<Extension>]
     static member WithStrings(record: PackContent, value: seq<KeyValuePair<string, ((string * string) list)>>) : PackContent = { record with Strings = [ for pair in value -> pair.Key, pair.Value ] }

@@ -7,13 +7,16 @@
 
 use super::actors::{Dialogue, Npc};
 use super::animals::AnimalSpeciesDefinition;
+use super::combat::MonsterDefinition;
 use super::content::{CropDefinition, Item};
 use super::crafting::{MachineTypeDefinition, RecipeDefinition};
 use super::cutscenes::Cutscene;
 use super::economy::ShopDefinition;
 use super::events::GameEvent;
 use super::extensibility::{ActionDef, MinigameDef};
+use super::farm::BuildingDefinition;
 use super::fishing::FishTable;
+use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
 use super::nodes::NodeTypeDefinition;
 use super::quests::Quest;
 use super::relationships::HeartEvent;
@@ -208,6 +211,24 @@ pub struct PackContent {
     /// Heart events the pack adds or replaces (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heart_events: Option<Vec<HeartEvent>>,
+    /// Building types the pack adds or replaces (M9: the M5 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub building_types: Option<Vec<BuildingDefinition>>,
+    /// Collections the pack adds or replaces (M9: the M6 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collections: Option<Vec<CollectionDefinition>>,
+    /// Bundles the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundles: Option<Vec<BundleDefinition>>,
+    /// Achievements the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub achievements: Option<Vec<AchievementDefinition>>,
+    /// Letters the pack adds or replaces (M9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mail: Option<Vec<MailDefinition>>,
+    /// Monsters the pack adds or replaces (M9: the M7 content).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub monsters: Option<Vec<MonsterDefinition>>,
     /// Per-locale string tables for game text (M7 i18n). Keys address content fields:
     /// `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`,
     /// `quest:{id}:description`. The authored text is the fallback locale.
