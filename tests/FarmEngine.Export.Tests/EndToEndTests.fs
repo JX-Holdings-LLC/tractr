@@ -40,7 +40,15 @@ let private run (executable: string) (args: string list) =
     Assert.True((proc.ExitCode = 0), sprintf "%s exited with %d: %s" executable proc.ExitCode error)
     JsonDocument.Parse(output).RootElement.Clone()
 
-[<Fact>]
+// macOS hosts can export Windows/Linux/web, but none is a native macOS executable.
+// Keep this reported as skipped instead of trying to execute an ELF on Darwin.
+type HostPlayerFactAttribute() as this =
+    inherit FactAttribute()
+    do
+        if OperatingSystem.IsMacOS() then
+            this.Skip <- "There is no macOS game export target; cross-platform exports are checked in release packaging."
+
+[<HostPlayerFact>]
 let ``an exported host game runs headless and reports the game's identity and hash`` () =
     match hostTemplate () with
     | None -> ()

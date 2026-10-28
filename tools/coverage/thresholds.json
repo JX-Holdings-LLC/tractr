@@ -1,11 +1,17 @@
 {
-  "_note": "Minimum line coverage in percent, checked by tools/coverage/check.py in CI. Set a little below what was measured on 2026-10-01 (FarmEngine.Authoring 87.8% and FarmEngine.Export 91.0% from their own test projects; farm-sim 94.4% and farm-cart 87.7% from their own tests); the full CI runs cover more. Units without a minimum are reported only: add one after reading the coverage summary of a CI run.",
+  "_note": "Minimum line coverage in percent, enforced by tools/coverage/check.py; missing configured units fail too. Existing core floors are retained. Additional .NET floors are below the 2026-10-28 Linux run (Authoring.Net 34.2%, Interop 84.1%, Tractr 88.3%, Updates 80.6%, Cli 82.9%). The Rust total floor is below 89.3% measured in the passing Rust coverage job in CI run 40731487890 on 2026-10-28, commit 6c7c39eab733e8084bd7332f3cf626810101404c. Raise floors as coverage grows; lower them only with an explained change.",
   "dotnet": {
     "FarmEngine.Authoring": 85,
-    "FarmEngine.Export": 85
+    "FarmEngine.Export": 85,
+    "FarmEngine.Authoring.Net": 30,
+    "FarmEngine.Interop": 80,
+    "Tractr": 85,
+    "Tractr.Updates": 75,
+    "FarmEngine.Cli": 80
   },
   "rust": {
     "farm-sim": 92,
-    "farm-cart": 85
+    "farm-cart": 85,
+    "total": 85
   }
 }

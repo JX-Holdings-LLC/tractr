@@ -24,6 +24,29 @@ public sealed class MainWindowTests
     }
 
     [AvaloniaFact]
+    public void NativeMenu_TracksHeadersCommandsAndLanguageChecks()
+    {
+        var source = new MenuItem { Header = "_Help" };
+        var language = new MenuItem { Header = "English", ToggleType = MenuItemToggleType.Radio };
+        source.Items.Add(language);
+        var menu = Tractr.App.Services.NativeMenus.Create([source]);
+        var native = Assert.IsType<NativeMenuItem>(menu.Items[0]);
+        var nativeLanguage = Assert.IsType<NativeMenuItem>(native.Menu!.Items[0]);
+        Assert.Equal("Help", native.Header);
+        source.Header = "A_yuda";
+        language.IsChecked = true;
+        var invoked = false;
+        language.Command = new Tractr.App.Mvvm.RelayCommand(() => invoked = true);
+        Pump();
+        Assert.Equal("Ayuda", native.Header);
+        Assert.True(nativeLanguage.IsChecked);
+        Assert.Equal(MenuItemToggleType.Radio, nativeLanguage.ToggleType);
+        Assert.Same(language.Command, nativeLanguage.Command);
+        nativeLanguage.Command!.Execute(null);
+        Assert.True(invoked);
+    }
+
+    [AvaloniaFact]
     public void Header_ShowsTitleSubtitleAndModeToggle()
     {
         var (window, viewModel) = Open(new ShellComposition(new PlaceholderGameSurfaceFactory(), new PlaceholderProjectCommandHandler()));

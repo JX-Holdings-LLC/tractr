@@ -5,8 +5,8 @@ using System.Text.Json.Serialization;
 namespace Tractr.Updates;
 
 /// <summary>
-/// Stores settings in <c>%APPDATA%/Tractr/settings.json</c> (on Linux/macOS:
-/// <c>~/.config/Tractr/settings.json</c>). Update settings live under the
+/// Stores settings in <c>%APPDATA%/Tractr/settings.json</c> (on Linux:
+/// <c>~/.config/Tractr/settings.json</c>; on macOS: <c>~/Library/Application Support/Tractr/settings.json</c>). Update settings live under the
 /// <c>"updates"</c> key; any other top-level keys (written by other parts of the app)
 /// are preserved on save. The file is shared through <see cref="SettingsFile"/>: atomic,
 /// flushed writes with a <c>.bak</c>, and an unreadable file is never overwritten.
@@ -37,10 +37,7 @@ public sealed class JsonSettingsStore : ISettingsStore
     }
 
     /// <summary><c>&lt;ApplicationData&gt;/Tractr/settings.json</c>.</summary>
-    public static string DefaultFilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify),
-        "Tractr",
-        "settings.json");
+    public static string DefaultFilePath => Path.Combine(AppDataDirectory.DefaultRoot, "settings.json");
 
     public string FilePath => _file.FilePath;
 

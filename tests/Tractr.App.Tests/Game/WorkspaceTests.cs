@@ -260,11 +260,11 @@ public sealed class WorkspaceTests
         Assert.Equal("water", host.Workspace.Store.Load(host.Workspace.Current!.Id).Project!.Scenes.First(s => s.Id == sceneId).Tiles[2][2].Type);
 
         // The drag stroke is one undo step.
-        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Avalonia.Input.Key.Z, Avalonia.Input.RawInputModifiers.Control, Avalonia.Input.PhysicalKey.Z, "z");
+        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Avalonia.Input.Key.Z, CommandModifier, Avalonia.Input.PhysicalKey.Z, "z");
         Pump();
         Assert.Equal("grass", TileType(2, 2));
         Assert.Equal("grass", TileType(3, 2));
-        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Avalonia.Input.Key.Y, Avalonia.Input.RawInputModifiers.Control, Avalonia.Input.PhysicalKey.Y, "y");
+        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Avalonia.Input.Key.Y, CommandModifier, Avalonia.Input.PhysicalKey.Y, "y");
         Pump();
         Assert.Equal("water", TileType(3, 2));
     }

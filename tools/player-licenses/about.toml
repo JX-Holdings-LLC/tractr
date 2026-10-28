@@ -16,8 +16,8 @@ accepted = [
     # copyleft: it ships unmodified, and THIRD-PARTY.txt says where its source is.
     "MPL-2.0",
 ]
-# The union of both desktop templates' dependency graphs.
-targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+# The union of desktop players and the macOS editor's Rust dependencies.
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu", "x86_64-apple-darwin", "aarch64-apple-darwin"]
 # Build scripts and tests don't ship in the player.
 ignore-build-dependencies = true
 ignore-dev-dependencies = true

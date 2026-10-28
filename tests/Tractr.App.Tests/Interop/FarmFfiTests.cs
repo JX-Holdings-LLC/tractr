@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using FarmEngine.Interop;
 
 namespace Tractr.App.Tests.Interop;
@@ -55,13 +56,50 @@ public sealed class FarmFfiTests
         Assert.Null(FarmFfi.LoadError);
         Assert.Equal(4u, FarmFfi.AbiVersion);
         // Loaded from the application's folder, not from wherever the OS would search.
-        var loaded = System.Diagnostics.Process.GetCurrentProcess().Modules
-            .Cast<System.Diagnostics.ProcessModule>()
-            .Select(module => module.FileName)
+        var loaded = LoadedLibraryPaths()
             .Where(path => Path.GetFileNameWithoutExtension(path).Contains("farm_ffi", StringComparison.Ordinal))
             .ToList();
         Assert.Contains(loaded, path => Path.GetDirectoryName(path) == Path.GetDirectoryName(typeof(FarmFfi).Assembly.Location));
     }
+
+    private static IEnumerable<string> LoadedLibraryPaths()
+    {
+        if (!OperatingSystem.IsMacOS())
+        {
+            using var process = System.Diagnostics.Process.GetCurrentProcess();
+            return process.Modules.Cast<System.Diagnostics.ProcessModule>().Select(module => module.FileName).ToArray();
+        }
+
+        // Process.Modules does not enumerate dylibs on macOS. Ask dyld for the loaded
+        // images instead, so the application-directory assertion still checks the real loader.
+        var system = NativeLibrary.Load("/usr/lib/libSystem.B.dylib");
+        try
+        {
+            var count = Marshal.GetDelegateForFunctionPointer<ImageCount>(NativeLibrary.GetExport(system, "_dyld_image_count"));
+            var name = Marshal.GetDelegateForFunctionPointer<ImageName>(NativeLibrary.GetExport(system, "_dyld_get_image_name"));
+            var paths = new List<string>();
+            var imageCount = count();
+            for (uint index = 0; index < imageCount; index++)
+            {
+                if (Marshal.PtrToStringUTF8(name(index)) is { } path)
+                {
+                    paths.Add(path);
+                }
+            }
+
+            return paths;
+        }
+        finally
+        {
+            NativeLibrary.Free(system);
+        }
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate uint ImageCount();
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate nint ImageName(uint index);
 
     [NativeFact]
     public void ReportsItsVersion()

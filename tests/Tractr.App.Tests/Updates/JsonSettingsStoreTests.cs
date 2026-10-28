@@ -137,12 +137,8 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
-    public void DefaultPath_IsUnderApplicationData()
+    public void DefaultPath_SharesTheEditorsConfiguredDataDirectory()
     {
-        var expected = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify),
-            "Tractr",
-            "settings.json");
-        Assert.Equal(expected, JsonSettingsStore.DefaultFilePath);
+        Assert.Equal(Tractr.App.Projects.AppDataPaths.SettingsFile(), JsonSettingsStore.DefaultFilePath);
     }
 }

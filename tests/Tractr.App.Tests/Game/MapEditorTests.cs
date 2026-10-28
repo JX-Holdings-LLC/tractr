@@ -127,10 +127,10 @@ public sealed class MapEditorTests
         Assert.Contains("Water", FindByName<TextBlock>(host.Window, "EditCursorStatus").Text, StringComparison.Ordinal);
 
         // Ctrl+Z still undoes while the map has focus: one press per application.
-        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", RawInputModifiers.Control);
+        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", CommandModifier);
         Assert.Equal("grass", TileType(3, 2));
         Assert.Equal("water", TileType(2, 2));
-        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", RawInputModifiers.Control);
+        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", CommandModifier);
         Assert.Equal("grass", TileType(2, 2));
         Assert.Equal((3, 2), edit.CursorTile);
     }
@@ -376,7 +376,7 @@ public sealed class MapEditorTests
         Assert.Equal(before + 1, host.Workspace.Document!.Past.Length);
 
         // Ctrl+Z right after picking the next brush undoes the paint, and the brush stays.
-        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", RawInputModifiers.Control);
+        Key(host, Avalonia.Input.Key.Z, PhysicalKey.Z, "z", CommandModifier);
         Assert.NotEqual("soil", Scene(host, sceneId).Tiles[3][3].Type);
         Assert.Equal("water", edit.Brush);
         Assert.Equal("water", host.Workspace.Current!.SelectedTileType);

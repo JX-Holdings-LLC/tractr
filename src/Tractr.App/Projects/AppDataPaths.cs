@@ -4,27 +4,13 @@ namespace Tractr.App.Projects;
 public static class AppDataPaths
 {
     /// <summary>Overrides the data directory (tests, portable installs).</summary>
-    public const string DataDirectoryVariable = "TRACTR_DATA_DIR";
+    public const string DataDirectoryVariable = Tractr.Updates.AppDataDirectory.OverrideVariable;
 
     /// <summary>
-    /// <c>%APPDATA%/Tractr</c> (Linux/macOS: <c>~/.config/Tractr</c>), or
+    /// <c>%APPDATA%/Tractr</c> (Linux: <c>~/.config/Tractr</c>; macOS: <c>~/Library/Application Support/Tractr</c>), or
     /// <see cref="DataDirectoryVariable"/> when set. Holds <c>settings.json</c> and <c>projects/</c>.
     /// </summary>
-    public static string DefaultRoot
-    {
-        get
-        {
-            var overridden = Environment.GetEnvironmentVariable(DataDirectoryVariable);
-            if (!string.IsNullOrWhiteSpace(overridden))
-            {
-                return overridden;
-            }
-
-            return Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.DoNotVerify),
-                "Tractr");
-        }
-    }
+    public static string DefaultRoot => Tractr.Updates.AppDataDirectory.DefaultRoot;
 
     /// <summary>
     /// The shared <c>settings.json</c> in <paramref name="root"/> (default <see cref="DefaultRoot"/>):

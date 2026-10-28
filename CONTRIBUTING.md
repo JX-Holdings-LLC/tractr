@@ -51,8 +51,9 @@ What it installs:
   `FARM_REQUIRE_GPU=1` (set in CI on Linux) makes that a failure.
 
 Windows needs the MSVC build tools for Rust (the Visual Studio "Desktop
-development with C++" workload). macOS is untested: CI has no macOS job, and
-Export Game has no macOS host template yet.
+development with C++" workload). CI also builds and tests on Intel and Apple Silicon macOS.
+Export Game has no macOS game target yet, so the host-game execution test is
+explicitly skipped there; release packaging checks Windows/Linux/web exports.
 
 ## Build and test
 

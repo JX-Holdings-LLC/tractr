@@ -28,6 +28,11 @@ public partial class MainWindow : Window
         _launcher = launcher;
         InitializeComponent();
         BuildLanguageMenu();
+        if (OperatingSystem.IsMacOS() && this.FindControl<Menu>("MainMenu") is { } menu)
+        {
+            NativeMenu.SetMenu(this, NativeMenus.Create(menu.Items));
+            menu.IsVisible = false;
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)

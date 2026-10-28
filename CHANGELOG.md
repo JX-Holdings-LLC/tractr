@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.1
+
+- Prepare Linux x64 and macOS (Apple Silicon and Intel) editor packages,
+  separate update feeds, and native CI builds. Release packaging verifies
+  all three offline export templates and blocks live unsigned Mac releases.
+- Include macOS Rust dependency notices and give web exports their own
+  notices generated from the browser player dependency graph (#60).
+- Enforce the remaining editor, interop and CLI coverage floors and a Rust
+  workspace total minimum, based on measured coverage (#66).
+- Use Command shortcuts on macOS and keep editor and updater data together
+  in `~/Library/Application Support/Tractr` (or `TRACTR_DATA_DIR`).
+
 ## 0.10.0
 
 Roadmap milestones M8 (projects at full size) and M9 (more power for content

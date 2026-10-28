@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Threading;
 using FarmEngine.Interop;
 using Tractr.App.Localization;
+using Tractr.App.Services;
 
 namespace Tractr.App.Game;
 
@@ -56,12 +57,12 @@ public sealed class PlayModeView : UserControl
         }
 
         // Labels in the editor's language (EditorStrings); a playtest starts a new view.
-        var restart = Tool("RestartButton", Ui.IconLabel("IconRefresh", EditorStrings.Get("toolbar.restart")), () => RestartRequested?.Invoke(this, EventArgs.Empty), EditorStrings.Get("toolbar.restartTip") + " (Ctrl+R)");
-        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(restart, "Ctrl+R");
+        var restart = Tool("RestartButton", Ui.IconLabel("IconRefresh", EditorStrings.Get("toolbar.restart")), () => RestartRequested?.Invoke(this, EventArgs.Empty), EditorStrings.Get("toolbar.restartTip") + EditorShortcuts.Display(" (Ctrl+R)"));
+        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(restart, EditorShortcuts.Display("Ctrl+R"));
         _keepChanges = new ToggleButton { Name = "KeepChangesButton", Content = Ui.IconLabel("IconCheckCircle", EditorStrings.Get("toolbar.keepChanges")), Margin = new Thickness(6, 3, 0, 3), Focusable = false };
         _keepChanges.Classes.Add("tool");
-        ToolTip.SetTip(_keepChanges, EditorStrings.Get("toolbar.keepChangesTip") + " (Ctrl+Shift+K)");
-        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(_keepChanges, "Ctrl+Shift+K");
+        ToolTip.SetTip(_keepChanges, EditorStrings.Get("toolbar.keepChangesTip") + EditorShortcuts.Display(" (Ctrl+Shift+K)"));
+        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(_keepChanges, EditorShortcuts.Display("Ctrl+Shift+K"));
         _keepChanges.IsCheckedChanged += (_, _) =>
         {
             ShowToast(_keepChanges.IsChecked == true
@@ -69,8 +70,8 @@ public sealed class PlayModeView : UserControl
                 : new ToastMessage(EditorStrings.Get("toolbar.keepOff"), ToastKind.Info));
         };
         toolbar.Children.Add(_keepChanges);
-        var debug = Tool("DebugButton", EditorStrings.Get("toolbar.debug"), ToggleDebug, EditorStrings.Get("toolbar.debugTip") + " (Ctrl+D)");
-        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(debug, "Ctrl+D");
+        var debug = Tool("DebugButton", EditorStrings.Get("toolbar.debug"), ToggleDebug, EditorStrings.Get("toolbar.debugTip") + EditorShortcuts.Display(" (Ctrl+D)"));
+        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(debug, EditorShortcuts.Display("Ctrl+D"));
 
         var hint = Ui.Text(EditorStrings.Get("toolbar.playHint"), "muted", "small");
         hint.VerticalAlignment = VerticalAlignment.Center;
@@ -412,7 +413,7 @@ public sealed class PlayModeView : UserControl
 
         // The toolbar never takes focus (Tab and Space belong to the game), so its buttons have
         // shortcuts: Ctrl+R restarts, Ctrl+Shift+K toggles Keep changes, Ctrl+D opens Debug.
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control) && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+        if (e.KeyModifiers.HasFlag(EditorShortcuts.CommandModifier) && !e.KeyModifiers.HasFlag(KeyModifiers.Alt))
         {
             var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
             switch (e.Key)

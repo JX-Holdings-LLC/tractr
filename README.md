@@ -85,6 +85,23 @@ attached to the release too.
 Builds are not code-signed yet, so Windows SmartScreen may say *"Windows
 protected your PC"*. Choose **More info → Run anyway**.
 
+The release workflow also builds these editor packages. Their first public
+release requires the native install/update checks in [RELEASING](docs/RELEASING.md):
+
+- **Linux x64:** `Tractr-linux-x64.AppImage`. Make it executable with
+  `chmod +x Tractr-linux-x64.AppImage`, then run it from a writable folder.
+  Ubuntu 22.04 or newer is the build baseline. Install the runtime packages
+  `libasound2`, `libudev1`, `libxkbcommon-x11-0` and `libfuse2` (on Ubuntu
+  24.04, use `libasound2t64` and `libfuse2t64`). A graphical desktop is required.
+- **macOS:** `Tractr-osx-arm64-Portable.zip` for Apple Silicon or
+  `Tractr-osx-x64-Portable.zip` for Intel. Extract and move `Tractr.app` to
+  Applications. Live releases require Developer ID signing and notarization;
+  unsigned dry-run artifacts are for testing only.
+
+Every release editor includes Windows, Linux and web game export templates.
+The Mac editor uses Command in place of Ctrl for editor shortcuts. Game export
+for macOS is a separate feature and is not included.
+
 ### Updates
 
 **Help → Update Center** checks GitHub Releases for newer versions. It shows
@@ -237,8 +254,8 @@ x64) in `players/` next to the app and `farmc`, so Export Game works from a
 source build. Export tests need no extra tools; rebuilding the PE test
 fixture needs mingw-w64 (see `tests/FarmEngine.Export.Tests/Fixtures/pe/build.sh`).
 
-CI builds and tests everything on Windows and Linux (macOS is untested, and
-Export Game has no macOS or arm64 host template yet). The
+CI builds and tests on Windows, Linux, Intel macOS and Apple Silicon macOS.
+Export Game has no macOS game target yet. The
 [CI workflow](.github/workflows/ci.yml) also publishes a self-contained
 `win-x64` build on every push. [CONTRIBUTING.md](CONTRIBUTING.md) lists the
 checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and

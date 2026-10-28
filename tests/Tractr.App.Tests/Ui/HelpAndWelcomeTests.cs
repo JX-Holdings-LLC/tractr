@@ -99,6 +99,7 @@ public sealed class HelpAndWelcomeTests
         Pump();
         var welcome = Assert.IsType<WelcomeWindow>(window.OpenWelcome);
         Assert.Equal(WelcomeWindow.Steps.Count, FindByName<StackPanel>(welcome, "WelcomeSteps").Children.Count);
+        Assert.Contains(Tractr.App.Services.EditorShortcuts.Display("Ctrl+Z"), AllVisibleText(welcome), StringComparison.Ordinal);
         var text = AllVisibleText(welcome);
         Assert.Contains("Welcome to Tractr", text, StringComparison.Ordinal);
         Assert.Contains("F5", text, StringComparison.Ordinal);
@@ -156,7 +157,7 @@ public sealed class HelpAndWelcomeTests
         viewModel.ShortcutsCommand.Execute(null);
         PumpUntil(() => window.OpenShortcuts is not null, "shortcuts");
         var shortcuts = AllVisibleText(window.OpenShortcuts!);
-        Assert.Contains("Ctrl+Shift+E", shortcuts, StringComparison.Ordinal);
+        Assert.Contains(Tractr.App.Services.EditorShortcuts.Display("Ctrl+Shift+E"), shortcuts, StringComparison.Ordinal);
         Assert.Contains("F5", shortcuts, StringComparison.Ordinal);
         Assert.Contains("Watering can", shortcuts, StringComparison.Ordinal);
         window.OpenShortcuts!.Close();

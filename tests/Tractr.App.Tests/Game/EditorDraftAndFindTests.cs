@@ -142,7 +142,7 @@ public sealed class EditorDraftAndFindTests
         Assert.Empty(edit.Find(""));
 
         // Ctrl+K opens it; Enter opens the first result.
-        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Key.K, RawInputModifiers.Control, PhysicalKey.K, "k");
+        Avalonia.Headless.HeadlessWindowExtensions.KeyPress(host.Window, Key.K, CommandModifier, PhysicalKey.K, "k");
         Pump();
         Assert.True(FindByName<Border>(host.Window, "QuickOpen").IsVisible);
         var box = FindByName<TextBox>(host.Window, "QuickOpenBox");
