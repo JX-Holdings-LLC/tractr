@@ -323,6 +323,10 @@ xkbcommon-X11, a desktop display and FUSE 2 for the AppImage. Development `-dev`
 packages are not runtime requirements. Test on a clean Ubuntu 22.04/24.04 system,
 not just the build runner.
 
+The macOS PR jobs also publish, package and launch an unsigned app for a short
+startup check. These smoke bundles do not include all offline export templates
+and are not release deliverables.
+
 `editor-unix` builds on matching native runners (Linux x64, macOS arm64 and
 macOS x64). It verifies template hashes before and after publish, tests the
 managed editor with the real native library, and exports the fixture for all

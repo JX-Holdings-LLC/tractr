@@ -35,10 +35,15 @@ public sealed class MainWindowTests
         Assert.Equal("Help", native.Header);
         source.Header = "A_yuda";
         language.IsChecked = true;
+        var invoked = false;
+        language.Command = new Tractr.App.Mvvm.RelayCommand(() => invoked = true);
         Pump();
         Assert.Equal("Ayuda", native.Header);
         Assert.True(nativeLanguage.IsChecked);
         Assert.Equal(MenuItemToggleType.Radio, nativeLanguage.ToggleType);
+        Assert.Same(language.Command, nativeLanguage.Command);
+        nativeLanguage.Command!.Execute(null);
+        Assert.True(invoked);
     }
 
     [AvaloniaFact]

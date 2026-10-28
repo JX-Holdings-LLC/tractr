@@ -162,7 +162,7 @@ public sealed class WelcomeWindow : HelpWindowBase
             ((PathIcon)badge.Child).Foreground = (IBrush?)Application.Current?.FindResource("PaperBrush");
             badge.Child.HorizontalAlignment = HorizontalAlignment.Center;
             badge.Child.VerticalAlignment = VerticalAlignment.Center;
-            var text = Ui.VStack(2, Ui.Wrapped(EditorStrings.Get(key + ".title"), "h3"), Ui.Wrapped(EditorStrings.Get(key + ".body"), "muted", "small"));
+            var text = Ui.VStack(2, Ui.Wrapped(EditorStrings.Get(key + ".title"), "h3"), Ui.Wrapped(Services.EditorShortcuts.Display(EditorStrings.Get(key + ".body")), "muted", "small"));
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), ColumnSpacing = 12 };
             row.Children.Add(badge);
             Grid.SetColumn(text, 1);

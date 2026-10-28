@@ -56,6 +56,22 @@ class TemplatesTest(unittest.TestCase):
                 path.write_text(json.dumps({**original, **change}))
                 self.assertNotEqual(0, self.verify())
 
+    def test_web_packaging_ships_browser_dependency_notices(self):
+        repo = VERIFY.resolve().parents[2]
+        dist = self.root / "wasm-dist"
+        dist.mkdir()
+        for name in ("farm_wasm_bg.wasm", "farm_wasm.js"):
+            (dist / name).write_bytes(b"packaging test fixture")
+        output = self.root / "packaged"
+        subprocess.run(["bash", str(repo / "tools/player-templates/package.sh"),
+                        "web", "1.0.0", str(dist), str(output)], check=True, capture_output=True)
+        notices = (output / "web/THIRD-PARTY.txt").read_text()
+        self.assertIn("- wasm-bindgen ", notices)
+        self.assertIn("- js-sys ", notices)
+        manifest = json.loads((output / "web/template.json").read_text())
+        digest = hashlib.sha256((output / "web/THIRD-PARTY.txt").read_bytes()).hexdigest()
+        self.assertEqual(digest, manifest["files"]["THIRD-PARTY.txt"])
+
     def test_path_escape(self):
         path = self.root / "web" / "template.json"
         manifest = json.loads(path.read_text())

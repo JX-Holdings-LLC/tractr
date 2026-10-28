@@ -99,6 +99,7 @@ public sealed class HelpAndWelcomeTests
         Pump();
         var welcome = Assert.IsType<WelcomeWindow>(window.OpenWelcome);
         Assert.Equal(WelcomeWindow.Steps.Count, FindByName<StackPanel>(welcome, "WelcomeSteps").Children.Count);
+        Assert.Contains(Tractr.App.Services.EditorShortcuts.Display("Ctrl+Z"), AllVisibleText(welcome), StringComparison.Ordinal);
         var text = AllVisibleText(welcome);
         Assert.Contains("Welcome to Tractr", text, StringComparison.Ordinal);
         Assert.Contains("F5", text, StringComparison.Ordinal);

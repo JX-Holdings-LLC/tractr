@@ -540,11 +540,46 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Pin the .NET SDK
+        run: |
+          python3 - <<'PYSDK'
+          import json
+          from pathlib import Path
+          path = Path('global.json')
+          sdk = json.loads(path.read_text())
+          sdk['sdk']['rollForward'] = 'disable'
+          path.write_text(json.dumps(sdk))
+          PYSDK
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           global-json-file: global.json
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
-      - run: dotnet build -c Release
+      # .NET stays Release; the native dev profile avoids duplicate LTO work in PRs.
+      # The release workflow builds and tests the optimized native library before packaging.
+      - run: dotnet build -c Release -p:CargoProfile=dev
       - run: dotnet test -c Release --no-build
       - run: tools/ci/golden-guard.sh fixtures
+      - name: Package and launch the macOS app (unsigned smoke build)
+        shell: bash
+        run: |
+          rid=osx-arm64
+          if [[ "$(uname -m)" == x86_64 ]]; then rid=osx-x64; fi
+          version="$(python3 -c 'import json; print(json.load(open("release.json"))["apps"]["tractr"]["version"])')"
+          vpk_version="$(sed -n 's/.*<PackageVersion Include="Velopack" Version="\([^"]*\)".*/\1/p' Directory.Packages.props)"
+          dotnet publish src/Tractr.App -c Release -r "$rid" --self-contained -p:CargoProfile=dev -o publish
+          test -s publish/libfarm_ffi.dylib
+          python3 tools/release/macos-icon.py src/Tractr.App/Assets/app-icon-256.png "$RUNNER_TEMP/Tractr.icns"
+          dotnet tool install -g vpk --version "$vpk_version"
+          vpk --yes --skip-updates pack --packId Tractr --packVersion "$version" --packDir publish \
+            --runtime "$rid" --channel "$rid" --mainExe Tractr --packTitle Tractr --noInst \
+            --bundleId com.jxholdings.tractr --icon "$RUNNER_TEMP/Tractr.icns" --outputDir Releases
+          ditto -xk "Releases/Tractr-$rid-Portable.zip" "$RUNNER_TEMP/tractr-smoke"
+          export TRACTR_DATA_DIR="$RUNNER_TEMP/tractr-smoke-data"
+          "$RUNNER_TEMP/tractr-smoke/Tractr.app/Contents/MacOS/Tractr" > "$RUNNER_TEMP/tractr-startup.log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true; wait "$app_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 10); do
+            sleep 1
+            if ! kill -0 "$app_pid" 2>/dev/null; then cat "$RUNNER_TEMP/tractr-startup.log"; exit 1; fi
+          done

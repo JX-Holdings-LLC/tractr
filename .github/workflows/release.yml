@@ -319,6 +319,17 @@ jobs:
       with:
         ref: ${{ needs.plan.outputs.sha }}
         persist-credentials: false
+    - name: Pin the .NET SDK
+      shell: bash
+      run: |
+        python3 - <<'PYSDK'
+        import json
+        from pathlib import Path
+        path = Path('global.json')
+        sdk = json.loads(path.read_text())
+        sdk['sdk']['rollForward'] = 'disable'
+        path.write_text(json.dumps(sdk))
+        PYSDK
     - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
       with:
         global-json-file: global.json

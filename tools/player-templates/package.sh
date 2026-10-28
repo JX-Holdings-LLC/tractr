@@ -7,7 +7,7 @@
 #   <out>/<target>/template.json       { "target", "version", "sha256", "files" }: sha256 is the
 #                                      player's (for web, the module's) hash, and "files" maps
 #                                      every other file to its hash; export checks them all
-#   <out>/<target>/THIRD-PARTY.txt     tools/player-licenses/THIRD-PARTY.txt
+#   <out>/<target>/THIRD-PARTY.txt     desktop or web notices from tools/player-licenses
 #
 # The editor refuses a template whose version differs from its own, so <version> must be the
 # version the app is published with. Development builds get the same layout from the
@@ -46,7 +46,11 @@ else
   cp "$player" "$folder/$name"
   chmod 755 "$folder/$name"
 fi
-cp "$root/tools/player-licenses/THIRD-PARTY.txt" "$folder/THIRD-PARTY.txt"
+notices="$root/tools/player-licenses/THIRD-PARTY.txt"
+if [[ "$target" == web ]]; then
+  notices="$root/tools/player-licenses/THIRD-PARTY-web.txt"
+fi
+cp "$notices" "$folder/THIRD-PARTY.txt"
 sha="$(sha256sum "$folder/$name" | cut -d' ' -f1)"
 files=""
 for path in $(find "$folder" -maxdepth 1 -type f ! -name "$name" | LC_ALL=C sort); do
