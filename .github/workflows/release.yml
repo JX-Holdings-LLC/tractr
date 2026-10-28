@@ -399,6 +399,15 @@ jobs:
     - name: Launch the packaged Linux editor
       if: runner.os == 'Linux'
       run: tools/release/smoke-appimage.sh Releases/Tractr-linux-x64.AppImage
+    - name: Verify and launch the packaged Mac editor
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        RID: ${{ matrix.rid }}
+      run: |
+        args=("Releases/Tractr-$RID-Portable.zip" "$VERSION")
+        if [[ "$RELEASE_DRY_RUN" != true ]]; then args+=(--require-signature); fi
+        tools/release/smoke-macos.sh "${args[@]}"
     - name: Remove Apple credentials
       if: always() && runner.os == 'macOS'
       shell: bash
@@ -408,6 +417,9 @@ jobs:
         fi
         rm -f "$RUNNER_TEMP/tractr-signing.p12" "$RUNNER_TEMP/tractr-notary.p8"
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      # Keep completed packages available for diagnosis if a smoke check fails.
+      # The failed job still blocks downstream release collection/publication.
+      if: ${{ !cancelled() }}
       with:
         name: editor-${{ matrix.rid }}
         path: Releases/*

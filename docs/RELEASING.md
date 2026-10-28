@@ -325,12 +325,28 @@ not just the build runner.
 
 The macOS PR jobs also publish, package and launch an unsigned app for a short
 startup check. These smoke bundles do not include all offline export templates
-and are not release deliverables.
+and are not release deliverables. Download the unsigned `Tractr-mac-test-*`
+artifacts from the PR's CI run to test startup and editor behavior before merging;
+`macos-15` is Apple Silicon and `macos-15-intel` is Intel. CI uploads the ZIP before
+the startup check so a failed check does not hide the package needed to debug it.
+
+For complete Mac and Linux test packages, run **Release** on `main` with
+`dry_run=true` and download its `editor-osx-arm64`, `editor-osx-x64` and
+`editor-linux-x64` artifacts. Dry runs do not require Apple signing credentials
+and do not publish a release. Completed packages are retained even when a smoke
+check fails; that failure still prevents publication. Downloaded unsigned Mac
+apps may require a local Gatekeeper exception for testing.
 
 `editor-unix` builds on matching native runners (Linux x64, macOS arm64 and
 macOS x64). It verifies template hashes before and after publish, tests the
 managed editor with the real native library, and exports the fixture for all
-three game targets. The final inventory requires every editor package and feed;
+three game targets. Before allowing release publication, it launches the Linux
+AppImage and extracts and launches each Mac ZIP using the same startup script
+as PR CI. The Mac gate rechecks all offline templates inside the extracted app;
+live releases additionally require strict code-signature verification, a valid
+stapled notarization ticket and Gatekeeper assessment. A failure blocks artifact
+collection and publication. Unsigned dry runs skip only the signature checks.
+The final inventory requires every editor package and feed;
 a missing platform cannot silently produce a Windows-only release.
 
 Velopack channels are `win` (unchanged), `linux-x64`, `osx-arm64` and `osx-x64`.
