@@ -379,6 +379,7 @@ jobs:
         Path('release-notes.md').write_text(notes, encoding='utf-8')
         PY
         dotnet tool install -g vpk --version "$VPK_VERSION"
+    # Without any Apple credentials this warns and packages the Mac editor unsigned.
     - name: Import Apple signing and notarization credentials
       if: runner.os == 'macOS' && !inputs.dry_run
       shell: bash
@@ -406,7 +407,7 @@ jobs:
         RID: ${{ matrix.rid }}
       run: |
         args=("Releases/Tractr-$RID-Portable.zip" "$VERSION")
-        if [[ "$RELEASE_DRY_RUN" != true ]]; then args+=(--require-signature); fi
+        if [[ "${MACOS_SIGNING:-false}" == true ]]; then args+=(--require-signature); fi
         tools/release/smoke-macos.sh "${args[@]}"
     - name: Remove Apple credentials
       if: always() && runner.os == 'macOS'
