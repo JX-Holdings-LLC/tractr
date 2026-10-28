@@ -161,21 +161,21 @@ public sealed class PlayModeTests
             host.Frames(1);
         }
 
-        Chord(PhysicalKey.D, RawInputModifiers.Control);
+        Chord(PhysicalKey.D, CommandModifier);
         Assert.True(host.Play.IsDebugOpen);
-        Chord(PhysicalKey.D, RawInputModifiers.Control);
+        Chord(PhysicalKey.D, CommandModifier);
         Assert.False(host.Play.IsDebugOpen);
         // Ctrl+D is not the game's D (walk right).
         Assert.Equal(0, Num(State(host)["player"]!["moveIntent"]!["dx"]));
 
-        Chord(PhysicalKey.K, RawInputModifiers.Control | RawInputModifiers.Shift);
+        Chord(PhysicalKey.K, CommandModifier | RawInputModifiers.Shift);
         Assert.True(host.Play.KeepChanges);
-        Chord(PhysicalKey.K, RawInputModifiers.Control | RawInputModifiers.Shift);
+        Chord(PhysicalKey.K, CommandModifier | RawInputModifiers.Shift);
         Assert.False(host.Play.KeepChanges);
 
         host.Play.Use(player => player.RunCommands("""[{"type":"sleep"}]"""));
         Assert.Equal(2, Num(State(host)["clock"]!["day"]));
-        Chord(PhysicalKey.R, RawInputModifiers.Control);
+        Chord(PhysicalKey.R, CommandModifier);
         Assert.Equal(1, Num(State(host)["clock"]!["day"]));
         Assert.Equal(EditorMode.Play, host.ViewModel.Mode);
     }

@@ -10,6 +10,8 @@ namespace Tractr.App.Tests.Ui;
 
 internal static class UiTestHelpers
 {
+    public static RawInputModifiers CommandModifier => OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+
     /// <summary>
     /// How long <see cref="PumpUntil"/> waits before it fails: 60 s, or
     /// <c>FARM_TEST_WAIT_SECONDS</c>. A passing wait returns as soon as its condition holds, so

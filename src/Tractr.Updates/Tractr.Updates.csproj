@@ -4,6 +4,7 @@
     <Description>Update Center backend: Velopack + GitHub Releases.</Description>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Tractr.App.Tests" />
     <PackageReference Include="Velopack" />
   </ItemGroup>
 </Project>

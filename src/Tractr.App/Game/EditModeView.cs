@@ -13,6 +13,7 @@ using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
 using Tractr.App.Localization;
 using Tractr.App.Projects;
+using Tractr.App.Services;
 
 namespace Tractr.App.Game;
 
@@ -111,11 +112,11 @@ public sealed partial class EditModeView : UserControl
         _undo = Ui.Button(Ui.IconLabel("IconUndo", "Undo"), () => _workspace.Undo(), "tool");
         _undo.Name = "UndoButton";
         AutomationProperties.SetName(_undo, "Undo");
-        ToolTip.SetTip(_undo, "Undo (Ctrl+Z)");
+        ToolTip.SetTip(_undo, EditorShortcuts.Display("Undo (Ctrl+Z)"));
         _redo = Ui.Button(Ui.IconLabel("IconRedo", "Redo"), () => _workspace.Redo(), "tool");
         _redo.Name = "RedoButton";
         AutomationProperties.SetName(_redo, "Redo");
-        ToolTip.SetTip(_redo, "Redo (Ctrl+Y)");
+        ToolTip.SetTip(_redo, EditorShortcuts.Display("Redo (Ctrl+Y)"));
         _sidePanel = BuildSidePanel();
 
         // The tabs, in EditorTab order.
@@ -573,7 +574,7 @@ public sealed partial class EditModeView : UserControl
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (!IsEffectivelyVisible || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        if (!IsEffectivelyVisible || !e.KeyModifiers.HasFlag(EditorShortcuts.CommandModifier))
         {
             return;
         }

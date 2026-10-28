@@ -1,6 +1,6 @@
 # Releasing Tractr
 
-Windows releases are built by GitHub Actions, packaged with
+Windows, Linux x64 and macOS (arm64 and x64) releases are built by GitHub Actions, packaged with
 [Velopack](https://velopack.io) and published as GitHub Releases of
 `JX-Holdings-LLC/tractr`. The in-app **Update Center**
 (Help → Update Center…) reads those releases, so publishing a release is all
@@ -13,6 +13,8 @@ Actions → Release → Run workflow (main, channel, dry run)
                      version       on main? versions agree?
                      player-*      templates (Windows, Steam Runtime Linux, web)
                      smoke-linux   export + replay on the release Linux template
+                     editor-unix   native test/publish, offline exports, AppImage/Mac ZIP,
+                                   live Mac signing + notarization
                      release       dotnet test, dotnet publish -p:Version=0.3.1,
                                    export + replay on the release Windows template,
                                    vpk download/pack, SHA256SUMS      (read-only token)
@@ -311,3 +313,60 @@ vpk "[win]" pack --packId Tractr --packVersion 0.1.0 --packDir publish \
 
 Nothing is uploaded; inspect `Releases/`. (The `[win]` directive is only for
 cross-packaging; the workflow runs on Windows and doesn't need it.)
+
+## macOS and Linux release gates
+
+The first cross-platform release is not verified until its native dry run and
+install/update checks pass. Linux is built on Ubuntu 22.04; the game template
+continues to use Steam Runtime sniper. The editor needs ALSA, libudev,
+xkbcommon-X11, a desktop display and FUSE 2 for the AppImage. Development `-dev`
+packages are not runtime requirements. Test on a clean Ubuntu 22.04/24.04 system,
+not just the build runner.
+
+`editor-unix` builds on matching native runners (Linux x64, macOS arm64 and
+macOS x64). It verifies template hashes before and after publish, tests the
+managed editor with the real native library, and exports the fixture for all
+three game targets. The final inventory requires every editor package and feed;
+a missing platform cannot silently produce a Windows-only release.
+
+Velopack channels are `win` (unchanged), `linux-x64`, `osx-arm64` and `osx-x64`.
+The installed package records its channel, which `UpdateManager` reads. The
+Stable/Pre-release selector still controls GitHub prerelease discovery; it must
+not replace the platform channel. Each architecture has distinct package and
+feed filenames, preventing an Intel Mac from downloading an ARM update.
+
+For a live macOS release, provision these secrets in the protected `release`
+environment (the repository cannot establish whether they are configured):
+
+- `MACOS_CERTIFICATE_BASE64`: base64 PKCS#12 Developer ID Application certificate
+  including its private key.
+- `MACOS_CERTIFICATE_PASSWORD`: that certificate's export password.
+- `MACOS_SIGN_IDENTITY`: full Developer ID Application identity name.
+- `APPLE_API_KEY_BASE64`: base64 App Store Connect notarization API `.p8` key.
+- `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`: that key's ID and issuer.
+
+The job imports them into a temporary keychain, lets Velopack sign with hardened
+runtime entitlements, notarize, staple and assess the app, then deletes the
+keychain and temporary credential files even on failure. No credentials are
+needed for unsigned dry runs. A live Mac job fails if credentials are missing;
+never publish its unsigned dry-run ZIP as a release. Only the signed `.app` ZIP
+is distributed, so no Developer ID Installer certificate is needed.
+
+Before publishing the first release on either platform:
+
+1. Run the complete release workflow with `dry_run=true` and inspect all required
+   assets, checksums and test results. The Mac dry-run ZIP is unsigned.
+2. On both Mac architectures, validate the signed/notarized app with Gatekeeper,
+   launch from Applications, open/save a project, test Command shortcuts and
+   native file dialogs, Play Mode audio and gamepad, and all three exports.
+3. On clean Linux, launch the AppImage, open/save/play/export, and verify audio
+   and gamepad with real hardware. The build host's libraries cannot substitute
+   for this check.
+4. Install an earlier candidate and update to a newer one via Update Center on
+   every platform/architecture, including a prerelease check, restart, and
+   confirmation that settings/projects remain intact. Test offline launch and
+   offline exports as well.
+
+Do not mark issue #203 complete based only on CI configuration. Apple credential
+provisioning, signed native validation and real install/update smoke tests are
+release gates; this Linux development environment cannot perform the Mac checks.

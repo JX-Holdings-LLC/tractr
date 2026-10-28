@@ -293,6 +293,115 @@ jobs:
       RELEASE_SOURCE_SHA: ${{ needs.plan.outputs.sha }}
     permissions:
       contents: read
+  editor-unix:
+    name: Editor (${{ matrix.rid }})
+    needs: [plan, version, player-windows, player-linux, player-web]
+    if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
+    runs-on: ${{ matrix.os }}
+    environment: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - os: ubuntu-22.04
+          rid: linux-x64
+        - os: macos-15
+          rid: osx-arm64
+        - os: macos-15-intel
+          rid: osx-x64
+    env:
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      CARGO_PROFILE_RELEASE_STRIP: symbols
+      RELEASE_DRY_RUN: ${{ inputs.dry_run }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      with:
+        ref: ${{ needs.plan.outputs.sha }}
+        persist-credentials: false
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      with:
+        global-json-file: global.json
+    - run: rustup toolchain install
+    - name: Linux dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev pkg-config libxkbcommon-x11-0 xvfb libfuse2 squashfs-tools x11-utils
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        pattern: player-*
+        path: player-templates
+        merge-multiple: true
+    - name: Unpack offline templates
+      shell: bash
+      run: |
+        mkdir players
+        unzip -q player-templates/player-windows-x64.zip -d players
+        tar -xzf player-templates/player-linux-x64.tar.gz -C players
+        tar -xzf player-templates/player-web.tar.gz -C players
+        python3 tools/release/verify-templates.py players "$VERSION"
+    - name: Build and test native editor
+      shell: bash
+      run: |
+        dotnet build -c Release "-p:FarmPlayerTemplatesDir=$PWD/players"
+        dotnet test -c Release --no-build
+        tools/ci/golden-guard.sh fixtures
+        for target in windows-x64 linux-x64 web; do
+          dotnet run --project src/FarmEngine.Cli -c Release --no-build -- export \
+            fixtures/projects/fixture-project.json --target "$target" --out "export-smoke-$target"
+        done
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        name: release-plan
+        path: plan
+    - name: Prepare release notes and packaging tool
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import json
+        from pathlib import Path
+        plan = json.loads(Path('plan/release-plan.json').read_text())
+        notes = next(app['notes'] for app in plan['selected'] if app['app'] == 'tractr')
+        if not notes:
+            raise SystemExit('No release notes for tractr')
+        Path('release-notes.md').write_text(notes, encoding='utf-8')
+        PY
+        dotnet tool install -g vpk --version "$VPK_VERSION"
+    - name: Import Apple signing and notarization credentials
+      if: runner.os == 'macOS' && !inputs.dry_run
+      shell: bash
+      env:
+        MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+        MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+      run: tools/release/apple-signing.sh
+    - name: Publish and package
+      shell: bash
+      env:
+        RID: ${{ matrix.rid }}
+        MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      run: tools/release/pack-unix.sh "$RID" "$VERSION"
+    - name: Launch the packaged Linux editor
+      if: runner.os == 'Linux'
+      run: tools/release/smoke-appimage.sh Releases/Tractr-linux-x64.AppImage
+    - name: Remove Apple credentials
+      if: always() && runner.os == 'macOS'
+      shell: bash
+      run: |
+        if [[ -f "$RUNNER_TEMP/tractr-signing.keychain-db" ]]; then
+          security delete-keychain "$RUNNER_TEMP/tractr-signing.keychain-db"
+        fi
+        rm -f "$RUNNER_TEMP/tractr-signing.p12" "$RUNNER_TEMP/tractr-notary.p8"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: editor-${{ matrix.rid }}
+        path: Releases/*
+        if-no-files-found: error
+        retention-days: 30
   release:
     name: Build, test & pack
     needs:
@@ -302,6 +411,7 @@ jobs:
     - player-linux
     - player-web
     - smoke-linux
+    - editor-unix
     runs-on: windows-latest
     env:
       CARGO_PROFILE_RELEASE_DEBUG: '0'
@@ -452,6 +562,12 @@ jobs:
         vpk @vpkArgs
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         Get-ChildItem Releases | Format-Table Name, Length
+    - name: Collect macOS and Linux editor packages
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        pattern: editor-*
+        path: Releases
+        merge-multiple: true
     - name: Checksums and build info
       shell: pwsh
       env:

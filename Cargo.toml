@@ -27,7 +27,7 @@ members = [
 exclude = ["crates/farm-plugin-guest", "fuzz"]
 
 [workspace.package]
-version = "0.10.0"
+version = "0.10.1"
 edition = "2021"
 rust-version = "1.88"
 license = "BUSL-1.1"

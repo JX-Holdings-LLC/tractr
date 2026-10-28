@@ -287,7 +287,7 @@ public sealed class ShortcutsWindow : HelpWindowBase
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("190,*"), ColumnSpacing = 12 };
             var cap = new Border
             {
-                Child = Ui.Text(keys),
+                Child = Ui.Text(Services.EditorShortcuts.Display(keys)),
                 Padding = new Thickness(8, 3),
                 CornerRadius = new CornerRadius(4),
                 BorderThickness = new Thickness(1),

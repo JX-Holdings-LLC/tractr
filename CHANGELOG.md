@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1
+
+- Prepare Linux x64 and macOS (Apple Silicon and Intel) editor packages,
+  separate update feeds, and native CI builds. Release packaging verifies
+  all three offline export templates and blocks live unsigned Mac releases.
+- Use Command shortcuts on macOS and keep editor and updater data together
+  in `~/Library/Application Support/Tractr` (or `TRACTR_DATA_DIR`).
+
 ## 0.10.0
 
 Roadmap milestones M8 (projects at full size) and M9 (more power for content

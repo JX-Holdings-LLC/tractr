@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -264,6 +264,7 @@ jobs:
           dotnet format whitespace Tractr.sln --no-restore --verify-no-changes
           dotnet format style Tractr.sln --no-restore --verify-no-changes
           python3 tools/ci/text-style.py
+          python3 tools/release/test-templates.py
 
       # Coverage needs the real source paths in the PDBs: coverlet leaves out assemblies whose
       # sources it cannot find, so no deterministic /_/ paths here (Directory.Build.props).
@@ -527,3 +528,23 @@ jobs:
   audit:
     name: Dependency audit
     uses: ./.github/workflows/audit.yml
+
+  dotnet-macos:
+    name: Build & test (macOS ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          global-json-file: global.json
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release --no-build
+      - run: tools/ci/golden-guard.sh fixtures

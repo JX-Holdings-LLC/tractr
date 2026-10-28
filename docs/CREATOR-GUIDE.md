@@ -20,7 +20,8 @@ code. The editor shows this guide under **Help → Creator Guide** (F1).
 
 **File → Open Project** (Ctrl+O) lists your projects. They are saved
 automatically in the app's data folder (`%APPDATA%\Tractr` on
-Windows, `~/.config/Tractr` on Linux), one *project folder* each under
+Windows, `~/.config/Tractr` on Linux,
+`~/Library/Application Support/Tractr` on macOS), one *project folder* each under
 `projects/`: `project.json`, a file per scene, NPC, dialogue and item
 (`scenes/`, `npcs/`, `dialogue/`, `items/`), and your art and sounds as
 ordinary image and sound files in `assets/`. A big game opens quickly, and a
@@ -685,7 +686,7 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 
 ## 4. Share your game
 
-**File → Export Game** (Ctrl+Shift+E) builds real desktop games: a Windows x64
+**File → Export Game** (Ctrl+Shift+E, or Cmd+Shift+E on macOS) builds real desktop games: a Windows x64
 folder with the game's `.exe`, and a Linux x64 folder that also runs on the
 Steam Deck, each with an optional zip or tar.gz archive. Players unzip and
 play; no editor, browser or install is needed. The exported game has a title
