@@ -399,6 +399,15 @@ jobs:
     - name: Launch the packaged Linux editor
       if: runner.os == 'Linux'
       run: tools/release/smoke-appimage.sh Releases/Tractr-linux-x64.AppImage
+    - name: Verify and launch the packaged Mac editor
+      if: runner.os == 'macOS'
+      shell: bash
+      env:
+        RID: ${{ matrix.rid }}
+      run: |
+        args=("Releases/Tractr-$RID-Portable.zip" "$VERSION")
+        if [[ "$RELEASE_DRY_RUN" != true ]]; then args+=(--require-signature); fi
+        tools/release/smoke-macos.sh "${args[@]}"
     - name: Remove Apple credentials
       if: always() && runner.os == 'macOS'
       shell: bash

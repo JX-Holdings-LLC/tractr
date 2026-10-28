@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.2
+
+- Gate Mac release artifact upload and publication on launching the packaged
+  app, checking its offline templates, and verifying signatures, notarization
+  and Gatekeeper acceptance for live releases. Share the startup check with CI.
+
 ## 0.10.1
 
 - Prepare Linux x64 and macOS (Apple Silicon and Intel) editor packages,

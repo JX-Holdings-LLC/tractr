@@ -330,7 +330,13 @@ and are not release deliverables.
 `editor-unix` builds on matching native runners (Linux x64, macOS arm64 and
 macOS x64). It verifies template hashes before and after publish, tests the
 managed editor with the real native library, and exports the fixture for all
-three game targets. The final inventory requires every editor package and feed;
+three game targets. Before uploading release artifacts, it launches the Linux
+AppImage and extracts and launches each Mac ZIP using the same startup script
+as PR CI. The Mac gate rechecks all offline templates inside the extracted app;
+live releases additionally require strict code-signature verification, a valid
+stapled notarization ticket and Gatekeeper assessment. A failure blocks artifact
+collection and publication. Unsigned dry runs skip only the signature checks.
+The final inventory requires every editor package and feed;
 a missing platform cannot silently produce a Windows-only release.
 
 Velopack channels are `win` (unchanged), `linux-x64`, `osx-arm64` and `osx-x64`.
