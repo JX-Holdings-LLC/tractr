@@ -417,6 +417,9 @@ jobs:
         fi
         rm -f "$RUNNER_TEMP/tractr-signing.p12" "$RUNNER_TEMP/tractr-notary.p8"
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      # Keep completed packages available for diagnosis if a smoke check fails.
+      # The failed job still blocks downstream release collection/publication.
+      if: ${{ !cancelled() }}
       with:
         name: editor-${{ matrix.rid }}
         path: Releases/*

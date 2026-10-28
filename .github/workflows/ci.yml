@@ -561,7 +561,7 @@ jobs:
       - run: dotnet build -c Release -p:CargoProfile=dev
       - run: dotnet test -c Release --no-build
       - run: tools/ci/golden-guard.sh fixtures
-      - name: Package and launch the macOS app (unsigned smoke build)
+      - name: Package the macOS app (unsigned test build)
         shell: bash
         run: |
           rid=osx-arm64
@@ -575,4 +575,12 @@ jobs:
           vpk --yes --skip-updates pack --packId Tractr --packVersion "$version" --packDir publish \
             --runtime "$rid" --channel "$rid" --mainExe Tractr --packTitle Tractr --noInst \
             --bundleId com.jxholdings.tractr --icon "$RUNNER_TEMP/Tractr.icns" --outputDir Releases
-          tools/release/smoke-macos.sh "Releases/Tractr-$rid-Portable.zip"
+      - name: Upload unsigned Mac test package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Tractr-mac-test-${{ matrix.os }}-${{ github.sha }}
+          path: Releases/*-Portable.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Launch the packaged Mac editor
+        run: tools/release/smoke-macos.sh Releases/*-Portable.zip
