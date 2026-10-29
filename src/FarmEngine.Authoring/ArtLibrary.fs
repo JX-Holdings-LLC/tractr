@@ -12,12 +12,19 @@ module ArtLibrary =
     /// `art-N`. The web imports every file of a multi-file pick the same way.
     let importAssets (project: GameProject) (assets: CustomAsset list) : Edit =
         let taken = HashSet<string>(project.CustomAssets |> List.map (fun a -> a.Id))
+
         let edits =
             assets
             |> List.map (fun asset ->
-                let id = if asset.Id.Length > 0 && not (taken.Contains asset.Id) then asset.Id else Defaults.nextId "art" taken
+                let id =
+                    if asset.Id.Length > 0 && not (taken.Contains asset.Id) then
+                        asset.Id
+                    else
+                        Defaults.nextId "art" taken
+
                 taken.Add id |> ignore
                 UpsertAsset { asset with Id = id })
+
         Batch("Import art", edits)
 
     /// The assets "Remove unused art" would delete: the images nothing in the game uses

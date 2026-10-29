@@ -25,19 +25,37 @@ module JsNumber =
 
     let private isJsWhiteSpace (c: char) =
         match c with
-        | '\t' | '\n' | '\u000B' | '\u000C' | '\r' | ' ' | ' ' | ' ' | ' ' | ' ' | ' ' | ' '
-        | '　' | '﻿' -> true
+        | '\t'
+        | '\n'
+        | '\u000B'
+        | '\u000C'
+        | '\r'
+        | ' '
+        | ' '
+        | ' '
+        | ' '
+        | ' '
+        | ' '
+        | ' '
+        | '　'
+        | '﻿' -> true
         | c -> c >= ' ' && c <= ' '
 
     /// JS `String.prototype.trim` (JS white space and line terminators, not .NET's set).
     let trim (s: string) : string =
         let mutable start = 0
         let mutable stop = s.Length - 1
+
         while start <= stop && isJsWhiteSpace s.[start] do
             start <- start + 1
+
         while stop >= start && isJsWhiteSpace s.[stop] do
             stop <- stop - 1
-        if start > stop then "" else s.Substring(start, stop - start + 1)
+
+        if start > stop then
+            ""
+        else
+            s.Substring(start, stop - start + 1)
 
     let private digitValue (c: char) : int =
         if c >= '0' && c <= '9' then int c - int '0'
@@ -52,9 +70,15 @@ module JsNumber =
         else
             let mutable value = 0.0
             let mutable ok = true
+
             for c in digits do
                 let d = digitValue c
-                if d >= radix then ok <- false else value <- value * float radix + float d
+
+                if d >= radix then
+                    ok <- false
+                else
+                    value <- value * float radix + float d
+
             if ok then value else nan
 
     /// The JS StrDecimalLiteral grammar without the sign: `digits[.digits][e±digits]`, `.digits…`
@@ -62,31 +86,43 @@ module JsNumber =
     let private isDecimalLiteral (s: string) : bool =
         let n = s.Length
         let mutable i = 0
+
         let digits () =
             let start = i
+
             while i < n && s.[i] >= '0' && s.[i] <= '9' do
                 i <- i + 1
+
             i - start
+
         let intDigits = digits ()
+
         let fracDigits =
             if i < n && s.[i] = '.' then
                 i <- i + 1
                 digits ()
             else
                 0
+
         if intDigits + fracDigits = 0 then
             false
         else
             if i < n && (s.[i] = 'e' || s.[i] = 'E') then
                 i <- i + 1
-                if i < n && (s.[i] = '+' || s.[i] = '-') then i <- i + 1
-                if digits () = 0 then i <- -1
+
+                if i < n && (s.[i] = '+' || s.[i] = '-') then
+                    i <- i + 1
+
+                if digits () = 0 then
+                    i <- -1
+
             i = n
 
     /// JS `Number(s)` for a string: trims, `""` is 0, `0x`/`0o`/`0b` prefixes, `Infinity`, and
     /// NaN for anything that is not a complete numeric literal.
     let parse (s: string) : float =
         let t = trim s
+
         if t.Length = 0 then
             0.0
         elif t.Length > 2 && t.[0] = '0' && (t.[1] = 'x' || t.[1] = 'X') then
@@ -98,6 +134,7 @@ module JsNumber =
         else
             let negative = t.[0] = '-'
             let body = if t.[0] = '-' || t.[0] = '+' then t.Substring 1 else t
+
             if body = "Infinity" then
                 (if negative then -infinity else infinity)
             elif isDecimalLiteral body then
@@ -125,20 +162,28 @@ module JsNumber =
             let negative = r0.StartsWith "-"
             let r1 = if negative then r0.Substring 1 else r0
             let ePos = r1.IndexOfAny [| 'E'; 'e' |]
+
             let exponent, mantissa =
                 if ePos >= 0 then
                     int (r1.Substring(ePos + 1)), r1.Substring(0, ePos)
                 else
                     0, r1
+
             let dot = mantissa.IndexOf '.'
+
             let digits0, intLen0 =
-                if dot >= 0 then mantissa.Substring(0, dot) + mantissa.Substring(dot + 1), dot
-                else mantissa, mantissa.Length
+                if dot >= 0 then
+                    mantissa.Substring(0, dot) + mantissa.Substring(dot + 1), dot
+                else
+                    mantissa, mantissa.Length
             // Strip leading zeros (e.g. "0.001" → digits "0001").
             let mutable leading = 0
+
             while leading < digits0.Length - 1 && digits0.[leading] = '0' do
                 leading <- leading + 1
+
             let digits = digits0.Substring(leading).TrimEnd('0')
+
             if digits.Length = 0 then
                 "0"
             else
@@ -146,6 +191,7 @@ module JsNumber =
                 let k = digits.Length
                 let n = intLen0 - leading + exponent
                 let sign = if negative then "-" else ""
+
                 if k <= n && n <= 21 then
                     sign + digits + String('0', n - k)
                 elif 0 < n && n <= 21 then
@@ -155,7 +201,13 @@ module JsNumber =
                 else
                     let e = n - 1
                     let fraction = if k > 1 then "." + digits.Substring 1 else ""
-                    sign + digits.Substring(0, 1) + fraction + "e" + (if e >= 0 then "+" else "-") + string (abs e)
+
+                    sign
+                    + digits.Substring(0, 1)
+                    + fraction
+                    + "e"
+                    + (if e >= 0 then "+" else "-")
+                    + string (abs e)
 
     // The rounding of the authoring core (.NET's own `Math.Round` rounds halves to even and is
     // not used for game values): halves away from zero, as the engine rounds a value onto its
@@ -169,7 +221,11 @@ module JsNumber =
             x
         else
             let t = Math.Truncate x
-            if abs (x - t) >= 0.5 then t + (if x < 0.0 then -1.0 else 1.0) else t
+
+            if abs (x - t) >= 0.5 then
+                t + (if x < 0.0 then -1.0 else 1.0)
+            else
+                t
 
 /// JS-semantics helpers over `Json`, for code ported from TypeScript that works on raw
 /// `Record<string, any>` data. Each helper names the JS expression it stands for.
@@ -189,13 +245,15 @@ module Json =
         | _ -> None
 
     /// Optional-chaining read `obj?.key`: `JNull` for non-objects, missing keys and JSON null.
-    let get (key: string) (value: Json) : Json = tryGet key value |> Option.defaultValue JNull
+    let get (key: string) (value: Json) : Json =
+        tryGet key value |> Option.defaultValue JNull
 
     /// `obj.key !== undefined` (a JSON null counts as defined).
     let has (key: string) (value: Json) : bool = (tryGet key value).IsSome
 
     /// `a ?? b`.
-    let orElse (fallback: Json) (value: Json) : Json = if isNullish value then fallback else value
+    let orElse (fallback: Json) (value: Json) : Json =
+        if isNullish value then fallback else value
 
     /// The string value, or `None` for anything that is not a JSON string.
     let asString (value: Json) : string option =
@@ -240,7 +298,8 @@ module Json =
     let set (key: string) (v: Json) (value: Json) : Json = JObject(setMember key v (spread value))
 
     /// `delete copy[key]` on `{ ...value }`.
-    let remove (key: string) (value: Json) : Json = JObject(removeMember key (spread value))
+    let remove (key: string) (value: Json) : Json =
+        JObject(removeMember key (spread value))
 
     // ── Throwing reads (JS TypeErrors) ─────────────────────────────────────
 
@@ -258,7 +317,12 @@ module Json =
 
     let private unicodeEscape (c: char) : string =
         let code = int c
-        "\\u" + hexDigit ((code >>> 12) &&& 0xF) + hexDigit ((code >>> 8) &&& 0xF) + hexDigit ((code >>> 4) &&& 0xF) + hexDigit (code &&& 0xF)
+
+        "\\u"
+        + hexDigit ((code >>> 12) &&& 0xF)
+        + hexDigit ((code >>> 8) &&& 0xF)
+        + hexDigit ((code >>> 4) &&& 0xF)
+        + hexDigit (code &&& 0xF)
 
     let private isHighSurrogate (c: char) = int c >= 0xD800 && int c <= 0xDBFF
     let private isLowSurrogate (c: char) = int c >= 0xDC00 && int c <= 0xDFFF
@@ -268,8 +332,10 @@ module Json =
         let sb = System.Text.StringBuilder(s.Length + 2)
         sb.Append '"' |> ignore
         let mutable i = 0
+
         while i < s.Length do
             let c = s.[i]
+
             match c with
             | '"' -> sb.Append "\\\"" |> ignore
             | '\\' -> sb.Append "\\\\" |> ignore
@@ -287,7 +353,9 @@ module Json =
                     sb.Append(unicodeEscape c) |> ignore
             | c when isLowSurrogate c -> sb.Append(unicodeEscape c) |> ignore
             | c -> sb.Append c |> ignore
+
             i <- i + 1
+
         sb.Append '"' |> ignore
         sb.ToString()
 
@@ -306,8 +374,11 @@ module Json =
     /// then the rest in the given order.
     let jsKeyOrder (members: (string * Json) list) : (string * Json) list =
         let indexed, rest = members |> List.partition (fun (k, _) -> (arrayIndex k).IsSome)
-        if List.isEmpty indexed then members
-        else (indexed |> List.sortBy (fun (k, _) -> (arrayIndex k).Value)) @ rest
+
+        if List.isEmpty indexed then
+            members
+        else
+            (indexed |> List.sortBy (fun (k, _) -> (arrayIndex k).Value)) @ rest
 
     let rec private write (sorted: bool) (sb: System.Text.StringBuilder) (value: Json) : unit =
         match value with
@@ -320,21 +391,32 @@ module Json =
         | JString s -> sb.Append(quote s) |> ignore
         | JArray items ->
             sb.Append '[' |> ignore
+
             items
             |> List.iteri (fun i item ->
-                if i > 0 then sb.Append ',' |> ignore
+                if i > 0 then
+                    sb.Append ',' |> ignore
+
                 write sorted sb item)
+
             sb.Append ']' |> ignore
         | JObject members ->
             let ordered =
-                if sorted then members |> List.sortWith (fun (a, _) (b, _) -> compare a b) |> jsKeyOrder
-                else jsKeyOrder members
+                if sorted then
+                    members |> List.sortWith (fun (a, _) (b, _) -> compare a b) |> jsKeyOrder
+                else
+                    jsKeyOrder members
+
             sb.Append '{' |> ignore
+
             ordered
             |> List.iteri (fun i (k, v) ->
-                if i > 0 then sb.Append ',' |> ignore
+                if i > 0 then
+                    sb.Append ',' |> ignore
+
                 sb.Append(quote k).Append(':') |> ignore
                 write sorted sb v)
+
             sb.Append '}' |> ignore
 
     /// `JSON.stringify(value)`: compact, members in JS enumeration order.
@@ -350,20 +432,28 @@ module Json =
         | JArray items ->
             let inner = indent + "  "
             sb.Append "[\n" |> ignore
+
             items
             |> List.iteri (fun i item ->
-                if i > 0 then sb.Append ",\n" |> ignore
+                if i > 0 then
+                    sb.Append ",\n" |> ignore
+
                 sb.Append inner |> ignore
                 writeIndented sb inner item)
+
             sb.Append('\n').Append(indent).Append(']') |> ignore
         | JObject members ->
             let inner = indent + "  "
             sb.Append "{\n" |> ignore
+
             jsKeyOrder members
             |> List.iteri (fun i (k, v) ->
-                if i > 0 then sb.Append ",\n" |> ignore
+                if i > 0 then
+                    sb.Append ",\n" |> ignore
+
                 sb.Append(inner).Append(quote k).Append(": ") |> ignore
                 writeIndented sb inner v)
+
             sb.Append('\n').Append(indent).Append('}') |> ignore
         | scalar -> write false sb scalar
 
@@ -395,45 +485,68 @@ module Json =
     /// `JSON.stringify` writes back as null) are errors, so a file that loads also saves.
     let parse (text: string) : Result<Json, string> =
         let mutable i = 0
-        let fail (message: string) : 'T = raise (ParseFailure(sprintf "%s at position %d" message i))
+
+        let fail (message: string) : 'T =
+            raise (ParseFailure(sprintf "%s at position %d" message i))
         // White space and comments: a loop, so a file of many comments does not recurse.
         let skip () =
             let mutable more = true
+
             while more do
-                while i < text.Length && (text.[i] = ' ' || text.[i] = '\t' || text.[i] = '\n' || text.[i] = '\r') do
+                while i < text.Length
+                      && (text.[i] = ' ' || text.[i] = '\t' || text.[i] = '\n' || text.[i] = '\r') do
                     i <- i + 1
+
                 if i + 1 < text.Length && text.[i] = '/' && text.[i + 1] = '/' then
                     while i < text.Length && text.[i] <> '\n' do
                         i <- i + 1
                 elif i + 1 < text.Length && text.[i] = '/' && text.[i + 1] = '*' then
                     // An ordinal search for "*/" (String.IndexOf(string) is culture-sensitive).
                     let mutable close = i + 2
+
                     while close + 1 < text.Length && not (text.[close] = '*' && text.[close + 1] = '/') do
                         close <- close + 1
-                    if close + 1 >= text.Length then fail "Unterminated comment"
+
+                    if close + 1 >= text.Length then
+                        fail "Unterminated comment"
+
                     i <- close + 2
                 else
                     more <- false
+
         let expect (c: char) =
-            if i < text.Length && text.[i] = c then i <- i + 1 else fail (sprintf "Expected '%c'" c)
+            if i < text.Length && text.[i] = c then
+                i <- i + 1
+            else
+                fail (sprintf "Expected '%c'" c)
+
         let hex (c: char) =
             if c >= '0' && c <= '9' then int c - int '0'
             elif c >= 'a' && c <= 'f' then int c - int 'a' + 10
             elif c >= 'A' && c <= 'F' then int c - int 'A' + 10
             else fail "Invalid \\u escape"
+
         let readString () : string =
             expect '"'
             let sb = System.Text.StringBuilder()
             let mutable closed = false
+
             while not closed do
-                if i >= text.Length then fail "Unterminated string"
+                if i >= text.Length then
+                    fail "Unterminated string"
+
                 let c = text.[i]
                 i <- i + 1
-                if c = '"' then closed <- true
+
+                if c = '"' then
+                    closed <- true
                 elif c = '\\' then
-                    if i >= text.Length then fail "Unterminated string"
+                    if i >= text.Length then
+                        fail "Unterminated string"
+
                     let e = text.[i]
                     i <- i + 1
+
                     match e with
                     | '"' -> sb.Append '"' |> ignore
                     | '\\' -> sb.Append '\\' |> ignore
@@ -444,47 +557,84 @@ module Json =
                     | 'r' -> sb.Append '\r' |> ignore
                     | 't' -> sb.Append '\t' |> ignore
                     | 'u' ->
-                        if i + 4 > text.Length then fail "Invalid \\u escape"
-                        let code = (hex text.[i] <<< 12) ||| (hex text.[i + 1] <<< 8) ||| (hex text.[i + 2] <<< 4) ||| hex text.[i + 3]
+                        if i + 4 > text.Length then
+                            fail "Invalid \\u escape"
+
+                        let code =
+                            (hex text.[i] <<< 12)
+                            ||| (hex text.[i + 1] <<< 8)
+                            ||| (hex text.[i + 2] <<< 4)
+                            ||| hex text.[i + 3]
+
                         sb.Append(char code) |> ignore
                         i <- i + 4
                     | _ -> fail "Invalid escape"
-                elif c < ' ' then fail "Control character in string"
-                else sb.Append c |> ignore
+                elif c < ' ' then
+                    fail "Control character in string"
+                else
+                    sb.Append c |> ignore
+
             sb.ToString()
+
         let readNumber () : Json =
             let start = i
-            if i < text.Length && text.[i] = '-' then i <- i + 1
+
+            if i < text.Length && text.[i] = '-' then
+                i <- i + 1
+
             let digits () =
                 let from = i
+
                 while i < text.Length && text.[i] >= '0' && text.[i] <= '9' do
                     i <- i + 1
+
                 i - from
+
             let intStart = i
             let intDigits = digits ()
-            if intDigits = 0 then fail "Invalid number"
+
+            if intDigits = 0 then
+                fail "Invalid number"
             // No leading zeros: `01` is not JSON.
-            if intDigits > 1 && text.[intStart] = '0' then fail "Invalid number"
+            if intDigits > 1 && text.[intStart] = '0' then
+                fail "Invalid number"
+
             if i < text.Length && text.[i] = '.' then
                 i <- i + 1
-                if digits () = 0 then fail "Invalid number"
+
+                if digits () = 0 then
+                    fail "Invalid number"
+
             if i < text.Length && (text.[i] = 'e' || text.[i] = 'E') then
                 i <- i + 1
-                if i < text.Length && (text.[i] = '+' || text.[i] = '-') then i <- i + 1
-                if digits () = 0 then fail "Invalid number"
+
+                if i < text.Length && (text.[i] = '+' || text.[i] = '-') then
+                    i <- i + 1
+
+                if digits () = 0 then
+                    fail "Invalid number"
+
             let value = JsNumber.parse (text.Substring(start, i - start))
+
             if System.Double.IsInfinity value then
                 i <- start
                 fail "Number out of range"
+
             JNumber value
+
         let literal (word: string) (value: Json) =
             if i + word.Length <= text.Length && text.Substring(i, word.Length) = word then
                 i <- i + word.Length
                 value
-            else fail "Unexpected token"
+            else
+                fail "Unexpected token"
+
         let rec readValue (depth: int) : Json =
             skip ()
-            if i >= text.Length then fail "Unexpected end of JSON input"
+
+            if i >= text.Length then
+                fail "Unexpected end of JSON input"
+
             match text.[i] with
             | '{'
             | '[' when depth >= MaxDepth -> fail (sprintf "Too deeply nested (more than %d levels)" MaxDepth)
@@ -493,6 +643,7 @@ module Json =
                 let members = ResizeArray<string * Json>()
                 // Key → position, once the object has more than `IndexedMembers` members.
                 let mutable index: System.Collections.Generic.Dictionary<string, int> option = None
+
                 let add (key: string) (value: Json) =
                     let existing =
                         match index with
@@ -503,26 +654,37 @@ module Json =
                         | None ->
                             let mutable position = -1
                             let mutable k = 0
+
                             while position < 0 && k < members.Count do
-                                if fst members.[k] = key then position <- k
+                                if fst members.[k] = key then
+                                    position <- k
+
                                 k <- k + 1
+
                             position
+
                     if existing >= 0 then
                         members.[existing] <- (key, value)
                     else
                         members.Add((key, value))
+
                         match index with
                         | Some positions -> positions.[key] <- members.Count - 1
                         | None when members.Count > IndexedMembers ->
                             let positions = System.Collections.Generic.Dictionary<string, int>()
+
                             for k in 0 .. members.Count - 1 do
                                 positions.[fst members.[k]] <- k
+
                             index <- Some positions
                         | None -> ()
+
                 skip ()
                 let mutable closed = false
+
                 while not closed do
                     skip ()
+
                     if i < text.Length && text.[i] = '}' then
                         i <- i + 1
                         closed <- true
@@ -532,25 +694,31 @@ module Json =
                         expect ':'
                         add key (readValue (depth + 1))
                         skip ()
+
                         if i < text.Length && text.[i] = ',' then i <- i + 1
                         elif i < text.Length && text.[i] = '}' then ()
                         else fail "Expected ',' or '}'"
+
                 JObject(List.ofSeq members)
             | '[' ->
                 i <- i + 1
                 let items = ResizeArray<Json>()
                 let mutable closed = false
+
                 while not closed do
                     skip ()
+
                     if i < text.Length && text.[i] = ']' then
                         i <- i + 1
                         closed <- true
                     else
                         items.Add(readValue (depth + 1))
                         skip ()
+
                         if i < text.Length && text.[i] = ',' then i <- i + 1
                         elif i < text.Length && text.[i] = ']' then ()
                         else fail "Expected ',' or ']'"
+
                 JArray(List.ofSeq items)
             | '"' -> JString(readString ())
             | 't' -> literal "true" (JBool true)
@@ -558,10 +726,14 @@ module Json =
             | 'n' -> literal "null" JNull
             | c when c = '-' || (c >= '0' && c <= '9') -> readNumber ()
             | _ -> fail "Unexpected token"
+
         try
             let value = readValue 0
             skip ()
-            if i < text.Length then fail "Unexpected text after JSON"
+
+            if i < text.Length then
+                fail "Unexpected text after JSON"
+
             Ok value
         with ParseFailure message ->
             Error message

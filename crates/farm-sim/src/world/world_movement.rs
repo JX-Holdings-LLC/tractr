@@ -572,7 +572,9 @@ pub fn integrate_movement(ctx: &EngineContext, state: &mut GameState) -> Effects
 
     // TS `ctx.content.settings.movement?.playerSpeed ?? 4.5`: the config is always present here
     // and defaults to 4.5 tiles per second. The setting is already per tick.
-    let speed = ctx.content.settings.movement.player_speed;
+    let bonus = crate::skills::stat_bonus(ctx, state, "moveSpeed").clamp(-90, 500);
+    let speed = (i64::from(ctx.content.settings.movement.player_speed) * i64::from(100 + bonus) / 100)
+        .clamp(1, i64::from(i32::MAX)) as i32;
     let speed = if intent_dx != 0 && intent_dy != 0 {
         let scaled = units::div_round(i64::from(speed) * INV_SQRT2_NUMERATOR, INV_SQRT2_DENOMINATOR);
         i32::try_from(scaled).unwrap_or(speed)

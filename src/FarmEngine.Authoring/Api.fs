@@ -29,7 +29,8 @@ type Edits =
 
     /// The layer a terrain of `project` paints on (its definition's; the built-in rule for an
     /// unknown one).
-    static member LayerIn(project: GameProject, tileType: string) : TileLayer = TileRules.layerIn (ContentCompiler.terrains project) tileType
+    static member LayerIn(project: GameProject, tileType: string) : TileLayer =
+        TileRules.layerIn (ContentCompiler.terrains project) tileType
 
     static member PaintTiles(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>, tileType: string) : Edit =
         PaintTiles(sceneId, layer, Edits.Cells cells, tileType)
@@ -38,22 +39,39 @@ type Edits =
     static member PaintTile(sceneId: string, x: int, y: int, tileType: string) : Edit =
         PaintTiles(sceneId, TileRules.layerOf tileType, [ (x, y) ], tileType)
 
-    static member EraseLayer(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>) : Edit = EraseLayer(sceneId, layer, Edits.Cells cells)
-    static member FillRect(sceneId: string, layer: TileLayer, x0: int, y0: int, x1: int, y1: int, tileType: string) : Edit = FillRect(sceneId, layer, x0, y0, x1, y1, tileType)
-    static member FloodFill(sceneId: string, layer: TileLayer, x: int, y: int, tileType: string) : Edit = FloodFill(sceneId, layer, x, y, tileType)
-    static member PasteTiles(sceneId: string, x: int, y: int, tiles: seq<seq<Tile>>) : Edit = PasteTiles(sceneId, x, y, tiles |> Seq.map List.ofSeq |> List.ofSeq)
-    static member SetCollision(sceneId: string, cells: seq<struct (int * int)>, blocked: bool) : Edit = SetCollision(sceneId, Edits.Cells cells, blocked)
-    static member SetTileVisual(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>, visual: VisualRef | null) : Edit = SetTileVisual(sceneId, layer, Edits.Cells cells, Edits.Visual visual)
+    static member EraseLayer(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>) : Edit =
+        EraseLayer(sceneId, layer, Edits.Cells cells)
+
+    static member FillRect(sceneId: string, layer: TileLayer, x0: int, y0: int, x1: int, y1: int, tileType: string) : Edit =
+        FillRect(sceneId, layer, x0, y0, x1, y1, tileType)
+
+    static member FloodFill(sceneId: string, layer: TileLayer, x: int, y: int, tileType: string) : Edit =
+        FloodFill(sceneId, layer, x, y, tileType)
+
+    static member PasteTiles(sceneId: string, x: int, y: int, tiles: seq<seq<Tile>>) : Edit =
+        PasteTiles(sceneId, x, y, tiles |> Seq.map List.ofSeq |> List.ofSeq)
+
+    static member SetCollision(sceneId: string, cells: seq<struct (int * int)>, blocked: bool) : Edit =
+        SetCollision(sceneId, Edits.Cells cells, blocked)
+
+    static member SetTileVisual(sceneId: string, layer: TileLayer, cells: seq<struct (int * int)>, visual: VisualRef | null) : Edit =
+        SetTileVisual(sceneId, layer, Edits.Cells cells, Edits.Visual visual)
+
     static member PlaceNode(sceneId: string, x: int, y: int, nodeTypeId: string) : Edit = PlaceNode(sceneId, x, y, nodeTypeId)
     static member RemoveNode(sceneId: string, x: int, y: int) : Edit = RemoveNode(sceneId, x, y)
     static member PlaceItem(sceneId: string, x: int, y: int, item: Item) : Edit = PlaceItem(sceneId, x, y, item)
     static member RemovePlacedItem(sceneId: string, x: int, y: int) : Edit = RemovePlacedItem(sceneId, x, y)
-    static member PlaceMachine(sceneId: string, x: int, y: int, machineTypeId: string) : Edit = PlaceMachine(sceneId, x, y, machineTypeId)
+
+    static member PlaceMachine(sceneId: string, x: int, y: int, machineTypeId: string) : Edit =
+        PlaceMachine(sceneId, x, y, machineTypeId)
+
     static member RemoveMachine(sceneId: string, x: int, y: int) : Edit = RemoveMachine(sceneId, x, y)
     static member ClearTile(sceneId: string, x: int, y: int) : Edit = ClearTile(sceneId, x, y)
+
     /// Eyedropper: the brush the tile at (x, y) picks up, or null outside the scene.
     static member PickBrush(project: GameProject, sceneId: string, x: int, y: int) : Edit | null =
         EditScenes.brushAt project sceneId x y |> Option.map SelectBrush |> Option.toObj
+
     static member ClearCropsAndItems(sceneId: string) : Edit = ClearCropsAndItems sceneId
     static member ResetSoil(sceneId: string) : Edit = ResetSoil sceneId
     static member FillScene(sceneId: string, tileType: string) : Edit = FillScene(sceneId, tileType)
@@ -61,25 +79,38 @@ type Edits =
     static member RemoveScene(sceneId: string) : Edit = RemoveScene sceneId
     static member RenameScene(sceneId: string, name: string) : Edit = RenameScene(sceneId, name)
     static member SetSceneIndoor(sceneId: string, indoor: bool) : Edit = SetSceneIndoor(sceneId, indoor)
+
     /// The scene's surroundings: dark, temperature (null: the season's), tags, music (null or
     /// empty: none) and its own atmosphere look (null: none).
-    static member SetSceneEnvironment(sceneId: string, dark: bool, temperature: System.Nullable<float>, tags: seq<string>,
-                                      music: string | null, atmosphere: AtmosphereLook | null) : Edit =
+    static member SetSceneEnvironment
+        (sceneId: string, dark: bool, temperature: System.Nullable<float>, tags: seq<string>, music: string | null, atmosphere: AtmosphereLook | null)
+        : Edit =
         SetSceneEnvironment(sceneId, dark, Option.ofNullable temperature, List.ofSeq tags, Option.ofObj music, Option.ofObj atmosphere)
+
     /// A greenhouse (M5): crops grow in the scene in every season.
     static member SetSceneAllSeasons(sceneId: string, allSeasons: bool) : Edit = SetSceneAllSeasons(sceneId, allSeasons)
+
     /// The monsters the scene has each morning (M7).
-    static member SetSceneMonsters(sceneId: string, monsters: seq<MonsterSpawn>) : Edit = SetSceneMonsters(sceneId, List.ofSeq monsters)
+    static member SetSceneMonsters(sceneId: string, monsters: seq<MonsterSpawn>) : Edit =
+        SetSceneMonsters(sceneId, List.ofSeq monsters)
+
     /// The scene's extra layers (M8).
-    static member SetSceneLayers(sceneId: string, layers: seq<SceneLayer>) : Edit = SetSceneLayers(sceneId, List.ofSeq layers)
+    static member SetSceneForageSpawns(sceneId: string, tables: seq<ForageSpawnTable>) : Edit =
+        SetSceneForageSpawns(sceneId, List.ofSeq tables)
+
+    static member SetSceneLayers(sceneId: string, layers: seq<SceneLayer>) : Edit =
+        SetSceneLayers(sceneId, List.ofSeq layers)
+
     /// A scene's extra layer as the layer the map tools paint on.
     static member DecorLayer(layerId: string) : TileLayer = Decor layerId
     static member ResizeScene(sceneId: string, width: int, height: int) : Edit = ResizeScene(sceneId, width, height)
     /// Largest scene side `ResizeScene` takes.
     static member MaxSceneSize = EditScenes.MaxSceneSize
+
     /// What `ResizeScene` to this size would move inside or remove (empty when nothing).
     static member ResizeImpact(project: GameProject, sceneId: string, width: int, height: int) : IReadOnlyList<string> =
         EditScenes.resizeImpact sceneId width height project |> Array.ofList :> IReadOnlyList<string>
+
     static member DuplicateScene(sceneId: string, newSceneId: string) : Edit = DuplicateScene(sceneId, newSceneId)
     static member SetTransition(sceneId: string, transition: SceneTransition) : Edit = SetTransition(sceneId, transition)
     /// TransitionEditor "Both Ways": the door and its return door as one step.
@@ -88,7 +119,9 @@ type Edits =
     static member ClearTransitions(sceneId: string) : Edit = ClearTransitions sceneId
     static member SetStartScene(sceneId: string) : Edit = SetStartScene sceneId
     static member SetPlayerStart(sceneId: string, x: int, y: int) : Edit = SetPlayerStart(sceneId, x, y)
-    static member SelectBrush(tileType: string, visual: VisualRef | null) : Edit = SelectBrush(tileType, Edits.Visual visual)
+
+    static member SelectBrush(tileType: string, visual: VisualRef | null) : Edit =
+        SelectBrush(tileType, Edits.Visual visual)
 
     static member UpsertNpc(npc: Npc) : Edit = UpsertNpc npc
     static member RemoveNpc(npcId: string) : Edit = RemoveNpc npcId
@@ -116,6 +149,10 @@ type Edits =
     static member RemoveAnimalSpecies(speciesId: string) : Edit = RemoveAnimalSpecies speciesId
     static member UpsertAnimal(animal: AnimalState) : Edit = UpsertAnimal animal
     static member RemoveAnimal(animalId: string) : Edit = RemoveAnimal animalId
+    static member UpsertMine(mine: MineDefinition) : Edit = UpsertMine mine
+    static member RemoveMine(id: string) : Edit = RemoveMine id
+    static member UpsertRequestBoard(board: RequestBoard) : Edit = UpsertRequestBoard board
+    static member RemoveRequestBoard(id: string) : Edit = RemoveRequestBoard id
     static member UpsertFishTable(table: FishTable) : Edit = UpsertFishTable table
     static member RemoveFishTable(tableId: string) : Edit = RemoveFishTable tableId
     static member UpsertAction(action: ActionDef) : Edit = UpsertAction action
@@ -151,40 +188,69 @@ type Edits =
     static member UpsertMail(mail: MailDefinition) : Edit = UpsertMail mail
     static member RemoveMail(mailId: string) : Edit = RemoveMail mailId
     static member SetWeather(config: WeatherConfig) : Edit = SetWeather config
-    static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit = SetWeatherWeight(seasonId, weatherId, weight)
+
+    static member SetWeatherWeight(seasonId: string, weatherId: string, weight: float) : Edit =
+        SetWeatherWeight(seasonId, weatherId, weight)
+
     static member SetMine(config: MineConfig) : Edit = SetMine config
     static member SetGamePanels(panels: seq<GamePanel>) : Edit = SetGamePanels(List.ofSeq panels)
 
     static member SetProjectInfo(name: string, version: string) : Edit = SetProjectInfo(name, version)
     static member SetSettings(settings: ProjectSettings) : Edit = SetSettings settings
-    static member SetExportSettings(settings: ExportSettings | null) : Edit = SetExportSettings(Option.ofObj settings)
+
+    static member SetExportSettings(settings: ExportSettings | null) : Edit =
+        SetExportSettings(Option.ofObj settings)
+
     static member RemoveSeason(seasonId: string) : Edit = RemoveSeason seasonId
     /// Season arrows: swap with the season `delta` places away (festivals and weather follow by id).
     static member MoveSeason(seasonId: string, delta: int) : Edit = MoveSeason(seasonId, delta)
     static member SetGraphics(graphics: GraphicsSettings) : Edit = SetGraphics graphics
     static member SetPlayerVisual(visual: VisualRef | null) : Edit = SetPlayerVisual(Edits.Visual visual)
-    static member BindPlayerVisual(visual: VisualRef | null) : Edit = BindVisual(PlayerVisual, Edits.Visual visual)
-    static member BindNpcVisual(npcId: string, visual: VisualRef | null) : Edit = BindVisual(NpcVisual npcId, Edits.Visual visual)
-    static member BindItemVisual(itemId: string, visual: VisualRef | null) : Edit = BindVisual(ItemVisual itemId, Edits.Visual visual)
-    static member BindCropVisual(cropId: string, visual: VisualRef | null) : Edit = BindVisual(CropVisual cropId, Edits.Visual visual)
-    static member BindNodeTypeVisual(nodeTypeId: string, visual: VisualRef | null) : Edit = BindVisual(NodeTypeVisual nodeTypeId, Edits.Visual visual)
-    static member BindAnimalSpeciesVisual(speciesId: string, visual: VisualRef | null) : Edit = BindVisual(AnimalSpeciesVisual speciesId, Edits.Visual visual)
-    static member BindMachineTypeVisual(machineTypeId: string, visual: VisualRef | null) : Edit = BindVisual(MachineTypeVisual machineTypeId, Edits.Visual visual)
+
+    static member BindPlayerVisual(visual: VisualRef | null) : Edit =
+        BindVisual(PlayerVisual, Edits.Visual visual)
+
+    static member BindNpcVisual(npcId: string, visual: VisualRef | null) : Edit =
+        BindVisual(NpcVisual npcId, Edits.Visual visual)
+
+    static member BindItemVisual(itemId: string, visual: VisualRef | null) : Edit =
+        BindVisual(ItemVisual itemId, Edits.Visual visual)
+
+    static member BindCropVisual(cropId: string, visual: VisualRef | null) : Edit =
+        BindVisual(CropVisual cropId, Edits.Visual visual)
+
+    static member BindNodeTypeVisual(nodeTypeId: string, visual: VisualRef | null) : Edit =
+        BindVisual(NodeTypeVisual nodeTypeId, Edits.Visual visual)
+
+    static member BindAnimalSpeciesVisual(speciesId: string, visual: VisualRef | null) : Edit =
+        BindVisual(AnimalSpeciesVisual speciesId, Edits.Visual visual)
+
+    static member BindMachineTypeVisual(machineTypeId: string, visual: VisualRef | null) : Edit =
+        BindVisual(MachineTypeVisual machineTypeId, Edits.Visual visual)
+
     static member UpsertAsset(asset: CustomAsset) : Edit = UpsertAsset asset
     static member RemoveAsset(assetId: string) : Edit = RemoveAsset assetId
     /// An asset's display name (trimmed; blank is a no-op); its id, and so what uses it, stays.
     static member RenameAsset(assetId: string, name: string) : Edit = RenameAsset(assetId, name)
+
     /// One frame's duration in ticks (20 ticks = 1 second).
-    static member SetFrameTicks(assetId: string, clip: string, frame: int, ticks: int) : Edit = SetFrameTicks(assetId, clip, Some frame, ticks)
+    static member SetFrameTicks(assetId: string, clip: string, frame: int, ticks: int) : Edit =
+        SetFrameTicks(assetId, clip, Some frame, ticks)
+
     /// Every frame of a clip gets the same duration.
-    static member SetAllFrameTicks(assetId: string, clip: string, ticks: int) : Edit = SetFrameTicks(assetId, clip, None, ticks)
+    static member SetAllFrameTicks(assetId: string, clip: string, ticks: int) : Edit =
+        SetFrameTicks(assetId, clip, None, ticks)
+
     static member DuplicateFrame(assetId: string, clip: string, frame: int) : Edit = DuplicateFrame(assetId, clip, frame)
     static member InstallPack(pack: ContentPack) : Edit = InstallPack pack
     static member SetPackEnabled(packId: string, enabled: bool) : Edit = SetPackEnabled(packId, enabled)
     static member ReorderPacks(packIds: seq<string>) : Edit = ReorderPacks(List.ofSeq packIds)
+
     /// ModsEditor `move`: swap a pack with its neighbour in the load order.
     static member MovePack(project: GameProject, packId: string, delta: int) : Edit =
-        let ids = project.ContentPacks |> Seq.map (fun i -> i.Pack.Manifest.Id) |> Array.ofSeq
+        let ids =
+            project.ContentPacks |> Seq.map (fun i -> i.Pack.Manifest.Id) |> Array.ofSeq
+
         match Array.tryFindIndex (fun id -> id = packId) ids with
         | Some index when index + delta >= 0 && index + delta < ids.Length ->
             let swapped = Array.copy ids
@@ -192,6 +258,7 @@ type Edits =
             swapped.[index + delta] <- ids.[index]
             ReorderPacks(List.ofArray swapped)
         | _ -> ReorderPacks(List.ofArray ids)
+
     static member RemovePack(packId: string) : Edit = RemovePack packId
     static member ImportPack(packId: string) : Edit = ImportPack packId
     static member ReplaceProject(project: GameProject) : Edit = ReplaceProject project
@@ -205,9 +272,14 @@ type Documents =
     /// The project after an edit, with no history (previews).
     static member Preview(project: GameProject, edit: Edit) : GameProject = Document.run project edit
     static member Apply(document: Document, edit: Edit) : Document = Document.apply edit document
-    static member ApplyInStroke(document: Document, strokeId: string, edit: Edit) : Document = Document.applyInStroke strokeId edit document
+
+    static member ApplyInStroke(document: Document, strokeId: string, edit: Edit) : Document =
+        Document.applyInStroke strokeId edit document
+
     /// An edit to editor state that is not history (the tile brush): no undo entry.
-    static member ApplyWithoutHistory(document: Document, edit: Edit) : Document = Document.applyWithoutHistory edit document
+    static member ApplyWithoutHistory(document: Document, edit: Edit) : Document =
+        Document.applyWithoutHistory edit document
+
     static member EndStroke(document: Document) : Document = Document.endStroke document
     static member CanUndo(document: Document) : bool = Document.canUndo document
     static member CanRedo(document: Document) : bool = Document.canRedo document
@@ -219,7 +291,8 @@ type Documents =
 [<AbstractClass; Sealed>]
 type Playtests =
     /// The cartridge Play Mode runs (compiled even when Problems reports errors).
-    static member Cartridge(project: GameProject) : byte[] = CartridgeCompiler.CompileForPlaytest project
+    static member Cartridge(project: GameProject) : byte[] =
+        CartridgeCompiler.CompileForPlaytest project
 
     /// The project with a playtest's final state (the engine's `GameState` JSON text) written
     /// back. Throws `FormatException` when the text is not a state the project can take.
@@ -230,17 +303,28 @@ type Playtests =
 
 [<AbstractClass; Sealed>]
 type Problems =
-    static member Collect(project: GameProject) : IReadOnlyList<Problem> = Problems.collect project |> Array.ofList :> IReadOnlyList<Problem>
-    static member BlocksExport(problems: seq<Problem>) : bool = problems |> Seq.exists (fun p -> p.IsError)
+    static member Collect(project: GameProject) : IReadOnlyList<Problem> =
+        Problems.collect project |> Array.ofList :> IReadOnlyList<Problem>
+
+    static member BlocksExport(problems: seq<Problem>) : bool =
+        problems |> Seq.exists (fun p -> p.IsError)
 
 /// `Defaults` for C#: the options come back as nullable references.
 [<AbstractClass; Sealed>]
 type Defaults =
     static member NextId(prefix: string, existingIds: seq<string>) : string = Defaults.nextId prefix existingIds
-    static member SlugId(name: string, existingIds: seq<string>, fallback: string) : string = Defaults.slugId name existingIds fallback
-    static member AllIds(project: GameProject) : IReadOnlyList<string> = Defaults.allIds project |> Array.ofSeq :> IReadOnlyList<string>
+
+    static member SlugId(name: string, existingIds: seq<string>, fallback: string) : string =
+        Defaults.slugId name existingIds fallback
+
+    static member AllIds(project: GameProject) : IReadOnlyList<string> =
+        Defaults.allIds project |> Array.ofSeq :> IReadOnlyList<string>
+
     static member NewNpc(project: GameProject, name: string) : Npc = Defaults.newNpc project name
-    static member NewNpc(project: GameProject, name: string, appearance: string, canMove: bool) : Npc = Defaults.newNpcWith project name appearance canMove
+
+    static member NewNpc(project: GameProject, name: string, appearance: string, canMove: bool) : Npc =
+        Defaults.newNpcWith project name appearance canMove
+
     static member NewDialogue(project: GameProject, npcId: string) : Dialogue = Defaults.newDialogue project npcId
     static member NewDialogueOption() : DialogueOption = Defaults.newDialogueOption ()
     static member NewScheduleEntry(npc: Npc) : NpcScheduleEntry = Defaults.newScheduleEntry npc
@@ -250,14 +334,23 @@ type Defaults =
     static member DuplicateCrop(project: GameProject, crop: CustomCropDefinition) : CustomCropDefinition = Defaults.duplicateCrop project crop
     static member NewQuest(project: GameProject) : Quest = Defaults.newQuest project
     static member NewObjective(quest: Quest) : QuestObjective = Defaults.newObjective quest
-    static member NewRewardItem(project: GameProject) : QuestRewardItem | null = Defaults.newRewardItem project |> Option.toObj
+
+    static member NewRewardItem(project: GameProject) : QuestRewardItem | null =
+        Defaults.newRewardItem project |> Option.toObj
+
     static member DefaultCondition(kind: string, project: GameProject) : EventCondition = Defaults.defaultCondition kind project
     static member DefaultOutcome(kind: string) : EventOutcome = Defaults.defaultOutcome kind
     static member NewEvent(project: GameProject) : GameEvent = Defaults.newEvent project
     static member NewShop(project: GameProject) : ShopDefinition = Defaults.newShop project
-    static member NewStockEntry(project: GameProject) : ShopStockEntry | null = Defaults.newStockEntry project |> Option.toObj
+
+    static member NewStockEntry(project: GameProject) : ShopStockEntry | null =
+        Defaults.newStockEntry project |> Option.toObj
+
     static member NewRecipe(project: GameProject) : RecipeDefinition = Defaults.newRecipe project
-    static member NewIngredient(project: GameProject) : RecipeIngredient | null = Defaults.newIngredient project |> Option.toObj
+
+    static member NewIngredient(project: GameProject) : RecipeIngredient | null =
+        Defaults.newIngredient project |> Option.toObj
+
     static member NewMachineType(project: GameProject) : MachineTypeDefinition = Defaults.newMachineType project
     static member NewNodeType(project: GameProject) : NodeTypeDefinition = Defaults.newNodeType project
     static member NewDrop(project: GameProject) : NodeDrop = Defaults.newDrop project
@@ -269,34 +362,69 @@ type Defaults =
     static member NewCutscene(project: GameProject) : Cutscene = Defaults.newCutscene project
     static member NewHeartEvent(project: GameProject) : HeartEvent = Defaults.newHeartEvent project
     static member NewAnimalSpecies(project: GameProject) : AnimalSpeciesDefinition = Defaults.newAnimalSpecies project
-    static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState = Defaults.newAnimal project speciesId sceneId x y
+
+    static member NewAnimal(project: GameProject, speciesId: string, sceneId: string, x: int, y: int) : AnimalState =
+        Defaults.newAnimal project speciesId sceneId x y
+
+    static member NewMine(project: GameProject) : MineDefinition = Defaults.newMine project
+    static member NewRequestBoard(project: GameProject) : RequestBoard = Defaults.newRequestBoard project
     static member NewFishTable(project: GameProject) : FishTable = Defaults.newFishTable project
-    static member NewFishEntry(project: GameProject) : FishTableEntry | null = Defaults.newFishEntry project |> Option.toObj
+
+    static member NewFishEntry(project: GameProject) : FishTableEntry | null =
+        Defaults.newFishEntry project |> Option.toObj
+
     static member NewAction(project: GameProject) : ActionDef = Defaults.newAction project
     static member DuplicateAction(project: GameProject, action: ActionDef) : ActionDef = Defaults.duplicateAction project action
     static member NewMinigame(project: GameProject) : MinigameDef = Defaults.newMinigame project
-    static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef = Defaults.duplicateMinigame project minigame
-    static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene = Defaults.duplicateCutscene project cutscene
-    static member DuplicateHeartEvent(project: GameProject, heartEvent: HeartEvent) : HeartEvent = Defaults.duplicateHeartEvent project heartEvent
+
+    static member DuplicateMinigame(project: GameProject, minigame: MinigameDef) : MinigameDef =
+        Defaults.duplicateMinigame project minigame
+
+    static member DuplicateCutscene(project: GameProject, cutscene: Cutscene) : Cutscene =
+        Defaults.duplicateCutscene project cutscene
+
+    static member DuplicateHeartEvent(project: GameProject, heartEvent: HeartEvent) : HeartEvent =
+        Defaults.duplicateHeartEvent project heartEvent
+
     static member NewBuildingType(project: GameProject) : BuildingDefinition = Defaults.newBuildingType project
-    static member DuplicateBuildingType(project: GameProject, building: BuildingDefinition) : BuildingDefinition = Defaults.duplicateBuildingType project building
+
+    static member DuplicateBuildingType(project: GameProject, building: BuildingDefinition) : BuildingDefinition =
+        Defaults.duplicateBuildingType project building
+
     static member NewPlacedBuilding(project: GameProject) : BuildingState = Defaults.newPlacedBuilding project
     static member NewMonster(project: GameProject) : MonsterDefinition = Defaults.newMonster project
-    static member DuplicateMonster(project: GameProject, monster: MonsterDefinition) : MonsterDefinition = Defaults.duplicateMonster project monster
+
+    static member DuplicateMonster(project: GameProject, monster: MonsterDefinition) : MonsterDefinition =
+        Defaults.duplicateMonster project monster
+
     static member NewCollection(project: GameProject) : CollectionDefinition = Defaults.newCollection project
-    static member DuplicateCollection(project: GameProject, collection: CollectionDefinition) : CollectionDefinition = Defaults.duplicateCollection project collection
+
+    static member DuplicateCollection(project: GameProject, collection: CollectionDefinition) : CollectionDefinition =
+        Defaults.duplicateCollection project collection
+
     static member NewBundle(project: GameProject) : BundleDefinition = Defaults.newBundle project
     static member DuplicateBundle(project: GameProject, bundle: BundleDefinition) : BundleDefinition = Defaults.duplicateBundle project bundle
     static member NewAchievement(project: GameProject) : AchievementDefinition = Defaults.newAchievement project
-    static member DuplicateAchievement(project: GameProject, achievement: AchievementDefinition) : AchievementDefinition = Defaults.duplicateAchievement project achievement
+
+    static member DuplicateAchievement(project: GameProject, achievement: AchievementDefinition) : AchievementDefinition =
+        Defaults.duplicateAchievement project achievement
+
     static member NewMail(project: GameProject) : MailDefinition = Defaults.newMail project
     static member DuplicateMail(project: GameProject, mail: MailDefinition) : MailDefinition = Defaults.duplicateMail project mail
     static member NewResultTier() : MinigameResultTier = Defaults.newResultTier ()
-    static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene = Defaults.newScene project name width height
-    static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene = Defaults.newSceneWith project name width height defaultTile
+
+    static member NewScene(project: GameProject, name: string, width: int, height: int) : Scene =
+        Defaults.newScene project name width height
+
+    static member NewScene(project: GameProject, name: string, width: int, height: int, defaultTile: string) : Scene =
+        Defaults.newSceneWith project name width height defaultTile
+
     static member NewTransition(toSceneId: string) : SceneTransition = Defaults.newTransition toSceneId
     static member NewSeason(calendar: CalendarConfig) : CalendarSeason = Defaults.newSeason calendar
-    static member NewFestival(project: GameProject, calendar: CalendarConfig) : CalendarFestival | null = Defaults.newFestival project calendar |> Option.toObj
+
+    static member NewFestival(project: GameProject, calendar: CalendarConfig) : CalendarFestival | null =
+        Defaults.newFestival project calendar |> Option.toObj
+
     static member MineEnabled(project: GameProject, enabled: bool) : MineConfig = Defaults.mineEnabled project enabled
     static member NewGamePanel(project: GameProject) : GamePanel = Defaults.newGamePanel project
 
@@ -305,15 +433,17 @@ type Defaults =
 /// `FromX`/`FromY` its door), "event" (an event's tile or region, `X2`/`Y2` the far corner;
 /// `TargetId` is the event), "mine" (the mine entrance) or "start" (the player start).
 type MapMarker =
-    { Kind: string
-      X: int
-      Y: int
-      X2: int
-      Y2: int
-      FromX: int
-      FromY: int
-      TargetId: string
-      Label: string }
+    {
+        Kind: string
+        X: int
+        Y: int
+        X2: int
+        Y2: int
+        FromX: int
+        FromY: int
+        TargetId: string
+        Label: string
+    }
 
 /// The markers the Edit Mode map draws over a scene (#47): doors and their arrivals, event
 /// triggers (Workshop encounters are events too), the mine entrance and the player start.
@@ -321,39 +451,84 @@ type MapMarker =
 type MapMarkers =
     static member ForScene(project: GameProject, sceneId: string) : IReadOnlyList<MapMarker> =
         let sceneName (id: string) =
-            project.Scenes |> List.tryFind (fun s -> s.Id = id) |> Option.map (fun s -> s.Name) |> Option.defaultValue id
+            project.Scenes
+            |> List.tryFind (fun s -> s.Id = id)
+            |> Option.map (fun s -> s.Name)
+            |> Option.defaultValue id
+
         let marker kind x y label targetId =
-            { Kind = kind; X = int (floor x); Y = int (floor y); X2 = int (floor x); Y2 = int (floor y); FromX = 0; FromY = 0; TargetId = targetId; Label = label }
+            {
+                Kind = kind
+                X = int (floor x)
+                Y = int (floor y)
+                X2 = int (floor x)
+                Y2 = int (floor y)
+                FromX = 0
+                FromY = 0
+                TargetId = targetId
+                Label = label
+            }
+
         let num (value: float) = JsNumber.format value
-        [ match Proj.tryScene sceneId project with
-          | None -> ()
-          | Some scene ->
-              for t in scene.Transitions do
-                  yield marker "door" t.FromX t.FromY (sprintf "Door to %s (%s, %s)" (sceneName t.ToSceneId) (num t.ToX) (num t.ToY)) t.ToSceneId
-              for other in project.Scenes do
-                  for t in other.Transitions do
-                      if t.ToSceneId = sceneId then
-                          yield { marker "arrival" t.ToX t.ToY (sprintf "Arrival from %s" other.Name) other.Id with FromX = int t.FromX; FromY = int t.FromY }
-              for e in project.Events do
-                  if e.SceneId = sceneId || e.SceneId = "" then
-                      let how = if e.Trigger = EventTriggers.Enter then "step on" else if e.Trigger = EventTriggers.Interact then "interact" else e.Trigger
-                      let where = if e.SceneId = "" then ", every scene" else ""
-                      for c in e.Conditions do
-                          let region (x: float) (y: float) (x2: float option) (y2: float option) =
-                              let x2 = defaultArg x2 x
-                              let y2 = defaultArg y2 y
-                              { marker "event" (min x x2) (min y y2) (sprintf "Event %s (%s%s)" e.Name how where) e.Id with
-                                  X2 = int (floor (max x x2)); Y2 = int (floor (max y y2)) }
-                          match c with
-                          | EventCondition.EnterTile t -> yield region t.X t.Y t.X2 t.Y2
-                          | EventCondition.InteractTile t -> yield region t.X t.Y t.X2 t.Y2
-                          | _ -> ()
-              let mine = project.Mine
-              if mine.Enabled && mine.EntranceSceneId = Some sceneId then
-                  yield marker "mine" (defaultArg mine.EntranceX 0.0) (defaultArg mine.EntranceY 0.0) "Mine entrance" ""
-              if project.Player.SceneId = sceneId then
-                  yield marker "start" project.Player.X project.Player.Y "Player start" "" ]
-        |> Array.ofList :> IReadOnlyList<MapMarker>
+
+        [
+            match Proj.tryScene sceneId project with
+            | None -> ()
+            | Some scene ->
+                for t in scene.Transitions do
+                    yield marker "door" t.FromX t.FromY (sprintf "Door to %s (%s, %s)" (sceneName t.ToSceneId) (num t.ToX) (num t.ToY)) t.ToSceneId
+
+                for other in project.Scenes do
+                    for t in other.Transitions do
+                        if t.ToSceneId = sceneId then
+                            yield
+                                { marker "arrival" t.ToX t.ToY (sprintf "Arrival from %s" other.Name) other.Id with
+                                    FromX = int t.FromX
+                                    FromY = int t.FromY
+                                }
+
+                for e in project.Events do
+                    if e.SceneId = sceneId || e.SceneId = "" then
+                        let how =
+                            if e.Trigger = EventTriggers.Enter then "step on"
+                            else if e.Trigger = EventTriggers.Interact then "interact"
+                            else e.Trigger
+
+                        let where = if e.SceneId = "" then ", every scene" else ""
+
+                        for c in e.Conditions do
+                            let region (x: float) (y: float) (x2: float option) (y2: float option) =
+                                let x2 = defaultArg x2 x
+                                let y2 = defaultArg y2 y
+
+                                { marker "event" (min x x2) (min y y2) (sprintf "Event %s (%s%s)" e.Name how where) e.Id with
+                                    X2 = int (floor (max x x2))
+                                    Y2 = int (floor (max y y2))
+                                }
+
+                            match c with
+                            | EventCondition.EnterTile t -> yield region t.X t.Y t.X2 t.Y2
+                            | EventCondition.InteractTile t -> yield region t.X t.Y t.X2 t.Y2
+                            | _ -> ()
+
+                let mine = project.Mine
+
+                if mine.Enabled && mine.EntranceSceneId = Some sceneId then
+                    yield marker "mine" (defaultArg mine.EntranceX 0.0) (defaultArg mine.EntranceY 0.0) "Mine entrance" ""
+
+                for board in defaultArg project.RequestBoards [] do
+                    if board.SceneId = sceneId then
+                        yield marker "request-board" board.X board.Y board.Name board.Id
+
+                for named in defaultArg project.Mines [] do
+                    if named.Config.Enabled && named.Config.EntranceSceneId = Some sceneId then
+                        yield marker "mine" (defaultArg named.Config.EntranceX 0.0) (defaultArg named.Config.EntranceY 0.0) named.Name named.Id
+
+                if project.Player.SceneId = sceneId then
+                    yield marker "start" project.Player.X project.Player.Y "Player start" ""
+        ]
+        |> Array.ofList
+        :> IReadOnlyList<MapMarker>
 
 /// The map's Place tools for C# (web App.tsx `handleTileClick` placement modes and the Place
 /// buttons of NPCEditor, NodeTypeEditor, ItemEditor and WildlifeEditor): what each tool offers
@@ -364,7 +539,12 @@ type MapPlacement =
     static member private Entries(entries: seq<string * string>) : IReadOnlyList<PickerOption> =
         entries
         |> Seq.distinctBy fst
-        |> Seq.map (fun (id, name) -> { Id = id; Label = (if System.String.IsNullOrWhiteSpace name then id else name); Missing = false })
+        |> Seq.map (fun (id, name) ->
+            {
+                Id = id
+                Label = (if System.String.IsNullOrWhiteSpace name then id else name)
+                Missing = false
+            })
         |> Array.ofSeq
         :> IReadOnlyList<PickerOption>
 
@@ -373,7 +553,10 @@ type MapPlacement =
     static member Choices(kind: string, project: GameProject) : IReadOnlyList<PickerOption> =
         match kind with
         | "npc" -> project.Npcs |> Seq.map (fun n -> n.Id, n.Name) |> MapPlacement.Entries
-        | "nodeType" -> EditScenes.placeableNodeTypes project |> Seq.map (fun n -> n.Id, n.Name) |> MapPlacement.Entries
+        | "nodeType" ->
+            EditScenes.placeableNodeTypes project
+            |> Seq.map (fun n -> n.Id, n.Name)
+            |> MapPlacement.Entries
         | "item" -> project.Items |> Seq.map (fun i -> i.Id, i.Name) |> MapPlacement.Entries
         | "machineType" -> project.MachineTypes |> Seq.map (fun m -> m.Id, m.Name) |> MapPlacement.Entries
         | "animalSpecies" -> project.AnimalSpecies |> Seq.map (fun s -> s.Id, s.Name) |> MapPlacement.Entries
@@ -384,7 +567,8 @@ type MapPlacement =
     /// `id` is not one of `Choices(kind, project)`.
     static member Place(project: GameProject, kind: string, id: string, sceneId: string, x: int, y: int) : Edit | null =
         let edit =
-            if not (MapPlacement.Choices(kind, project) |> Seq.exists (fun o -> o.Id = id)) then None
+            if not (MapPlacement.Choices(kind, project) |> Seq.exists (fun o -> o.Id = id)) then
+                None
             else
                 match kind with
                 | "npc" -> Some(MoveNpc(id, sceneId, x, y))
@@ -392,14 +576,30 @@ type MapPlacement =
                 | "item" -> Some(PlaceItem(sceneId, x, y, project.Items |> Seq.find (fun i -> i.Id = id)))
                 | "machineType" -> Some(PlaceMachine(sceneId, x, y, id))
                 | _ -> Some(UpsertAnimal(Defaults.newAnimal project id sceneId x y))
+
         Option.toObj edit
 
 /// A form field for C#: what a property or vocabulary field holds, as strings and read-only
 /// lists instead of F# unions (docs/LANGUAGES.md "C# friendliness at the boundary").
 [<Sealed>]
-type FormField internal (key: string, label: string, kind: string, reference: string, choices: PickerOption list,
-                         optional: bool, emptyLabel: string option, placeholder: string, whenEmpty: float,
-                         min: float option, max: float option, onLabel: string, offLabel: string, reason: string) =
+type FormField
+    internal
+    (
+        key: string,
+        label: string,
+        kind: string,
+        reference: string,
+        choices: PickerOption list,
+        optional: bool,
+        emptyLabel: string option,
+        placeholder: string,
+        whenEmpty: float,
+        min: float option,
+        max: float option,
+        onLabel: string,
+        offLabel: string,
+        reason: string
+    ) =
     /// The JSON key of a vocabulary field ("itemId"); empty for a declared schema property.
     member _.Key = key
     member _.Label = label
@@ -409,7 +609,10 @@ type FormField internal (key: string, label: string, kind: string, reference: st
     member _.Kind = kind
     /// The reference kind ("item", "npc", …) for reference fields, else "".
     member _.Reference = reference
-    member _.Choices: IReadOnlyList<PickerOption> = choices |> Array.ofList :> IReadOnlyList<PickerOption>
+
+    member _.Choices: IReadOnlyList<PickerOption> =
+        choices |> Array.ofList :> IReadOnlyList<PickerOption>
+
     /// Clearing the field removes the value.
     member _.Optional = optional
     /// The label of the "nothing chosen" entry, or null when a value is required.
@@ -436,12 +639,28 @@ type FormField internal (key: string, label: string, kind: string, reference: st
             | FieldKind.Reference kind -> "reference", ReferenceKind.name kind, [], "", ""
             | FieldKind.ReferenceList kind -> "referenceList", ReferenceKind.name kind, [], "", ""
             | FieldKind.Conditions -> "conditions", "", [], "", ""
-        FormField(field.Key, field.Label, kind, reference, choices, field.Optional, field.Empty, field.Placeholder,
-                  field.WhenEmpty, field.Min, field.Max, onLabel, offLabel, "")
+
+        FormField(
+            field.Key,
+            field.Label,
+            kind,
+            reference,
+            choices,
+            field.Optional,
+            field.Empty,
+            field.Placeholder,
+            field.WhenEmpty,
+            field.Min,
+            field.Max,
+            onLabel,
+            offLabel,
+            ""
+        )
 
     static member internal OfRole(label: string, role: FieldRole) =
         let make kind reference choices empty reason =
             FormField("", label, kind, reference, choices, Option.isSome empty, empty, "", 0.0, None, None, "", "", reason)
+
         match role with
         | FieldRole.Reference(kind, empty) -> make "reference" (ReferenceKind.name kind) [] empty ""
         | FieldRole.ReferenceList kind -> make "referenceList" (ReferenceKind.name kind) [] None ""
@@ -455,6 +674,7 @@ type FormField internal (key: string, label: string, kind: string, reference: st
 [<AbstractClass; Sealed>]
 type ContentForms =
     static member private List(xs: 'T list) = xs |> Array.ofList :> IReadOnlyList<'T>
+
     static member private Kind(kind: string) =
         match ReferenceKind.tryParse kind with
         | Some kind -> kind
@@ -487,7 +707,10 @@ type ContentForms =
         match MinigameKinds.tryFind kind, MinigameKinds.tryFindPackKind project kind with
         | Some builtIn, _ -> builtIn.Help
         | None, Some pack ->
-            sprintf "Defined by the pack %s (plugin %s): the plugin runs and draws the game. Its settings are passed to the plugin as written." pack.PackName pack.PluginId
+            sprintf
+                "Defined by the pack %s (plugin %s): the plugin runs and draws the game. Its settings are passed to the plugin as written."
+                pack.PackName
+                pack.PluginId
         | None, None -> ""
 
     /// The typed settings of a built-in minigame kind, as optional fields of its `config` (empty
@@ -500,13 +723,30 @@ type ContentForms =
                 | MinigameSettingKind.Number -> "number"
                 | MinigameSettingKind.Integer -> "integer"
                 | MinigameSettingKind.Text -> "text"
-            FormField(setting.Key, setting.Label, fieldKind, "", [], true, None, sprintf "default: %s" setting.Default,
-                      0.0, setting.Min, setting.Max, "", "", ""))
+
+            FormField(
+                setting.Key,
+                setting.Label,
+                fieldKind,
+                "",
+                [],
+                true,
+                None,
+                sprintf "default: %s" setting.Default,
+                0.0,
+                setting.Min,
+                setting.Max,
+                "",
+                "",
+                ""
+            ))
         |> ContentForms.List
 
     /// What a built-in minigame kind plays like (empty for a kind the game doesn't have).
     static member MinigameHelp(kind: string) : string =
-        MinigameKinds.tryFind kind |> Option.map (fun k -> k.Help) |> Option.defaultValue ""
+        MinigameKinds.tryFind kind
+        |> Option.map (fun k -> k.Help)
+        |> Option.defaultValue ""
 
     /// The ids a picker of `kind` offers, in project order.
     static member Options(kind: string, project: GameProject) : IReadOnlyList<PickerOption> =
@@ -515,28 +755,53 @@ type ContentForms =
     /// A picker's entries for `field` holding `current`: the empty entry when allowed, a
     /// "(missing: id)" entry for an unknown id, then `available` (from `Options`, or the choices).
     static member Entries(field: FormField, available: seq<PickerOption>, current: string | null) : IReadOnlyList<PickerOption> =
-        References.pickerEntries (List.ofSeq available) (Option.ofObj field.EmptyLabel) (Option.ofObj current) |> ContentForms.List
+        References.pickerEntries (List.ofSeq available) (Option.ofObj field.EmptyLabel) (Option.ofObj current)
+        |> ContentForms.List
 
     /// Chips of a reference list: each id with its label, or "(missing: id)" when unknown.
     static member ListEntries(available: seq<PickerOption>, ids: seq<string>) : IReadOnlyList<PickerOption> =
         let known = available |> Seq.map (fun o -> o.Id, o) |> Seq.distinctBy fst |> dict
-        [ for id in ids ->
-              match known.TryGetValue id with
-              | true, option -> option
-              | _ -> { Id = id; Label = sprintf "(missing: %s)" id; Missing = true } ]
+
+        [
+            for id in ids ->
+                match known.TryGetValue id with
+                | true, option -> option
+                | _ ->
+                    {
+                        Id = id
+                        Label = sprintf "(missing: %s)" id
+                        Missing = true
+                    }
+        ]
         |> ContentForms.List
 
-    static member ConditionTypes: IReadOnlyList<PickerOption> = References.choiceOptions Vocabulary.conditionTypes |> ContentForms.List
-    static member OutcomeTypes: IReadOnlyList<PickerOption> = References.choiceOptions Vocabulary.outcomeTypes |> ContentForms.List
+    static member ConditionTypes: IReadOnlyList<PickerOption> =
+        References.choiceOptions Vocabulary.conditionTypes |> ContentForms.List
+
+    static member OutcomeTypes: IReadOnlyList<PickerOption> =
+        References.choiceOptions Vocabulary.outcomeTypes |> ContentForms.List
+
     static member ConditionLabel(kind: string) : string = Vocabulary.conditionLabel kind
     static member OutcomeLabel(kind: string) : string = Vocabulary.outcomeLabel kind
-    static member ConditionFields(kind: string) : IReadOnlyList<FormField> = Vocabulary.conditionFields kind |> List.map FormField.OfVocabulary |> ContentForms.List
-    static member OutcomeFields(kind: string) : IReadOnlyList<FormField> = Vocabulary.outcomeFields kind |> List.map FormField.OfVocabulary |> ContentForms.List
-    static member DefaultCondition(kind: string, project: GameProject) : EventCondition = Vocabulary.defaultCondition kind project
+
+    static member ConditionFields(kind: string) : IReadOnlyList<FormField> =
+        Vocabulary.conditionFields kind
+        |> List.map FormField.OfVocabulary
+        |> ContentForms.List
+
+    static member OutcomeFields(kind: string) : IReadOnlyList<FormField> =
+        Vocabulary.outcomeFields kind
+        |> List.map FormField.OfVocabulary
+        |> ContentForms.List
+
+    static member DefaultCondition(kind: string, project: GameProject) : EventCondition =
+        Vocabulary.defaultCondition kind project
+
     static member DefaultOutcome(kind: string) : EventOutcome = Vocabulary.defaultOutcome kind
 
     /// Properties of `owner` to hide while its `type` is `kind` (quest objective targets).
-    static member HiddenProperties(owner: string, kind: string) : IReadOnlyList<string> = Vocabulary.hiddenProperties owner kind |> ContentForms.List
+    static member HiddenProperties(owner: string, kind: string) : IReadOnlyList<string> =
+        Vocabulary.hiddenProperties owner kind |> ContentForms.List
 
     /// A new list element of `elementType` (C# type name) for the entry being edited, or null
     /// when the record's own defaults apply.
@@ -553,73 +818,106 @@ type ContentReadouts =
 
     /// Output value minus input value of one craft.
     static member RecipeProfit(project: GameProject, recipe: RecipeDefinition) : float = Readouts.recipeProfit project recipe
+
     /// Profit per in-game hour of processing (rounded), or null for an instant craft.
     static member RecipeProfitPerHour(project: GameProject, recipe: RecipeDefinition) : System.Nullable<float> =
         match Readouts.recipeProfitPerHour project recipe with
         | Some value -> System.Nullable value
         | None -> System.Nullable()
+
     /// "Profit per craft: 12 · time-adjusted: 24/hr" (or "instant").
     static member RecipeSummary(project: GameProject, recipe: RecipeDefinition) : string = Readouts.recipeSummary project recipe
     /// The recipe list's second line: "hand craft · profit +12".
     static member RecipeNote(project: GameProject, recipe: RecipeDefinition) : string = Readouts.recipeNote project recipe
 
     /// Harvest value minus seed cost.
-    static member CropProfit(crop: CustomCropDefinition) : float = Readouts.cropProfit (Readouts.cropOfCustom crop)
+    static member CropProfit(crop: CustomCropDefinition) : float =
+        Readouts.cropProfit (Readouts.cropOfCustom crop)
+
     static member CropProfit(crop: CropDefinition) : float = Readouts.cropProfit crop
+
     /// "Profit per harvest: $15".
-    static member CropProfitText(crop: CustomCropDefinition) : string = Readouts.cropProfitText (Readouts.cropOfCustom crop)
+    static member CropProfitText(crop: CustomCropDefinition) : string =
+        Readouts.cropProfitText (Readouts.cropOfCustom crop)
+
     /// The list line under a custom crop: "Custom · 5 stages" or "Replaces built-in · 4 stages".
     static member CropNote(crop: CustomCropDefinition) : string = Readouts.cropNote crop
     /// The list line under a built-in crop: "Built-in · 4 stages".
     static member BuiltinCropNote(crop: CropDefinition) : string = Readouts.builtinCropNote crop
+
     /// The crop summary card.
     static member CropSummary(project: GameProject, crop: CustomCropDefinition) : IReadOnlyList<ReadoutLine> =
-        Readouts.cropSummary project (Readouts.cropOfCustom crop) |> ContentReadouts.List
+        Readouts.cropSummary project (Readouts.cropOfCustom crop)
+        |> ContentReadouts.List
+
     static member CropSummary(project: GameProject, crop: CropDefinition) : IReadOnlyList<ReadoutLine> =
         Readouts.cropSummary project crop |> ContentReadouts.List
+
     /// Built-in crops no custom crop replaces, in pack order (read-only in the editor).
-    static member BuiltinCrops(project: GameProject) : IReadOnlyList<CropDefinition> = Readouts.builtinCrops project |> ContentReadouts.List
+    static member BuiltinCrops(project: GameProject) : IReadOnlyList<CropDefinition> =
+        Readouts.builtinCrops project |> ContentReadouts.List
+
     /// True when `id` is a built-in crop (a custom crop with that id replaces it).
-    static member IsBuiltinCrop(id: string) : bool = Readouts.builtinCropIds () |> List.contains id
+    static member IsBuiltinCrop(id: string) : bool =
+        Readouts.builtinCropIds () |> List.contains id
+
     /// A custom crop with the built-in crop's id and values, to replace it.
     static member CustomizeCrop(crop: CropDefinition) : CustomCropDefinition = Readouts.customOfCrop crop
 
     /// Built-in and mine node types the project does not replace (read-only in the editor).
-    static member BuiltinNodeTypes(project: GameProject) : IReadOnlyList<NodeTypeDefinition> = Readouts.builtinNodeTypes project |> ContentReadouts.List
+    static member BuiltinNodeTypes(project: GameProject) : IReadOnlyList<NodeTypeDefinition> =
+        Readouts.builtinNodeTypes project |> ContentReadouts.List
+
     /// True when `id` is a built-in node type (a project node type with that id replaces it).
-    static member IsBuiltinNodeType(id: string) : bool = Readouts.builtinNodeTypeIds () |> List.contains id
+    static member IsBuiltinNodeType(id: string) : bool =
+        Readouts.builtinNodeTypeIds () |> List.contains id
+
     /// "4 hp · axe · no respawn".
     static member NodeTypeNote(node: NodeTypeDefinition) : string = Readouts.nodeTypeNote node
     /// The list line under a node type: "Built-in · 4 hp · axe · no respawn" (`builtin` when it is
     /// listed read-only), "Replaces built-in · …" or "Custom · …".
     static member NodeTypeListNote(node: NodeTypeDefinition, builtin: bool) : string = Readouts.nodeTypeListNote node builtin
+
     /// The node type summary card.
     static member NodeTypeSummary(project: GameProject, node: NodeTypeDefinition) : IReadOnlyList<ReadoutLine> =
         Readouts.nodeTypeSummary project node |> ContentReadouts.List
 
     /// Built-in terrains, tools, item categories, crop qualities and mutations the project does not
     /// replace (M1; read-only in the editor until customized).
-    static member BuiltinTerrains(project: GameProject) : IReadOnlyList<TerrainDefinition> = Readouts.builtinTerrains project |> ContentReadouts.List
-    static member BuiltinTools(project: GameProject) : IReadOnlyList<ToolDefinition> = Readouts.builtinTools project |> ContentReadouts.List
+    static member BuiltinTerrains(project: GameProject) : IReadOnlyList<TerrainDefinition> =
+        Readouts.builtinTerrains project |> ContentReadouts.List
+
+    static member BuiltinTools(project: GameProject) : IReadOnlyList<ToolDefinition> =
+        Readouts.builtinTools project |> ContentReadouts.List
+
     static member BuiltinItemCategories(project: GameProject) : IReadOnlyList<ItemCategoryDefinition> =
         Readouts.builtinItemCategories project |> ContentReadouts.List
+
     static member BuiltinCropQualities(project: GameProject) : IReadOnlyList<CropQualityDefinition> =
         Readouts.builtinCropQualities project |> ContentReadouts.List
+
     static member BuiltinCropMutations(project: GameProject) : IReadOnlyList<CropMutationDefinition> =
         Readouts.builtinCropMutations project |> ContentReadouts.List
+
     /// The game's terrains, built-in and its own, in the order the map's tile palette lists them.
-    static member Terrains(project: GameProject) : IReadOnlyList<TerrainDefinition> = ContentCompiler.terrains project |> ContentReadouts.List
+    static member Terrains(project: GameProject) : IReadOnlyList<TerrainDefinition> =
+        ContentCompiler.terrains project |> ContentReadouts.List
+
     /// True when `id` is a built-in definition of `kind` ("terrain", "tool", "itemCategory",
     /// "cropQuality", "cropMutation").
     static member IsBuiltinVocabulary(kind: string, id: string) : bool = Readouts.isBuiltinVocabulary kind id
+
     /// The list line under a terrain.
     static member TerrainListNote(terrain: TerrainDefinition, builtin: bool) : string =
         Readouts.vocabularyListNote "terrain" terrain.Id builtin (Readouts.terrainNote terrain)
+
     /// The list line under a tool.
     static member ToolListNote(tool: ToolDefinition, builtin: bool) : string =
         Readouts.vocabularyListNote "tool" tool.Id builtin (Readouts.toolNote tool)
+
     /// The list line under an item category, crop quality or mutation ("Built-in", "Custom", …).
-    static member VocabularyListNote(kind: string, id: string, builtin: bool) : string = Readouts.vocabularyListNote kind id builtin ""
+    static member VocabularyListNote(kind: string, id: string, builtin: bool) : string =
+        Readouts.vocabularyListNote kind id builtin ""
 
     /// A schedule minute as a clock time ("8:00 AM", "1:00 AM (next day)").
     static member Clock(minute: float) : string = Readouts.clock minute
@@ -628,7 +926,9 @@ type ContentReadouts =
 
     /// The tabs a content form of `recordType` (the C# record type name) groups its fields
     /// into; empty for one form.
-    static member FormTabs(recordType: string) : IReadOnlyList<FormTab> = Readouts.formTabs recordType |> ContentReadouts.List
+    static member FormTabs(recordType: string) : IReadOnlyList<FormTab> =
+        Readouts.formTabs recordType |> ContentReadouts.List
+
     /// A tab's properties for C#.
     static member TabProperties(tab: FormTab) : IReadOnlyList<string> = tab.Properties |> ContentReadouts.List
 
@@ -643,8 +943,23 @@ type ExportSettingsForm =
     /// Assets that can be the icon (PNG, at least 256×256), with "(none)" first and a
     /// "(missing: id)" entry when `current` is not one of them.
     static member IconOptions(project: GameProject, current: string | null) : IReadOnlyList<PickerOption> =
-        let icons = project.CustomAssets |> Seq.filter ChecksExport.suitableIcon |> Seq.map (fun a -> { Id = a.Id; Label = (if a.Name = a.Id then a.Id else sprintf "%s (%s)" a.Name a.Id); Missing = false })
-        References.pickerEntries (List.ofSeq icons) (Some "(none)") (Option.ofObj current) |> Array.ofList :> IReadOnlyList<PickerOption>
+        let icons =
+            project.CustomAssets
+            |> Seq.filter ChecksExport.suitableIcon
+            |> Seq.map (fun a ->
+                {
+                    Id = a.Id
+                    Label =
+                        (if a.Name = a.Id then
+                             a.Id
+                         else
+                             sprintf "%s (%s)" a.Name a.Id)
+                    Missing = false
+                })
+
+        References.pickerEntries (List.ofSeq icons) (Some "(none)") (Option.ofObj current)
+        |> Array.ofList
+        :> IReadOnlyList<PickerOption>
 
     static member PixelScales: IReadOnlyList<PickerOption> =
         match References.roleOf "ExportSettings" "PixelScale" with
@@ -662,7 +977,12 @@ type ExportSettingsForm =
 type ContentActions =
     /// What `Edits.AddToInventory(itemId)` does to `project`, as ItemEditor's toast.
     static member AddToInventoryMessage(project: GameProject, itemId: string) : string =
-        let name () = project.Items |> List.tryFind (fun i -> i.Id = itemId) |> Option.map (fun i -> i.Name) |> Option.defaultValue itemId
+        let name () =
+            project.Items
+            |> List.tryFind (fun i -> i.Id = itemId)
+            |> Option.map (fun i -> i.Name)
+            |> Option.defaultValue itemId
+
         match fst (EditContent.inventoryAdd itemId project) with
         | InventoryAddResult.Added -> sprintf "Added %s to inventory" (name ())
         | InventoryAddResult.StackFull -> sprintf "%s stack is full" (name ())
@@ -673,9 +993,13 @@ type ContentActions =
 [<AbstractClass; Sealed>]
 type ArtLibrary =
     /// Several imported images as one undo step; colliding ids become the next free `art-N`.
-    static member Import(project: GameProject, assets: seq<CustomAsset>) : Edit = ArtLibrary.importAssets project (List.ofSeq assets)
+    static member Import(project: GameProject, assets: seq<CustomAsset>) : Edit =
+        ArtLibrary.importAssets project (List.ofSeq assets)
+
     /// What "Remove unused art" would delete, for the confirmation.
-    static member Unused(project: GameProject) : IReadOnlyList<CustomAsset> = ArtLibrary.unused project |> Array.ofList :> IReadOnlyList<CustomAsset>
+    static member Unused(project: GameProject) : IReadOnlyList<CustomAsset> =
+        ArtLibrary.unused project |> Array.ofList :> IReadOnlyList<CustomAsset>
+
     /// Every unused asset removed as one undo step.
     static member RemoveUnused(project: GameProject) : Edit = ArtLibrary.removeUnused project
 
@@ -684,24 +1008,44 @@ type ArtLibrary =
 type ProjectList =
     /// The name a duplicate gets ("Name (copy)").
     static member CopyName(name: string) : string = Defaults.copyName name
+
     /// A copy under `newId` (from `ProjectCatalog.NewProjectId`) named `name` (the copy name when blank).
     static member Duplicate(project: GameProject, newId: string, name: string | null) : GameProject =
-        Defaults.duplicateProject project newId (match name with null -> "" | value -> value)
+        Defaults.duplicateProject
+            project
+            newId
+            (match name with
+             | null -> ""
+             | value -> value)
+
     /// The project renamed (trimmed); the same instance for a blank or unchanged name.
     static member Rename(project: GameProject, name: string) : GameProject =
-        if System.String.IsNullOrWhiteSpace name then project
-        else Document.run project (SetProjectInfo(name, project.Version))
+        if System.String.IsNullOrWhiteSpace name then
+            project
+        else
+            Document.run project (SetProjectInfo(name, project.Version))
 
 /// What `Mods.ExportPack` hands to C#: the validated pack and its file, or why there is none.
 [<Sealed>]
 type PackExportResult internal (pack: ContentPack option, errors: string list) =
     member _.Ok = pack.IsSome
     member _.Pack: ContentPack | null = Option.toObj pack
-    member _.Errors: IReadOnlyList<string> = errors |> Array.ofList :> IReadOnlyList<string>
+
+    member _.Errors: IReadOnlyList<string> =
+        errors |> Array.ofList :> IReadOnlyList<string>
+
     /// The pack as indented JSON (empty when there is no pack).
-    member _.Text: string = match pack with Some p -> PackExport.toText p | None -> ""
+    member _.Text: string =
+        match pack with
+        | Some p -> PackExport.toText p
+        | None -> ""
+
     /// The suggested file name (`{id}.json`).
-    member _.FileName: string = match pack with Some p -> PackExport.fileName p | None -> ""
+    member _.FileName: string =
+        match pack with
+        | Some p -> PackExport.fileName p
+        | None -> ""
+
     /// The art the pack carries for its entries (empty when they use none).
     member _.Assets: IReadOnlyList<CustomAsset> =
         match pack |> Option.map PackRules.packAssets with
@@ -712,27 +1056,37 @@ type PackExportResult internal (pack: ContentPack option, errors: string list) =
 [<AbstractClass; Sealed>]
 type Mods =
     /// The curated packs that ship with the editor, validated.
-    static member Registry: IReadOnlyList<RegistryEntry> = ModRegistry.entries () |> Array.ofList :> IReadOnlyList<RegistryEntry>
+    static member Registry: IReadOnlyList<RegistryEntry> =
+        ModRegistry.entries () |> Array.ofList :> IReadOnlyList<RegistryEntry>
+
     static member IsInstalled(project: GameProject, packId: string) : bool = ModRegistry.isInstalled project packId
+
     /// The exportable content types with their entries, in pack order.
     static member ExportCategories(project: GameProject) : IReadOnlyList<PackExportCategory> =
         PackExport.categories project |> Array.ofList :> IReadOnlyList<PackExportCategory>
+
     /// The types ticked at first (web: items and recipes).
-    static member DefaultExportKeys: IReadOnlyList<string> = PackExport.defaultKeys |> Array.ofList :> IReadOnlyList<string>
+    static member DefaultExportKeys: IReadOnlyList<string> =
+        PackExport.defaultKeys |> Array.ofList :> IReadOnlyList<string>
+
     /// The pack id a name becomes.
     static member PackId(name: string) : string = PackExport.packId name
+
     /// The art a pack carries (`assets`): it joins the project's art when the pack is installed.
     static member PackAssets(pack: ContentPack) : IReadOnlyList<CustomAsset> =
         match PackRules.packAssets pack with
         | Ok assets -> assets |> Array.ofList :> IReadOnlyList<CustomAsset>
         | Error _ -> [||] :> IReadOnlyList<CustomAsset>
+
     /// Ids of the pack's art that the project already has with a different image; installing
     /// keeps the project's.
     static member PackAssetConflicts(project: GameProject, pack: ContentPack) : IReadOnlyList<string> =
         snd (PackMerge.mergeAssets project pack) |> Array.ofList :> IReadOnlyList<string>
+
     /// A validated pack of the chosen entries: content key → ids.
     static member ExportPack(project: GameProject, name: string, selection: IReadOnlyDictionary<string, IReadOnlyList<string>>) : PackExportResult =
         let pairs = [ for pair in selection -> pair.Key, List.ofSeq pair.Value ]
+
         match PackExport.build project name pairs with
         | Ok pack -> PackExportResult(Some pack, [])
         | Error errors -> PackExportResult(None, errors)
@@ -740,6 +1094,90 @@ type Mods =
 /// The Project Settings view's weather odds, mine card and season arrows (`SettingsForms`).
 [<AbstractClass; Sealed>]
 type SettingsForm =
+    static member ProgressionDraft(project: GameProject) : ProgressionSettings =
+        {
+            Limits = project.Settings.Progression
+            Skills = project.Settings.SkillDefinitions
+        }
+
+    /// Editable classic training and passive rewards for this project's current level curve.
+    static member ClassicSkills(project: GameProject) : ProgressionSettings =
+        let training action subject xp : SkillTraining =
+            {
+                Action = action
+                Subject = subject
+                Experience = xp
+            }
+
+        let tools = ContentCompiler.tools project
+
+        let gatherSkill (node: NodeTypeDefinition) =
+            tools
+            |> List.tryFind (fun tool -> tool.Id = node.RequiredTool)
+            |> Option.bind _.Skill
+            |> Option.defaultValue "foraging"
+
+        let definitions =
+            SaveSchema.SkillNames
+            |> List.map (fun id ->
+                let rows =
+                    match id with
+                    | "farming" -> [ training "harvest" None 8.0 ]
+                    | "fishing" -> [ training "catch" None 8.0 ]
+                    | "social" -> [ training "gift" None 4.0 ]
+                    | "combat" ->
+                        defaultArg project.Monsters []
+                        |> List.map (fun monster -> training "slay" (Some monster.Id) monster.Experience)
+                    | _ -> []
+
+                let rows =
+                    rows
+                    @ (ContentCompiler.nodeTypes project
+                       |> List.filter (fun node -> gatherSkill node = id)
+                       |> List.map (fun node -> training "gather" (Some node.Id) 5.0))
+
+                let rewards =
+                    [
+                        for level in 1 .. project.Settings.SkillLevelCurve.Length - 1 do
+                            let reward stat =
+                                { SkillReward.Default with
+                                    Level = float level
+                                    Stat = stat
+                                    Amount = 1.0
+                                }
+
+                            if id = "farming" && level % 4 = 0 then
+                                yield reward "yield"
+
+                            if id = "farming" && level % 3 = 0 then
+                                yield reward "quality"
+
+                            if id = "combat" then
+                                yield reward "attack"
+                    ]
+
+                { SkillDefinition.Default with
+                    Id = id
+                    Name =
+                        project.Settings.Words
+                        |> Option.bind (fun words -> words.Skills |> List.tryFind (fun (key, _) -> key = id) |> Option.map snd)
+                        |> Option.defaultValue (id.Substring(0, 1).ToUpperInvariant() + id.Substring(1))
+                    Training = rows
+                    Rewards = rewards
+                })
+
+        {
+            Limits = project.Settings.Progression
+            Skills = Some definitions
+        }
+
+    static member Progression(project: GameProject, draft: ProgressionSettings) : Edit =
+        SetSettings
+            { project.Settings with
+                Progression = draft.Limits
+                SkillDefinitions = draft.Skills
+            }
+
     /// The weight shown for one season and weather type (0 without an entry).
     static member WeatherWeight(project: GameProject, seasonId: string, weatherId: string) : float =
         SettingsForms.weatherWeight project seasonId weatherId
@@ -759,7 +1197,8 @@ type SettingsForm =
     /// The game's words from the fields (null when none is set); blank fields keep the built-in
     /// words. Throws `FormatException` for a money format without `{0}`.
     static member Words(project: GameProject, money: string | null, energy: string | null, skills: seq<struct (string * string)>) : GameWords | null =
-        SettingsForms.words project.Settings.Words money energy (skills |> Seq.map (fun (struct (id, name)) -> id, name) |> List.ofSeq) |> Option.toObj
+        SettingsForms.words project.Settings.Words money energy (skills |> Seq.map (fun (struct (id, name)) -> id, name) |> List.ofSeq)
+        |> Option.toObj
 
     /// A calendar season row; null or empty music is none.
     static member Season(id: string, name: string, days: float, temperature: System.Nullable<float>, music: string | null) : CalendarSeason =
@@ -770,7 +1209,10 @@ type SettingsForm =
         SettingsForms.festival id name seasonId day music
 
     /// `settings` with the game's words (null: the built-in words).
-    static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings = { settings with Words = Option.ofObj words }
+    static member WithWords(settings: ProjectSettings, words: GameWords | null) : ProjectSettings =
+        { settings with
+            Words = Option.ofObj words
+        }
 
     /// The People section (M4): whether new games open the character creator, and the game's
     /// relationship rules (null: none). One undo step; nothing changed → an empty batch.
@@ -778,8 +1220,13 @@ type SettingsForm =
         let settings =
             { project.Settings with
                 CharacterCreator = (if characterCreator then Some true else None)
-                Relationships = Option.ofObj relationships }
-        if settings = project.Settings then Batch("People", []) else SetSettings settings
+                Relationships = Option.ofObj relationships
+            }
+
+        if settings = project.Settings then
+            Batch("People", [])
+        else
+            SetSettings settings
 
     /// The relationship rules a game starts from when the creator turns them on (M4).
     static member DefaultRelationships: RelationshipSettings = RelationshipSettings.Default
@@ -787,32 +1234,61 @@ type SettingsForm =
     /// The Farm section (M5): the farm scene, its layouts and pests (null: none). One undo
     /// step; nothing changed → an empty batch.
     static member Farm(project: GameProject, farm: FarmSettings | null) : Edit =
-        let settings = { project.Settings with Farm = Option.ofObj farm }
-        if settings = project.Settings then Batch("Farm", []) else SetSettings settings
+        let settings =
+            { project.Settings with
+                Farm = Option.ofObj farm
+            }
+
+        if settings = project.Settings then
+            Batch("Farm", [])
+        else
+            SetSettings settings
 
     /// The farm settings a game starts from when the creator turns them on (M5): the start
     /// scene is the farm, with no layouts and no pests.
-    static member DefaultFarm(project: GameProject) : FarmSettings = { FarmSettings.Default with SceneId = project.StartSceneId }
+    static member DefaultFarm(project: GameProject) : FarmSettings =
+        { FarmSettings.Default with
+            SceneId = project.StartSceneId
+        }
 
     /// The Combat section (M7): player health, fainting and monsters (null: no combat). One
     /// undo step; nothing changed → an empty batch.
     static member Combat(project: GameProject, combat: CombatSettings | null) : Edit =
-        let settings = { project.Settings with Combat = Option.ofObj combat }
-        if settings = project.Settings then Batch("Combat", []) else SetSettings settings
+        let settings =
+            { project.Settings with
+                Combat = Option.ofObj combat
+            }
+
+        if settings = project.Settings then
+            Batch("Combat", [])
+        else
+            SetSettings settings
 
     /// The combat rules a game starts from when the creator turns them on (M7): enabled, with
     /// the built-in health and fainting.
-    static member DefaultCombat: CombatSettings = { CombatSettings.Default with Enabled = true }
+    static member DefaultCombat: CombatSettings =
+        { CombatSettings.Default with
+            Enabled = true
+        }
 
     /// The mine with the depth bands a form edited (M7 adds monsters, hazards and treasure to
     /// them); the rest of the mine card stays as stored. One undo step.
-    static member MineBands(project: GameProject, bands: seq<MineBand>) : Edit = SetMine { project.Mine with Bands = List.ofSeq bands }
+    static member MineBands(project: GameProject, bands: seq<MineBand>) : Edit =
+        SetMine
+            { project.Mine with
+                Bands = List.ofSeq bands
+            }
 
     /// A scene's monster spawns as text, one per line (`SettingsForms.monsterSpawnsText`).
-    static member MonsterSpawnsText(spawns: seq<MonsterSpawn>) : string = SettingsForms.monsterSpawnsText (List.ofSeq spawns)
+    static member MonsterSpawnsText(spawns: seq<MonsterSpawn>) : string =
+        SettingsForms.monsterSpawnsText (List.ofSeq spawns)
 
     /// A scene's extra layers as text, one per line (`SettingsForms.sceneLayersText`).
-    static member SceneLayersText(layers: seq<SceneLayer>) : string = SettingsForms.sceneLayersText (List.ofSeq layers)
+    static member ForageEligibleTiles(project: GameProject, scene: Scene, table: ForageSpawnTable) : IReadOnlyList<GridPoint> =
+        SettingsForms.forageEligibleTiles project scene table |> Array.ofList :> IReadOnlyList<GridPoint>
+
+    static member SceneLayersText(layers: seq<SceneLayer>) : string =
+        SettingsForms.sceneLayersText (List.ofSeq layers)
 
     /// A scene's extra layers from their text; throws `FormatException` naming the line.
     static member SceneLayers(existing: seq<SceneLayer>, text: string | null) : IReadOnlyList<SceneLayer> =
@@ -825,14 +1301,18 @@ type SettingsForm =
     /// `settings` without the sky looks of `seasonIds`, as removing those seasons leaves it
     /// (`Cleanup.dropSeason`).
     static member WithoutSeasonLooks(settings: ProjectSettings, seasonIds: seq<string>) : ProjectSettings =
-        seasonIds |> Seq.fold (fun settings id -> Cleanup.dropSeasonLook id settings) settings
+        seasonIds
+        |> Seq.fold (fun settings id -> Cleanup.dropSeasonLook id settings) settings
 
     /// `time` with its day length (null: the built-in 1440 minutes).
     static member WithDayMinutes(time: TimeConfig, minutes: System.Nullable<float>) : TimeConfig =
-        { time with DayMinutes = Option.ofNullable minutes }
+        { time with
+            DayMinutes = Option.ofNullable minutes
+        }
 
     /// Day/night keyframes as text, one "minute #colour" per line.
-    static member DaylightText(keys: seq<DaylightKey>) : string = SettingsForms.daylightText (List.ofSeq keys)
+    static member DaylightText(keys: seq<DaylightKey>) : string =
+        SettingsForms.daylightText (List.ofSeq keys)
 
     /// An atmosphere look from its fields, or null when it sets nothing. Throws `FormatException`
     /// naming the field (`label` daylight, `label` foliage tint).
@@ -842,7 +1322,12 @@ type SettingsForm =
     /// The game's atmosphere as one edit: the look of every season (null: none) and the seasons'
     /// own looks by season id (null looks are left out).
     static member Atmosphere(project: GameProject, allSeasons: AtmosphereLook | null, seasons: seq<struct (string * AtmosphereLook | null)>) : Edit =
-        SettingsForms.atmosphere project (Option.ofObj allSeasons) (seasons |> Seq.map (fun (struct (id, look)) -> id, Option.ofObj look) |> List.ofSeq)
+        SettingsForms.atmosphere
+            project
+            (Option.ofObj allSeasons)
+            (seasons
+             |> Seq.map (fun (struct (id, look)) -> id, Option.ofObj look)
+             |> List.ofSeq)
 
     /// A weather overlay from its fields; throws `FormatException` naming what is wrong.
     static member Overlay(id: string, style: string, color: string, density: float, speed: float, tint: string | null) : WeatherOverlayDefinition =
@@ -851,10 +1336,16 @@ type SettingsForm =
     /// The weather's overlays and each type's overlay and music (weather id, overlay, music) as
     /// one edit; throws `FormatException` for two overlays with one id.
     static member WeatherLooks(project: GameProject, overlays: seq<WeatherOverlayDefinition>, looks: seq<struct (string * string * string)>) : Edit =
-        SettingsForms.weatherLooks project (List.ofSeq overlays) (looks |> Seq.map (fun (struct (id, overlay, music)) -> id, overlay, music) |> List.ofSeq)
+        SettingsForms.weatherLooks
+            project
+            (List.ofSeq overlays)
+            (looks
+             |> Seq.map (fun (struct (id, overlay, music)) -> id, overlay, music)
+             |> List.ofSeq)
 
     /// The overlay styles in the editor's order.
-    static member OverlayStyles: IReadOnlyList<string> = OverlayStyles.All |> Array.ofList :> IReadOnlyList<string>
+    static member OverlayStyles: IReadOnlyList<string> =
+        OverlayStyles.All |> Array.ofList :> IReadOnlyList<string>
 
 /// What `Patterns.Build` hands to C#: the edit to apply, or the message to show.
 [<Sealed>]
@@ -866,7 +1357,8 @@ type PatternResult internal (edit: Edit option, error: string option) =
 /// `Patterns` for C#.
 [<AbstractClass; Sealed>]
 type Patterns =
-    static member All: IReadOnlyList<PatternInfo> = Patterns.all |> Array.ofList :> IReadOnlyList<PatternInfo>
+    static member All: IReadOnlyList<PatternInfo> =
+        Patterns.all |> Array.ofList :> IReadOnlyList<PatternInfo>
 
     static member Build(kind: PatternKind, options: PatternOptions, project: GameProject) : PatternResult =
         match Patterns.build kind options project with
@@ -874,10 +1366,32 @@ type Patterns =
         | Error message -> PatternResult(None, Some message)
 
     static member Options(name: string, text: string, x: int, y: int, day: int, npcId: string, friendship: int, consequences: bool) : PatternOptions =
-        { Name = name; Text = text; X = x; Y = y; Day = day; NpcId = npcId; Friendship = friendship; Consequences = consequences; SceneId = "" }
+        {
+            Name = name
+            Text = text
+            X = x
+            Y = y
+            Day = day
+            NpcId = npcId
+            Friendship = friendship
+            Consequences = consequences
+            SceneId = ""
+        }
 
     /// The form's options with the pattern's tile in `sceneId` (the scene the Map tab shows).
-    static member Options(name: string, text: string, x: int, y: int, day: int, npcId: string, friendship: int, consequences: bool, sceneId: string) : PatternOptions =
-        { Name = name; Text = text; X = x; Y = y; Day = day; NpcId = npcId; Friendship = friendship; Consequences = consequences; SceneId = sceneId }
+    static member Options
+        (name: string, text: string, x: int, y: int, day: int, npcId: string, friendship: int, consequences: bool, sceneId: string)
+        : PatternOptions =
+        {
+            Name = name
+            Text = text
+            X = x
+            Y = y
+            Day = day
+            NpcId = npcId
+            Friendship = friendship
+            Consequences = consequences
+            SceneId = sceneId
+        }
 
     static member SuccessMessage(kind: PatternKind, name: string) : string = Patterns.successMessage kind name

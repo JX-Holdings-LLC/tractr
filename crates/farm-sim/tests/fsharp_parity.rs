@@ -204,3 +204,53 @@ fn the_rust_pipeline_compiles_what_the_fsharp_pipeline_compiles() {
     assert!(checked >= 10, "only {checked} pipeline fixtures");
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
+
+#[test]
+fn classic_skill_preset_matches_legacy_training_and_passive_rewards() {
+    use farm_sim::{skills, state, EngineContext};
+    let fixture = fixtures()
+        .into_iter()
+        .find(|(name, _)| name == "starter-classic-skills")
+        .expect("record the F# classic-skills parity fixture")
+        .1;
+    let preset: GameProject = serde_json::from_value(fixture["project"].clone()).unwrap();
+    let mut legacy = preset.clone();
+    legacy.settings.skill_definitions = None;
+    let ctx = EngineContext::new(create_content_from_project(&preset));
+    let legacy_ctx = EngineContext::new(create_content_from_project(&legacy));
+    let mut state = state::create_game_state(&preset, Some("classic"));
+    let mut legacy_state = state::create_game_state(&legacy, Some("classic"));
+    for (action, skill, xp) in [("harvest", "farming", 8), ("catch", "fishing", 8), ("gift", "social", 4)] {
+        skills::grant_action_xp(&ctx, &mut state, action, skill, xp);
+        skills::grant_action_xp(&legacy_ctx, &mut legacy_state, action, skill, xp);
+    }
+    for definition in ctx.content.settings.skill_definitions() {
+        for row in definition.training.iter().filter(|row| row.action == "gather" || row.action == "slay") {
+            skills::grant_action_xp_subject(
+                &ctx,
+                &mut state,
+                &row.action,
+                row.subject.as_deref().unwrap_or(""),
+                &definition.id,
+                row.experience,
+            );
+            skills::grant_action_xp_subject(
+                &legacy_ctx,
+                &mut legacy_state,
+                &row.action,
+                row.subject.as_deref().unwrap_or(""),
+                &definition.id,
+                row.experience,
+            );
+        }
+    }
+    assert_eq!(state.player.skills, legacy_state.player.skills);
+    for (level, threshold) in preset.settings.skill_level_curve.iter().enumerate() {
+        for id in ["farming", "combat"] {
+            state.player.skills.insert(id.into(), farm_sim::schema::SkillState { xp: *threshold, level: level as u32 });
+        }
+        assert_eq!(skills::stat_bonus(&ctx, &state, "yield"), level as i32 / 4);
+        assert_eq!(skills::stat_bonus(&ctx, &state, "quality"), level as i32 / 3);
+        assert_eq!(skills::stat_bonus(&ctx, &state, "attack"), level as i32);
+    }
+}

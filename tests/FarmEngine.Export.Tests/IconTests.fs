@@ -14,12 +14,14 @@ let private ok (result: Result<'T, string>) =
 let ``icons come out at 16, 32, 48 and 256 pixels as PNG`` () =
     let rendered = Icons.render (makePng 512 512 false) |> ok
     Assert.Equal<int list>([ 16; 32; 48; 256 ], rendered |> List.map fst)
+
     for size, png in rendered do
         Assert.Equal((size, size), pngSize png)
 
 [<Fact>]
 let ``the default icon renders at every size`` () =
     let rendered = Icons.render (Icons.defaultIcon ()) |> ok
+
     for size, png in rendered do
         Assert.Equal((size, size), pngSize png)
 
@@ -28,16 +30,21 @@ let ``an icon drawn at its own size keeps its pixels`` () =
     // A 256-pixel source at 256 pixels is copied, not resampled: a blur would change the
     // pixels and make the PNG too large for the slot the Windows template reserves.
     let source = Icons.defaultIcon ()
-    let png = Icons.render source |> ok |> List.find (fun (size, _) -> size = 256) |> snd
+
+    let png =
+        Icons.render source |> ok |> List.find (fun (size, _) -> size = 256) |> snd
+
     use expected = SKBitmap.Decode source
     use actual = SKBitmap.Decode png
     Assert.Equal((256, 256), (expected.Width, expected.Height))
-    for y in 0 .. 255 do
-        for x in 0 .. 255 do
+
+    for y in 0..255 do
+        for x in 0..255 do
             let a = expected.GetPixel(x, y)
             let b = actual.GetPixel(x, y)
             // Alpha exactly; colours within the rounding of premultiplying and back.
             Assert.Equal(a.Alpha, b.Alpha)
+
             if a.Alpha = 255uy then
                 Assert.Equal(a, b)
 
@@ -73,8 +80,10 @@ let ``only PNG images reach Skia, whatever the data URL says`` () =
     use jpeg = image.Encode(SKEncodedImageFormat.Jpeg, 90)
     let bytes = jpeg.ToArray()
     Assert.False(Icons.isPng bytes)
+
     match Icons.render bytes with
     | Ok _ -> failwith "a JPEG icon must be refused"
     | Error e -> Assert.Contains("not a PNG", e)
+
     Assert.True(Icons.isPng (makePng 16 16 false))
     Assert.False(Icons.isPng [| 0x89uy; byte 'P' |])

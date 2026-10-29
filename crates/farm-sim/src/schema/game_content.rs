@@ -41,6 +41,8 @@ pub struct GameContent {
     pub npcs: Vec<Npc>,
     pub dialogues: Vec<Dialogue>,
     pub quests: Vec<Quest>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub request_boards: Vec<super::RequestBoard>,
     pub events: Vec<GameEvent>,
     pub shops: Vec<ShopDefinition>,
     pub node_types: Vec<NodeTypeDefinition>,
@@ -51,6 +53,8 @@ pub struct GameContent {
     pub animal_species: Vec<AnimalSpeciesDefinition>,
     pub fish_tables: Vec<FishTable>,
     pub mine: MineConfig,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub mines: Vec<super::MineDefinition>,
     /// Creator-defined actions (extensibility layer).
     pub actions: Vec<ActionDef>,
     /// Declared minigames (extensibility layer).

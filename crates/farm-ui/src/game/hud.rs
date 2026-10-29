@@ -13,7 +13,7 @@ use crate::settings::BindAction;
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::Button;
-use farm_render::{Color, FontId, Rect};
+use farm_render::{Color, FontId, ImageStore, Rect};
 use farm_sim::Command;
 
 /// Height of one HUD row.
@@ -30,6 +30,10 @@ enum StatValue {
     Primary(String),
     Secondary(String),
     Plain(String),
+    Buff {
+        icon: Option<String>,
+        text: String,
+    },
     Energy {
         ratio: f32,
         text: String,
@@ -56,11 +60,14 @@ fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
         StatValue::Energy { text, .. } | StatValue::Health { text, .. } => {
             ENERGY_BAR + if text.is_empty() { 0.0 } else { 8.0 + ui.measure(text, 12.0, FontId::Regular) }
         }
+        StatValue::Buff { icon, text } => {
+            ui.measure(text, 13.0, FontId::Bold) + if icon.is_some() { 26.0 } else { 0.0 }
+        }
     };
     (label + value).ceil()
 }
 
-fn draw_stat(ui: &mut Ui, rect: Rect, stat: &Stat) {
+fn draw_stat(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, rect: Rect, stat: &Stat) {
     let colors = ui.theme().colors;
     let mut area = rect;
     if !stat.label.is_empty() {
@@ -80,6 +87,24 @@ fn draw_stat(ui: &mut Ui, rect: Rect, stat: &Stat) {
             ui.label(area, text, 13.0, FontId::Bold, colors.secondary, Align::Start);
         }
         StatValue::Plain(text) => {
+            ui.label(area, text, 13.0, FontId::Bold, colors.text, Align::Start);
+        }
+        StatValue::Buff { icon, text } => {
+            if let Some(icon) = icon {
+                let slot = area.cut_left(26.0).centered(20.0, 20.0);
+                let visual = farm_sim::schema::VisualRef { asset_id: icon.clone(), ..Default::default() };
+                let sprite = farm_render::resolve_visual(view.art.assets, Some(&visual), 0.0, "down", true);
+                if !sprite
+                    .as_ref()
+                    .is_some_and(|sprite| super::draw_sprite(ui, images, sprite, slot, view.art.pixel_art))
+                {
+                    if let Some(item) = view.content.items.iter().find(|item| item.id == *icon) {
+                        super::draw_item_art(ui, images, &view.art, view.content, item, slot);
+                    } else {
+                        ui.label(slot, icon, 16.0, FontId::Regular, colors.accent_text, Align::Center);
+                    }
+                }
+            }
             ui.label(area, text, 13.0, FontId::Bold, colors.text, Align::Start);
         }
         StatValue::Energy { ratio, text } | StatValue::Health { ratio, text } => {
@@ -183,7 +208,12 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         },
         Stat {
             label: lang.tr("hud.day").to_owned(),
-            value: StatValue::Secondary(format!("{} / {}", num(calendar.day_of_season), num(calendar.season_days))),
+            value: StatValue::Secondary(format!(
+                "{}{} / {}",
+                calendar.weekday_name.as_ref().map(|name| format!("{name} ")).unwrap_or_default(),
+                num(calendar.day_of_season),
+                num(calendar.season_days)
+            )),
         },
         Stat { label: lang.tr("hud.year").to_owned(), value: StatValue::Secondary(num(clock.year)) },
         Stat {
@@ -201,6 +231,12 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
     ];
     if content.settings.energy_enabled {
         let max = if state.player.max_energy > 0 { state.player.max_energy } else { content.settings.max_energy };
+        let max = max
+            .saturating_add(
+                farm_sim::skills::stat_bonus_for(content, state, "maxEnergy")
+                    .saturating_mul(farm_sim::units::ENERGY_POINT),
+            )
+            .max(1);
         let ratio = if max > 0 { (f64::from(state.player.energy) / f64::from(max)) as f32 } else { 0.0 };
         // Whole points, rounded down like the web HUD.
         let point = farm_sim::units::ENERGY_POINT;
@@ -212,16 +248,38 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text } });
     }
     // Health beside energy (M7, with combat on).
-    if let (Some(health), Some(max)) = (state.player.health, farm_sim::combat::max_health(&content.settings)) {
+    if let (Some(health), Some(max)) = (
+        state.player.health,
+        farm_sim::combat::max_health(&content.settings).map(|base| {
+            state
+                .player
+                .max_health
+                .unwrap_or(base)
+                .saturating_add(farm_sim::skills::stat_bonus_for(content, state, "maxHealth"))
+                .max(1)
+        }),
+    ) {
         let ratio = (f64::from(health.max(0)) / f64::from(max.max(1))).min(1.0) as f32;
         let text = if compact { String::new() } else { format!("{} / {}", num(health.max(0)), num(max)) };
         stats.push(Stat { label: lang.tr("hud.health").to_owned(), value: StatValue::Health { ratio, text } });
+    }
+    let now = farm_sim::crafting::absolute_minute_in(content.settings.time.minutes_per_day(), state);
+    for buff in state.player.buffs.iter().filter(|buff| buff.expires_at_minute > now) {
+        let minutes = (buff.expires_at_minute - now + i64::from(farm_sim::units::MINUTE) - 1)
+            / i64::from(farm_sim::units::MINUTE);
+        stats.push(Stat {
+            label: buff.definition.id.clone(),
+            value: StatValue::Buff {
+                icon: buff.definition.icon.clone().filter(|icon| !icon.is_empty()),
+                text: lang.format("hud.buffMinutes", &[&minutes]),
+            },
+        });
     }
     stats
 }
 
 /// Draws the HUD; returns the bottom of the top bar.
-pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameAction>) -> f32 {
+pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) -> f32 {
     let colors = ui.theme().colors;
     let screen = ui.screen();
     let device = ui.device();
@@ -265,7 +323,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     let bar = Rect::new(bar_outer.x, bar_outer.y, bar_outer.width, content_height + 16.0);
     ui.panel(bar, colors.hud, colors.hud_border, 10.0, true);
     for (stat, rect) in stats.iter().zip(&flow.items) {
-        draw_stat(ui, *rect, stat);
+        draw_stat(ui, view, images, *rect, stat);
     }
     let toolbar_origin = if one_row {
         Rect::new(

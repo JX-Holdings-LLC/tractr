@@ -71,6 +71,8 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 dotnet format whitespace Tractr.sln --verify-no-changes
 dotnet format style Tractr.sln --verify-no-changes
+dotnet tool restore
+dotnet fantomas check src tests tools
 python3 tools/ci/text-style.py
 npx --yes markdownlint-cli2@0.23.3
 ```
@@ -86,11 +88,13 @@ The full list of CI jobs is in [.github/workflows/ci.yml](.github/workflows/ci.y
   (`EnforceCodeStyleInBuild`), and CI runs `dotnet format whitespace` and
   `dotnet format style` in check mode; run them without `--verify-no-changes`
   to fix a file. Lines should stay within 160 columns (not enforced yet).
-- **F#:** no formatter is enforced (Fantomas would rewrite almost every
-  file); follow the style of the file you edit. CI checks the basics for F#
-  and every other text file: UTF-8, LF line endings, a final newline, no
-  trailing whitespace and no tab indentation (`tools/ci/text-style.py`, with
-  `--fix`).
+- **F#:** Fantomas is pinned in `.config/dotnet-tools.json`. Run `dotnet tool
+  restore`, then `dotnet fantomas src tests tools` to format; CI runs the same
+  paths with `check`. `.fantomasignore` excludes generated schema/record codecs,
+  generated record helpers, and build outputs; their generators check them.
+  The 160-column setting guides layout, while indivisible literals may exceed it.
+- **All text:** CI checks UTF-8, LF line endings, a final newline, no trailing
+  whitespace and no tab indentation (`tools/ci/text-style.py`, with `--fix`).
 - **Markdown:** markdownlint with `.markdownlint-cli2.jsonc`.
 - `.gitattributes` keeps text files LF on every platform, so the bash scripts
   the Windows release jobs run keep working.

@@ -256,11 +256,11 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      # C# whitespace and code style follow .editorconfig; F#, scripts, project files and docs
-      # are LF and UTF-8 with no trailing whitespace (CONTRIBUTING.md "Formatting"). Fantomas is
-      # not enforced: it would reformat almost every F# file.
-      - name: Formatting (C# and text files)
+      # Generated F# sources are checked by their generators, not reformatted.
+      - name: Formatting (C#, F# and text files)
         run: |
+          dotnet tool restore
+          dotnet fantomas check src tests tools
           dotnet format whitespace Tractr.sln --no-restore --verify-no-changes
           dotnet format style Tractr.sln --no-restore --verify-no-changes
           python3 tools/ci/text-style.py

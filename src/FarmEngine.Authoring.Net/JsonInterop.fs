@@ -10,7 +10,10 @@ module JsonInterop =
 
     /// A number `Json` can hold: finite (the F# parser refuses `1e400` the same way).
     let private finite (n: float) : float =
-        if System.Double.IsNaN n || System.Double.IsInfinity n then raise (System.FormatException "Number out of range") else n
+        if System.Double.IsNaN n || System.Double.IsInfinity n then
+            raise (System.FormatException "Number out of range")
+        else
+            n
 
     // A parsed node wraps a JsonElement and converts directly; a value C# created from another
     // CLR type (an int, say) goes through its JSON form. `GetDouble` throws FormatException for
@@ -27,6 +30,7 @@ module JsonInterop =
                 value.GetValue<string>()
             with :? System.InvalidOperationException ->
                 JsonSerializer.SerializeToElement(value).GetString()
+
         match s with
         | null -> ""
         | s -> s
@@ -80,11 +84,15 @@ module JsonInterop =
         | JString s -> JsonValue.Create s
         | JArray items ->
             let array = JsonArray()
+
             for item in items do
                 array.Add(toNode item)
+
             array
         | JObject members ->
             let obj = JsonObject()
+
             for key, item in members do
                 obj[key] <- toNode item
+
             obj

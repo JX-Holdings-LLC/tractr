@@ -9,7 +9,7 @@ use crate::events;
 use crate::inventory;
 use crate::messages;
 use crate::quests;
-use crate::schema::{Dialogue, DialogueOption, DialogueState, GameState, ShopSession};
+use crate::schema::{Dialogue, DialogueOption, DialogueState, GameState};
 use crate::social;
 use serde_json::Value;
 
@@ -122,13 +122,8 @@ pub fn handle_choose_dialogue_option(ctx: &EngineContext, state: &mut GameState,
 
     // Shop-opening options close the dialogue and start a shop session.
     if let Some(open_shop_id) = non_empty(option.open_shop_id.as_deref()) {
-        let shop_exists = ctx.shop(open_shop_id).is_some();
         state.dialogue = None;
-        if shop_exists {
-            state.shop = Some(ShopSession { shop_id: open_shop_id.to_owned() });
-        } else {
-            effects.push(Effect::say(message_levels::ERROR, &messages::SHOP_MISSING));
-        }
+        effects.extend(crate::economy::handle_open_shop(ctx, state, open_shop_id));
         return effects;
     }
 

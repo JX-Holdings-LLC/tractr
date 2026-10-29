@@ -49,17 +49,25 @@ let unionCases =
                             case, payload, tag
                         | _ -> failwithf "%s.%s: each case of a schema union carries one record" u.Name case.Name
                 ]
+
             u, cases
     ]
 
-let payloadTag = dict [ for _, cases in unionCases do for _, payload, tag in cases -> payload, tag ]
+let payloadTag =
+    dict
+        [
+            for _, cases in unionCases do
+                for _, payload, tag in cases -> payload, tag
+        ]
 
 let records =
     schemaTypes
     |> Array.filter (fun t -> FSharpType.IsRecord t && not (payloadTag.ContainsKey t))
     |> Array.sortWith (fun a b -> String.CompareOrdinal(a.Name, b.Name))
 
-let isGen (d: Type) (t: Type) = t.IsGenericType && t.GetGenericTypeDefinition() = d
+let isGen (d: Type) (t: Type) =
+    t.IsGenericType && t.GetGenericTypeDefinition() = d
+
 let isOption = isGen typedefof<option<_>>
 let isList = isGen typedefof<list<_>>
 let arg (t: Type) = t.GetGenericArguments().[0]
@@ -74,13 +82,23 @@ let dictValue (t: Type) =
         None
 
 let rec decoder (t: Type) : string =
-    if t = typeof<string> then "Decode.string"
-    elif t = typeof<float> then "Decode.number"
-    elif t = typeof<bool> then "Decode.boolean"
-    elif t = typeof<int> then "Decode.int32"
-    elif t = typeof<uint32> then "Decode.uint32"
-    elif t = typeof<Json> then "Decode.json"
-    elif FSharpType.IsRecord t || FSharpType.IsUnion t && t.Namespace = typeof<GameProject>.Namespace then "decode" + t.Name
+    if t = typeof<string> then
+        "Decode.string"
+    elif t = typeof<float> then
+        "Decode.number"
+    elif t = typeof<bool> then
+        "Decode.boolean"
+    elif t = typeof<int> then
+        "Decode.int32"
+    elif t = typeof<uint32> then
+        "Decode.uint32"
+    elif t = typeof<Json> then
+        "Decode.json"
+    elif
+        FSharpType.IsRecord t
+        || FSharpType.IsUnion t && t.Namespace = typeof<GameProject>.Namespace
+    then
+        "decode" + t.Name
     else
         match dictValue t with
         | Some v -> sprintf "(Decode.dict %s)" (decoder v)
@@ -89,12 +107,21 @@ let rec decoder (t: Type) : string =
 
 /// The encoder, as a function.
 let rec encoder (t: Type) : string =
-    if t = typeof<string> then "JString"
-    elif t = typeof<float> then "JNumber"
-    elif t = typeof<bool> then "JBool"
-    elif t = typeof<int> || t = typeof<uint32> then "(float >> JNumber)"
-    elif t = typeof<Json> then "id"
-    elif FSharpType.IsRecord t || FSharpType.IsUnion t && t.Namespace = typeof<GameProject>.Namespace then "encode" + t.Name
+    if t = typeof<string> then
+        "JString"
+    elif t = typeof<float> then
+        "JNumber"
+    elif t = typeof<bool> then
+        "JBool"
+    elif t = typeof<int> || t = typeof<uint32> then
+        "(float >> JNumber)"
+    elif t = typeof<Json> then
+        "id"
+    elif
+        FSharpType.IsRecord t
+        || FSharpType.IsUnion t && t.Namespace = typeof<GameProject>.Namespace
+    then
+        "encode" + t.Name
     else
         match dictValue t with
         | Some v -> sprintf "(Encode.dict %s)" (encoder v)
@@ -102,37 +129,56 @@ let rec encoder (t: Type) : string =
         | None -> failwithf "no encoder for %s" t.FullName
 
 /// The encoder applied to `x`.
-let encode (t: Type) (x: string) = if t = typeof<Json> then x else encoder t + " " + x
+let encode (t: Type) (x: string) =
+    if t = typeof<Json> then x else encoder t + " " + x
 
 let floatLiteral (n: float) =
-    if Double.IsNaN n || Double.IsInfinity n then failwithf "default %f has no F# literal here" n
-    elif n = Math.Floor n && abs n < 1e15 then n.ToString("0.0", CultureInfo.InvariantCulture)
+    if Double.IsNaN n || Double.IsInfinity n then
+        failwithf "default %f has no F# literal here" n
+    elif n = Math.Floor n && abs n < 1e15 then
+        n.ToString("0.0", CultureInfo.InvariantCulture)
     else
         let text = n.ToString("R", CultureInfo.InvariantCulture)
-        if text.Contains "E" then failwithf "default %s: add an exponent form to schema-json.fsx" text
+
+        if text.Contains "E" then
+            failwithf "default %s: add an exponent form to schema-json.fsx" text
+
         text
 
 let stringLiteral (s: string) =
     if s |> Seq.exists (fun c -> c < ' ' || c = '\\' || c = '"') then
         failwithf "default %A: add escaping to schema-json.fsx" s
+
     "\"" + s + "\""
 
 /// A default value as F# source: a nested record at its own `Default` is `Type.Default`.
 let rec literal (t: Type) (value: obj) : string =
-    if t = typeof<string> then stringLiteral (value :?> string)
-    elif t = typeof<float> then floatLiteral (value :?> float)
-    elif t = typeof<bool> then (if value :?> bool then "true" else "false")
-    elif t = typeof<int> then string (value :?> int)
-    elif t = typeof<uint32> then string (value :?> uint32) + "u"
+    if t = typeof<string> then
+        stringLiteral (value :?> string)
+    elif t = typeof<float> then
+        floatLiteral (value :?> float)
+    elif t = typeof<bool> then
+        (if value :?> bool then "true" else "false")
+    elif t = typeof<int> then
+        string (value :?> int)
+    elif t = typeof<uint32> then
+        string (value :?> uint32) + "u"
     elif isOption t then
         match value with
         | null -> "None"
         | _ -> sprintf "Some(%s)" (literal (arg t) (t.GetProperty("Value").GetValue value))
     elif isList t then
-        let items = [ for item in (value :?> Collections.IEnumerable) -> literal (arg t) item ]
-        if items.IsEmpty then "[]" else "[ " + String.concat "; " items + " ]"
+        let items =
+            [ for item in (value :?> Collections.IEnumerable) -> literal (arg t) item ]
+
+        if items.IsEmpty then
+            "[]"
+        else
+            "[ " + String.concat "; " items + " ]"
     elif FSharpType.IsTuple t then
-        let parts = Array.map2 literal (FSharpType.GetTupleElements t) (FSharpValue.GetTupleFields value)
+        let parts =
+            Array.map2 literal (FSharpType.GetTupleElements t) (FSharpValue.GetTupleFields value)
+
         "(" + String.concat ", " parts + ")"
     elif FSharpType.IsRecord t then
         if value.Equals(t.GetProperty("Default").GetValue(null)) then
@@ -143,6 +189,7 @@ let rec literal (t: Type) (value: obj) : string =
                     (fun (p: PropertyInfo) v -> p.Name + " = " + literal p.PropertyType v)
                     (FSharpType.GetRecordFields t)
                     (FSharpValue.GetRecordFields value)
+
             sprintf "({ %s } : %s)" (String.concat "; " fields) t.Name
     else
         failwithf "default of type %s: add it to schema-json.fsx" t.FullName
@@ -170,37 +217,61 @@ let emitRecord (t: Type) (tag: string option) =
     add (sprintf "    %s decode%s (path: Path) (json: Json) : %s =" (if first then "let rec" else "and") t.Name t.Name)
     first <- false
     add "        let members = Decode.object path json"
+
     for p in declared do
         add (sprintf "        let mutable v%s = %s" p.Name (literal p.PropertyType (defaultOf p)))
-    if hasExtra then add "        let extra = ResizeArray<string * Json>()"
+
+    if hasExtra then
+        add "        let extra = ResizeArray<string * Json>()"
+
     add "        for (key, value) in members do"
     add "            match key with"
+
     for p in declared do
         let ft = p.PropertyType
+
         let read =
             match attribute<JsonDecodeAttribute> p with
             | Some a -> a.Expression
             | None when isOption ft && isOption (arg ft) -> sprintf "Decode.optionalNullable %s (key :: path) value" (decoder (arg (arg ft)))
             | None when isOption ft -> sprintf "Decode.optional %s (key :: path) value" (decoder (arg ft))
             | None -> sprintf "%s (key :: path) value" (decoder ft)
+
         add (sprintf "            | \"%s\" -> v%s <- %s" (jsonKey p) p.Name read)
-    if tag.IsSome then add "            | \"type\" -> ()"
-    add (if hasExtra then "            | _ -> extra.Add((key, value))" else "            | _ -> ()")
-    let assigns = [ for p in declared -> sprintf "%s = v%s" p.Name p.Name ] @ (if hasExtra then [ "Extra = List.ofSeq extra" ] else [])
+
+    if tag.IsSome then
+        add "            | \"type\" -> ()"
+
+    add (
+        if hasExtra then
+            "            | _ -> extra.Add((key, value))"
+        else
+            "            | _ -> ()"
+    )
+
+    let assigns =
+        [ for p in declared -> sprintf "%s = v%s" p.Name p.Name ]
+        @ (if hasExtra then [ "Extra = List.ofSeq extra" ] else [])
+
     add (sprintf "        { %s }" (String.concat "; " assigns))
     add ""
     add (sprintf "    and encode%s (value: %s) : Json =" t.Name t.Name)
     add "        JObject("
     add "            ["
+
     match tag with
     | Some tag -> add (sprintf "                yield \"type\", JString \"%s\"" tag)
     | None -> ()
+
     for p in declared do
         let ft = p.PropertyType
         let key = jsonKey p
         let writesNull = (attribute<JsonNullAttribute> p).IsSome
+
         if isOption ft && isOption (arg ft) then
-            if writesNull then failwithf "%s.%s: an option option writes null for Some None already" t.Name p.Name
+            if writesNull then
+                failwithf "%s.%s: an option option writes null for Some None already" t.Name p.Name
+
             add (sprintf "                match value.%s with" p.Name)
             add (sprintf "                | Some(Some n) -> yield \"%s\", %s" key (encode (arg (arg ft)) "n"))
             add (sprintf "                | Some None -> yield \"%s\", JNull" key)
@@ -208,11 +279,22 @@ let emitRecord (t: Type) (tag: string option) =
         elif isOption ft then
             add (sprintf "                match value.%s with" p.Name)
             add (sprintf "                | Some v -> yield \"%s\", %s" key (encode (arg ft) "v"))
-            add (if writesNull then sprintf "                | None -> yield \"%s\", JNull" key else "                | None -> ()")
+
+            add (
+                if writesNull then
+                    sprintf "                | None -> yield \"%s\", JNull" key
+                else
+                    "                | None -> ()"
+            )
         else
-            if writesNull then failwithf "%s.%s: [<JsonNull>] is for option fields" t.Name p.Name
+            if writesNull then
+                failwithf "%s.%s: [<JsonNull>] is for option fields" t.Name p.Name
+
             add (sprintf "                yield \"%s\", %s" key (encode ft ("value." + p.Name)))
-    if hasExtra then add "                yield! value.Extra"
+
+    if hasExtra then
+        add "                yield! value.Extra"
+
     add "            ]"
     add "        )"
     add ""
@@ -220,12 +302,15 @@ let emitRecord (t: Type) (tag: string option) =
 let emitUnion (u: Type) (cases: (UnionCaseInfo * Type * string) list) =
     add (sprintf "    and decode%s (path: Path) (json: Json) : %s =" u.Name u.Name)
     add "        match Decode.discriminator path json with"
+
     for case, payload, tag in cases do
         add (sprintf "        | \"%s\" -> %s.%s(decode%s path json)" tag u.Name case.Name payload.Name)
+
     add "        | other -> Decode.unknownDiscriminator path other"
     add ""
     add (sprintf "    and encode%s (value: %s) : Json =" u.Name u.Name)
     add "        match value with"
+
     for case, payload, _ in cases do
         add (sprintf "        | %s.%s c -> encode%s c" u.Name case.Name payload.Name)
 
@@ -242,20 +327,27 @@ add "/// a zod-style issue (`scenes.0.width: Expected number, received string`).
 add "/// fields in order, then `Extra`; absent options are left out, except the fields zod declares"
 add "/// `.nullable()`, which are written as `null`."
 add "module SchemaJson ="
+
 for t in records do
     emitRecord t None
+
 for u, cases in unionCases do
     for _, payload, tag in cases do
         emitRecord payload (Some tag)
+
     emitUnion u cases
 
-let target = IO.Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "src", "FarmEngine.Authoring", "SchemaJson.fs")
+let target =
+    IO.Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "src", "FarmEngine.Authoring", "SchemaJson.fs")
+
 let generated = String.concat "\n" lines + "\n"
+
 if fsi.CommandLineArgs |> Array.contains "--check" then
     // Line endings as checked out do not matter (a Windows checkout may have CRLF).
     if IO.File.ReadAllText(target).Replace("\r\n", "\n") <> generated then
         eprintfn "src/FarmEngine.Authoring/SchemaJson.fs is out of date: run dotnet fsi tools/codegen/schema-json.fsx"
         exit 1
+
     printfn "src/FarmEngine.Authoring/SchemaJson.fs is current (%d records, %d unions)" (records.Length + payloadTag.Count) unions.Length
 else
     IO.File.WriteAllText(target, generated)

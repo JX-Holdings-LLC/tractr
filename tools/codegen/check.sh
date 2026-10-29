@@ -62,6 +62,7 @@ done
 
 dotnet fsi "$root/tools/codegen/schema-json.fsx" --check || failed=1
 python3 "$root/tools/codegen/record-json.py" --check || failed=1
+python3 "$root/tools/codegen/font-coverage.py" --check || failed=1
 
 if [[ ! -f "$root/src/FarmEngine.Authoring/bin/Release/net10.0/FarmEngine.Authoring.dll" ]]; then
   dotnet build -c Release "$root/src/FarmEngine.Authoring" >/dev/null

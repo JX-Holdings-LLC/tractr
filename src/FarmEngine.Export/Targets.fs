@@ -58,7 +58,8 @@ module ExportTarget =
     let webContentSecurityPolicy =
         "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
 
-    let tryParse (id: string) : ExportTarget option = all |> List.tryFind (fun t -> t.Id = id)
+    let tryParse (id: string) : ExportTarget option =
+        all |> List.tryFind (fun t -> t.Id = id)
 
     /// The ids, for messages ("windows-x64 or linux-x64").
     let ids = all |> List.map (fun t -> t.Id)

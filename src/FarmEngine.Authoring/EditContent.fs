@@ -19,14 +19,18 @@ module DialogueCopies =
     /// The copy the game plays for each dialogue id an NPC carries (the first NPC's).
     let private onNpcs (project: GameProject) : Dictionary<string, Dialogue> =
         let byId = Dictionary<string, Dialogue>()
+
         for npc in project.Npcs do
             for dialogue in npc.Dialogue do
-                if not (byId.ContainsKey dialogue.Id) then byId.[dialogue.Id] <- dialogue
+                if not (byId.ContainsKey dialogue.Id) then
+                    byId.[dialogue.Id] <- dialogue
+
         byId
 
     /// `project.Dialogues` with each entry an NPC also carries as the NPC's copy.
     let shown (project: GameProject) : Dialogue list =
         let played = onNpcs project
+
         project.Dialogues
         |> List.map (fun dialogue ->
             match played.TryGetValue dialogue.Id with
@@ -38,9 +42,18 @@ module DialogueCopies =
     /// them. The same instance when the copies already agree. Runs when a project loads.
     let reconcile (project: GameProject) : GameProject =
         let listed = HashSet<string>(project.Dialogues |> List.map (fun d -> d.Id))
-        let missing = project.Npcs |> List.collect (fun npc -> npc.Dialogue) |> List.filter (fun d -> listed.Add d.Id)
+
+        let missing =
+            project.Npcs
+            |> List.collect (fun npc -> npc.Dialogue)
+            |> List.filter (fun d -> listed.Add d.Id)
+
         let next = shown project @ missing
-        if next = project.Dialogues then project else { project with Dialogues = next }
+
+        if next = project.Dialogues then
+            project
+        else
+            { project with Dialogues = next }
 
 /// The content edits (NPCEditor, ItemEditor, CropEditor, QuestEditor, EventsEditor, ShopEditor,
 /// RecipeEditor, NodeTypeEditor, WildlifeEditor, ActionsEditor, ProjectSettingsEditor weather and
@@ -53,7 +66,14 @@ module internal EditContent =
         | None -> project
 
     /// Remove by id, then scrub what referenced it (`cleanup`); the same project when absent.
-    let private remove (get: GameProject -> 'T list) (set: GameProject -> 'T list -> GameProject) (idOf: 'T -> string) (cleanup: string -> GameProject -> GameProject) (id: string) (project: GameProject) =
+    let private remove
+        (get: GameProject -> 'T list)
+        (set: GameProject -> 'T list -> GameProject)
+        (idOf: 'T -> string)
+        (cleanup: string -> GameProject -> GameProject)
+        (id: string)
+        (project: GameProject)
+        =
         match Lists.removeBy idOf id (get project) with
         | None -> project
         | Some kept -> set project kept |> cleanup id
@@ -67,43 +87,77 @@ module internal EditContent =
     let private syncDialogues (npc: Npc) (project: GameProject) =
         let ownIds = HashSet<string>(npc.Dialogue |> List.map (fun d -> d.Id))
         let byId = Dictionary<string, Dialogue>()
-        for d in npc.Dialogue do byId.[d.Id] <- d
+
+        for d in npc.Dialogue do
+            byId.[d.Id] <- d
+
         let kept =
             project.Dialogues
             |> List.choose (fun d ->
                 if ownIds.Contains d.Id then Some byId.[d.Id]
                 elif d.NpcId = npc.Id then None
                 else Some d)
+
         let present = HashSet<string>(kept |> List.map (fun d -> d.Id))
         let appended = npc.Dialogue |> List.filter (fun d -> not (present.Contains d.Id))
         let next = kept @ appended
-        if next = project.Dialogues then project else { project with Dialogues = next }
+
+        if next = project.Dialogues then
+            project
+        else
+            { project with Dialogues = next }
 
     /// Reward options default to once-only: an option that gains a reward (money or an item)
     /// with nothing deciding how often it pays (`Once` unset, no hidden-if flag, no price)
     /// becomes `Once = Some true`. Setting `Once` to false keeps it repeatable.
     let rewardsOnceByDefault (previous: Dialogue option) (dialogue: Dialogue) : Dialogue =
         let pays (option: DialogueOption) =
-            option.GiveMoney |> Option.exists (fun money -> money > 0.0) || option.GiveItem |> Option.exists (fun item -> item.Length > 0)
+            option.GiveMoney |> Option.exists (fun money -> money > 0.0)
+            || option.GiveItem |> Option.exists (fun item -> item.Length > 0)
+
         let undecided (option: DialogueOption) =
-            option.Once.IsNone && option.HiddenIfFlag.IsNone && not (option.TakeMoney |> Option.exists (fun money -> money > 0.0))
+            option.Once.IsNone
+            && option.HiddenIfFlag.IsNone
+            && not (option.TakeMoney |> Option.exists (fun money -> money > 0.0))
+
         let before = previous |> Option.map (fun d -> d.Options) |> Option.defaultValue []
+
         let options =
             dialogue.Options
             |> List.mapi (fun k option ->
                 let paidBefore = before |> List.tryItem k |> Option.exists pays
-                if pays option && undecided option && not paidBefore then { option with Once = Some true } else option)
-        if options = dialogue.Options then dialogue else { dialogue with Options = options }
+
+                if pays option && undecided option && not paidBefore then
+                    { option with Once = Some true }
+                else
+                    option)
+
+        if options = dialogue.Options then
+            dialogue
+        else
+            { dialogue with Options = options }
 
     let private npcs (project: GameProject) = project.Npcs
     let private withNpcs (project: GameProject) list = { project with Npcs = list }
 
     /// NPCEditor `createNPC` / `updateNPC` / MovementScheduleSection `patch`.
     let upsertNpc (npc: Npc) (project: GameProject) =
-        let previous = project.Npcs |> List.tryFind (fun n -> n.Id = npc.Id) |> Option.map (fun n -> n.Dialogue) |> Option.defaultValue []
+        let previous =
+            project.Npcs
+            |> List.tryFind (fun n -> n.Id = npc.Id)
+            |> Option.map (fun n -> n.Dialogue)
+            |> Option.defaultValue []
+
         let dialogue =
-            npc.Dialogue |> List.map (fun d -> rewardsOnceByDefault (previous |> List.tryFind (fun p -> p.Id = d.Id)) d)
-        let npc = if dialogue = npc.Dialogue then npc else { npc with Dialogue = dialogue }
+            npc.Dialogue
+            |> List.map (fun d -> rewardsOnceByDefault (previous |> List.tryFind (fun p -> p.Id = d.Id)) d)
+
+        let npc =
+            if dialogue = npc.Dialogue then
+                npc
+            else
+                { npc with Dialogue = dialogue }
+
         upsert npcs withNpcs (fun (n: Npc) -> n.Id) npc project |> syncDialogues npc
 
     /// NPCEditor `deleteNPC` (NPC + its dialogues) plus every reference to it.
@@ -112,11 +166,19 @@ module internal EditContent =
 
     /// App.tsx NPC placement mode: `{ ...npc, x, y }` (and here the scene it is placed in).
     let moveNpc (npcId: string) (sceneId: string) (x: int) (y: int) (project: GameProject) =
-        if (Proj.tryScene sceneId project).IsNone then project
+        if (Proj.tryScene sceneId project).IsNone then
+            project
         else
             let move (n: Npc) =
-                if n.Id <> npcId || (n.SceneId = sceneId && n.X = float x && n.Y = float y) then n
-                else { n with SceneId = sceneId; X = float x; Y = float y }
+                if n.Id <> npcId || (n.SceneId = sceneId && n.X = float x && n.Y = float y) then
+                    n
+                else
+                    { n with
+                        SceneId = sceneId
+                        X = float x
+                        Y = float y
+                    }
+
             match Lists.mapChanged move project.Npcs with
             | Some next -> { project with Npcs = next }
             | None -> project
@@ -124,9 +186,14 @@ module internal EditContent =
     /// NPCDetailEditor `createDialogue` / DialogueEditor `save`: in `project.Dialogues` and on the owning NPC.
     let upsertDialogue (dialogue: Dialogue) (project: GameProject) =
         let previous =
-            project.Dialogues @ (project.Npcs |> List.collect (fun n -> n.Dialogue)) |> List.tryFind (fun d -> d.Id = dialogue.Id)
+            project.Dialogues @ (project.Npcs |> List.collect (fun n -> n.Dialogue))
+            |> List.tryFind (fun d -> d.Id = dialogue.Id)
+
         let dialogue = rewardsOnceByDefault previous dialogue
-        let project = upsert (fun p -> p.Dialogues) (fun p l -> { p with Dialogues = l }) (fun (d: Dialogue) -> d.Id) dialogue project
+
+        let project =
+            upsert (fun p -> p.Dialogues) (fun p l -> { p with Dialogues = l }) (fun (d: Dialogue) -> d.Id) dialogue project
+
         let onNpc (n: Npc) =
             if n.Id <> dialogue.NpcId then
                 // A dialogue that moved to another NPC leaves the old one.
@@ -137,6 +204,7 @@ module internal EditContent =
                 match Lists.upsertBy (fun (d: Dialogue) -> d.Id) dialogue n.Dialogue with
                 | Some next -> { n with Dialogue = next }
                 | None -> n
+
         match Lists.mapChanged onNpc project.Npcs with
         | Some next -> { project with Npcs = next }
         | None -> project
@@ -147,14 +215,17 @@ module internal EditContent =
             match Lists.removeBy (fun (d: Dialogue) -> d.Id) dialogueId project.Dialogues with
             | Some kept -> { project with Dialogues = kept }
             | None -> project
+
         let onNpc (n: Npc) =
             match Lists.removeBy (fun (d: Dialogue) -> d.Id) dialogueId n.Dialogue with
             | Some kept -> { n with Dialogue = kept }
             | None -> n
+
         let project =
             match Lists.mapChanged onNpc project.Npcs with
             | Some next -> { project with Npcs = next }
             | None -> project
+
         Cleanup.dropDialogue dialogueId project
 
     // ---- Items (ItemEditor.tsx) ----
@@ -166,23 +237,43 @@ module internal EditContent =
     /// definition, keeping their instance data (a tool's durability, clamped to the new maximum).
     let upsertItem (item: Item) (project: GameProject) =
         let project = upsert items withItems (fun (i: Item) -> i.Id) item project
+
         let project =
-            Proj.mapScenes (Proj.mapTiles (fun tile ->
-                match tile.Item with
-                | Some placed when placed.Id = item.Id ->
-                    let refreshed = InventoryRules.refresh placed item
-                    if refreshed = placed then tile else { tile with Item = Some refreshed }
-                | _ -> tile)) project
+            Proj.mapScenes
+                (Proj.mapTiles (fun tile ->
+                    match tile.Item with
+                    | Some placed when placed.Id = item.Id ->
+                        let refreshed = InventoryRules.refresh placed item
+
+                        if refreshed = placed then
+                            tile
+                        else
+                            { tile with Item = Some refreshed }
+                    | _ -> tile))
+                project
+
         let slots =
             Lists.mapChanged
                 (fun (slot: InventorySlot) ->
-                    if slot.Item.Id <> item.Id then slot
+                    if slot.Item.Id <> item.Id then
+                        slot
                     else
                         let refreshed = InventoryRules.refresh slot.Item item
-                        if refreshed = slot.Item then slot else { slot with Item = refreshed })
+
+                        if refreshed = slot.Item then
+                            slot
+                        else
+                            { slot with Item = refreshed })
                 project.Player.Inventory
+
         match slots with
-        | Some inventory -> { project with Player = { project.Player with Inventory = inventory } }
+        | Some inventory ->
+            { project with
+                Player =
+                    { project.Player with
+                        Inventory = inventory
+                    }
+            }
         | None -> project
 
     /// ItemEditor `handleDelete`. The web refuses when the item sits in the player's inventory;
@@ -198,20 +289,51 @@ module internal EditContent =
         | None -> InventoryAddResult.UnknownItem, project
         | Some item ->
             let inventory = project.Player.Inventory
+
             let next =
-                let held (slot: InventorySlot) = slot.Item.Id = itemId && slot.Quality.IsNone
-                let room (slot: InventorySlot) = held slot && slot.Quantity < InventoryRules.stackCap item
+                let held (slot: InventorySlot) =
+                    slot.Item.Id = itemId && slot.Quality.IsNone
+
+                let room (slot: InventorySlot) =
+                    held slot && slot.Quantity < InventoryRules.stackCap item
+
                 match List.tryFindIndex room inventory, List.exists held inventory with
                 | Some index, _ when item.Stackable ->
                     let slot = inventory.[index]
-                    Ok(List.updateAt index { slot with Quantity = slot.Quantity + 1.0 } inventory)
+
+                    Ok(
+                        List.updateAt
+                            index
+                            { slot with
+                                Quantity = slot.Quantity + 1.0
+                            }
+                            inventory
+                    )
                 | None, true when item.Stackable -> Error InventoryAddResult.StackFull
                 | _ ->
                     if float inventory.Length < project.Player.MaxInventorySize then
-                        Ok(Lists.append ({ Item = item; Quantity = 1.0; Quality = None } : InventorySlot) inventory)
-                    else Error InventoryAddResult.InventoryFull
+                        Ok(
+                            Lists.append
+                                ({
+                                    Item = item
+                                    Quantity = 1.0
+                                    Quality = None
+                                }
+                                : InventorySlot)
+                                inventory
+                        )
+                    else
+                        Error InventoryAddResult.InventoryFull
+
             match next with
-            | Ok slots -> InventoryAddResult.Added, { project with Player = { project.Player with Inventory = slots } }
+            | Ok slots ->
+                InventoryAddResult.Added,
+                { project with
+                    Player =
+                        { project.Player with
+                            Inventory = slots
+                        }
+                }
             | Error result -> result, project
 
     let addToInventory (itemId: string) (project: GameProject) = inventoryAdd itemId project |> snd
@@ -222,22 +344,42 @@ module internal EditContent =
     let cropItems (crop: CustomCropDefinition) : Item * Item =
         let seed =
             { Item.Default with
-                Id = sprintf "seed-%s" crop.Id; Name = sprintf "%s Seeds" crop.Name; Description = sprintf "Plant these to grow %s" crop.Name
-                Type = ItemTypes.Seed; Stackable = true; MaxStack = 999.0; Value = crop.SeedCost; CropType = Some crop.Id }
+                Id = sprintf "seed-%s" crop.Id
+                Name = sprintf "%s Seeds" crop.Name
+                Description = sprintf "Plant these to grow %s" crop.Name
+                Type = ItemTypes.Seed
+                Stackable = true
+                MaxStack = 999.0
+                Value = crop.SeedCost
+                CropType = Some crop.Id
+            }
+
         let produce =
             { Item.Default with
-                Id = sprintf "crop-%s" crop.Id; Name = crop.Name; Description = sprintf "Fresh %s" crop.Name
-                Type = ItemTypes.Crop; Stackable = true; MaxStack = 999.0; Value = crop.BaseHarvestValue }
+                Id = sprintf "crop-%s" crop.Id
+                Name = crop.Name
+                Description = sprintf "Fresh %s" crop.Name
+                Type = ItemTypes.Crop
+                Stackable = true
+                MaxStack = 999.0
+                Value = crop.BaseHarvestValue
+            }
+
         seed, produce
 
     /// CropEditor save: the definition plus its seed and crop items (created or refreshed).
     let upsertCrop (crop: CustomCropDefinition) (project: GameProject) =
         let crops = defaultArg project.CustomCrops []
+
         let project =
             match Lists.upsertBy (fun (c: CustomCropDefinition) -> c.Id) crop crops with
             | Some next -> { project with CustomCrops = Some next }
-            | None when project.CustomCrops.IsNone -> { project with CustomCrops = Some crops }
+            | None when project.CustomCrops.IsNone ->
+                { project with
+                    CustomCrops = Some crops
+                }
             | None -> project
+
         let seed, produce = cropItems crop
         project |> upsertItem seed |> upsertItem produce
 
@@ -252,10 +394,20 @@ module internal EditContent =
             | None -> project
             | Some kept ->
                 let project = { project with CustomCrops = Some kept }
+
                 if Builtin.crops () |> List.exists (fun (id, _) -> id = cropId) then
-                    let builtinItems = Builtin.items () |> List.filter (fun i -> i.Id = sprintf "seed-%s" cropId || i.Id = sprintf "crop-%s" cropId)
-                    let restore (item: Item) = builtinItems |> List.tryFind (fun builtin -> builtin.Id = item.Id) |> Option.defaultValue item
-                    { project with Items = project.Items |> List.map restore }
+                    let builtinItems =
+                        Builtin.items ()
+                        |> List.filter (fun i -> i.Id = sprintf "seed-%s" cropId || i.Id = sprintf "crop-%s" cropId)
+
+                    let restore (item: Item) =
+                        builtinItems
+                        |> List.tryFind (fun builtin -> builtin.Id = item.Id)
+                        |> Option.defaultValue item
+
+                    { project with
+                        Items = project.Items |> List.map restore
+                    }
                 else
                     project
                     |> removeItem (sprintf "seed-%s" cropId)
@@ -264,158 +416,340 @@ module internal EditContent =
 
     // ---- Quests, events, shops, recipes, nodes, machines, wildlife, actions ----
 
-    let private quests = (fun (p: GameProject) -> p.Quests), (fun (p: GameProject) l -> { p with Quests = l }), (fun (q: Quest) -> q.Id)
-    let private events = (fun (p: GameProject) -> p.Events), (fun (p: GameProject) l -> { p with Events = l }), (fun (e: GameEvent) -> e.Id)
-    let private shops = (fun (p: GameProject) -> p.Shops), (fun (p: GameProject) l -> { p with Shops = l }), (fun (s: ShopDefinition) -> s.Id)
-    let private recipes = (fun (p: GameProject) -> p.Recipes), (fun (p: GameProject) l -> { p with Recipes = l }), (fun (r: RecipeDefinition) -> r.Id)
-    let private nodeTypes = (fun (p: GameProject) -> p.NodeTypes), (fun (p: GameProject) l -> { p with NodeTypes = l }), (fun (n: NodeTypeDefinition) -> n.Id)
-    let private machineTypes = (fun (p: GameProject) -> p.MachineTypes), (fun (p: GameProject) l -> { p with MachineTypes = l }), (fun (m: MachineTypeDefinition) -> m.Id)
-    let private species = (fun (p: GameProject) -> p.AnimalSpecies), (fun (p: GameProject) l -> { p with AnimalSpecies = l }), (fun (s: AnimalSpeciesDefinition) -> s.Id)
-    let private animals = (fun (p: GameProject) -> p.Animals), (fun (p: GameProject) l -> { p with Animals = l }), (fun (a: AnimalState) -> a.Id)
-    let private fishTables = (fun (p: GameProject) -> p.FishTables), (fun (p: GameProject) l -> { p with FishTables = l }), (fun (t: FishTable) -> t.Id)
-    let private actions = (fun (p: GameProject) -> p.Actions), (fun (p: GameProject) l -> { p with Actions = l }), (fun (a: ActionDef) -> a.Id)
-    let private minigames = (fun (p: GameProject) -> p.Minigames), (fun (p: GameProject) l -> { p with Minigames = l }), (fun (m: MinigameDef) -> m.Id)
+    let private quests =
+        (fun (p: GameProject) -> p.Quests), (fun (p: GameProject) l -> { p with Quests = l }), (fun (q: Quest) -> q.Id)
+
+    let private events =
+        (fun (p: GameProject) -> p.Events), (fun (p: GameProject) l -> { p with Events = l }), (fun (e: GameEvent) -> e.Id)
+
+    let private shops =
+        (fun (p: GameProject) -> p.Shops), (fun (p: GameProject) l -> { p with Shops = l }), (fun (s: ShopDefinition) -> s.Id)
+
+    let private recipes =
+        (fun (p: GameProject) -> p.Recipes), (fun (p: GameProject) l -> { p with Recipes = l }), (fun (r: RecipeDefinition) -> r.Id)
+
+    let private nodeTypes =
+        (fun (p: GameProject) -> p.NodeTypes), (fun (p: GameProject) l -> { p with NodeTypes = l }), (fun (n: NodeTypeDefinition) -> n.Id)
+
+    let private machineTypes =
+        (fun (p: GameProject) -> p.MachineTypes), (fun (p: GameProject) l -> { p with MachineTypes = l }), (fun (m: MachineTypeDefinition) -> m.Id)
+
+    let private species =
+        (fun (p: GameProject) -> p.AnimalSpecies), (fun (p: GameProject) l -> { p with AnimalSpecies = l }), (fun (s: AnimalSpeciesDefinition) -> s.Id)
+
+    let private animals =
+        (fun (p: GameProject) -> p.Animals), (fun (p: GameProject) l -> { p with Animals = l }), (fun (a: AnimalState) -> a.Id)
+
+    let private fishTables =
+        (fun (p: GameProject) -> p.FishTables), (fun (p: GameProject) l -> { p with FishTables = l }), (fun (t: FishTable) -> t.Id)
+
+    let private actions =
+        (fun (p: GameProject) -> p.Actions), (fun (p: GameProject) l -> { p with Actions = l }), (fun (a: ActionDef) -> a.Id)
+
+    let private minigames =
+        (fun (p: GameProject) -> p.Minigames), (fun (p: GameProject) l -> { p with Minigames = l }), (fun (m: MinigameDef) -> m.Id)
 
     let private terrains =
-        (fun (p: GameProject) -> defaultArg p.Terrains []), (fun (p: GameProject) l -> { p with Terrains = (if List.isEmpty l then None else Some l) }), (fun (x: TerrainDefinition) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.Terrains []),
+        (fun (p: GameProject) l ->
+            { p with
+                Terrains = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: TerrainDefinition) -> x.Id)
+
     let private tools =
-        (fun (p: GameProject) -> defaultArg p.Tools []), (fun (p: GameProject) l -> { p with Tools = (if List.isEmpty l then None else Some l) }), (fun (x: ToolDefinition) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.Tools []),
+        (fun (p: GameProject) l ->
+            { p with
+                Tools = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: ToolDefinition) -> x.Id)
+
     let private itemCategories =
-        (fun (p: GameProject) -> defaultArg p.ItemCategories []), (fun (p: GameProject) l -> { p with ItemCategories = (if List.isEmpty l then None else Some l) }), (fun (x: ItemCategoryDefinition) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.ItemCategories []),
+        (fun (p: GameProject) l ->
+            { p with
+                ItemCategories = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: ItemCategoryDefinition) -> x.Id)
+
     let private cropQualities =
-        (fun (p: GameProject) -> defaultArg p.CropQualities []), (fun (p: GameProject) l -> { p with CropQualities = (if List.isEmpty l then None else Some l) }), (fun (x: CropQualityDefinition) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.CropQualities []),
+        (fun (p: GameProject) l ->
+            { p with
+                CropQualities = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: CropQualityDefinition) -> x.Id)
+
     let private cropMutations =
-        (fun (p: GameProject) -> defaultArg p.CropMutations []), (fun (p: GameProject) l -> { p with CropMutations = (if List.isEmpty l then None else Some l) }), (fun (x: CropMutationDefinition) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.CropMutations []),
+        (fun (p: GameProject) l ->
+            { p with
+                CropMutations = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: CropMutationDefinition) -> x.Id)
+
     let private cutscenes =
-        (fun (p: GameProject) -> defaultArg p.Cutscenes []), (fun (p: GameProject) l -> { p with Cutscenes = (if List.isEmpty l then None else Some l) }), (fun (x: Cutscene) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.Cutscenes []),
+        (fun (p: GameProject) l ->
+            { p with
+                Cutscenes = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: Cutscene) -> x.Id)
+
     let private heartEvents =
-        (fun (p: GameProject) -> defaultArg p.HeartEvents []), (fun (p: GameProject) l -> { p with HeartEvents = (if List.isEmpty l then None else Some l) }), (fun (x: HeartEvent) -> x.Id)
+        (fun (p: GameProject) -> defaultArg p.HeartEvents []),
+        (fun (p: GameProject) l ->
+            { p with
+                HeartEvents = (if List.isEmpty l then None else Some l)
+            }),
+        (fun (x: HeartEvent) -> x.Id)
+
     /// A project list kept absent while empty (M5–M7 content).
     let private optionalList (get: GameProject -> 'T list option) (set: GameProject -> 'T list option -> GameProject) (idOf: 'T -> string) =
         (fun (p: GameProject) -> defaultArg (get p) []), (fun (p: GameProject) (l: 'T list) -> set p (if List.isEmpty l then None else Some l)), idOf
-    let private buildingTypes = optionalList (fun p -> p.BuildingTypes) (fun p l -> { p with BuildingTypes = l }) (fun (x: BuildingDefinition) -> x.Id)
-    let private placedBuildings = optionalList (fun p -> p.Buildings) (fun p l -> { p with Buildings = l }) (fun (x: BuildingState) -> x.Id)
-    let private monsters = optionalList (fun p -> p.Monsters) (fun p l -> { p with Monsters = l }) (fun (x: MonsterDefinition) -> x.Id)
-    let private collections = optionalList (fun p -> p.Collections) (fun p l -> { p with Collections = l }) (fun (x: CollectionDefinition) -> x.Id)
-    let private bundles = optionalList (fun p -> p.Bundles) (fun p l -> { p with Bundles = l }) (fun (x: BundleDefinition) -> x.Id)
-    let private achievements = optionalList (fun p -> p.Achievements) (fun p l -> { p with Achievements = l }) (fun (x: AchievementDefinition) -> x.Id)
-    let private mail = optionalList (fun p -> p.Mail) (fun p l -> { p with Mail = l }) (fun (x: MailDefinition) -> x.Id)
+
+    let private buildingTypes =
+        optionalList (fun p -> p.BuildingTypes) (fun p l -> { p with BuildingTypes = l }) (fun (x: BuildingDefinition) -> x.Id)
+
+    let private placedBuildings =
+        optionalList (fun p -> p.Buildings) (fun p l -> { p with Buildings = l }) (fun (x: BuildingState) -> x.Id)
+
+    let private monsters =
+        optionalList (fun p -> p.Monsters) (fun p l -> { p with Monsters = l }) (fun (x: MonsterDefinition) -> x.Id)
+
+    let private collections =
+        optionalList (fun p -> p.Collections) (fun p l -> { p with Collections = l }) (fun (x: CollectionDefinition) -> x.Id)
+
+    let private bundles =
+        optionalList (fun p -> p.Bundles) (fun p l -> { p with Bundles = l }) (fun (x: BundleDefinition) -> x.Id)
+
+    let private achievements =
+        optionalList (fun p -> p.Achievements) (fun p l -> { p with Achievements = l }) (fun (x: AchievementDefinition) -> x.Id)
+
+    let private mail =
+        optionalList (fun p -> p.Mail) (fun p l -> { p with Mail = l }) (fun (x: MailDefinition) -> x.Id)
+
+    let private mines =
+        optionalList (fun p -> p.Mines) (fun p l -> { p with Mines = l }) (fun (x: MineDefinition) -> x.Id)
+
+    let private requestBoards =
+        optionalList (fun p -> p.RequestBoards) (fun p l -> { p with RequestBoards = l }) (fun (x: RequestBoard) -> x.Id)
+
     let private upsertIn (get, set, idOf) item project = upsert get set idOf item project
     let private removeIn (get, set, idOf) cleanup id project = remove get set idOf cleanup id project
+
+    let upsertMine (mine: MineDefinition) (project: GameProject) = upsertIn mines mine project
+    let removeMine (id: string) (project: GameProject) = removeIn mines noCleanup id project
+    let upsertRequestBoard (board: RequestBoard) (project: GameProject) = upsertIn requestBoards board project
+
+    let removeRequestBoard (id: string) (project: GameProject) =
+        removeIn requestBoards noCleanup id project
 
     // ---- The world vocabulary (M1) and cutscenes (M2) ----
 
     let upsertTerrain (terrain: TerrainDefinition) (project: GameProject) = upsertIn terrains terrain project
-    let removeTerrain (terrainId: string) (project: GameProject) = removeIn terrains noCleanup terrainId project
+
+    let removeTerrain (terrainId: string) (project: GameProject) =
+        removeIn terrains noCleanup terrainId project
 
     let upsertTool (tool: ToolDefinition) (project: GameProject) = upsertIn tools tool project
     let removeTool (toolId: string) (project: GameProject) = removeIn tools noCleanup toolId project
 
-    let upsertItemCategory (category: ItemCategoryDefinition) (project: GameProject) = upsertIn itemCategories category project
-    let removeItemCategory (categoryId: string) (project: GameProject) = removeIn itemCategories noCleanup categoryId project
+    let upsertItemCategory (category: ItemCategoryDefinition) (project: GameProject) =
+        upsertIn itemCategories category project
+
+    let removeItemCategory (categoryId: string) (project: GameProject) =
+        removeIn itemCategories noCleanup categoryId project
 
     let upsertCropQuality (quality: CropQualityDefinition) (project: GameProject) = upsertIn cropQualities quality project
-    let removeCropQuality (qualityId: string) (project: GameProject) = removeIn cropQualities noCleanup qualityId project
+
+    let removeCropQuality (qualityId: string) (project: GameProject) =
+        removeIn cropQualities noCleanup qualityId project
 
     let upsertCropMutation (mutation: CropMutationDefinition) (project: GameProject) = upsertIn cropMutations mutation project
-    let removeCropMutation (mutationId: string) (project: GameProject) = removeIn cropMutations noCleanup mutationId project
+
+    let removeCropMutation (mutationId: string) (project: GameProject) =
+        removeIn cropMutations noCleanup mutationId project
 
     let upsertCutscene (cutscene: Cutscene) (project: GameProject) = upsertIn cutscenes cutscene project
-    let removeCutscene (cutsceneId: string) (project: GameProject) = removeIn cutscenes noCleanup cutsceneId project
+
+    let removeCutscene (cutsceneId: string) (project: GameProject) =
+        removeIn cutscenes noCleanup cutsceneId project
 
     // ---- Heart events (M4) ----
 
     let upsertHeartEvent (heartEvent: HeartEvent) (project: GameProject) = upsertIn heartEvents heartEvent project
-    let removeHeartEvent (heartEventId: string) (project: GameProject) = removeIn heartEvents noCleanup heartEventId project
+
+    let removeHeartEvent (heartEventId: string) (project: GameProject) =
+        removeIn heartEvents noCleanup heartEventId project
 
     // ---- Building the farm, long-term goals and combat (M5–M7) ----
 
     let upsertBuildingType (building: BuildingDefinition) (project: GameProject) = upsertIn buildingTypes building project
-    let removeBuildingType (buildingTypeId: string) (project: GameProject) = removeIn buildingTypes Cleanup.dropBuildingType buildingTypeId project
 
-    let upsertPlacedBuilding (building: BuildingState) (project: GameProject) = upsertIn placedBuildings building project
+    let removeBuildingType (buildingTypeId: string) (project: GameProject) =
+        removeIn buildingTypes Cleanup.dropBuildingType buildingTypeId project
+
+    let upsertPlacedBuilding (building: BuildingState) (project: GameProject) =
+        upsertIn placedBuildings building project
+
     /// A building taken off the start map: animals housed in it are homeless (Problems says so).
-    let removePlacedBuilding (placedBuildingId: string) (project: GameProject) = removeIn placedBuildings Cleanup.dropPlacedBuilding placedBuildingId project
+    let removePlacedBuilding (placedBuildingId: string) (project: GameProject) =
+        removeIn placedBuildings Cleanup.dropPlacedBuilding placedBuildingId project
 
     let upsertMonster (monster: MonsterDefinition) (project: GameProject) = upsertIn monsters monster project
-    let removeMonster (monsterId: string) (project: GameProject) = removeIn monsters Cleanup.dropMonster monsterId project
+
+    let removeMonster (monsterId: string) (project: GameProject) =
+        removeIn monsters Cleanup.dropMonster monsterId project
 
     let upsertCollection (collection: CollectionDefinition) (project: GameProject) = upsertIn collections collection project
-    let removeCollection (collectionId: string) (project: GameProject) = removeIn collections noCleanup collectionId project
+
+    let removeCollection (collectionId: string) (project: GameProject) =
+        removeIn collections noCleanup collectionId project
 
     let upsertBundle (bundle: BundleDefinition) (project: GameProject) = upsertIn bundles bundle project
-    let removeBundle (bundleId: string) (project: GameProject) = removeIn bundles noCleanup bundleId project
 
-    let upsertAchievement (achievement: AchievementDefinition) (project: GameProject) = upsertIn achievements achievement project
-    let removeAchievement (achievementId: string) (project: GameProject) = removeIn achievements noCleanup achievementId project
+    let removeBundle (bundleId: string) (project: GameProject) =
+        removeIn bundles noCleanup bundleId project
+
+    let upsertAchievement (achievement: AchievementDefinition) (project: GameProject) =
+        upsertIn achievements achievement project
+
+    let removeAchievement (achievementId: string) (project: GameProject) =
+        removeIn achievements noCleanup achievementId project
 
     let upsertMail (letter: MailDefinition) (project: GameProject) = upsertIn mail letter project
-    let removeMail (mailId: string) (project: GameProject) = removeIn mail Cleanup.dropMail mailId project
+
+    let removeMail (mailId: string) (project: GameProject) =
+        removeIn mail Cleanup.dropMail mailId project
 
 
     let upsertQuest (quest: Quest) (project: GameProject) = upsertIn quests quest project
-    let removeQuest (questId: string) (project: GameProject) = removeIn quests Cleanup.dropQuest questId project
+
+    let removeQuest (questId: string) (project: GameProject) =
+        removeIn quests Cleanup.dropQuest questId project
 
     let upsertEvent (event: GameEvent) (project: GameProject) = upsertIn events event project
-    let removeEvent (eventId: string) (project: GameProject) = removeIn events Cleanup.dropEvent eventId project
+
+    let removeEvent (eventId: string) (project: GameProject) =
+        removeIn events Cleanup.dropEvent eventId project
 
     let upsertShop (shop: ShopDefinition) (project: GameProject) = upsertIn shops shop project
-    let removeShop (shopId: string) (project: GameProject) = removeIn shops Cleanup.dropShop shopId project
+
+    let removeShop (shopId: string) (project: GameProject) =
+        removeIn shops Cleanup.dropShop shopId project
 
     let upsertRecipe (recipe: RecipeDefinition) (project: GameProject) = upsertIn recipes recipe project
-    let removeRecipe (recipeId: string) (project: GameProject) = removeIn recipes Cleanup.dropRecipe recipeId project
+
+    let removeRecipe (recipeId: string) (project: GameProject) =
+        removeIn recipes Cleanup.dropRecipe recipeId project
 
     let upsertNodeType (nodeType: NodeTypeDefinition) (project: GameProject) = upsertIn nodeTypes nodeType project
+
     /// A node type that replaced a built-in one gives way to it: placed nodes and mine bands keep the id.
     let removeNodeType (nodeTypeId: string) (project: GameProject) =
-        let builtin = Builtin.nodeTypes () @ Builtin.mineNodeTypes () |> List.exists (fun n -> n.Id = nodeTypeId)
+        let builtin =
+            Builtin.nodeTypes () @ Builtin.mineNodeTypes ()
+            |> List.exists (fun n -> n.Id = nodeTypeId)
+
         removeIn nodeTypes (if builtin then noCleanup else Cleanup.dropNodeType) nodeTypeId project
 
-    let upsertMachineType (machineType: MachineTypeDefinition) (project: GameProject) = upsertIn machineTypes machineType project
-    let removeMachineType (machineTypeId: string) (project: GameProject) = removeIn machineTypes Cleanup.dropMachineType machineTypeId project
+    let upsertMachineType (machineType: MachineTypeDefinition) (project: GameProject) =
+        upsertIn machineTypes machineType project
+
+    let removeMachineType (machineTypeId: string) (project: GameProject) =
+        removeIn machineTypes Cleanup.dropMachineType machineTypeId project
 
     let upsertAnimalSpecies (definition: AnimalSpeciesDefinition) (project: GameProject) = upsertIn species definition project
-    let removeAnimalSpecies (speciesId: string) (project: GameProject) = removeIn species Cleanup.dropAnimalSpecies speciesId project
+
+    let removeAnimalSpecies (speciesId: string) (project: GameProject) =
+        removeIn species Cleanup.dropAnimalSpecies speciesId project
 
     /// App.tsx animal placement (the animal is built by `Defaults.newAnimal`); unknown species or scene → no-op.
     let upsertAnimal (animal: AnimalState) (project: GameProject) =
-        if (Proj.tryScene animal.SceneId project).IsNone || not (project.AnimalSpecies |> List.exists (fun s -> s.Id = animal.SpeciesId)) then project
-        else upsertIn animals animal project
+        if
+            (Proj.tryScene animal.SceneId project).IsNone
+            || not (project.AnimalSpecies |> List.exists (fun s -> s.Id = animal.SpeciesId))
+        then
+            project
+        else
+            upsertIn animals animal project
 
-    let removeAnimal (animalId: string) (project: GameProject) = removeIn animals noCleanup animalId project
+    let removeAnimal (animalId: string) (project: GameProject) =
+        removeIn animals noCleanup animalId project
 
     let upsertFishTable (table: FishTable) (project: GameProject) = upsertIn fishTables table project
-    let removeFishTable (tableId: string) (project: GameProject) = removeIn fishTables noCleanup tableId project
+
+    let removeFishTable (tableId: string) (project: GameProject) =
+        removeIn fishTables Cleanup.dropFishTable tableId project
 
     let upsertAction (action: ActionDef) (project: GameProject) = upsertIn actions action project
-    let removeAction (actionId: string) (project: GameProject) = removeIn actions Cleanup.dropAction actionId project
+
+    let removeAction (actionId: string) (project: GameProject) =
+        removeIn actions Cleanup.dropAction actionId project
 
     let upsertMinigame (minigame: MinigameDef) (project: GameProject) = upsertIn minigames minigame project
-    let removeMinigame (minigameId: string) (project: GameProject) = removeIn minigames Cleanup.dropMinigame minigameId project
+
+    let removeMinigame (minigameId: string) (project: GameProject) =
+        removeIn minigames Cleanup.dropMinigame minigameId project
 
     // ---- Weather, mine, interface ----
 
     let setWeather (config: WeatherConfig) (project: GameProject) =
-        if project.Weather = config then project else { project with Weather = config }
+        if project.Weather = config then
+            project
+        else
+            { project with Weather = config }
 
     /// ProjectSettingsEditor weather table: `weight > 0` sets the row entry, otherwise it is removed.
     let setWeatherWeight (seasonId: string) (weatherId: string) (weight: float) (project: GameProject) =
         let table = project.Weather.Table
-        let current = table |> List.tryFind (fun (key, _) -> key = seasonId) |> Option.map snd |> Option.defaultValue []
+
+        let current =
+            table
+            |> List.tryFind (fun (key, _) -> key = seasonId)
+            |> Option.map snd
+            |> Option.defaultValue []
+
         let kept = current |> List.filter (fun e -> e.WeatherId <> weatherId)
-        let next = if weight > 0.0 then kept @ [ { WeatherId = weatherId; Weight = weight } ] else kept
-        if next = current then project
+
+        let next =
+            if weight > 0.0 then
+                kept
+                @ [
+                    {
+                        WeatherId = weatherId
+                        Weight = weight
+                    }
+                ]
+            else
+                kept
+
+        if next = current then
+            project
         else
             let updated =
                 if table |> List.exists (fun (key, _) -> key = seasonId) then
-                    table |> List.map (fun (key, entries) -> if key = seasonId then key, next else key, entries)
+                    table
+                    |> List.map (fun (key, entries) -> if key = seasonId then key, next else key, entries)
                 else
                     table @ [ seasonId, next ]
-            { project with Weather = { project.Weather with Table = updated } }
+
+            { project with
+                Weather = { project.Weather with Table = updated }
+            }
 
     let setMine (config: MineConfig) (project: GameProject) =
-        if project.Mine = config then project else { project with Mine = config }
+        if project.Mine = config then
+            project
+        else
+            { project with Mine = config }
 
     let setGamePanels (panels: GamePanel list) (project: GameProject) =
-        if panels = defaultArg project.GamePanels [] then project
-        else { project with GamePanels = Some panels }
+        if panels = defaultArg project.GamePanels [] then
+            project
+        else
+            { project with
+                GamePanels = Some panels
+            }

@@ -26,6 +26,7 @@ type RecordJson =
         add SchemaJson.encodeArtFrame SchemaJson.decodeArtFrame
         add SchemaJson.encodeAtmosphereLook SchemaJson.decodeAtmosphereLook
         add SchemaJson.encodeAtmosphereSettings SchemaJson.decodeAtmosphereSettings
+        add SchemaJson.encodeBuffDefinition SchemaJson.decodeBuffDefinition
         add SchemaJson.encodeBuildingDefinition SchemaJson.decodeBuildingDefinition
         add SchemaJson.encodeBuildingState SchemaJson.decodeBuildingState
         add SchemaJson.encodeBundleDefinition SchemaJson.decodeBundleDefinition
@@ -33,6 +34,7 @@ type RecordJson =
         add SchemaJson.encodeCalendarConfig SchemaJson.decodeCalendarConfig
         add SchemaJson.encodeCalendarFestival SchemaJson.decodeCalendarFestival
         add SchemaJson.encodeCalendarSeason SchemaJson.decodeCalendarSeason
+        add SchemaJson.encodeCalendarWeekday SchemaJson.decodeCalendarWeekday
         add SchemaJson.encodeCollectionDefinition SchemaJson.decodeCollectionDefinition
         add SchemaJson.encodeCollectionReward SchemaJson.decodeCollectionReward
         add SchemaJson.encodeCombatSettings SchemaJson.decodeCombatSettings
@@ -55,8 +57,18 @@ type RecordJson =
         add SchemaJson.encodeExportWindow SchemaJson.decodeExportWindow
         add SchemaJson.encodeFarmLayout SchemaJson.decodeFarmLayout
         add SchemaJson.encodeFarmSettings SchemaJson.decodeFarmSettings
+        add SchemaJson.encodeFestivalActivity SchemaJson.decodeFestivalActivity
+        add SchemaJson.encodeFestivalAttendance SchemaJson.decodeFestivalAttendance
+        add SchemaJson.encodeFestivalContest SchemaJson.decodeFestivalContest
+        add SchemaJson.encodeFestivalProgram SchemaJson.decodeFestivalProgram
+        add SchemaJson.encodeFishProduction SchemaJson.decodeFishProduction
         add SchemaJson.encodeFishTable SchemaJson.decodeFishTable
         add SchemaJson.encodeFishTableEntry SchemaJson.decodeFishTableEntry
+        add SchemaJson.encodeFishingFilter SchemaJson.decodeFishingFilter
+        add SchemaJson.encodeFishingGear SchemaJson.decodeFishingGear
+        add SchemaJson.encodeFishingRules SchemaJson.decodeFishingRules
+        add SchemaJson.encodeForageRegion SchemaJson.decodeForageRegion
+        add SchemaJson.encodeForageSpawnTable SchemaJson.decodeForageSpawnTable
         add SchemaJson.encodeGameContent SchemaJson.decodeGameContent
         add SchemaJson.encodeGameEvent SchemaJson.decodeGameEvent
         add SchemaJson.encodeGamePanel SchemaJson.decodeGamePanel
@@ -77,6 +89,7 @@ type RecordJson =
         add SchemaJson.encodeMailDefinition SchemaJson.decodeMailDefinition
         add SchemaJson.encodeMineBand SchemaJson.decodeMineBand
         add SchemaJson.encodeMineConfig SchemaJson.decodeMineConfig
+        add SchemaJson.encodeMineDefinition SchemaJson.decodeMineDefinition
         add SchemaJson.encodeMineHazard SchemaJson.decodeMineHazard
         add SchemaJson.encodeMineMonsterWeight SchemaJson.decodeMineMonsterWeight
         add SchemaJson.encodeMineRockWeight SchemaJson.decodeMineRockWeight
@@ -95,6 +108,7 @@ type RecordJson =
         add SchemaJson.encodeNpcLine SchemaJson.decodeNpcLine
         add SchemaJson.encodeNpcPortrait SchemaJson.decodeNpcPortrait
         add SchemaJson.encodeNpcScheduleEntry SchemaJson.decodeNpcScheduleEntry
+        add SchemaJson.encodeNpcScheduleVariant SchemaJson.decodeNpcScheduleVariant
         add SchemaJson.encodeNpcSocialState SchemaJson.decodeNpcSocialState
         add SchemaJson.encodePackContent SchemaJson.decodePackContent
         add SchemaJson.encodePackDependency SchemaJson.decodePackDependency
@@ -106,7 +120,10 @@ type RecordJson =
         add SchemaJson.encodePackStartItem SchemaJson.decodePackStartItem
         add SchemaJson.encodePlayer SchemaJson.decodePlayer
         add SchemaJson.encodePlayerLook SchemaJson.decodePlayerLook
+        add SchemaJson.encodePlayerUpgrade SchemaJson.decodePlayerUpgrade
         add SchemaJson.encodeProductProgress SchemaJson.decodeProductProgress
+        add SchemaJson.encodeProgressionLimits SchemaJson.decodeProgressionLimits
+        add SchemaJson.encodeProgressionSettings SchemaJson.decodeProgressionSettings
         add SchemaJson.encodeProjectSettings SchemaJson.decodeProjectSettings
         add SchemaJson.encodeQuest SchemaJson.decodeQuest
         add SchemaJson.encodeQuestObjective SchemaJson.decodeQuestObjective
@@ -117,13 +134,24 @@ type RecordJson =
         add SchemaJson.encodeRecipeSkillRequirement SchemaJson.decodeRecipeSkillRequirement
         add SchemaJson.encodeRecipeUnlock SchemaJson.decodeRecipeUnlock
         add SchemaJson.encodeRelationshipSettings SchemaJson.decodeRelationshipSettings
+        add SchemaJson.encodeRequestBoard SchemaJson.decodeRequestBoard
+        add SchemaJson.encodeRequestBoardEntry SchemaJson.decodeRequestBoardEntry
         add SchemaJson.encodeRngState SchemaJson.decodeRngState
         add SchemaJson.encodeScene SchemaJson.decodeScene
         add SchemaJson.encodeSceneLayer SchemaJson.decodeSceneLayer
         add SchemaJson.encodeSceneTransition SchemaJson.decodeSceneTransition
+        add SchemaJson.encodeShopClosedOn SchemaJson.decodeShopClosedOn
         add SchemaJson.encodeShopDefinition SchemaJson.decodeShopDefinition
+        add SchemaJson.encodeShopHours SchemaJson.decodeShopHours
+        add SchemaJson.encodeShopPriceModifier SchemaJson.decodeShopPriceModifier
+        add SchemaJson.encodeShopSaturation SchemaJson.decodeShopSaturation
         add SchemaJson.encodeShopStockEntry SchemaJson.decodeShopStockEntry
+        add SchemaJson.encodeSkillDefinition SchemaJson.decodeSkillDefinition
+        add SchemaJson.encodeSkillPerk SchemaJson.decodeSkillPerk
+        add SchemaJson.encodeSkillPerkChoice SchemaJson.decodeSkillPerkChoice
+        add SchemaJson.encodeSkillReward SchemaJson.decodeSkillReward
         add SchemaJson.encodeSkillState SchemaJson.decodeSkillState
+        add SchemaJson.encodeSkillTraining SchemaJson.decodeSkillTraining
         add SchemaJson.encodeSpriteSheet SchemaJson.decodeSpriteSheet
         add SchemaJson.encodeTerrainDefinition SchemaJson.decodeTerrainDefinition
         add SchemaJson.encodeTerrainTransform SchemaJson.decodeTerrainTransform
@@ -134,6 +162,7 @@ type RecordJson =
         add SchemaJson.encodeTimeConfig SchemaJson.decodeTimeConfig
         add SchemaJson.encodeToolArea SchemaJson.decodeToolArea
         add SchemaJson.encodeToolDefinition SchemaJson.decodeToolDefinition
+        add SchemaJson.encodeToolUpgrade SchemaJson.decodeToolUpgrade
         add SchemaJson.encodeVisualRef SchemaJson.decodeVisualRef
         add SchemaJson.encodeWearDefinition SchemaJson.decodeWearDefinition
         add SchemaJson.encodeWeatherConfig SchemaJson.decodeWeatherConfig
@@ -163,6 +192,8 @@ type RecordJson =
         add SchemaJson.encodeDayOfSeasonCondition SchemaJson.decodeDayOfSeasonCondition
         add SchemaJson.encodeRelationshipCondition SchemaJson.decodeRelationshipCondition
         add SchemaJson.encodeMoneyCondition SchemaJson.decodeMoneyCondition
+        add SchemaJson.encodePerkCondition SchemaJson.decodePerkCondition
+        add SchemaJson.encodeBuffCondition SchemaJson.decodeBuffCondition
         add SchemaJson.encodeSkillLevelCondition SchemaJson.decodeSkillLevelCondition
         add SchemaJson.encodeMineFloorCondition SchemaJson.decodeMineFloorCondition
         add SchemaJson.encodeCollectionCondition SchemaJson.decodeCollectionCondition
@@ -172,6 +203,7 @@ type RecordJson =
         add SchemaJson.encodeBuildingCondition SchemaJson.decodeBuildingCondition
         add SchemaJson.encodeSlainCondition SchemaJson.decodeSlainCondition
         add SchemaJson.encodeBirthdayCondition SchemaJson.decodeBirthdayCondition
+        add SchemaJson.encodeWeekdayCondition SchemaJson.decodeWeekdayCondition
         add SchemaJson.encodeEventCondition SchemaJson.decodeEventCondition
         table
 
@@ -192,13 +224,15 @@ type RecordJson =
         add typeof<ArtFrame> [ "AssetId", "assetId"; "X", "x"; "Y", "y"; "Width", "width"; "Height", "height"; "Ticks", "ticks" ]
         add typeof<AtmosphereLook> [ "Daylight", "daylight"; "FoliageTint", "foliageTint" ]
         add typeof<AtmosphereSettings> [ "AllSeasons", "allSeasons"; "Seasons", "seasons" ]
+        add typeof<BuffDefinition> [ "Id", "id"; "Stat", "stat"; "Amount", "amount"; "DurationMinutes", "durationMinutes"; "Icon", "icon"; "PersistsAfterSleep", "persistsAfterSleep"; "Additive", "additive" ]
         add typeof<BuildingDefinition> [ "Id", "id"; "Name", "name"; "Description", "description"; "Visual", "visual"; "Color", "color"; "Width", "width"; "Height", "height"; "Door", "door"; "InteriorSceneId", "interiorSceneId"; "InteriorDoor", "interiorDoor"; "Cost", "cost"; "Materials", "materials"; "BuildDays", "buildDays"; "Scenes", "scenes"; "Capacity", "capacity"; "UpgradeOf", "upgradeOf"; "Light", "light" ]
         add typeof<BuildingState> [ "Id", "id"; "BuildingId", "buildingId"; "SceneId", "sceneId"; "X", "x"; "Y", "y"; "InteriorSceneId", "interiorSceneId"; "DaysLeft", "daysLeft"; "UpgradeTo", "upgradeTo" ]
         add typeof<BundleDefinition> [ "Id", "id"; "Name", "name"; "Description", "description"; "Group", "group"; "SceneId", "sceneId"; "Items", "items"; "Required", "required"; "Message", "message"; "Outcomes", "outcomes" ]
         add typeof<BundleItem> [ "ItemId", "itemId"; "Quantity", "quantity"; "Quality", "quality" ]
-        add typeof<CalendarConfig> [ "Seasons", "seasons"; "Festivals", "festivals" ]
-        add typeof<CalendarFestival> [ "Id", "id"; "Name", "name"; "SeasonId", "seasonId"; "Day", "day"; "Music", "music" ]
+        add typeof<CalendarConfig> [ "Seasons", "seasons"; "Festivals", "festivals"; "Weekdays", "weekdays"; "WeekdayOffset", "weekdayOffset" ]
+        add typeof<CalendarFestival> [ "Id", "id"; "Name", "name"; "SeasonId", "seasonId"; "Day", "day"; "Program", "program"; "Music", "music" ]
         add typeof<CalendarSeason> [ "Id", "id"; "Name", "name"; "Days", "days"; "Temperature", "temperature"; "Music", "music" ]
+        add typeof<CalendarWeekday> [ "Id", "id"; "Name", "name"; "Words", "words" ]
         add typeof<CollectionDefinition> [ "Id", "id"; "Name", "name"; "Description", "description"; "Items", "items"; "Kind", "kind"; "SceneId", "sceneId"; "Rewards", "rewards" ]
         add typeof<CollectionReward> [ "Count", "count"; "Message", "message"; "Outcomes", "outcomes" ]
         add typeof<CombatSettings> [ "Enabled", "enabled"; "MaxHealth", "maxHealth"; "FaintMoneyPenalty", "faintMoneyPenalty"; "FaintSceneId", "faintSceneId"; "FaintX", "faintX"; "FaintY", "faintY"; "HurtTicks", "hurtTicks" ]
@@ -216,18 +250,28 @@ type RecordJson =
         add typeof<DaylightKey> [ "Minute", "minute"; "Color", "color" ]
         add typeof<Dialogue> [ "Id", "id"; "NpcId", "npcId"; "Text", "text"; "Options", "options"; "Expression", "expression" ]
         add typeof<DialogueOption> [ "Text", "text"; "NextDialogueId", "nextDialogueId"; "GiveItem", "giveItem"; "GiveItemQuantity", "giveItemQuantity"; "TakeMoney", "takeMoney"; "GiveMoney", "giveMoney"; "EventFlag", "eventFlag"; "Once", "once"; "HiddenIfFlag", "hiddenIfFlag"; "RequiresItem", "requiresItem"; "RequiresFlag", "requiresFlag"; "OpenShopId", "openShopId"; "OfferQuestId", "offerQuestId"; "RequiresFriendship", "requiresFriendship"; "ActionId", "actionId" ]
-        add typeof<EventOutcome> [ "Type", "type"; "Message", "message"; "ItemId", "itemId"; "ItemQuantity", "itemQuantity"; "Amount", "amount"; "Radius", "radius"; "FlagName", "flagName"; "QuestId", "questId"; "NpcId", "npcId"; "DialogueId", "dialogueId"; "TileX", "tileX"; "TileY", "tileY"; "NewTileType", "newTileType"; "SceneId", "sceneId"; "X", "x"; "Y", "y"; "SoundId", "soundId"; "ActionId", "actionId"; "MinigameId", "minigameId"; "CutsceneId", "cutsceneId"; "Variable", "variable"; "Text", "text"; "WeatherId", "weatherId"; "Skill", "skill"; "ShopId", "shopId"; "NodeTypeId", "nodeTypeId"; "MachineTypeId", "machineTypeId"; "Status", "status"; "MailId", "mailId" ]
+        add typeof<EventOutcome> [ "Type", "type"; "Message", "message"; "ItemId", "itemId"; "ItemQuantity", "itemQuantity"; "Amount", "amount"; "Radius", "radius"; "FlagName", "flagName"; "QuestId", "questId"; "NpcId", "npcId"; "DialogueId", "dialogueId"; "TileX", "tileX"; "TileY", "tileY"; "NewTileType", "newTileType"; "SceneId", "sceneId"; "X", "x"; "Y", "y"; "SoundId", "soundId"; "ActionId", "actionId"; "MinigameId", "minigameId"; "CutsceneId", "cutsceneId"; "Variable", "variable"; "Text", "text"; "WeatherId", "weatherId"; "Skill", "skill"; "ShopId", "shopId"; "NodeTypeId", "nodeTypeId"; "MachineTypeId", "machineTypeId"; "Status", "status"; "MailId", "mailId"; "Buff", "buff" ]
         add typeof<ExportSettings> [ "Title", "title"; "ExecutableName", "executableName"; "Version", "version"; "GameId", "gameId"; "Author", "author"; "Company", "company"; "IconAssetId", "icon"; "Window", "window"; "PixelScale", "pixelScale"; "Credits", "credits"; "Targets", "targets" ]
         add typeof<ExportWindow> [ "Width", "width"; "Height", "height"; "Fullscreen", "fullscreen" ]
         add typeof<FarmLayout> [ "Id", "id"; "Name", "name"; "Description", "description"; "SceneId", "sceneId" ]
         add typeof<FarmSettings> [ "SceneId", "sceneId"; "Layouts", "layouts"; "PestChance", "pestChance" ]
-        add typeof<FishTable> [ "Id", "id"; "Name", "name"; "Seasons", "seasons"; "SceneIds", "sceneIds"; "Entries", "entries"; "JunkChance", "junkChance"; "JunkItemId", "junkItemId" ]
-        add typeof<FishTableEntry> [ "ItemId", "itemId"; "Weight", "weight"; "Difficulty", "difficulty" ]
-        add typeof<GameContent> [ "ContentVersion", "contentVersion"; "Crops", "crops"; "Items", "items"; "Npcs", "npcs"; "Dialogues", "dialogues"; "Quests", "quests"; "Events", "events"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "FishTables", "fishTables"; "Mine", "mine"; "Actions", "actions"; "Minigames", "minigames"; "Scenes", "scenes"; "StartSceneId", "startSceneId"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters" ]
+        add typeof<FestivalActivity> [ "X", "x"; "Y", "y"; "MinigameId", "minigameId"; "CutsceneId", "cutsceneId"; "ActionId", "actionId"; "Contest", "contest" ]
+        add typeof<FestivalAttendance> [ "NpcId", "npcId"; "X", "x"; "Y", "y"; "DialogueId", "dialogueId" ]
+        add typeof<FestivalContest> [ "ItemId", "itemId"; "MinimumQuality", "minimumQuality"; "ConsumeItem", "consumeItem"; "Rewards", "rewards" ]
+        add typeof<FestivalProgram> [ "SceneId", "sceneId"; "EntranceSceneId", "entranceSceneId"; "EntranceX", "entranceX"; "EntranceY", "entranceY"; "ArrivalX", "arrivalX"; "ArrivalY", "arrivalY"; "OpenMinute", "openMinute"; "CloseMinute", "closeMinute"; "EndDay", "endDay"; "Attendance", "attendance"; "Conditions", "conditions"; "OnMiss", "onMiss"; "ShopId", "shopId"; "ShopTile", "shopTile"; "Activity", "activity" ]
+        add typeof<FishProduction> [ "TableId", "tableId"; "SpeciesItemId", "speciesItemId"; "EveryDays", "everyDays"; "Quantity", "quantity" ]
+        add typeof<FishTable> [ "Id", "id"; "Name", "name"; "Seasons", "seasons"; "SceneIds", "sceneIds"; "Entries", "entries"; "JunkChance", "junkChance"; "JunkItemId", "junkItemId"; "Filter", "filter"; "Layered", "layered" ]
+        add typeof<FishTableEntry> [ "ItemId", "itemId"; "Weight", "weight"; "Difficulty", "difficulty"; "Rules", "rules" ]
+        add typeof<FishingFilter> [ "Seasons", "seasons"; "WeatherIds", "weatherIds"; "StartMinute", "startMinute"; "EndMinute", "endMinute"; "Condition", "condition" ]
+        add typeof<FishingGear> [ "Kind", "kind"; "FishIds", "fishIds"; "WeightBonus", "weightBonus"; "EscapeReduction", "escapeReduction"; "QualityBonus", "qualityBonus" ]
+        add typeof<FishingRules> [ "Filter", "filter"; "Xp", "xp"; "Quality", "quality"; "MinSize", "minSize"; "MaxSize", "maxSize" ]
+        add typeof<ForageRegion> [ "X", "x"; "Y", "y"; "Width", "width"; "Height", "height" ]
+        add typeof<ForageSpawnTable> [ "Id", "id"; "Entries", "entries"; "Maximum", "maximum"; "Terrains", "terrains"; "Seasons", "seasons"; "SceneTags", "sceneTags"; "Region", "region"; "LifetimeDays", "lifetimeDays" ]
+        add typeof<GameContent> [ "ContentVersion", "contentVersion"; "Crops", "crops"; "Items", "items"; "Npcs", "npcs"; "Dialogues", "dialogues"; "Quests", "quests"; "RequestBoards", "requestBoards"; "Events", "events"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "FishTables", "fishTables"; "Mine", "mine"; "Mines", "mines"; "Actions", "actions"; "Minigames", "minigames"; "Scenes", "scenes"; "StartSceneId", "startSceneId"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters" ]
         add typeof<GameEvent> [ "Id", "id"; "Name", "name"; "SceneId", "sceneId"; "Trigger", "trigger"; "Conditions", "conditions"; "Outcomes", "outcomes"; "Active", "active"; "Repeatable", "repeatable"; "Subject", "subject"; "Minute", "minute" ]
         add typeof<GamePanel> [ "Id", "id"; "Title", "title"; "VisibleFlag", "visibleFlag"; "Entries", "entries" ]
         add typeof<GamePanelEntry> [ "Label", "label"; "Kind", "kind"; "Value", "value" ]
-        add typeof<GameProject> [ "SchemaVersion", "schemaVersion"; "Id", "id"; "Name", "name"; "Version", "version"; "Scenes", "scenes"; "Npcs", "npcs"; "Items", "items"; "Events", "events"; "Dialogues", "dialogues"; "Quests", "quests"; "Player", "player"; "EventFlags", "eventFlags"; "StartSceneId", "startSceneId"; "Mode", "mode"; "SelectedTileType", "selectedTileType"; "SelectedTileVisual", "selectedTileVisual"; "SelectedNpcId", "selectedNPCId"; "SelectedItemId", "selectedItemId"; "CustomAssets", "customAssets"; "CustomCrops", "customCrops"; "PlayerVisual", "playerVisual"; "Graphics", "graphics"; "GamePanels", "gamePanels"; "CurrentSeason", "currentSeason"; "CurrentDay", "currentDay"; "CurrentDayOfSeason", "currentDayOfSeason"; "CurrentTimeMinutes", "currentTimeMinutes"; "CurrentYear", "currentYear"; "GameStartTime", "gameStartTime"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "Animals", "animals"; "FishTables", "fishTables"; "Mine", "mine"; "Actions", "actions"; "Minigames", "minigames"; "ContentPacks", "contentPacks"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Buildings", "buildings"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "Export", "export"; "RngState", "rngState"; "CurrentWeatherId", "currentWeatherId"; "SocialState", "socialState"; "MineDeepestFloor", "mineDeepestFloor"; "QuarantinedItems", "quarantinedItems"; "KeptState", "keptState" ]
+        add typeof<GameProject> [ "SchemaVersion", "schemaVersion"; "Id", "id"; "Name", "name"; "Version", "version"; "Scenes", "scenes"; "Npcs", "npcs"; "Items", "items"; "Events", "events"; "Dialogues", "dialogues"; "Quests", "quests"; "RequestBoards", "requestBoards"; "Player", "player"; "EventFlags", "eventFlags"; "StartSceneId", "startSceneId"; "Mode", "mode"; "SelectedTileType", "selectedTileType"; "SelectedTileVisual", "selectedTileVisual"; "SelectedNpcId", "selectedNPCId"; "SelectedItemId", "selectedItemId"; "CustomAssets", "customAssets"; "CustomCrops", "customCrops"; "PlayerVisual", "playerVisual"; "Graphics", "graphics"; "GamePanels", "gamePanels"; "CurrentSeason", "currentSeason"; "CurrentDay", "currentDay"; "CurrentDayOfSeason", "currentDayOfSeason"; "CurrentTimeMinutes", "currentTimeMinutes"; "CurrentYear", "currentYear"; "GameStartTime", "gameStartTime"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "Animals", "animals"; "FishTables", "fishTables"; "Mine", "mine"; "Mines", "mines"; "Actions", "actions"; "Minigames", "minigames"; "ContentPacks", "contentPacks"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Buildings", "buildings"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "Export", "export"; "RngState", "rngState"; "CurrentWeatherId", "currentWeatherId"; "SocialState", "socialState"; "MineDeepestFloor", "mineDeepestFloor"; "QuarantinedItems", "quarantinedItems"; "KeptState", "keptState" ]
         add typeof<GameWords> [ "Money", "money"; "Energy", "energy"; "Skills", "skills"; "Locales", "locales" ]
         add typeof<GiftTastes> [ "Loved", "loved"; "Liked", "liked"; "Disliked", "disliked"; "Hated", "hated" ]
         add typeof<GraphicsSettings> [ "PixelArt", "pixelArt" ]
@@ -235,14 +279,15 @@ type RecordJson =
         add typeof<GrowthRequirements> [ "Terrains", "terrains"; "Light", "light"; "MinTemperature", "minTemperature"; "MaxTemperature", "maxTemperature"; "SceneTags", "sceneTags"; "Fertilizers", "fertilizers"; "Neighbors", "neighbors" ]
         add typeof<HeartEvent> [ "Id", "id"; "Name", "name"; "NpcId", "npcId"; "Hearts", "hearts"; "CutsceneId", "cutsceneId"; "SceneId", "sceneId"; "Conditions", "conditions" ]
         add typeof<InventorySlot> [ "Item", "item"; "Quantity", "quantity"; "Quality", "quality" ]
-        add typeof<Item> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Description", "description"; "Type", "type"; "Stackable", "stackable"; "MaxStack", "maxStack"; "Value", "value"; "CropType", "cropType"; "ToolType", "toolType"; "ToolPower", "toolPower"; "ToolTier", "toolTier"; "Durability", "durability"; "MaxDurability", "maxDurability"; "UseActionId", "useActionId"; "ConsumeOnUse", "consumeOnUse"; "Energy", "energy"; "Wear", "wear"; "Health", "health" ]
+        add typeof<Item> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Description", "description"; "Type", "type"; "Stackable", "stackable"; "MaxStack", "maxStack"; "Value", "value"; "CropType", "cropType"; "ToolType", "toolType"; "ToolPower", "toolPower"; "ToolTier", "toolTier"; "Durability", "durability"; "MaxDurability", "maxDurability"; "UseActionId", "useActionId"; "ConsumeOnUse", "consumeOnUse"; "Energy", "energy"; "Buffs", "buffs"; "Wear", "wear"; "Health", "health"; "FishingGear", "fishingGear" ]
         add typeof<ItemCategoryDefinition> [ "Id", "id"; "Name", "name"; "Plantable", "plantable"; "Fertilizer", "fertilizer"; "Equippable", "equippable"; "Edible", "edible"; "Energy", "energy"; "Placeable", "placeable"; "Giftable", "giftable"; "Sellable", "sellable" ]
         add typeof<LightSource> [ "Radius", "radius"; "Color", "color"; "Brightness", "brightness" ]
         add typeof<MachineProcessing> [ "RecipeId", "recipeId"; "CompletesAtMinute", "completesAtMinute" ]
-        add typeof<MachineTypeDefinition> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Description", "description"; "Color", "color"; "ItemId", "itemId"; "BlocksMovement", "blocksMovement"; "StationCategories", "stationCategories"; "Storage", "storage"; "Shipping", "shipping"; "Gate", "gate"; "AreaEffects", "areaEffects"; "Light", "light" ]
+        add typeof<MachineTypeDefinition> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Description", "description"; "Color", "color"; "ItemId", "itemId"; "BlocksMovement", "blocksMovement"; "StationCategories", "stationCategories"; "Storage", "storage"; "Shipping", "shipping"; "Gate", "gate"; "AreaEffects", "areaEffects"; "Light", "light"; "FishProduction", "fishProduction" ]
         add typeof<MailDefinition> [ "Id", "id"; "Subject", "subject"; "From", "from"; "Text", "text"; "Attachments", "attachments"; "Money", "money"; "Outcomes", "outcomes"; "Conditions", "conditions"; "Repeat", "repeat" ]
         add typeof<MineBand> [ "FromFloor", "fromFloor"; "ToFloor", "toFloor"; "Rocks", "rocks"; "Density", "density"; "Monsters", "monsters"; "MonsterCount", "monsterCount"; "Hazards", "hazards"; "Treasure", "treasure"; "TreasureCount", "treasureCount" ]
         add typeof<MineConfig> [ "Enabled", "enabled"; "EntranceSceneId", "entranceSceneId"; "EntranceX", "entranceX"; "EntranceY", "entranceY"; "Floors", "floors"; "FloorWidth", "floorWidth"; "FloorHeight", "floorHeight"; "Bands", "bands"; "LadderChance", "ladderChance"; "ElevatorEvery", "elevatorEvery" ]
+        add typeof<MineDefinition> [ "Id", "id"; "Name", "name"; "Config", "config"; "Music", "music" ]
         add typeof<MineHazard> [ "TerrainId", "terrainId"; "Density", "density" ]
         add typeof<MineMonsterWeight> [ "MonsterId", "monsterId"; "Weight", "weight" ]
         add typeof<MineRockWeight> [ "NodeTypeId", "nodeTypeId"; "Weight", "weight" ]
@@ -254,15 +299,16 @@ type RecordJson =
         add typeof<MoodQuality> [ "MinMood", "minMood"; "Quality", "quality" ]
         add typeof<MovementConfig> [ "PlayerSpeed", "playerSpeed" ]
         add typeof<NeighborRequirement> [ "Kind", "kind"; "Id", "id"; "Radius", "radius"; "Min", "min" ]
-        add typeof<NodeDrop> [ "ItemId", "itemId"; "Min", "min"; "Max", "max"; "Weight", "weight" ]
-        add typeof<NodeTypeDefinition> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Health", "health"; "RequiredTool", "requiredTool"; "RequiredToolTier", "requiredToolTier"; "Drops", "drops"; "RespawnDays", "respawnDays"; "Color", "color"; "BlocksMovement", "blocksMovement"; "Light", "light" ]
-        add typeof<Npc> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "X", "x"; "Y", "y"; "SceneId", "sceneId"; "Dialogue", "dialogue"; "CanMove", "canMove"; "MovePattern", "movePattern"; "WanderRadius", "wanderRadius"; "PatrolPoints", "patrolPoints"; "Schedule", "schedule"; "GiftTastes", "giftTastes"; "Birthday", "birthday"; "Appearance", "appearance"; "Lines", "lines"; "Portraits", "portraits"; "Romanceable", "romanceable" ]
+        add typeof<NodeDrop> [ "ItemId", "itemId"; "Min", "min"; "Max", "max"; "Weight", "weight"; "Seasons", "seasons" ]
+        add typeof<NodeTypeDefinition> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Health", "health"; "RequiredTool", "requiredTool"; "RequiredToolTier", "requiredToolTier"; "Drops", "drops"; "RespawnDays", "respawnDays"; "Color", "color"; "BlocksMovement", "blocksMovement"; "Light", "light"; "Seasons", "seasons" ]
+        add typeof<Npc> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "X", "x"; "Y", "y"; "SceneId", "sceneId"; "Dialogue", "dialogue"; "CanMove", "canMove"; "MovePattern", "movePattern"; "WanderRadius", "wanderRadius"; "PatrolPoints", "patrolPoints"; "Schedule", "schedule"; "Schedules", "schedules"; "GiftTastes", "giftTastes"; "Birthday", "birthday"; "Appearance", "appearance"; "Lines", "lines"; "Portraits", "portraits"; "Romanceable", "romanceable" ]
         add typeof<NpcBirthday> [ "Season", "season"; "Day", "day" ]
         add typeof<NpcLine> [ "Text", "text"; "Conditions", "conditions"; "Expression", "expression"; "Weight", "weight" ]
         add typeof<NpcPortrait> [ "Expression", "expression"; "Visual", "visual" ]
         add typeof<NpcScheduleEntry> [ "Minute", "minute"; "SceneId", "sceneId"; "X", "x"; "Y", "y" ]
+        add typeof<NpcScheduleVariant> [ "Id", "id"; "Name", "name"; "Conditions", "conditions"; "Stops", "stops" ]
         add typeof<NpcSocialState> [ "Friendship", "friendship"; "GiftsToday", "giftsToday"; "LastGiftDay", "lastGiftDay"; "TalkedDay", "talkedDay"; "Status", "status"; "StatusDay", "statusDay" ]
-        add typeof<PackContent> [ "Crops", "crops"; "Items", "items"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "NodeTypes", "nodeTypes"; "AnimalSpecies", "animalSpecies"; "FishTables", "fishTables"; "WeatherTypes", "weatherTypes"; "Npcs", "npcs"; "Dialogues", "dialogues"; "Scenes", "scenes"; "Events", "events"; "Quests", "quests"; "Shops", "shops"; "Actions", "actions"; "Minigames", "minigames"; "PlayerStart", "playerStart"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "GamePanels", "gamePanels"; "Strings", "strings" ]
+        add typeof<PackContent> [ "Crops", "crops"; "Items", "items"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "NodeTypes", "nodeTypes"; "AnimalSpecies", "animalSpecies"; "FishTables", "fishTables"; "WeatherTypes", "weatherTypes"; "Npcs", "npcs"; "Dialogues", "dialogues"; "Scenes", "scenes"; "Events", "events"; "Quests", "quests"; "Shops", "shops"; "Actions", "actions"; "Minigames", "minigames"; "PlayerStart", "playerStart"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "Skills", "skills"; "GamePanels", "gamePanels"; "Strings", "strings" ]
         add typeof<PackDependency> [ "PackId", "packId"; "Version", "version" ]
         add typeof<PackInstallation> [ "Pack", "pack"; "Enabled", "enabled" ]
         add typeof<PackManifest> [ "Id", "id"; "Name", "name"; "Version", "version"; "Description", "description"; "Author", "author"; "EngineCompatibility", "engineCompatibility"; "Base", "base"; "Dependencies", "dependencies"; "Overrides", "overrides"; "Permissions", "permissions" ]
@@ -272,10 +318,13 @@ type RecordJson =
         add typeof<PackStartItem> [ "ItemId", "itemId"; "Quantity", "quantity" ]
         add typeof<Player> [ "X", "x"; "Y", "y"; "Direction", "direction"; "SceneId", "sceneId"; "Inventory", "inventory"; "MaxInventorySize", "maxInventorySize"; "Money", "money"; "Energy", "energy"; "MaxEnergy", "maxEnergy"; "Skills", "skills"; "ActiveQuests", "activeQuests"; "CompletedQuests", "completedQuests"; "EquippedTool", "equippedTool"; "Name", "name"; "FarmName", "farmName"; "Look", "look"; "Worn", "worn"; "Health", "health" ]
         add typeof<PlayerLook> [ "Skin", "skin"; "Hair", "hair"; "Shirt", "shirt"; "Pants", "pants"; "Accent", "accent" ]
+        add typeof<PlayerUpgrade> [ "Id", "id"; "Kind", "kind"; "Amount", "amount" ]
         add typeof<ProductProgress> [ "Days", "days"; "Ready", "ready" ]
-        add typeof<ProjectSettings> [ "Movement", "movement"; "EnergyEnabled", "energyEnabled"; "MaxEnergy", "maxEnergy"; "CollapseEnergyFraction", "collapseEnergyFraction"; "CollapseMoneyPenalty", "collapseMoneyPenalty"; "Time", "time"; "Calendar", "calendar"; "SkillsEnabled", "skillsEnabled"; "SkillLevelCurve", "skillLevelCurve"; "Locale", "locale"; "ShowMadeWithCredit", "showMadeWithCredit"; "Words", "words"; "Atmosphere", "atmosphere"; "Relationships", "relationships"; "CharacterCreator", "characterCreator"; "Farm", "farm"; "Combat", "combat" ]
-        add typeof<Quest> [ "Id", "id"; "Name", "name"; "Description", "description"; "Giver", "giver"; "Status", "status"; "Objectives", "objectives"; "Rewards", "rewards"; "Prerequisites", "prerequisites"; "AutoStart", "autoStart"; "Repeatable", "repeatable"; "AvailableSeasons", "availableSeasons"; "AvailableFromDay", "availableFromDay"; "AvailableToDay", "availableToDay" ]
-        add typeof<QuestObjective> [ "Id", "id"; "Type", "type"; "Description", "description"; "TargetItemId", "targetItemId"; "TargetItemQuantity", "targetItemQuantity"; "TargetCropType", "targetCropType"; "TargetCropQuantity", "targetCropQuantity"; "TargetNpcId", "targetNPCId"; "TargetSceneId", "targetSceneId"; "Completed", "completed"; "Progress", "progress" ]
+        add typeof<ProgressionLimits> [ "MaxInventorySize", "maxInventorySize"; "MaxEnergy", "maxEnergy"; "MaxHealth", "maxHealth" ]
+        add typeof<ProgressionSettings> [ "Limits", "limits"; "Skills", "skills" ]
+        add typeof<ProjectSettings> [ "Movement", "movement"; "EnergyEnabled", "energyEnabled"; "MaxEnergy", "maxEnergy"; "CollapseEnergyFraction", "collapseEnergyFraction"; "CollapseMoneyPenalty", "collapseMoneyPenalty"; "Time", "time"; "Calendar", "calendar"; "SkillsEnabled", "skillsEnabled"; "SkillLevelCurve", "skillLevelCurve"; "Locale", "locale"; "ShowMadeWithCredit", "showMadeWithCredit"; "Words", "words"; "Atmosphere", "atmosphere"; "Relationships", "relationships"; "CharacterCreator", "characterCreator"; "Farm", "farm"; "Combat", "combat"; "Progression", "progression"; "SkillDefinitions", "skillDefinitions" ]
+        add typeof<Quest> [ "Id", "id"; "Name", "name"; "Description", "description"; "Giver", "giver"; "Status", "status"; "Objectives", "objectives"; "Rewards", "rewards"; "Prerequisites", "prerequisites"; "AutoStart", "autoStart"; "Repeatable", "repeatable"; "AvailableSeasons", "availableSeasons"; "AvailableFromDay", "availableFromDay"; "AvailableToDay", "availableToDay"; "DeadlineDays", "deadlineDays"; "DeadlineDay", "deadlineDay"; "OnFail", "onFail" ]
+        add typeof<QuestObjective> [ "Id", "id"; "Type", "type"; "Description", "description"; "TargetItemId", "targetItemId"; "TargetItemQuantity", "targetItemQuantity"; "TargetCropType", "targetCropType"; "TargetCropQuantity", "targetCropQuantity"; "TargetNpcId", "targetNPCId"; "TargetSceneId", "targetSceneId"; "TargetMonsterId", "targetMonsterId"; "TargetBundleId", "targetBundleId"; "TargetMineId", "targetMineId"; "Completed", "completed"; "Progress", "progress" ]
         add typeof<QuestRewardItem> [ "ItemId", "itemId"; "Quantity", "quantity" ]
         add typeof<QuestRewards> [ "Money", "money"; "Items", "items"; "Experience", "experience"; "Skill", "skill"; "MailId", "mailId" ]
         add typeof<RecipeDefinition> [ "Id", "id"; "Name", "name"; "Inputs", "inputs"; "Outputs", "outputs"; "ProcessingMinutes", "processingMinutes"; "MachineTypeId", "machineTypeId"; "Category", "category"; "RequiresStationCategory", "requiresStationCategory"; "Unlock", "unlock" ]
@@ -283,23 +332,35 @@ type RecordJson =
         add typeof<RecipeSkillRequirement> [ "Skill", "skill"; "Level", "level" ]
         add typeof<RecipeUnlock> [ "Skill", "skill"; "QuestId", "questId"; "Seasons", "seasons" ]
         add typeof<RelationshipSettings> [ "DecayPerDay", "decayPerDay"; "Dating", "dating"; "DatingHearts", "datingHearts"; "DatingItemId", "datingItemId"; "Marriage", "marriage"; "ProposalHearts", "proposalHearts"; "ProposalItemId", "proposalItemId"; "WeddingDays", "weddingDays"; "WeddingCutsceneId", "weddingCutsceneId"; "HomeSceneId", "homeSceneId"; "HomeX", "homeX"; "HomeY", "homeY"; "SpouseHelps", "spouseHelps"; "SpouseGiftItemIds", "spouseGiftItemIds"; "Children", "children"; "ChildDays", "childDays"; "MaxChildren", "maxChildren"; "ChildNames", "childNames" ]
+        add typeof<RequestBoard> [ "Id", "id"; "Name", "name"; "SceneId", "sceneId"; "X", "x"; "Y", "y"; "IntervalDays", "intervalDays"; "Entries", "entries" ]
+        add typeof<RequestBoardEntry> [ "QuestId", "questId"; "Weight", "weight"; "ItemIds", "itemIds"; "MinQuantity", "minQuantity"; "MaxQuantity", "maxQuantity"; "MinReward", "minReward"; "MaxReward", "maxReward" ]
         add typeof<RngState> [ "Algorithm", "algorithm"; "S", "s" ]
-        add typeof<Scene> [ "Id", "id"; "Name", "name"; "Width", "width"; "Height", "height"; "Tiles", "tiles"; "Transitions", "transitions"; "Npcs", "npcs"; "Events", "events"; "Indoor", "indoor"; "Dark", "dark"; "Temperature", "temperature"; "Tags", "tags"; "Atmosphere", "atmosphere"; "Music", "music"; "AllSeasons", "allSeasons"; "Building", "building"; "Monsters", "monsters"; "Layers", "layers" ]
+        add typeof<Scene> [ "Id", "id"; "Name", "name"; "Width", "width"; "Height", "height"; "Tiles", "tiles"; "Transitions", "transitions"; "Npcs", "npcs"; "Events", "events"; "Indoor", "indoor"; "Dark", "dark"; "Temperature", "temperature"; "Tags", "tags"; "Atmosphere", "atmosphere"; "Music", "music"; "AllSeasons", "allSeasons"; "Building", "building"; "Monsters", "monsters"; "Layers", "layers"; "ForageSpawns", "forageSpawns" ]
         add typeof<SceneLayer> [ "Id", "id"; "Name", "name"; "Above", "above" ]
         add typeof<SceneTransition> [ "FromX", "fromX"; "FromY", "fromY"; "ToSceneId", "toSceneId"; "ToX", "toX"; "ToY", "toY"; "Locked", "locked" ]
-        add typeof<ShopDefinition> [ "Id", "id"; "Name", "name"; "Stock", "stock"; "SellPriceMultiplier", "sellPriceMultiplier"; "BuysItems", "buysItems"; "RepairsTools", "repairsTools"; "RepairCostPerPoint", "repairCostPerPoint"; "Buildings", "buildings"; "Animals", "animals" ]
-        add typeof<ShopStockEntry> [ "ItemId", "itemId"; "Price", "price"; "Seasons", "seasons"; "DailyLimit", "dailyLimit" ]
+        add typeof<ShopClosedOn> [ "Weekdays", "weekdays"; "Seasons", "seasons"; "Festivals", "festivals" ]
+        add typeof<ShopDefinition> [ "Id", "id"; "Name", "name"; "Stock", "stock"; "SellPriceMultiplier", "sellPriceMultiplier"; "BuysItems", "buysItems"; "RepairsTools", "repairsTools"; "RepairCostPerPoint", "repairCostPerPoint"; "Buildings", "buildings"; "Animals", "animals"; "ToolUpgrades", "toolUpgrades"; "Hours", "hours"; "ClosedOn", "closedOn"; "KeeperNpcId", "keeperNpcId"; "PriceModifiers", "priceModifiers"; "Saturation", "saturation" ]
+        add typeof<ShopHours> [ "Open", "open"; "Close", "close" ]
+        add typeof<ShopPriceModifier> [ "Seasons", "seasons"; "Weekdays", "weekdays"; "Conditions", "conditions"; "ItemId", "itemId"; "BuyMultiplier", "buyMultiplier"; "SellMultiplier", "sellMultiplier" ]
+        add typeof<ShopSaturation> [ "QuantityPerStep", "quantityPerStep"; "ReductionPerStep", "reductionPerStep"; "MinimumMultiplier", "minimumMultiplier"; "RecoveryDays", "recoveryDays" ]
+        add typeof<ShopStockEntry> [ "ItemId", "itemId"; "Price", "price"; "Seasons", "seasons"; "DailyLimit", "dailyLimit"; "Upgrade", "upgrade" ]
+        add typeof<SkillDefinition> [ "Id", "id"; "Name", "name"; "Icon", "icon"; "Training", "training"; "Rewards", "rewards"; "Perks", "perks" ]
+        add typeof<SkillPerk> [ "Id", "id"; "Level", "level"; "Choices", "choices" ]
+        add typeof<SkillPerkChoice> [ "Id", "id"; "Name", "name"; "Stat", "stat"; "Amount", "amount"; "Outcomes", "outcomes" ]
+        add typeof<SkillReward> [ "Level", "level"; "Stat", "stat"; "Amount", "amount"; "Outcomes", "outcomes" ]
         add typeof<SkillState> [ "Xp", "xp"; "Level", "level" ]
+        add typeof<SkillTraining> [ "Action", "action"; "Subject", "subject"; "Experience", "experience" ]
         add typeof<SpriteSheet> [ "FrameWidth", "frameWidth"; "FrameHeight", "frameHeight"; "Frames", "frames"; "TicksPerFrame", "ticksPerFrame"; "Directional", "directional" ]
         add typeof<TerrainDefinition> [ "Id", "id"; "Name", "name"; "Layer", "layer"; "Color", "color"; "Visual", "visual"; "Walkable", "walkable"; "Plantable", "plantable"; "WaterSource", "waterSource"; "Fishable", "fishable"; "BlocksLight", "blocksLight"; "HazardEnergy", "hazardEnergy"; "Indoor", "indoor"; "Damage", "damage"; "Transforms", "transforms"; "Autotile", "autotile"; "Tall", "tall"; "Light", "light" ]
         add typeof<TerrainTransform> [ "Action", "action"; "Tool", "tool"; "Into", "into" ]
         add typeof<Tile> [ "X", "x"; "Y", "y"; "Type", "type"; "Background", "background"; "Overlay", "overlay"; "Object", "object"; "Crop", "crop"; "Item", "item"; "Node", "node"; "Machine", "machine"; "LadderDown", "ladderDown"; "Collision", "collision"; "Visuals", "visuals"; "SoilState", "soilState"; "SoilMoisture", "soilMoisture"; "SoilFertility", "soilFertility"; "Decor", "decor" ]
         add typeof<TileMachine> [ "TypeId", "typeId"; "Processing", "processing"; "Output", "output"; "Contents", "contents"; "Open", "open" ]
-        add typeof<TileNode> [ "TypeId", "typeId"; "RemainingHealth", "remainingHealth"; "DepletedOnDay", "depletedOnDay" ]
+        add typeof<TileNode> [ "TypeId", "typeId"; "RemainingHealth", "remainingHealth"; "DepletedOnDay", "depletedOnDay"; "DormantHealth", "dormantHealth"; "SpawnedOnDay", "spawnedOnDay"; "SpawnedSeason", "spawnedSeason"; "ExpiresOnDay", "expiresOnDay" ]
         add typeof<TileVisuals> [ "Background", "background"; "Overlay", "overlay"; "Object", "object" ]
         add typeof<TimeConfig> [ "DayStartMinute", "dayStartMinute"; "DayEndMinute", "dayEndMinute"; "MinutesPerRealSecond", "minutesPerRealSecond"; "PauseInModals", "pauseInModals"; "DayMinutes", "dayMinutes" ]
         add typeof<ToolArea> [ "Width", "width"; "Length", "length" ]
         add typeof<ToolDefinition> [ "Id", "id"; "Name", "name"; "Description", "description"; "Action", "action"; "Key", "key"; "EnergyCost", "energyCost"; "Area", "area"; "Skill", "skill"; "PlaceTerrain", "placeTerrain" ]
+        add typeof<ToolUpgrade> [ "FromItemId", "fromItemId"; "ToItemId", "toItemId"; "Cost", "cost"; "Materials", "materials"; "Nights", "nights" ]
         add typeof<VisualRef> [ "AssetId", "assetId"; "Animation", "animation"; "Frame", "frame" ]
         add typeof<WearDefinition> [ "Slot", "slot"; "Color", "color"; "Visual", "visual" ]
         add typeof<WeatherConfig> [ "Types", "types"; "Table", "table"; "Overlays", "overlays" ]
@@ -329,8 +390,10 @@ type RecordJson =
         add typeof<DayOfSeasonCondition> [ "MinDay", "minDay"; "MaxDay", "maxDay" ]
         add typeof<RelationshipCondition> [ "NpcId", "npcId"; "Status", "status" ]
         add typeof<MoneyCondition> [ "Min", "min" ]
+        add typeof<PerkCondition> [ "Skill", "skill"; "PerkId", "perkId"; "ChoiceId", "choiceId" ]
+        add typeof<BuffCondition> [ "Id", "id" ]
         add typeof<SkillLevelCondition> [ "Skill", "skill"; "Min", "min" ]
-        add typeof<MineFloorCondition> [ "Min", "min" ]
+        add typeof<MineFloorCondition> [ "Min", "min"; "MineId", "mineId" ]
         add typeof<CollectionCondition> [ "CollectionId", "collectionId"; "Min", "min" ]
         add typeof<BundleCondition> [ "BundleId", "bundleId" ]
         add typeof<AchievementCondition> [ "AchievementId", "achievementId" ]
@@ -338,6 +401,7 @@ type RecordJson =
         add typeof<BuildingCondition> [ "BuildingId", "buildingId"; "Min", "min" ]
         add typeof<SlainCondition> [ "MonsterId", "monsterId"; "Min", "min" ]
         add typeof<BirthdayCondition> [ "NpcId", "npcId" ]
+        add typeof<WeekdayCondition> [ "WeekdayIds", "weekdayIds" ]
         table
     // </generated>
 

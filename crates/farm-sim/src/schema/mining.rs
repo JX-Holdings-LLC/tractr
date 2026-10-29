@@ -113,3 +113,14 @@ impl Default for MineConfig {
         }
     }
 }
+
+/// An additional independently progressing mine. The legacy `mine` is the implicit first mine.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct MineDefinition {
+    pub id: String,
+    pub name: String,
+    pub config: MineConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub music: Option<String>,
+}

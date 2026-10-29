@@ -65,6 +65,9 @@ fn value(content: &GameContent, state: &GameState, name: &str) -> Option<String>
         "spouse" => Some(relationships::spouse(state).map(|id| npc_name(content, id)).unwrap_or_default()),
         "season" => Some(season_name()),
         "day" => Some(day_of_season().to_string()),
+        "weekday" => {
+            Some(game_time::weekday_name(calendar, state.clock.day, &content.settings.locale).unwrap_or_default())
+        }
         "year" => Some(state.clock.year.to_string()),
         "date" => Some(format!("{} {}", season_name(), day_of_season())),
         "time" => {

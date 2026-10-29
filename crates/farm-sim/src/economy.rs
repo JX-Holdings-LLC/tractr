@@ -35,6 +35,9 @@ pub fn handle_open_shop(ctx: &EngineContext, state: &mut GameState, shop_id: &st
     if shop.is_none() {
         return vec![Effect::say(message_levels::ERROR, &messages::SHOP_MISSING)];
     }
+    if !crate::commerce::shop_is_open(ctx, state, shop.as_ref().expect("checked shop")) {
+        return vec![Effect::say(message_levels::INFO, &messages::SHOP_CLOSED)];
+    }
     state.shop = Some(ShopSession { shop_id: shop_id.to_owned() });
     state.dialogue = None;
     Vec::new()
@@ -144,6 +147,9 @@ pub fn handle_buy_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
     let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
+    if !crate::commerce::shop_is_open(ctx, state, &shop) {
+        return vec![Effect::say(message_levels::INFO, &messages::SHOP_CLOSED)];
+    }
 
     let Some(entry) = shop.stock.iter().find(|stock_entry| stock_entry.item_id == item_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NOT_SOLD_HERE)];
@@ -170,12 +176,29 @@ pub fn handle_buy_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
         return vec![Effect::say(message_levels::ERROR, &messages::UNKNOWN_ITEM)];
     };
 
-    let price = entry.price.unwrap_or(item.value);
+    let price = crate::commerce::price(ctx, state, &shop, item_id, entry.price.unwrap_or(item.value), false);
     let total = price.saturating_mul(i64::from(quantity));
     if state.player.money < total {
         return vec![Effect::say(message_levels::ERROR, &messages::NOT_ENOUGH_MONEY)];
     }
 
+    if let Some(upgrade) = &entry.upgrade {
+        if quantity != 1 {
+            return Vec::new();
+        }
+        let key = crate::progression::purchase_key(&shop.id, &upgrade.id);
+        if upgrade.id.is_empty()
+            || state.player.purchased_upgrades.contains(&key)
+            || !crate::progression::UPGRADES.contains(&upgrade.kind.as_str())
+        {
+            return Vec::new();
+        }
+        let upgrade = upgrade.clone();
+        state.player.money = state.player.money.saturating_sub(total.max(0));
+        crate::progression::apply(ctx, state, &upgrade.kind, i64::from(upgrade.amount));
+        state.player.purchased_upgrades.push(key);
+        return vec![Effect::say(message_levels::SUCCESS, messages::BOUGHT.with(&[&quantity, &item.name, &total]))];
+    }
     let result = inventory::add_item(&state.player.inventory, item, quantity, state.player.max_inventory_size, None);
     if !result.added {
         return vec![Effect::say(message_levels::ERROR, &messages::INVENTORY_FULL)];
@@ -222,6 +245,9 @@ pub fn handle_sell_item(
     let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
+    if !crate::commerce::shop_is_open(ctx, state, &shop) {
+        return vec![Effect::say(message_levels::INFO, &messages::SHOP_CLOSED)];
+    }
     if !shop.buys_items {
         return vec![Effect::say(message_levels::ERROR, messages::SHOP_DOESNT_BUY.with(&[&shop.name]))];
     }
@@ -267,12 +293,24 @@ pub fn handle_sell_item(
         else {
             continue;
         };
-        let unit_price = sell_unit_price_with_quality(&ctx.content, &slot.item, tier.as_deref(), &shop);
+        let unit_price = crate::commerce::price(
+            ctx,
+            state,
+            &shop,
+            item_id,
+            sell_unit_price_with_quality(&ctx.content, &slot.item, tier.as_deref(), &shop),
+            true,
+        );
+        let bonus = crate::skills::stat_bonus(ctx, state, "sellPrice")
+            .saturating_add(crate::skills::stat_bonus(ctx, state, &format!("sellPrice:{}", slot.item.r#type)))
+            .clamp(-100, 1000);
+        let unit_price = unit_price.saturating_mul(i64::from(100 + bonus)) / 100;
         total = total.saturating_add(unit_price.saturating_mul(i64::from(take)));
         inventory = inventory::remove_item_with_quality(&inventory, item_id, tier.as_deref(), take);
         remaining -= take;
     }
 
+    crate::commerce::record_sale(state, &shop, item_id, quantity - remaining);
     state.player.inventory = inventory;
     state.player.money = state.player.money.saturating_add(total);
     ctx.emit(HookEvent::ItemSell(ItemSellHookPayload {
@@ -295,6 +333,9 @@ pub fn handle_repair_tool(ctx: &EngineContext, state: &mut GameState, item_id: &
     let Some(shop) = find_shop(ctx, state, &session.shop_id) else {
         return vec![Effect::say(message_levels::ERROR, &messages::NO_SHOP_OPEN)];
     };
+    if !crate::commerce::shop_is_open(ctx, state, &shop) {
+        return vec![Effect::say(message_levels::INFO, &messages::SHOP_CLOSED)];
+    }
     if !shop.repairs_tools {
         return vec![Effect::say(message_levels::ERROR, messages::SHOP_DOESNT_REPAIR.with(&[&shop.name]))];
     }

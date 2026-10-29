@@ -182,6 +182,69 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
             }
         }
     }
+    for definition in view.content.settings.skill_definitions() {
+        let learned = player.skills.get(&definition.id);
+        let level = learned.map_or(0, |skill| skill.level);
+        let xp = learned.map_or(0, |skill| skill.xp);
+        let next = view.content.settings.skill_level_curve.get(level as usize + 1).copied();
+        let progress = next.map_or_else(|| xp.to_string(), |next| format!("{xp}/{next}"));
+        let label = lang.format("skills.progress", &[&definition.name, &level, &progress]);
+        ui.label(Rect::new(area.x, y, area.width, 24.0), &label, 14.0, FontId::Bold, colors.text, Align::Start);
+        y += 28.0;
+        if let Some(reward) =
+            definition.rewards.iter().filter(|reward| reward.level > level).min_by_key(|reward| reward.level)
+        {
+            let (stat, category) = reward
+                .stat
+                .split_once(':')
+                .map_or((reward.stat.as_str(), None), |(stat, category)| (stat, Some(category)));
+            let stat_key = format!("stats.{stat}");
+            let stat = lang.get(&stat_key).unwrap_or(stat);
+            let stat = category.map_or_else(
+                || stat.to_owned(),
+                |id| {
+                    let name = view
+                        .content
+                        .item_categories
+                        .iter()
+                        .find(|category| category.id == id)
+                        .map_or(id, |category| category.name.as_str());
+                    lang.format("skills.categoryStat", &[&stat, &name])
+                },
+            );
+            let label = lang.format("skills.nextReward", &[&reward.level, &stat, &reward.amount]);
+            ui.label(Rect::new(area.x, y, area.width, 22.0), &label, 12.5, FontId::Regular, colors.muted, Align::Start);
+            y += 26.0;
+        }
+        for perk in definition.perks.iter().flatten().filter(|perk| perk.level <= level) {
+            let key = farm_sim::skills::perk_key(&definition.id, &perk.id);
+            for choice in &perk.choices {
+                let selected = player.perks.get(&key);
+                if selected.is_some_and(|id| id != &choice.id) {
+                    continue;
+                }
+                let label = if selected.is_some() {
+                    lang.format("skills.chosen", &[&choice.name])
+                } else {
+                    choice.name.clone()
+                };
+                let button = Button::new(&label).size(12.5).enabled(selected.is_none());
+                let height = ui.button_height(12.5);
+                if ui.button(
+                    WidgetId::new("perk").with(&key).with(&choice.id),
+                    Rect::new(area.x, y, area.width, height),
+                    button,
+                ) {
+                    actions.push(GameAction::Command(Command::ChoosePerk {
+                        skill: definition.id.clone(),
+                        perk_id: perk.id.clone(),
+                        choice_id: choice.id.clone(),
+                    }));
+                }
+                y += height + 6.0;
+            }
+        }
+    }
     ui.end_modal_body(y);
     if let Some(footer) = modal.footer {
         let total: i64 = player

@@ -9,18 +9,11 @@ using Tractr.App.Services;
 using Tractr.App.ViewModels;
 using Tractr.App.Views;
 using Tractr.Updates;
-using Tractr.Updates.Testing;
 
 namespace Tractr.App;
 
 public sealed class App : Application
 {
-    /// <summary>
-    /// Set to <c>available</c>, <c>uptodate</c>, <c>error</c> or <c>notinstalled</c> to run the
-    /// Update Center against <see cref="FakeUpdateService"/> (UI demos, screenshots).
-    /// </summary>
-    public const string FakeUpdatesVariable = "TRACTR_FAKE_UPDATES";
-
     /// <summary>Delay before the background startup check, so it never competes with first paint.</summary>
     public static readonly TimeSpan StartupCheckDelay = TimeSpan.FromSeconds(2);
 
@@ -112,25 +105,5 @@ public sealed class App : Application
         }
     }
 
-    private static IUpdateService CreateUpdateService(UpdateChannel channel)
-    {
-        var fake = Environment.GetEnvironmentVariable(FakeUpdatesVariable);
-        if (string.IsNullOrWhiteSpace(fake))
-        {
-            return new VelopackUpdateService(channel);
-        }
-
-        return new FakeUpdateService
-        {
-            Channel = channel,
-            IsInstalled = !fake.Equals("notinstalled", StringComparison.OrdinalIgnoreCase),
-            CheckDelay = TimeSpan.FromMilliseconds(600),
-            NextResult = fake.ToLowerInvariant() switch
-            {
-                "uptodate" => new UpdateCheckResult.UpToDate(),
-                "error" => new UpdateCheckResult.Error("Couldn't reach GitHub. Check your internet connection and try again."),
-                _ => FakeUpdateService.SampleUpdate(),
-            },
-        };
-    }
+    private static IUpdateService CreateUpdateService(UpdateChannel channel) => new VelopackUpdateService(channel);
 }

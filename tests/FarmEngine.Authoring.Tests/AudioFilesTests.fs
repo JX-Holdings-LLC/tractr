@@ -10,11 +10,17 @@ open FarmEngine.Schemas
 
 /// A quarter second of a 440 Hz tone, stereo at 22050 Hz (`fixtures/audio/tone.ogg`, the
 /// player's own decoder test file).
-let private tone () = IO.File.ReadAllBytes(testFile [ "Fixtures"; "audio"; "tone.ogg" ])
+let private tone () =
+    IO.File.ReadAllBytes(testFile [ "Fixtures"; "audio"; "tone.ogg" ])
 
 let private le16 (value: int) = [| byte value; byte (value >>> 8) |]
-let private le32 (value: int64) = [| byte value; byte (value >>> 8); byte (value >>> 16); byte (value >>> 24) |]
-let private chunk (tag: string) (body: byte[]) = Array.concat [ Text.Encoding.ASCII.GetBytes tag; le32 (int64 body.Length); body ]
+
+let private le32 (value: int64) =
+    [| byte value; byte (value >>> 8); byte (value >>> 16); byte (value >>> 24) |]
+
+let private chunk (tag: string) (body: byte[]) =
+    Array.concat [ Text.Encoding.ASCII.GetBytes tag; le32 (int64 body.Length); body ]
+
 let private riff (chunks: byte[] list) =
     let body = Array.concat (Text.Encoding.ASCII.GetBytes "WAVE" :: chunks)
     Array.concat [ Text.Encoding.ASCII.GetBytes "RIFF"; le32 (int64 body.Length); body ]
@@ -22,11 +28,23 @@ let private riff (chunks: byte[] list) =
 /// A `fmt ` chunk body: format tag, channels, rate, bytes per sample and bits (WAVEFORMAT plus
 /// the bits field, 16 bytes).
 let private fmt (tag: int) (channels: int) (rate: int) (bytes: int) (bits: int) =
-    Array.concat [ le16 tag; le16 channels; le32 (int64 rate); le32 (int64 (rate * channels * bytes)); le16 (channels * bytes); le16 bits ]
+    Array.concat
+        [
+            le16 tag
+            le16 channels
+            le32 (int64 rate)
+            le32 (int64 (rate * channels * bytes))
+            le16 (channels * bytes)
+            le16 bits
+        ]
 
 /// A PCM WAV file of `frames` silent frames.
 let private wav (channels: int) (rate: int) (bytes: int) (frames: int) =
-    riff [ chunk "fmt " (fmt 1 channels rate bytes (bytes * 8)); chunk "data" (Array.zeroCreate (frames * channels * bytes)) ]
+    riff
+        [
+            chunk "fmt " (fmt 1 channels rate bytes (bytes * 8))
+            chunk "data" (Array.zeroCreate (frames * channels * bytes))
+        ]
 
 let private ok (bytes: byte[]) =
     match AudioFiles.check bytes with
@@ -41,26 +59,46 @@ let private refused (expected: string) (bytes: byte[]) =
 /// The Ogg CRC-32 of a page (checksum field zeroed), to edit a page and keep it valid.
 let private oggCrc (page: byte[]) =
     let mutable crc = 0u
+
     for i in 0 .. page.Length - 1 do
         let value = if i >= 22 && i < 26 then 0uy else page.[i]
         crc <- crc ^^^ (uint32 value <<< 24)
+
         for _ in 0..7 do
-            crc <- if crc &&& 0x80000000u <> 0u then (crc <<< 1) ^^^ 0x04c11db7u else crc <<< 1
+            crc <-
+                if crc &&& 0x80000000u <> 0u then
+                    (crc <<< 1) ^^^ 0x04c11db7u
+                else
+                    crc <<< 1
+
     crc
 
 /// Where each page of an Ogg file starts.
 let private pageStarts (bytes: byte[]) =
     let mutable at = 0
-    [ while at < bytes.Length do
-          yield at
-          let segments = int bytes.[at + 26]
-          at <- at + 27 + segments + Seq.sum (seq { for k in 0 .. segments - 1 -> int bytes.[at + 27 + k] }) ]
+
+    [
+        while at < bytes.Length do
+            yield at
+            let segments = int bytes.[at + 26]
+
+            at <-
+                at
+                + 27
+                + segments
+                + Seq.sum (seq { for k in 0 .. segments - 1 -> int bytes.[at + 27 + k] })
+    ]
 
 /// `bytes` with the page at `start` changed by `edit` and its checksum made right again.
 let private rewritePage (bytes: byte[]) (start: int) (edit: byte[] -> unit) =
     let copy = Array.copy bytes
     let segments = int copy.[start + 26]
-    let length = 27 + segments + Seq.sum (seq { for k in 0 .. segments - 1 -> int copy.[start + 27 + k] })
+
+    let length =
+        27
+        + segments
+        + Seq.sum (seq { for k in 0 .. segments - 1 -> int copy.[start + 27 + k] })
+
     let page = Array.sub copy start length
     edit page
     let crc = oggCrc page
@@ -81,13 +119,50 @@ let ``the player's tone and plain WAV files pass`` () =
     // 8-, 24- and 32-bit PCM, 24 bits in 4 bytes, and 32-bit float.
     for bytes in [ 1; 3; 4 ] do
         ok (wav 2 44100 bytes 10) |> ignore
-    ok (riff [ chunk "fmt " (fmt 1 1 8000 4 24); chunk "data" (Array.zeroCreate 8) ]) |> ignore
-    ok (riff [ chunk "fmt " (fmt 3 2 48000 4 32); chunk "data" (Array.zeroCreate 16) ]) |> ignore
+
+    ok (riff [ chunk "fmt " (fmt 1 1 8000 4 24); chunk "data" (Array.zeroCreate 8) ])
+    |> ignore
+
+    ok (riff [ chunk "fmt " (fmt 3 2 48000 4 32); chunk "data" (Array.zeroCreate 16) ])
+    |> ignore
     // Chunks hound skips before the data, and WAVE_FORMAT_EXTENSIBLE with the PCM subformat.
     let extensible =
-        Array.concat [ fmt 0xFFFE 2 22050 2 16; le16 22; le16 16; le32 3L
-                       [| 0x01uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x10uy; 0x00uy; 0x80uy; 0x00uy; 0x00uy; 0xAAuy; 0x00uy; 0x38uy; 0x9Buy; 0x71uy |] ]
-    ok (riff [ chunk "LIST" (Array.zeroCreate 10); chunk "fmt " extensible; chunk "fact" (le32 4L); chunk "data" (Array.zeroCreate 16) ]) |> ignore
+        Array.concat
+            [
+                fmt 0xFFFE 2 22050 2 16
+                le16 22
+                le16 16
+                le32 3L
+                [|
+                    0x01uy
+                    0x00uy
+                    0x00uy
+                    0x00uy
+                    0x00uy
+                    0x00uy
+                    0x10uy
+                    0x00uy
+                    0x80uy
+                    0x00uy
+                    0x00uy
+                    0xAAuy
+                    0x00uy
+                    0x38uy
+                    0x9Buy
+                    0x71uy
+                |]
+            ]
+
+    ok (
+        riff
+            [
+                chunk "LIST" (Array.zeroCreate 10)
+                chunk "fmt " extensible
+                chunk "fact" (le32 4L)
+                chunk "data" (Array.zeroCreate 16)
+            ]
+    )
+    |> ignore
 
 [<Fact>]
 let ``files that are not Ogg Vorbis or WAV are refused`` () =
@@ -140,22 +215,45 @@ let ``damaged WAV files are refused`` () =
     Assert.True(Result.isOk (AudioFiles.check (wav 1 1000 1 (600 * 1000))))
 
 let private audioAsset (id: string) (kind: string) (url: string) =
-    { CustomAsset.Default with Id = id; Name = id + ".ogg"; Type = kind; DataUrl = url }
+    { CustomAsset.Default with
+        Id = id
+        Name = id + ".ogg"
+        Type = kind
+        DataUrl = url
+    }
 
-let private dataUrl (mime: string) (bytes: byte[]) = sprintf "data:%s;base64,%s" mime (Convert.ToBase64String bytes)
+let private dataUrl (mime: string) (bytes: byte[]) =
+    sprintf "data:%s;base64,%s" mime (Convert.ToBase64String bytes)
 
 [<Fact>]
 let ``Problems name sound and music files the game would skip`` () =
-    let good = audioAsset "sound-1" CustomAssetTypes.Sound (dataUrl "audio/ogg" (tone ()))
-    let wavMusic = audioAsset "music-1" CustomAssetTypes.Music (dataUrl "audio/wav" (wav 2 22050 2 100))
-    let project = starter () |> apply (Batch("audio", [ UpsertAsset good; UpsertAsset wavMusic ]))
-    let unreadable (project: GameProject) = Problems.collect project |> List.filter (fun p -> p.Code = "asset.audioUnreadable")
+    let good =
+        audioAsset "sound-1" CustomAssetTypes.Sound (dataUrl "audio/ogg" (tone ()))
+
+    let wavMusic =
+        audioAsset "music-1" CustomAssetTypes.Music (dataUrl "audio/wav" (wav 2 22050 2 100))
+
+    let project =
+        starter () |> apply (Batch("audio", [ UpsertAsset good; UpsertAsset wavMusic ]))
+
+    let unreadable (project: GameProject) =
+        Problems.collect project
+        |> List.filter (fun p -> p.Code = "asset.audioUnreadable")
+
     Assert.Empty(unreadable project)
-    let cut = audioAsset "music-2" CustomAssetTypes.Music (dataUrl "audio/ogg" (tone ()).[.. 999])
-    let notBase64 = audioAsset "sound-2" CustomAssetTypes.Sound "data:audio/wav;base64,@@@@"
+
+    let cut =
+        audioAsset "music-2" CustomAssetTypes.Music (dataUrl "audio/ogg" (tone ()).[..999])
+
+    let notBase64 =
+        audioAsset "sound-2" CustomAssetTypes.Sound "data:audio/wav;base64,@@@@"
     // Already reported as not audio at all: one problem for it, not two.
     let png = audioAsset "sound-3" CustomAssetTypes.Sound "data:image/png;base64,AAAA"
-    let broken = project |> apply (Batch("broken", [ UpsertAsset cut; UpsertAsset notBase64; UpsertAsset png ]))
+
+    let broken =
+        project
+        |> apply (Batch("broken", [ UpsertAsset cut; UpsertAsset notBase64; UpsertAsset png ]))
+
     let problems = unreadable broken
     Assert.Equal<string list>([ "music-2"; "sound-2" ], problems |> List.map (fun p -> p.TargetId))
     let first = problems.Head
@@ -164,7 +262,10 @@ let ``Problems name sound and music files the game would skip`` () =
     Assert.Equal(sprintf "customAssets[%d].dataUrl" (broken.CustomAssets.Length - 3), first.Path)
     Assert.Equal("Music \"music-2.ogg\" won't play: the Ogg file is cut short", first.Message)
     Assert.Contains("not a base64 data: URL", problems.[1].Message)
-    Assert.Single(Problems.collect broken, fun p -> p.TargetId = "sound-3") |> ignore
+
+    Assert.Single(Problems.collect broken, fun p -> p.TargetId = "sound-3")
+    |> ignore
+
     Assert.True(Problems.blocksExport (Problems.collect broken))
     Assert.False(Problems.blocksExport (Problems.collect project))
 
@@ -179,13 +280,24 @@ let ``data URLs are read as leniently as the player reads them`` () =
 
 [<Fact>]
 let ``renaming an asset keeps its id and what plays it`` () =
-    let sound = audioAsset "sound-1" CustomAssetTypes.Sound (dataUrl "audio/ogg" (tone ()))
+    let sound =
+        audioAsset "sound-1" CustomAssetTypes.Sound (dataUrl "audio/ogg" (tone ()))
+
     let project = starter () |> apply (UpsertAsset sound)
-    let doc = Document.create project |> Document.apply (RenameAsset("sound-1", "  Door creak  "))
+
+    let doc =
+        Document.create project
+        |> Document.apply (RenameAsset("sound-1", "  Door creak  "))
+
     let renamed = doc.Project.CustomAssets |> List.find (fun a -> a.Id = "sound-1")
     Assert.Equal("Door creak", renamed.Name)
     Assert.Equal({ sound with Name = "Door creak" }, renamed)
     Assert.Same(project, (Document.undo doc).Project)
     // Blank names, the same name and unknown ids change nothing.
-    for edit in [ RenameAsset("sound-1", "   "); RenameAsset("sound-1", sound.Name); RenameAsset("nobody", "X") ] do
+    for edit in
+        [
+            RenameAsset("sound-1", "   ")
+            RenameAsset("sound-1", sound.Name)
+            RenameAsset("nobody", "X")
+        ] do
         Assert.Same(project, project |> apply edit)

@@ -220,6 +220,8 @@ public sealed class ContentEditorTests
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 6;
         Pump();
         var before = host.Workspace.Current!.Npcs.Length;
+        var patterns = FindByName<ComboBox>(host.Window, "WorkshopPattern");
+        patterns.SelectedItem = patterns.Items.OfType<ComboBoxItem>().Single(item => item.Tag is PatternInfo { Id: "story" });
         FindByName<TextBox>(host.Window, "WorkshopName").Text = "Luna";
         FindByName<TextBox>(host.Window, "WorkshopX").Text = "4";
         FindByName<TextBox>(host.Window, "WorkshopY").Text = "4";

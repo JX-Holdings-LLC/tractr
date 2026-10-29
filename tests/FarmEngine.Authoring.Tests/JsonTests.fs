@@ -12,50 +12,104 @@ let private obj (members: (string * Json) list) = JObject members
 let ``truthiness follows JS`` () =
     for value in [ JNull; JBool false; JNumber 0.0; JNumber nan; JString "" ] do
         Assert.False(Json.truthy value, sprintf "%A" value)
+
     for value in [ JBool true; JNumber -1.0; JString "0"; JArray []; obj [] ] do
         Assert.True(Json.truthy value, sprintf "%A" value)
 
 [<Fact>]
 let ``number parsing follows JS Number() for strings`` () =
     let cases =
-        [ "  12  ", 12.0; "", 0.0; " \n", 0.0; "0x10", 16.0; "0b101", 5.0; "1e3", 1000.0; "-.5", -0.5; "5.", 5.0
-          "-Infinity", -infinity ]
+        [
+            "  12  ", 12.0
+            "", 0.0
+            " \n", 0.0
+            "0x10", 16.0
+            "0b101", 5.0
+            "1e3", 1000.0
+            "-.5", -0.5
+            "5.", 5.0
+            "-Infinity", -infinity
+        ]
+
     for text, expected in cases do
         Assert.Equal(expected, JsNumber.parse text)
+
     for text in [ "abc"; "1,000"; "1e"; "0x"; "+-1"; "infinity" ] do
         Assert.True(System.Double.IsNaN(JsNumber.parse text), text)
 
 [<Fact>]
 let ``number formatting matches JS Number.prototype.toString`` () =
     let cases =
-        [ 0.0, "0"; -0.0, "0"; 1.0, "1"; -1.5, "-1.5"; 0.1, "0.1"; 0.3 - 0.1, "0.19999999999999998"
-          1e21, "1e+21"; 1e20, "100000000000000000000"; 123456789012345680000.0, "123456789012345680000"
-          1e-6, "0.000001"; 1e-7, "1e-7"; 1.5e-7, "1.5e-7"; 5e-324, "5e-324"
-          1.7976931348623157e308, "1.7976931348623157e+308"; 4294967295.0, "4294967295"; 0.000123, "0.000123"
-          12345.678, "12345.678"; nan, "NaN"; infinity, "Infinity"; -infinity, "-Infinity" ]
+        [
+            0.0, "0"
+            -0.0, "0"
+            1.0, "1"
+            -1.5, "-1.5"
+            0.1, "0.1"
+            0.3 - 0.1, "0.19999999999999998"
+            1e21, "1e+21"
+            1e20, "100000000000000000000"
+            123456789012345680000.0, "123456789012345680000"
+            1e-6, "0.000001"
+            1e-7, "1e-7"
+            1.5e-7, "1.5e-7"
+            5e-324, "5e-324"
+            1.7976931348623157e308, "1.7976931348623157e+308"
+            4294967295.0, "4294967295"
+            0.000123, "0.000123"
+            12345.678, "12345.678"
+            nan, "NaN"
+            infinity, "Infinity"
+            -infinity, "-Infinity"
+        ]
+
     for value, expected in cases do
         Assert.Equal(expected, JsNumber.format value)
 
 [<Fact>]
 let ``parse reads JSON like JSON.parse, with comments and trailing commas`` () =
-    let text = """{ "a": [1, 2.5e1, -0.5, true, null, "x\"\u00e9\n"], /* note */ "b": {}, "a2": [], // end
+    let text =
+        """{ "a": [1, 2.5e1, -0.5, true, null, "x\"\u00e9\n"], /* note */ "b": {}, "a2": [], // end
       "c": { "d": "e", }, }"""
+
     let expected =
         JObject
-            [ "a", JArray [ JNumber 1.0; JNumber 25.0; JNumber -0.5; JBool true; JNull; JString "x\"é\n" ]
-              "b", JObject []
-              "a2", JArray []
-              "c", JObject [ "d", JString "e" ] ]
+            [
+                "a", JArray [ JNumber 1.0; JNumber 25.0; JNumber -0.5; JBool true; JNull; JString "x\"é\n" ]
+                "b", JObject []
+                "a2", JArray []
+                "c", JObject [ "d", JString "e" ]
+            ]
+
     Assert.Equal(Ok expected, Json.parse text)
     Assert.Equal(Ok(JObject [ "k", JNumber 2.0 ]), Json.parse """{"k":1,"k":2}""")
-    for bad in [ ""; "{"; "[1,,2]"; "01"; "1.e5"; "{\"a\" 1}"; "tru"; "\"unterminated"; "[1] 2" ] do
+
+    for bad in
+        [
+            ""
+            "{"
+            "[1,,2]"
+            "01"
+            "1.e5"
+            "{\"a\" 1}"
+            "tru"
+            "\"unterminated"
+            "[1] 2"
+        ] do
         match Json.parse bad with
         | Ok value -> failwithf "%s parsed as %A" bad value
         | Error _ -> ()
 
 [<Fact>]
 let ``stringifyIndented matches JSON.stringify with two spaces`` () =
-    let value = JObject [ "a", JArray [ JNumber 1.0; JObject [] ]; "b", JArray []; "c", JObject [ "d", JString "é" ] ]
+    let value =
+        JObject
+            [
+                "a", JArray [ JNumber 1.0; JObject [] ]
+                "b", JArray []
+                "c", JObject [ "d", JString "é" ]
+            ]
+
     Assert.Equal("{\n  \"a\": [\n    1,\n    {}\n  ],\n  \"b\": [],\n  \"c\": {\n    \"d\": \"é\"\n  }\n}", Json.stringifyIndented value)
 
 [<Fact>]
@@ -79,6 +133,7 @@ let ``elements raises a JS TypeError for a non-array`` () =
             failwith "expected a JsTypeError"
         with JsTypeError message ->
             message
+
     Assert.Equal("Expected an array at '$.scenes'", error (fun () -> Json.elements "$.scenes" (JString "x")))
     Assert.Empty(Json.elements "$.scenes" JNull)
 
@@ -86,7 +141,16 @@ let ``elements raises a JS TypeError for a non-array`` () =
 let ``stringify orders index keys first and escapes like JSON.stringify`` () =
     // A lone surrogate built at run time (the compiler rewrites one in a literal).
     let lone = string (char 0xD800)
-    let value = obj [ "b", JNumber 1.0; "10", JNull; "a", JString("q\"\n\u0001" + lone); "2", JArray [ JNumber nan; JBool true ] ]
+
+    let value =
+        obj
+            [
+                "b", JNumber 1.0
+                "10", JNull
+                "a", JString("q\"\n\u0001" + lone)
+                "2", JArray [ JNumber nan; JBool true ]
+            ]
+
     Assert.Equal("""{"2":[null,true],"10":null,"b":1,"a":"q\"\n\u0001\ud800"}""", Json.stringify value)
     Assert.Equal("""{"2":[null,true],"10":null,"a":"q\"\n\u0001\ud800","b":1}""", Json.stableStringify value)
 
@@ -95,13 +159,25 @@ let ``System.Text.Json conversion round-trips and keeps member order`` () =
     let text = """{"z":1,"a":[true,false,null,"s",{"y":2.5,"x":-0.125}],"m":{}}"""
     let node = JsonNode.Parse text
     let json = JsonInterop.ofNode node
+
     Assert.Equal(
         obj
-            [ "z", JNumber 1.0
-              "a", JArray [ JBool true; JBool false; JNull; JString "s"; obj [ "y", JNumber 2.5; "x", JNumber -0.125 ] ]
-              "m", obj [] ],
+            [
+                "z", JNumber 1.0
+                "a",
+                JArray
+                    [
+                        JBool true
+                        JBool false
+                        JNull
+                        JString "s"
+                        obj [ "y", JNumber 2.5; "x", JNumber -0.125 ]
+                    ]
+                "m", obj []
+            ],
         json
     )
+
     Assert.Equal(json, JsonInterop.ofNode (JsonInterop.toNode json))
     Assert.Equal(text, Json.stringify json)
     let created = JsonObject()
@@ -120,20 +196,28 @@ let private parseError (text: string) =
 let ``deep nesting is an error, not a stack overflow`` () =
     for depth in [ 300; 10_000; 200_000 ] do
         Assert.StartsWith("Too deeply nested", parseError ("{\"a\":" + String.replicate depth "[" + String.replicate depth "]" + "}"))
+
     Assert.StartsWith("Too deeply nested", parseError (String.replicate 10_000 "{\"a\":" + "1" + String.replicate 10_000 "}"))
     // Up to the limit parses.
     let ok = String.replicate Json.MaxDepth "[" + String.replicate Json.MaxDepth "]"
     Assert.True((Json.parse ok |> Result.isOk))
     Assert.False((Json.parse ("[" + ok + "]") |> Result.isOk))
     // Every loader reports it.
-    let deep = "{\"schemaVersion\":9,\"a\":" + String.replicate 10_000 "[" + String.replicate 10_000 "]" + "}"
+    let deep =
+        "{\"schemaVersion\":9,\"a\":"
+        + String.replicate 10_000 "["
+        + String.replicate 10_000 "]"
+        + "}"
+
     let loaded = ProjectLoad.loadProjectText deep
     Assert.False loaded.Ok
     Assert.Contains("Too deeply nested", String.concat "\n" loaded.Errors)
 
 [<Fact>]
 let ``many comments in a row do not recurse`` () =
-    let text = String.replicate 100_000 "// c\n" + String.replicate 100_000 "/* c */" + "[1]"
+    let text =
+        String.replicate 100_000 "// c\n" + String.replicate 100_000 "/* c */" + "[1]"
+
     Assert.Equal(Ok(JArray [ JNumber 1.0 ]), Json.parse text)
     Assert.StartsWith("Unterminated comment", parseError "[1] /* no end *")
 
@@ -151,7 +235,10 @@ let ``numbers beyond the double range are refused when they load`` () =
 [<Fact>]
 let ``JsonInterop refuses what Json cannot hold and loadProject reports it`` () =
     let node = JsonNode.Parse """{"schemaVersion":9,"player":{"money":1e400}}"""
-    Assert.Throws<System.FormatException>(fun () -> JsonInterop.ofNode node |> ignore) |> ignore
+
+    Assert.Throws<System.FormatException>(fun () -> JsonInterop.ofNode node |> ignore)
+    |> ignore
+
     Assert.True((JsonInterop.tryOfNode node |> Result.isError))
     let result = ProjectJson.loadProject node
     Assert.False result.Ok
@@ -162,8 +249,9 @@ let ``JsonInterop refuses what Json cannot hold and loadProject reports it`` () 
 
 [<Fact>]
 let ``objects with many members keep the last duplicate in the first position`` () =
-    let keys = [ for k in 0 .. 999 -> sprintf "\"k%d\":%d" k k ]
+    let keys = [ for k in 0..999 -> sprintf "\"k%d\":%d" k k ]
     let text = "{" + String.concat "," keys + ",\"k5\":-1,\"k500\":-2,\"new\":3}"
+
     match Json.parse text with
     | Ok(JObject members) ->
         Assert.Equal(1001, members.Length)
@@ -171,6 +259,7 @@ let ``objects with many members keep the last duplicate in the first position`` 
         Assert.Equal(("k500", JNumber -2.0), members.[500])
         Assert.Equal(("new", JNumber 3.0), List.last members)
     | other -> failwithf "%A" other
+
     Assert.Equal(Ok(JObject [ "a", JNumber 2.0; "b", JNumber 1.0 ]), Json.parse """{"a":1,"b":1,"a":2}""")
 
 [<Fact>]
@@ -179,8 +268,12 @@ let ``1e400 in a required or an optional field is a load error, not a later null
     let money = System.Text.RegularExpressions.Regex("\"money\": [0-9.]+")
     Assert.True(money.IsMatch text)
     let required = money.Replace(text, "\"money\": 1e400", 1)
-    let optional = text.Replace("{\n  \"schemaVersion\"", "{\n  \"mineDeepestFloor\": 1e999,\n  \"schemaVersion\"")
+
+    let optional =
+        text.Replace("{\n  \"schemaVersion\"", "{\n  \"mineDeepestFloor\": 1e999,\n  \"schemaVersion\"")
+
     Assert.NotEqual<string>(text, optional)
+
     for broken in [ required; optional ] do
         let result = ProjectLoad.loadProjectText broken
         Assert.False result.Ok
@@ -189,7 +282,10 @@ let ``1e400 in a required or an optional field is a load error, not a later null
     match Json.parse text with
     | Ok(JObject members) ->
         let player = members |> List.find (fun (key, _) -> key = "player") |> snd
-        let raw = JObject(Json.setMember "player" (Json.set "money" (JNumber infinity) player) members)
+
+        let raw =
+            JObject(Json.setMember "player" (Json.set "money" (JNumber infinity) player) members)
+
         let result = ProjectLoad.loadProject raw
         Assert.False result.Ok
         Assert.Equal<string list>([ "player.money: Number must be finite" ], result.Errors)

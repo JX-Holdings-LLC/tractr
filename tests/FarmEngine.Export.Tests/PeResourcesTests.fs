@@ -7,14 +7,16 @@ open Xunit
 open FarmEngine.Export
 open FarmEngine.Export.Tests.Support
 
-let private template () = IO.File.ReadAllBytes(fixture "player-fixture.exe")
+let private template () =
+    IO.File.ReadAllBytes(fixture "player-fixture.exe")
 
 let private ok (result: Result<'T, string>) =
     match result with
     | Ok value -> value
     | Error e -> failwith e
 
-let private icons () = Icons.render (makePng 256 256 false) |> ok
+let private icons () =
+    Icons.render (makePng 256 256 false) |> ok
 
 let private version () =
     VersionInfo.build (Exporter.versionResource (Exporter.identity (starter ())) "1.0.0-test")
@@ -22,17 +24,31 @@ let private version () =
 [<Fact>]
 let ``the fixture has the placeholder slots the template promises`` () =
     let image = PeResources.read (template ()) |> ok
-    let slots = image.Resources |> List.map (fun r -> r.TypeId, r.NameId, r.Language, r.Size)
+
+    let slots =
+        image.Resources |> List.map (fun r -> r.TypeId, r.NameId, r.Language, r.Size)
+
     Assert.Equal<(int * int * int * int) list>(
-        [ 3, 1, 1033, 2048; 3, 2, 1033, 4096; 3, 3, 1033, 6144; 3, 4, 1033, 24576; 14, 1, 1033, 62; 16, 1, 1033, 4160 ],
+        [
+            3, 1, 1033, 2048
+            3, 2, 1033, 4096
+            3, 3, 1033, 6144
+            3, 4, 1033, 24576
+            14, 1, 1033, 62
+            16, 1, 1033, 4160
+        ],
         slots
     )
+
     for resource in image.Resources do
         Assert.True(resource.Capacity >= resource.Size)
+
     let group = PeResources.readIcons (template ()) |> ok
     Assert.Equal<int list>([ 16; 32; 48; 256 ], group |> List.map (fun i -> i.Width))
     // windres wrote the placeholder version block; our reader understands it.
-    let placeholder = PeResources.readVersion (template ()) |> ok |> VersionInfo.parse |> ok
+    let placeholder =
+        PeResources.readVersion (template ()) |> ok |> VersionInfo.parse |> ok
+
     Assert.Equal(9, placeholder.Strings.Length)
     Assert.All(placeholder.Strings, fun (_, value) -> Assert.StartsWith("farm-player template", value))
 
@@ -46,6 +62,7 @@ let ``patching writes icons, version and checksum that read back`` () =
     let image = PeResources.read patched |> ok
     // Icons: each slot now holds exactly the PNG, and the group describes it.
     let read = PeResources.readIcons patched |> ok
+
     for size, png in rendered do
         let icon = read |> List.find (fun i -> i.Width = size)
         Assert.Equal(size, icon.Height)
@@ -67,22 +84,35 @@ let ``patching writes icons, version and checksum that read back`` () =
     Assert.Equal<byte[]>(patched, PeResources.patch rendered versionBytes patched |> ok)
     // Nothing outside the resource data changed.
     let resources = PeResources.read original |> ok
+
     let inside (offset: int) =
-        resources.Resources |> List.exists (fun r -> offset >= r.DataOffset && offset < r.DataOffset + r.Capacity || offset >= r.EntryOffset + 4 && offset < r.EntryOffset + 8)
+        resources.Resources
+        |> List.exists (fun r ->
+            offset >= r.DataOffset && offset < r.DataOffset + r.Capacity
+            || offset >= r.EntryOffset + 4 && offset < r.EntryOffset + 8)
         || (offset >= image.ChecksumOffset && offset < image.ChecksumOffset + 4)
         || (offset >= image.SubsystemOffset && offset < image.SubsystemOffset + 2)
+
     for i in 0 .. original.Length - 1 do
-        if original[i] <> patched[i] && not (inside i) then failwithf "byte %d changed outside the resources" i
+        if original[i] <> patched[i] && not (inside i) then
+            failwithf "byte %d changed outside the resources" i
 
 [<Fact>]
 let ``data larger than a slot is refused with a clear message`` () =
     let noisy = Icons.render (makePng 256 256 true) |> ok
+
     match PeResources.patch noisy (version ()) (template ()) with
     | Ok _ -> failwith "an incompressible 256×256 icon cannot fit a 24 KB slot"
     | Error e -> Assert.Matches(@"^The \d+×\d+ icon is \d+ bytes, but the player template reserves \d+\.$", e)
+
     let longTitle =
-        let game = { Exporter.identity (starter ()) with Title = String('x', 3000) }
+        let game =
+            { Exporter.identity (starter ()) with
+                Title = String('x', 3000)
+            }
+
         VersionInfo.build (Exporter.versionResource game "1.0.0")
+
     match PeResources.patch (icons ()) longTitle (template ()) with
     | Ok _ -> failwith "a 3000-character title cannot fit the version slot"
     | Error e -> Assert.Contains("version information", e)
@@ -95,14 +125,18 @@ let ``a template without the slots or not a PE is refused`` () =
     let pe = BitConverter.ToInt32(original, 0x3C)
     let bare = Array.copy original
     Array.Clear(bare, pe + 24 + 112 + 16, 8)
+
     match PeResources.patch (icons ()) (version ()) bare with
     | Ok _ -> failwith "no resources"
     | Error e -> Assert.Contains("no icon slot", e)
+
     Assert.True(image.Resources.Length > 0)
+
     match PeResources.patch (icons ()) (version ()) (Text.Encoding.ASCII.GetBytes "#!/bin/sh\necho not windows\n") with
     | Ok _ -> failwith "not a PE"
     | Error e -> Assert.StartsWith("Not a usable Windows executable", e)
-    match PeResources.read original[0 .. 1000] with
+
+    match PeResources.read original[0..1000] with
     | Ok _ -> failwith "truncated"
     | Error e -> Assert.StartsWith("Not a usable Windows executable", e)
 
@@ -119,13 +153,17 @@ let ``checksum matches the reference algorithm on the untouched fixture`` () =
     Assert.Equal(sum, PeResources.checksum changed image.ChecksumOffset)
 
 /// File offset of the fixture's data directories (PE32+).
-let private directories (bytes: byte[]) = BitConverter.ToInt32(bytes, 0x3C) + 24 + 112
+let private directories (bytes: byte[]) =
+    BitConverter.ToInt32(bytes, 0x3C) + 24 + 112
 
 [<Fact>]
 let ``a signed template loses its signature instead of keeping a broken one`` () =
     // The fixture with a stand-in certificate table appended, as signtool would put it.
     let original = template ()
-    let certificate = Array.append [| 16uy; 0uy; 0uy; 0uy; 0uy; 2uy; 2uy; 0uy |] (Array.create 8 0xCCuy)
+
+    let certificate =
+        Array.append [| 16uy; 0uy; 0uy; 0uy; 0uy; 2uy; 2uy; 0uy |] (Array.create 8 0xCCuy)
+
     let signed = Array.append original certificate
     let security = directories signed + 4 * 8
     BitConverter.GetBytes(uint32 original.Length).CopyTo(signed, security)
@@ -148,11 +186,15 @@ let ``resource data outside the resource section is refused`` () =
     let image = PeResources.read bytes |> ok
     // Point the version resource's data at the start of .text (RVA 0x1000): patching it would
     // clear code.
-    let version = image.Resources |> List.find (fun r -> r.TypeId = PeResources.RT_VERSION)
+    let version =
+        image.Resources |> List.find (fun r -> r.TypeId = PeResources.RT_VERSION)
+
     BitConverter.GetBytes(0x1000u).CopyTo(bytes, version.EntryOffset)
+
     match PeResources.read bytes with
     | Ok _ -> failwith "data in .text must be refused"
     | Error e -> Assert.Contains("outside the resource section", e)
+
     match PeResources.patch (icons ()) (VersionInfo.build (Exporter.versionResource (Exporter.identity (starter ())) "1.0.0")) bytes with
     | Ok _ -> failwith "data in .text must be refused"
     | Error e -> Assert.StartsWith("Not a usable Windows executable", e)
@@ -161,10 +203,15 @@ let ``resource data outside the resource section is refused`` () =
 let ``a resource table used twice is refused`` () =
     let bytes = template ()
     let rsrc = 0x3800 // the fixture's .rsrc raw offset (Fixtures/pe/build.sh)
-    let count = int (BitConverter.ToUInt16(bytes, rsrc + 12)) + int (BitConverter.ToUInt16(bytes, rsrc + 14))
+
+    let count =
+        int (BitConverter.ToUInt16(bytes, rsrc + 12))
+        + int (BitConverter.ToUInt16(bytes, rsrc + 14))
+
     Assert.True(count >= 2)
     // The second type entry points at the first type's name table.
     Array.blit bytes (rsrc + 16 + 4) bytes (rsrc + 16 + 8 + 4) 4
+
     match PeResources.read bytes with
     | Ok _ -> failwith "a shared table must be refused"
     | Error e -> Assert.Contains("used twice", e)
@@ -172,8 +219,10 @@ let ``a resource table used twice is refused`` () =
 [<Fact>]
 let ``a truncated resource section never yields a slot past the end of the file`` () =
     let original = template ()
+
     for length in [ 0x3900; 0x5000; 0x8000; 0xA000; 0xC000; 0xD800 ] do
         let bytes = original[0 .. length - 1]
+
         match PeResources.read bytes with
         | Error e -> Assert.StartsWith("Not a usable Windows executable", e)
         | Ok image ->

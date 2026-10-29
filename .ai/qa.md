@@ -30,7 +30,7 @@ C# Avalonia editor (`src/Tractr.App`). There is no dev server, no
 |---|---|---|
 | install | `dotnet restore` | restore succeeds |
 | build | `dotnet build -c Release`, `cargo build --workspace` | no warnings (they are errors) |
-| lint | `cargo fmt --check`, clippy `-D warnings`, `dotnet format whitespace/style --verify-no-changes`, `tools/ci/text-style.py`, markdownlint | no output from the checks |
+| lint | `cargo fmt --check`, clippy `-D warnings`, `dotnet format whitespace/style --verify-no-changes`, `dotnet fantomas check src tests tools`, `tools/ci/text-style.py`, markdownlint | no output from the checks |
 | unit | `cargo test --workspace`, `dotnet test -c Release` | all pass, and `tools/ci/golden-guard.sh fixtures` finds `fixtures/` unchanged |
 | generated | `tools/codegen/check.sh`, `tools/release/versions.sh`, the license `--check`s | committed generated files match their generators |
 | smoke | headless `farm-player` replay of `fixture-project.cart`; `tools/wasm` build + Node smoke tests | exit 0 |

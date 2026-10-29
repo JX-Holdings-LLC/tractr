@@ -101,6 +101,8 @@ pub struct MachineTypeDefinition {
     /// Station categories a placed machine of this type provides to nearby hand-crafting (e.g. a
     /// Kitchen provides 'cooking').
     pub station_categories: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fish_production: Option<super::FishProduction>,
     /// Slots of storage: a chest (M5). Absent: none (a shipping bin has
     /// [`super::DEFAULT_SHIPPING_SLOTS`]).
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
@@ -144,6 +146,7 @@ impl Default for MachineTypeDefinition {
             item_id: None,
             blocks_movement: true,
             station_categories: Vec::new(),
+            fish_production: None,
             storage: None,
             shipping: false,
             gate: false,

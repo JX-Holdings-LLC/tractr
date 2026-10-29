@@ -29,6 +29,9 @@ public sealed class PlayModeView : UserControl
     private readonly Panel _overlayLayer = new() { Name = "PlayOverlayLayer" };
     private readonly ToastHost _toasts = new() { Margin = new Thickness(16) };
     private readonly ToggleButton _keepChanges;
+    private readonly Button _restart;
+    private readonly Button _debug;
+    private readonly TextBlock _playHint;
     private readonly List<PlayerInput> _pending = [];
     private RustPlayer _player;
     private Control? _debugView;
@@ -56,9 +59,9 @@ public sealed class PlayModeView : UserControl
             return button;
         }
 
-        // Labels in the editor's language (EditorStrings); a playtest starts a new view.
-        var restart = Tool("RestartButton", Ui.IconLabel("IconRefresh", EditorStrings.Get("toolbar.restart")), () => RestartRequested?.Invoke(this, EventArgs.Empty), EditorStrings.Get("toolbar.restartTip") + EditorShortcuts.Display(" (Ctrl+R)"));
-        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(restart, EditorShortcuts.Display("Ctrl+R"));
+        // The toolbar follows editor language changes while this playtest stays open.
+        _restart = Tool("RestartButton", Ui.IconLabel("IconRefresh", EditorStrings.Get("toolbar.restart")), () => RestartRequested?.Invoke(this, EventArgs.Empty), EditorStrings.Get("toolbar.restartTip") + EditorShortcuts.Display(" (Ctrl+R)"));
+        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(_restart, EditorShortcuts.Display("Ctrl+R"));
         _keepChanges = new ToggleButton { Name = "KeepChangesButton", Content = Ui.IconLabel("IconCheckCircle", EditorStrings.Get("toolbar.keepChanges")), Margin = new Thickness(6, 3, 0, 3), Focusable = false };
         _keepChanges.Classes.Add("tool");
         ToolTip.SetTip(_keepChanges, EditorStrings.Get("toolbar.keepChangesTip") + EditorShortcuts.Display(" (Ctrl+Shift+K)"));
@@ -70,13 +73,14 @@ public sealed class PlayModeView : UserControl
                 : new ToastMessage(EditorStrings.Get("toolbar.keepOff"), ToastKind.Info));
         };
         toolbar.Children.Add(_keepChanges);
-        var debug = Tool("DebugButton", EditorStrings.Get("toolbar.debug"), ToggleDebug, EditorStrings.Get("toolbar.debugTip") + EditorShortcuts.Display(" (Ctrl+D)"));
-        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(debug, EditorShortcuts.Display("Ctrl+D"));
+        _debug = Tool("DebugButton", EditorStrings.Get("toolbar.debug"), ToggleDebug, EditorStrings.Get("toolbar.debugTip") + EditorShortcuts.Display(" (Ctrl+D)"));
+        Avalonia.Automation.AutomationProperties.SetAcceleratorKey(_debug, EditorShortcuts.Display("Ctrl+D"));
 
-        var hint = Ui.Text(EditorStrings.Get("toolbar.playHint"), "muted", "small");
-        hint.VerticalAlignment = VerticalAlignment.Center;
+        _playHint = Ui.Text(EditorStrings.Get("toolbar.playHint"), "muted", "small");
+        _playHint.Name = "PlayHint";
+        _playHint.VerticalAlignment = VerticalAlignment.Center;
         var barGrid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-        barGrid.Children.Add(hint);
+        barGrid.Children.Add(_playHint);
         Grid.SetColumn(toolbar, 1);
         barGrid.Children.Add(toolbar);
         var bar = new Border { Name = "PlayToolbar", Child = barGrid, Margin = new Thickness(0, 0, 0, 8) }.WithClasses("hud");
@@ -179,6 +183,7 @@ public sealed class PlayModeView : UserControl
     /// <summary>Stops the loop and frees the player (the host read what it needed first).</summary>
     public void Close()
     {
+        EditorStrings.LanguageChanged -= OnLanguageChanged;
         _running = false;
         lock (_gate)
         {
@@ -255,9 +260,22 @@ public sealed class PlayModeView : UserControl
         _overlayLayer.Children.Add(_debugView);
     }
 
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        _restart.Content = Ui.IconLabel("IconRefresh", EditorStrings.Get("toolbar.restart"));
+        ToolTip.SetTip(_restart, EditorStrings.Get("toolbar.restartTip") + EditorShortcuts.Display(" (Ctrl+R)"));
+        _keepChanges.Content = Ui.IconLabel("IconCheckCircle", EditorStrings.Get("toolbar.keepChanges"));
+        ToolTip.SetTip(_keepChanges, EditorStrings.Get("toolbar.keepChangesTip") + EditorShortcuts.Display(" (Ctrl+Shift+K)"));
+        _debug.Content = EditorStrings.Get("toolbar.debug");
+        ToolTip.SetTip(_debug, EditorStrings.Get("toolbar.debugTip") + EditorShortcuts.Display(" (Ctrl+D)"));
+        _playHint.Text = EditorStrings.Get("toolbar.playHint");
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        EditorStrings.LanguageChanged += OnLanguageChanged;
+        OnLanguageChanged(this, EventArgs.Empty);
         _topLevel = TopLevel.GetTopLevel(this);
         if (_topLevel is not null)
         {
@@ -280,6 +298,7 @@ public sealed class PlayModeView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        EditorStrings.LanguageChanged -= OnLanguageChanged;
         _running = false;
         if (_topLevel is not null)
         {

@@ -46,6 +46,8 @@ pub struct GameProject {
     pub events: Vec<GameEvent>,
     pub dialogues: Vec<Dialogue>,
     pub quests: Vec<Quest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_boards: Option<Vec<super::RequestBoard>>,
     pub player: Player,
     /// Flags a new game starts with. Values are `boolean | number | string` like
     /// [`super::GameState::flags`] (plugins store numbers and strings, and Keep changes writes
@@ -98,6 +100,8 @@ pub struct GameProject {
     pub animals: Vec<AnimalState>,
     pub fish_tables: Vec<FishTable>,
     pub mine: MineConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mines: Option<Vec<super::MineDefinition>>,
     pub actions: Vec<ActionDef>,
     pub minigames: Vec<MinigameDef>,
     /// Installed content packs (M5). Array order = load order.
@@ -169,6 +173,5 @@ pub struct GameProject {
     pub extra: Map<String, Value>,
 }
 
-/// The project schema version. Only this version loads (there are no migrations): bump it when
-/// the persisted shape changes, so files of another shape are refused with a message.
-pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 2;
+/// Highest supported project schema; additive version 3 preserves version-2 games.
+pub const CURRENT_PROJECT_SCHEMA_VERSION: u32 = 3;

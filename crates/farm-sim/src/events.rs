@@ -176,6 +176,8 @@ pub fn condition_holds(
         EventCondition::Friendship { npc_id, min } => {
             state.social.get(npc_id).map_or(0, |social| social.friendship) >= *min
         }
+        EventCondition::Weekday { weekday_ids } => game_time::weekday(&ctx.content.settings.calendar, state.clock.day)
+            .is_some_and(|day| weekday_ids.contains(&day.id)),
         EventCondition::Weather { weather_ids } => weather_ids.contains(&state.clock.weather_id),
         EventCondition::FestivalId { festival_id } => {
             game_time::festival_today(&ctx.content.settings.calendar, &state.clock)
@@ -212,8 +214,16 @@ pub fn condition_holds(
             None => state.social.values().any(|social| social.status.as_deref() == Some(status.as_str())),
         },
         EventCondition::Money { min } => state.player.money >= *min,
-        EventCondition::SkillLevel { skill, min } => skills::skill_level(state, skill) >= *min,
-        EventCondition::MineFloor { min } => state.mine.deepest_floor >= *min,
+        EventCondition::Perk { skill, perk_id, choice_id } => state
+            .player
+            .perks
+            .get(&skills::perk_key(skill, perk_id))
+            .is_some_and(|chosen| choice_id.is_empty() || chosen == choice_id),
+        EventCondition::Buff { id } => crate::buffs::active(ctx, state, id),
+        EventCondition::SkillLevel { skill, min } => skills::effective_level(ctx, state, skill) >= *min,
+        EventCondition::MineFloor { min, mine_id } => {
+            crate::mines::progress(state, mine_id.as_deref().unwrap_or("mine")).deepest_floor >= *min
+        }
         EventCondition::Collection { collection_id, min } => match min {
             Some(min) => crate::goals::collected(state, collection_id) as u64 >= u64::from(*min),
             None => crate::goals::collection_complete(ctx, state, collection_id),
@@ -438,6 +448,28 @@ fn apply_outcome(
             }
             vec![]
         }
+        OutcomeKind::SetInventorySize => {
+            crate::progression::apply(ctx, state, "setInventorySize", whole(outcome.amount.unwrap_or(0)));
+            vec![]
+        }
+        OutcomeKind::AddInventorySize => {
+            crate::progression::apply(ctx, state, "addInventorySize", whole(outcome.amount.unwrap_or(0)));
+            vec![]
+        }
+        OutcomeKind::AddMaxEnergy => {
+            crate::progression::apply(ctx, state, "addMaxEnergy", whole(outcome.amount.unwrap_or(0)));
+            vec![]
+        }
+        OutcomeKind::AddMaxHealth => {
+            crate::progression::apply(ctx, state, "addMaxHealth", whole(outcome.amount.unwrap_or(0)));
+            vec![]
+        }
+        OutcomeKind::ApplyBuff => {
+            if let Some(buff) = &outcome.buff {
+                crate::buffs::apply(ctx, state, buff, "event");
+            }
+            vec![]
+        }
         OutcomeKind::ModifyHealth => {
             let amount = i32::try_from(whole(outcome.amount.unwrap_or(0))).unwrap_or(0);
             crate::combat::modify_health(ctx, state, amount)
@@ -564,7 +596,7 @@ fn outcome_modify_energy(ctx: &EngineContext, state: &mut GameState, outcome: &E
     if amount < 0 {
         return energy::spend_energy(ctx, state, amount.saturating_neg()).effects;
     }
-    state.player.energy = state.player.max_energy.min(state.player.energy.saturating_add(amount));
+    state.player.energy = crate::buffs::max_energy(ctx, state).min(state.player.energy.saturating_add(amount));
     vec![]
 }
 
@@ -630,6 +662,7 @@ fn outcome_spawn_npc(ctx: &EngineContext, state: &mut GameState, outcome: &Event
         scene_id: outcome.scene_id.clone().unwrap_or_else(|| npc_def.scene_id.clone()),
         path: None,
         patrol_index: None,
+        schedule_selection: None,
     };
     state.npcs.insert(npc_id.to_owned(), npc_state);
     vec![]

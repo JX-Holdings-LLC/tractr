@@ -9,9 +9,9 @@ use farm_player::{HostView, Player};
 use farm_sim::schema::DialogueState;
 use farm_ui::WidgetId;
 
-/// A 390×844 CSS-pixel phone at devicePixelRatio 3, with 150 CSS pixels of touch controls.
+/// A 390×844 CSS-pixel phone at devicePixelRatio 3, with 224 CSS pixels of touch controls.
 const PHONE: (u32, u32) = (1170, 2532);
-const PHONE_VIEW: HostView = HostView { density: 3.0, touch_controls: true, inset_bottom: 450.0 };
+const PHONE_VIEW: HostView = HostView { density: 3.0, touch_controls: true, inset_bottom: 672.0 };
 
 fn playing(view: HostView, size: (u32, u32)) -> Player {
     let stores = Stores::new();
@@ -34,7 +34,7 @@ fn a_phone_lays_out_in_css_pixels_above_the_touch_controls() {
     let mut player = playing(PHONE_VIEW, PHONE);
     let menu = rect(&player, WidgetId::new("hud").with("menu"));
     // Toolbar buttons are a finger's size in CSS pixels, not 1280-wide-desktop small.
-    assert!(menu.height / 3.0 >= 20.0, "menu button {menu:?}");
+    assert!(menu.height / 3.0 >= 26.0, "menu button {menu:?}");
     assert!(menu.x + menu.width <= PHONE.0 as f32, "the toolbar fits the screen: {menu:?}");
 
     // A dialogue sits above the controls.
@@ -97,4 +97,18 @@ fn density_one_keeps_the_desktop_layout() {
         (dense.width - before.width * 2.0).abs() < 1.0 && (dense.x - before.x * 2.0).abs() < 1.0,
         "{dense:?} vs {before:?}"
     );
+}
+
+#[test]
+fn small_touch_layout_stays_usable_at_each_density() {
+    for density in [1.0, 2.0, 3.0] {
+        for (width, height) in [(320, 568), (390, 844)] {
+            let size = ((width as f32 * density) as u32, (height as f32 * density) as u32);
+            let view = HostView { density, touch_controls: true, inset_bottom: 224.0 * density };
+            let player = playing(view, size);
+            let menu = rect(&player, WidgetId::new("hud").with("menu"));
+            assert!(menu.height / density >= 20.0, "{size:?}: {menu:?}");
+            assert!(menu.x >= 0.0 && menu.right() <= size.0 as f32, "{size:?}: {menu:?}");
+        }
+    }
 }

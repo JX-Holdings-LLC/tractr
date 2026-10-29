@@ -70,7 +70,13 @@ type Edit =
     /// The scene's surroundings (M1, M2): no daylight (`dark`), its own temperature (`None`: the
     /// season's), the tags crops can require, the music asset that plays in it and its own
     /// day/night and foliage tints. Empty values are stored as absent keys.
-    | SetSceneEnvironment of sceneId: string * dark: bool * temperature: float option * tags: string list * music: string option * atmosphere: AtmosphereLook option
+    | SetSceneEnvironment of
+        sceneId: string *
+        dark: bool *
+        temperature: float option *
+        tags: string list *
+        music: string option *
+        atmosphere: AtmosphereLook option
     /// Crops are planted and grow in the scene in every season (a greenhouse, M5); off is absent.
     | SetSceneAllSeasons of sceneId: string * allSeasons: bool
     /// The monsters the scene has each morning (M7); none is absent.
@@ -78,6 +84,7 @@ type Edit =
     /// The scene's extra layers (M8); none is absent. A layer left out takes what was painted on
     /// it with it.
     | SetSceneLayers of sceneId: string * layers: SceneLayer list
+    | SetSceneForageSpawns of sceneId: string * tables: ForageSpawnTable list
     /// SceneManager `applyResize`: the overlap keeps its tiles, new tiles are grass.
     | ResizeScene of sceneId: string * width: int * height: int
     /// SceneManager `duplicateScene`: a deep copy with a new id, "(Copy)" name and no NPC list.
@@ -127,6 +134,10 @@ type Edit =
     | RemoveAnimalSpecies of speciesId: string
     | UpsertAnimal of animal: AnimalState
     | RemoveAnimal of animalId: string
+    | UpsertMine of mine: MineDefinition
+    | RemoveMine of mineId: string
+    | UpsertRequestBoard of board: RequestBoard
+    | RemoveRequestBoard of boardId: string
     | UpsertFishTable of table: FishTable
     | RemoveFishTable of tableId: string
     | UpsertAction of action: ActionDef

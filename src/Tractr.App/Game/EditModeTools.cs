@@ -8,6 +8,7 @@ using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
 using Tractr.App.Localization;
+using Tractr.App.ViewModels.EditMode;
 
 namespace Tractr.App.Game;
 
@@ -58,19 +59,19 @@ public sealed partial class EditModeView
     private readonly TextBlock _doorFrom = Ui.Wrapped("Choose Door, then click a departure tile.", "muted", "small");
     private readonly TextBlock _editorMessage = Ui.Wrapped("", "muted", "small");
     private readonly TextBlock _sceneSizeInfo = Ui.Wrapped("", "muted", "small");
-    private TileLayer _selectedLayer = Edits.LayerFor(TileTypes.Grass);
-    private MapTool _tool = MapTool.Inspect;
-    private (int X, int Y)? _gestureStart;
-    private (int X0, int Y0, int X1, int Y1)? _selection;
-    private List<List<Tile>>? _copiedTiles;
-    private (int X, int Y)? _doorAt;
+    private TileLayer _selectedLayer { get => ViewModel.Layer; set => ViewModel.Layer = value; }
+    private MapTool _tool { get => ViewModel.Tool; set => ViewModel.Tool = value; }
+    private (int X, int Y)? _gestureStart { get => ViewModel.GestureStart; set => ViewModel.GestureStart = value; }
+    private (int X0, int Y0, int X1, int Y1)? _selection { get => ViewModel.Selection; set => ViewModel.Selection = value; }
+    private List<List<Tile>>? _copiedTiles { get => ViewModel.CopiedTiles; set => ViewModel.CopiedTiles = value; }
+    private (int X, int Y)? _doorAt { get => ViewModel.DoorAt; set => ViewModel.DoorAt = value; }
     private string? _sceneControlsSceneId;
     private string? _shownSceneName;
     private string? _shownSceneWidth;
     private string? _shownSceneHeight;
     /// <summary>The last choice of each Place tool, by placement kind.</summary>
-    private readonly Dictionary<string, string> _placeChoices = new(StringComparer.Ordinal);
-    private string? _placeKind;
+    private Dictionary<string, string> _placeChoices => ViewModel.PlaceChoices;
+    private string? _placeKind { get => ViewModel.PlaceKind; set => ViewModel.PlaceKind = value; }
     private bool _updatingPlaceChoice;
     private List<string> _shownTransitions = [];
     private List<string> _shownAnimals = [];
@@ -418,6 +419,7 @@ public sealed partial class EditModeView
         AutomationProperties.SetName(_sceneLayers, EditorStrings.Get("scene.layersName"));
         ToolTip.SetTip(_sceneLayers, EditorStrings.Get("scene.layersTip"));
         side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.layers"), "muted", "small"), _sceneLayers));
+        side.Children.Add(NamedButton("SceneForageSpawnsButton", EditorStrings.Get("scene.forage"), EditForageSpawns));
         side.Children.Add(WrapButtons(NamedButton("SaveSurroundingsButton", EditorStrings.Get("scene.saveSurroundings"), () => ApplySurroundings(fields: true))));
     }
 
@@ -482,17 +484,17 @@ public sealed partial class EditModeView
                 layers = SettingsForm.SceneLayers(scene.Layers.OrEmpty(), _sceneLayers.Text);
             }
 
-            var saved = _workspace.Apply(Edits.Batch(EditorStrings.Get("scene.saveSurroundings"),
+            var saved = ViewModel.Apply(Edits.Batch(EditorStrings.Get("scene.saveSurroundings"),
             [
                 Edits.SetSceneEnvironment(scene.Id, dark ?? scene.Dark.OrNullable() == true, temperature, tags, music ?? scene.Music.OrNull(), atmosphere),
                 Edits.SetSceneMonsters(scene.Id, monsters),
                 Edits.SetSceneLayers(scene.Id, layers),
             ]));
-            if (fields) _editorMessage.Text = saved ? EditorStrings.Format("scene.savedSurroundings", scene.Name) : EditorStrings.Get("common.noChanges");
+            if (fields) ViewModel.Message = saved ? EditorStrings.Format("scene.savedSurroundings", scene.Name) : EditorStrings.Get("common.noChanges");
         }
         catch (FormatException error)
         {
-            _editorMessage.Text = EditorStrings.Format("scene.couldNotSaveSurroundings", error.Message);
+            ViewModel.Message = EditorStrings.Format("scene.couldNotSaveSurroundings", error.Message);
         }
     }
 
@@ -558,7 +560,7 @@ public sealed partial class EditModeView
         foreach (var animal in animals)
         {
             var id = animal.Id;
-            var remove = NamedButton($"RemoveAnimal_{id}", "Remove", () => _workspace.Apply(Edits.RemoveAnimal(id)));
+            var remove = NamedButton($"RemoveAnimal_{id}", "Remove", () => ViewModel.Apply(Edits.RemoveAnimal(id)));
             AutomationProperties.SetName(remove, $"Remove {animal.Name}");
             _sceneAnimals.Children.Add(Ui.Row(Ui.Wrapped($"{animal.Name} ({Ui.Num(Math.Floor(animal.X))}, {Ui.Num(Math.Floor(animal.Y))})", "small"), remove));
         }
@@ -621,7 +623,7 @@ public sealed partial class EditModeView
                 PlaceAt(tile.X, tile.Y);
                 return true;
             case MapTool.Remove:
-                _workspace.Apply(Edits.ClearTile(scene.Id, tile.X, tile.Y));
+                ViewModel.Apply(Edits.ClearTile(scene.Id, tile.X, tile.Y));
                 return true;
             case MapTool.Brush when _brush is not null:
             case MapTool.Erase:
@@ -637,7 +639,7 @@ public sealed partial class EditModeView
                 _lastPainted = tile;
                 return true;
             case MapTool.Fill when _brush is not null:
-                _workspace.Apply(Edits.FloodFill(scene.Id, Layer, tile.X, tile.Y, _brush));
+                ViewModel.Apply(Edits.FloodFill(scene.Id, Layer, tile.X, tile.Y, _brush));
                 return true;
             case MapTool.Paste:
                 PasteAt(tile.X, tile.Y);
@@ -646,25 +648,14 @@ public sealed partial class EditModeView
                 ChooseDoor(tile.X, tile.Y);
                 return true;
             case MapTool.PlayerStart:
-                _workspace.Apply(Edits.SetPlayerStart(scene.Id, tile.X, tile.Y));
+                ViewModel.Apply(Edits.SetPlayerStart(scene.Id, tile.X, tile.Y));
                 return true;
             default:
                 return false;
         }
     }
 
-    private void ApplyStrokeTile(int x, int y)
-    {
-        var scene = CurrentScene();
-        if (scene is null) return;
-        switch (Tool)
-        {
-            case MapTool.Brush: PaintTile(x, y); break;
-            case MapTool.Erase: _workspace.ApplyInStroke(_strokeId!, Edits.EraseLayer(scene.Id, Layer, new[] { new ValueTuple<int, int>(x, y) })); break;
-            case MapTool.Block: _workspace.ApplyInStroke(_strokeId!, Edits.SetCollision(scene.Id, new[] { new ValueTuple<int, int>(x, y) }, true)); break;
-            case MapTool.Unblock: _workspace.ApplyInStroke(_strokeId!, Edits.SetCollision(scene.Id, new[] { new ValueTuple<int, int>(x, y) }, false)); break;
-        }
-    }
+    private void ApplyStrokeTile(int x, int y) => ViewModel.ApplyStrokeTile(x, y);
 
     private void UpdateGesturePreview((int X, int Y) start, (int X, int Y) end)
     {
@@ -679,158 +670,62 @@ public sealed partial class EditModeView
 
     private void CompleteGesture((int X, int Y) end)
     {
-        if (_gestureStart is not { } start) return;
-        _gestureStart = null;
-        var scene = CurrentScene();
-        if (scene is null) return;
-        var x0 = Math.Min(start.X, end.X);
-        var y0 = Math.Min(start.Y, end.Y);
-        var x1 = Math.Max(start.X, end.X);
-        var y1 = Math.Max(start.Y, end.Y);
-        if (Tool == MapTool.Rectangle && _brush is not null)
-        {
-            _workspace.Apply(Edits.FillRect(scene.Id, Layer, x0, y0, x1, y1, _brush));
-        }
-        else if (Tool == MapTool.Select)
-        {
-            _selection = (x0, y0, x1, y1);
-            _copy.IsEnabled = true;
-            _editorMessage.Text = $"Selected {x1 - x0 + 1} × {y1 - y0 + 1} tiles.";
-        }
+        ViewModel.CompleteGesture(end);
+        _copy.IsEnabled = ViewModel.Selection is not null;
         _hover.IsVisible = false;
     }
 
     private void ClearSelection()
     {
-        _selection = null;
-        _gestureStart = null;
+        ViewModel.ClearSelection();
         _copy.IsEnabled = false;
     }
 
     public void CopySelection()
     {
-        var scene = CurrentScene();
-        if (scene is null || _selection is not { } area) return;
-        if (area.Y1 >= scene.Tiles.Length || scene.Tiles.Skip(area.Y0).Take(area.Y1 - area.Y0 + 1).Any(row => area.X1 >= row.Length))
-        {
-            ClearSelection();
-            _editorMessage.Text = "The selection no longer fits this scene; select an area again.";
-            return;
-        }
-        _copiedTiles = new List<List<Tile>>();
-        for (var y = area.Y0; y <= area.Y1; y++)
-        {
-            _copiedTiles.Add(scene.Tiles[y].Skip(area.X0).Take(area.X1 - area.X0 + 1).ToList());
-        }
-        _paste.IsEnabled = true;
-        _editorMessage.Text = $"Copied {_copiedTiles[0].Count} × {_copiedTiles.Count} tiles. Choose Paste on map.";
+        ViewModel.CopySelection();
+        _copy.IsEnabled = ViewModel.Selection is not null;
+        _paste.IsEnabled = ViewModel.CopiedTiles is not null;
     }
 
-    public void PasteAt(int x, int y)
-    {
-        var scene = CurrentScene();
-        if (scene is null || _copiedTiles is null) return;
-        _workspace.Apply(Edits.PasteTiles(scene.Id, x, y, _copiedTiles));
-    }
+    public void PasteAt(int x, int y) => ViewModel.PasteAt(x, y);
 
     /// <summary>Eyedropper: the tile's type (and that layer's art) becomes the brush.</summary>
     public void PickAt(int x, int y)
     {
-        var scene = CurrentScene();
-        if (_workspace.Current is not { } project || scene is null || Edits.PickBrush(project, scene.Id, x, y) is not { } pick) return;
-        var picked = Documents.Preview(project, pick);
-        SetBrush(picked.SelectedTileType, picked.SelectedTileVisual.OrNull());
-        _editorMessage.Text = $"Picked {picked.SelectedTileType}.";
+        if (ViewModel.PickAt(x, y)) SetBrush(ViewModel.Brush, ViewModel.BrushVisual);
     }
 
     /// <summary>The current Place tool puts its chosen NPC, node, item, machine or animal on the tile.</summary>
     public void PlaceAt(int x, int y)
     {
-        var scene = CurrentScene();
-        if (_workspace.Current is not { } project || scene is null || PlacementKind(Tool) is not { } kind) return;
-        if (_placeChoice.SelectedItem is not ComboBoxItem { Tag: string id, Content: string label }
-            || MapPlacement.Place(project, kind, id, scene.Id, x, y) is not { } edit)
-        {
-            _editorMessage.Text = "Choose what to place first.";
-            return;
-        }
-        if (_workspace.Apply(edit)) _editorMessage.Text = $"Placed {label} at ({x}, {y}).";
+        var choice = _placeChoice.SelectedItem as ComboBoxItem;
+        ViewModel.PlaceAt(x, y, choice?.Tag as string, choice?.Content as string);
     }
 
     private void ApplyToScene(Func<string, Edit> createEdit)
     {
-        if (CurrentScene() is { } scene) _workspace.Apply(createEdit(scene.Id));
-    }
-
-    private bool SceneSize(out int width, out int height)
-    {
-        var ok = TypedSceneSize(out width, out height);
-        if (!ok) _editorMessage.Text = $"Scene width and height must be whole numbers from 1 to {Edits.MaxSceneSize}.";
-        return ok;
-    }
-
-    /// <summary>The size typed in the Size boxes, when both are whole numbers from 1 to the largest scene size.</summary>
-    private bool TypedSceneSize(out int width, out int height)
-    {
-        var validWidth = int.TryParse(_sceneWidth.Text, NumberStyles.None, CultureInfo.InvariantCulture, out width);
-        var validHeight = int.TryParse(_sceneHeight.Text, NumberStyles.None, CultureInfo.InvariantCulture, out height);
-        return validWidth && validHeight && width >= 1 && width <= Edits.MaxSceneSize && height >= 1 && height <= Edits.MaxSceneSize;
+        if (CurrentScene() is { } scene) ViewModel.Apply(createEdit(scene.Id));
     }
 
     /// <summary>
     /// Tile count and aspect ratio of the typed size, and what a resize to it would cut off: the
     /// tiles, and each thing standing on or pointing at them that moves inside (#44).
     /// </summary>
-    private void RefreshSceneSizeInfo()
-    {
-        if (!TypedSceneSize(out var width, out var height))
-        {
-            _sceneSizeInfo.Text = $"Width and height must be whole numbers from 1 to {Edits.MaxSceneSize}.";
-            return;
-        }
-        var info = $"Total tiles: {width * height} · Aspect ratio: {((double)width / height).ToString("0.00", CultureInfo.InvariantCulture)}";
-        if (CurrentScene() is { } scene && _workspace.Current is { } project && (width < scene.Width || height < scene.Height))
-        {
-            info += $"\nResize removes the tiles outside {width}×{height}.";
-            var impact = Edits.ResizeImpact(project, scene.Id, width, height);
-            if (impact.Count > 0)
-            {
-                info += " It also changes: " + string.Join("; ", impact) + ".";
-            }
-        }
-        _sceneSizeInfo.Text = info;
-    }
+    private void RefreshSceneSizeInfo() => _sceneSizeInfo.Text = ViewModel.SceneSizeInfo();
 
     private void AddScene()
     {
-        if (_workspace.Current is not { } project || !SceneSize(out var width, out var height)) return;
         var tile = (_newSceneTile.SelectedItem as ComboBoxItem)?.Tag as string ?? TileTypes.Grass;
-        var scene = Defaults.NewScene(project, _sceneName.Text ?? "", width, height, tile);
-        if (_workspace.Apply(Edits.AddScene(scene))) SelectScene(scene.Id);
+        if (ViewModel.AddScene(tile) is { } id) SelectScene(id);
     }
 
-    private void RenameScene()
-    {
-        if (CurrentScene() is not { } scene) return;
-        if (string.IsNullOrWhiteSpace(_sceneName.Text))
-        {
-            _editorMessage.Text = "Enter a scene name first.";
-            return;
-        }
-        _workspace.Apply(Edits.RenameScene(scene.Id, _sceneName.Text.Trim()));
-    }
+    private void RenameScene() => ViewModel.RenameScene();
 
     private void ResizeScene()
     {
-        if (CurrentScene() is { } scene && _workspace.Current is { } project && SceneSize(out var width, out var height))
+        if (ViewModel.ResizeScene())
         {
-            var impact = Edits.ResizeImpact(project, scene.Id, width, height);
-            if (_workspace.Apply(Edits.ResizeScene(scene.Id, width, height)))
-            {
-                _editorMessage.Text = impact.Count == 0
-                    ? $"Resized {scene.Name} to {width}×{height}."
-                    : $"Resized {scene.Name} to {width}×{height}: {string.Join("; ", impact)}. Undo puts them back.";
-            }
             ClearSelection();
             FitToView();
         }
@@ -838,19 +733,10 @@ public sealed partial class EditModeView
 
     private void DuplicateScene()
     {
-        if (_workspace.Current is not { } project || CurrentScene() is not { } scene) return;
-        var id = Defaults.NextId("scene", project.Scenes.Select(s => s.Id));
-        if (_workspace.Apply(Edits.DuplicateScene(scene.Id, id))) SelectScene(id);
+        if (ViewModel.DuplicateScene() is { } id) SelectScene(id);
     }
 
-    private void DeleteScene()
-    {
-        if (CurrentScene() is not { } scene) return;
-        if (!_workspace.Apply(Edits.RemoveScene(scene.Id)))
-        {
-            _editorMessage.Text = "The start scene and the last scene cannot be deleted.";
-        }
-    }
+    private void DeleteScene() => ViewModel.DeleteScene();
 
     private void ChooseDoor(int x, int y)
     {
@@ -888,53 +774,13 @@ public sealed partial class EditModeView
         _doorX.Text = ((int)transition.ToX).ToString(CultureInfo.InvariantCulture);
         _doorY.Text = ((int)transition.ToY).ToString(CultureInfo.InvariantCulture);
         _doorReturn.IsChecked = false;
-        _editorMessage.Text = $"Copied the door to ({from.X}, {from.Y}). Adjust the departure tile (click the map), then choose Save door.";
+        ViewModel.Message = $"Copied the door to ({from.X}, {from.Y}). Adjust the departure tile (click the map), then choose Save door.";
     }
 
     /// <summary>The first tile without a door from (x, y), clamped into the scene, scanning right then down.</summary>
-    private static (int X, int Y) FreeDoorTile(Scene scene, int x, int y)
-    {
-        var width = Math.Max(1, (int)scene.Width);
-        var count = width * Math.Max(1, (int)scene.Height);
-        var start = (Math.Clamp(y, 0, (count / width) - 1) * width) + Math.Clamp(x, 0, width - 1);
-        for (var i = 0; i < count; i++)
-        {
-            var index = (start + i) % count;
-            var (tileX, tileY) = (index % width, index / width);
-            if (!scene.Transitions.Any(t => t.FromX == tileX && t.FromY == tileY)) return (tileX, tileY);
-        }
-        return (start % width, start / width);
-    }
+    private static (int X, int Y) FreeDoorTile(Scene scene, int x, int y) => MapEditorViewModel.FreeDoorTile(scene, x, y);
 
-    private void SaveDoor()
-    {
-        var scene = CurrentScene();
-        var project = _workspace.Current;
-        if (scene is null || project is null || _doorAt is not { } from)
-        {
-            _editorMessage.Text = "Choose Door and click a departure tile first.";
-            return;
-        }
-        if (_doorDestination.SelectedItem is not ComboBoxItem { Tag: string destinationId }
-            || !int.TryParse(_doorX.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var x)
-            || !int.TryParse(_doorY.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var y)
-            || project.Scenes.FirstOrDefault(s => s.Id == destinationId) is not { } destination
-            || x < 0 || y < 0 || x >= destination.Width || y >= destination.Height)
-        {
-            _editorMessage.Text = "Choose a destination and coordinates inside that scene.";
-            return;
-        }
-        var old = scene.Transitions.FirstOrDefault(t => t.FromX == from.X && t.FromY == from.Y);
-        var transition = (old ?? SceneTransition.Default).WithFromX(from.X).WithFromY(from.Y).WithToSceneId(destinationId).WithToX(x).WithToY(y);
-        _workspace.Apply(_doorReturn.IsChecked == true ? Edits.LinkScenes(scene.Id, transition) : Edits.SetTransition(scene.Id, transition));
-        _editorMessage.Text = _workspace.SavedText("Door", $" to {destination.Name} ({x}, {y})");
-    }
+    private void SaveDoor() => ViewModel.SaveDoor();
 
-    private void RemoveDoor()
-    {
-        if (CurrentScene() is { } scene && _doorAt is { } from)
-        {
-            _workspace.Apply(Edits.RemoveTransition(scene.Id, from.X, from.Y));
-        }
-    }
+    private void RemoveDoor() => ViewModel.RemoveDoor();
 }

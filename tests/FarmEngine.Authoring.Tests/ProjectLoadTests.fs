@@ -1,5 +1,5 @@
-/// Loading projects and exported games (`ProjectLoad`, `ProjectJson`): only the current schema
-/// version loads, and a refusal always says why.
+/// Loading projects and exported games (`ProjectLoad`, `ProjectJson`): supported schema
+/// versions load, and a refusal always says why.
 module FarmEngine.Authoring.Tests.ProjectLoadTests
 
 open System.Text.Json.Nodes
@@ -10,7 +10,8 @@ open FarmEngine.Schemas
 
 let private current = JsNumber.format ProjectSchema.CurrentProjectSchemaVersion
 
-let private starterText () = ProjectLoad.toText (TestProjects.starter ())
+let private starterText () =
+    ProjectLoad.toText (TestProjects.starter ())
 
 /// The starter project's JSON with `patch` applied.
 let private patched (patch: JsonObject -> unit) : string =
@@ -27,41 +28,156 @@ let private stableProject (data: GameProject option) =
 
 [<Fact>]
 let ``a project of the current schema version loads`` () =
-    let result = ProjectJson.loadProjectText (starterText ())
+    let result =
+        ProjectJson.loadProjectText (patched (fun o -> o["schemaVersion"] <- JsonValue.Create ProjectSchema.CurrentProjectSchemaVersion))
+
     Assert.True(result.Ok, String.concat "\n" result.Errors)
     Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, result.Data.Value.SchemaVersion)
 
 [<Fact>]
+let ``classic projects stay byte compatible until new features are authored`` () =
+    let starter = TestProjects.starter ()
+
+    let classic =
+        { starter with
+            SchemaVersion = ProjectSchema.ClassicProjectSchemaVersion
+            Settings =
+                { starter.Settings with
+                    Calendar =
+                        { starter.Settings.Calendar with
+                            Weekdays = None
+                            WeekdayOffset = None
+                        }
+                }
+        }
+
+    Assert.Equal(ProjectSchema.ClassicProjectSchemaVersion, classic.SchemaVersion)
+    Assert.Equal(SchemaJson.encodeGameProject classic, ProjectLoad.toJson classic)
+
+    let calendar =
+        { classic.Settings.Calendar with
+            Weekdays =
+                Some
+                    [
+                        { CalendarWeekday.Default with
+                            Id = "market"
+                            Name = "Market day"
+                        }
+                    ]
+        }
+
+    let upgraded =
+        { classic with
+            Settings =
+                { classic.Settings with
+                    Calendar = calendar
+                }
+        }
+
+    let saved = ProjectLoad.toText upgraded |> ProjectLoad.loadProjectText
+    Assert.True(saved.Ok, String.concat "\n" saved.Errors)
+    Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, saved.Data.Value.SchemaVersion)
+    Assert.Equal(upgraded.Settings, saved.Data.Value.Settings)
+    Assert.Equal(ProjectSchema.ClassicProjectSchemaVersion, classic.SchemaVersion)
+    let cart = CartridgeCompiler.Compile upgraded |> CartridgeReader.read
+
+    match cart with
+    | Ok cart -> Assert.Equal(uint32 ProjectSchema.CurrentProjectSchemaVersion, cart.ProjectSchemaVersion)
+    | Error error -> failwith error
+
+[<Fact>]
+let ``pack skill definitions require version three while player skills stay classic`` () =
+    let versionAfterSaving skills =
+        JObject
+            [
+                "schemaVersion", JNumber ProjectSchema.ClassicProjectSchemaVersion
+                "contentPacks", JArray [ JObject [ "content", JObject [ "skills", skills ] ] ]
+                "player", JObject [ "skills", JObject [ "farming", JNumber 2.0 ] ]
+            ]
+        |> ProjectVersion.forSave
+        |> Json.get "schemaVersion"
+
+    Assert.Equal(JNumber ProjectSchema.CurrentProjectSchemaVersion, versionAfterSaving (JArray [ JObject [ "id", JString "farming" ] ]))
+    Assert.Equal(JNumber ProjectSchema.ClassicProjectSchemaVersion, versionAfterSaving (JArray []))
+    Assert.Equal(JNumber ProjectSchema.ClassicProjectSchemaVersion, versionAfterSaving JNull)
+
+[<Fact>]
+let ``new objective kinds do not upgrade classic conditions or triggers`` () =
+    let versionAfterSaving entry =
+        JObject
+            [
+                "schemaVersion", JNumber ProjectSchema.ClassicProjectSchemaVersion
+                "entry", entry
+            ]
+        |> ProjectVersion.forSave
+        |> Json.get "schemaVersion"
+
+    for kind in [ "hearts"; "bundle"; "mineFloor"; "catch"; "slay" ] do
+        let conditionOrTrigger = JObject [ "type", JString kind ]
+        Assert.Equal(JNumber ProjectSchema.ClassicProjectSchemaVersion, versionAfterSaving conditionOrTrigger)
+
+        let objective =
+            conditionOrTrigger
+            |> Json.set "progress" (JNumber 0.0)
+            |> Json.set "completed" (JBool false)
+
+        Assert.Equal(JNumber ProjectSchema.CurrentProjectSchemaVersion, versionAfterSaving objective)
+
+[<Fact>]
 let ``other schema versions are refused`` () =
-    let errors (text: string) = (ProjectJson.loadProjectText text).Errors
+    let errors (text: string) =
+        (ProjectJson.loadProjectText text).Errors
+
     Assert.Equal<string list>(
-        [ "Project schema version 1 is not supported (this engine reads version " + current + ")." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 1)))
+        [
+            "Project schema version 1 is not supported (this engine reads version "
+            + current
+            + ")."
+        ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 1))
+    )
+
     Assert.Equal<string list>(
-        [ "Project schema version 3 is newer than this engine supports (" + current + "). Update the engine." ],
-        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 3)))
+        [
+            "Project schema version 4 is newer than this engine supports ("
+            + current
+            + "). Update the engine."
+        ],
+        errors (patched (fun o -> o["schemaVersion"] <- JsonValue.Create 4))
+    )
+
     Assert.Equal<string list>(
-        [ "Project data has no schemaVersion (this engine reads version " + current + ")." ],
-        errors (patched (fun o -> o.Remove "schemaVersion" |> ignore)))
+        [
+            "Project data has no schemaVersion (this engine reads version " + current + ")."
+        ],
+        errors (patched (fun o -> o.Remove "schemaVersion" |> ignore))
+    )
+
     Assert.Equal<string list>([ "Project data is not an object" ], errors "[1,2,3]")
 
 let private malformed () : (string * string) list =
     let arrayOf (items: JsonNode list) =
         let array = JsonArray()
+
         for item in items do
             array.Add item
-        array
-    [ "money is a string", patched (fun o -> o.["player"].["money"] <- JsonValue.Create "lots")
-      "scenes is a string", patched (fun o -> o["scenes"] <- JsonValue.Create "not-a-list")
-      "tile row is a number", patched (fun o -> o.["scenes"].[0].["tiles"] <- arrayOf [ JsonValue.Create 3 ])
-      "null tile", patched (fun o -> o.["scenes"].[0].["tiles"] <- arrayOf [ arrayOf [ null ] ])
-      "customCrops is an object", patched (fun o -> o["customCrops"] <- JsonObject())
-      "null event", patched (fun o -> o["events"] <- arrayOf [ null ])
-      "name is a number", """{"name":42}"""
-      "array payload", "[1,2,3]"
-      "empty object", "{}" ]
 
-let malformedCases () : seq<obj[]> = malformed () |> Seq.map (fun (name, _) -> [| box name |])
+        array
+
+    [
+        "money is a string", patched (fun o -> o.["player"].["money"] <- JsonValue.Create "lots")
+        "scenes is a string", patched (fun o -> o["scenes"] <- JsonValue.Create "not-a-list")
+        "tile row is a number", patched (fun o -> o.["scenes"].[0].["tiles"] <- arrayOf [ JsonValue.Create 3 ])
+        "null tile", patched (fun o -> o.["scenes"].[0].["tiles"] <- arrayOf [ arrayOf [ null ] ])
+        "customCrops is an object", patched (fun o -> o["customCrops"] <- JsonObject())
+        "null event", patched (fun o -> o["events"] <- arrayOf [ null ])
+        "name is a number", """{"name":42}"""
+        "array payload", "[1,2,3]"
+        "empty object", "{}"
+    ]
+
+let malformedCases () : seq<obj[]> =
+    malformed () |> Seq.map (fun (name, _) -> [| box name |])
 
 /// Whatever the input, loading reports instead of throwing, the result is deterministic, and a
 /// refused load says why.
@@ -78,7 +194,9 @@ let ``loading never throws and always explains a refusal`` (name: string) =
 
 [<Fact>]
 let ``malformed values are reported where they are`` () =
-    let errors name = (ProjectJson.loadProjectText (malformed () |> List.find (fun (n, _) -> n = name) |> snd)).Errors
+    let errors name =
+        (ProjectJson.loadProjectText (malformed () |> List.find (fun (n, _) -> n = name) |> snd)).Errors
+
     Assert.Equal<string list>([ "player.money: Expected number, received string" ], errors "money is a string")
     Assert.Equal<string list>([ "scenes: Expected array, received string" ], errors "scenes is a string")
 
@@ -99,7 +217,13 @@ let ``invalid JSON text is reported, not thrown`` () =
 let ``whole-number fields with a fraction are reported`` () =
     let project = TestProjects.starter ()
     let item = { project.Items.Head with Value = 12.5 }
-    let problems = Problems.collect { project with Items = item :: project.Items.Tail }
+
+    let problems =
+        Problems.collect
+            { project with
+                Items = item :: project.Items.Tail
+            }
+
     let found = problems |> List.filter (fun p -> p.Code = "numbers.offGrid")
     Assert.Equal<string list>([ "items[0].value" ], found |> List.map (fun p -> p.Path))
     Assert.EndsWith("it plays as 13", found.Head.Message)
@@ -111,26 +235,71 @@ let ``whole-number fields with a fraction are reported`` () =
 let ``loading reconciles dialogue copies with the NPC's copy, which the game plays`` () =
     let project = ProjectCatalog.CreateInitialProject 0.0
     let npc = project.Npcs |> List.find (fun n -> n.Id = "npc-farmer")
-    let greeting = npc.Dialogue |> List.find (fun d -> d.Id = "dialogue-farmer-greeting")
-    let invitation = { DialogueOption.Default with Text = "Would you like to go on a date?"; EventFlag = Some "date-asked" }
-    let played = { greeting with Options = greeting.Options @ [ invitation ] }
-    let onlyOnNpc = { DialogueOption.Default with Text = "Only on the NPC" } |> fun o -> { greeting with Id = "dialogue-npc-only"; Options = [ o ] }
+
+    let greeting =
+        npc.Dialogue |> List.find (fun d -> d.Id = "dialogue-farmer-greeting")
+
+    let invitation =
+        { DialogueOption.Default with
+            Text = "Would you like to go on a date?"
+            EventFlag = Some "date-asked"
+        }
+
+    let played =
+        { greeting with
+            Options = greeting.Options @ [ invitation ]
+        }
+
+    let onlyOnNpc =
+        { DialogueOption.Default with
+            Text = "Only on the NPC"
+        }
+        |> fun o ->
+            { greeting with
+                Id = "dialogue-npc-only"
+                Options = [ o ]
+            }
+
     let mismatched =
         { project with
-            Npcs = project.Npcs |> List.map (fun n -> if n.Id = npc.Id then { n with Dialogue = (n.Dialogue |> List.map (fun d -> if d.Id = greeting.Id then played else d)) @ [ onlyOnNpc ] } else n) }
+            Npcs =
+                project.Npcs
+                |> List.map (fun n ->
+                    if n.Id = npc.Id then
+                        { n with
+                            Dialogue =
+                                (n.Dialogue |> List.map (fun d -> if d.Id = greeting.Id then played else d))
+                                @ [ onlyOnNpc ]
+                        }
+                    else
+                        n)
+        }
+
     Assert.Equal(greeting, mismatched.Dialogues |> List.find (fun d -> d.Id = greeting.Id))
+
     let loaded =
         match (ProjectLoad.loadProjectText (ProjectLoad.toText mismatched)) with
         | { Ok = true; Data = Some loaded } -> loaded
         | result -> failwithf "%A" result.Errors
+
     Assert.Equal(played, loaded.Dialogues |> List.find (fun d -> d.Id = greeting.Id))
     Assert.Equal(onlyOnNpc, List.last loaded.Dialogues)
     Assert.Equal(mismatched.Dialogues.Length + 1, loaded.Dialogues.Length)
-    Assert.Empty(Problems.collect loaded |> List.filter (fun p -> p.Code = "dialogue.copyMismatch" || p.Code = "dialogue.notInProject"))
+
+    Assert.Empty(
+        Problems.collect loaded
+        |> List.filter (fun p -> p.Code = "dialogue.copyMismatch" || p.Code = "dialogue.notInProject")
+    )
     // Saving what the Dialogue editor shows keeps the NPC-only option.
-    let shown = ProjectContent.Dialogues mismatched |> Seq.find (fun d -> d.Id = greeting.Id)
+    let shown =
+        ProjectContent.Dialogues mismatched |> Seq.find (fun d -> d.Id = greeting.Id)
+
     let saved = Document.run mismatched (UpsertDialogue shown)
-    let onNpc = (saved.Npcs |> List.find (fun n -> n.Id = npc.Id)).Dialogue |> List.find (fun d -> d.Id = greeting.Id)
+
+    let onNpc =
+        (saved.Npcs |> List.find (fun n -> n.Id = npc.Id)).Dialogue
+        |> List.find (fun d -> d.Id = greeting.Id)
+
     Assert.Contains(invitation, onNpc.Options)
     // A project whose copies agree loads as the same value.
     Assert.Same(project, DialogueCopies.reconcile project)

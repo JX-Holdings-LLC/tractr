@@ -142,7 +142,15 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string Version { get => _version; set => SetProperty(ref _version, value ?? ""); }
 
-    public string Locale { get => _locale; set => SetProperty(ref _locale, value ?? ""); }
+    public string Locale
+    {
+        get => _locale;
+        set
+        {
+            if (SetProperty(ref _locale, value ?? ""))
+                foreach (var day in Weekdays) day.SelectLocale(_locale.Trim());
+        }
+    }
 
     public string PlayerSpeed { get => _playerSpeed; set => SetProperty(ref _playerSpeed, value ?? ""); }
 
@@ -187,6 +195,21 @@ public sealed class SettingsViewModel : ObservableObject
     public ObservableCollection<SeasonDraft> Seasons { get; } = [];
 
     public ObservableCollection<FestivalDraft> Festivals { get; } = [];
+    public ObservableCollection<WeekdayDraft> Weekdays { get; } = [];
+    private string _weekdayOffset = "";
+    public string WeekdayOffset { get => _weekdayOffset; set => SetProperty(ref _weekdayOffset, value ?? ""); }
+    public void AddWeekday() => Weekdays.Add(new WeekdayDraft($"day-{Weekdays.Count + 1}", "New day", "", CalendarWeekday.Default, Locale.Trim()));
+    public void ResetWeekdays()
+    {
+        Weekdays.Clear();
+        foreach (var day in SettingsSchema.ClassicCalendarWeekdays()) Weekdays.Add(new WeekdayDraft(day.Id, day.Name, "", day, Locale.Trim()));
+    }
+    public void MoveWeekday(WeekdayDraft day, int delta)
+    {
+        var index = Weekdays.IndexOf(day);
+        if (index >= 0 && index + delta >= 0 && index + delta < Weekdays.Count) Weekdays.Move(index, index + delta);
+    }
+
 
     /// <summary>The project section's status line.</summary>
     public string Message { get => _message; private set => SetProperty(ref _message, value); }
@@ -418,11 +441,12 @@ public sealed class SettingsViewModel : ObservableObject
             SettingsSection.Project =>
             [
                 _name, _version, _locale, _playerSpeed, _maxEnergy, _collapseFraction, _collapsePenalty, _dayStart, _dayEnd, _minutesPerSecond,
-                _dayMinutes, _moneyFormat, _energyWord,
+                _dayMinutes, _moneyFormat, _energyWord, _weekdayOffset,
+                .. Weekdays.SelectMany(row => new[] { row.Id, row.Name, row.LocalName, row.TranslationSnapshot }),
                 Flag(_pauseInModals), Flag(_energyEnabled), Flag(_skillsEnabled), Flag(_showCredit), .. SkillLevels.Select(level => level.Xp),
                 .. SkillNames.Select(row => row.Name),
                 .. Seasons.SelectMany(row => new[] { row.Id, row.Name, row.Days, row.Temperature, row.Music }),
-                .. Festivals.SelectMany(row => new[] { row.Id, row.Name, row.SeasonId, row.Day, row.Music }),
+                .. Festivals.SelectMany(row => new[] { row.Id, row.Name, row.SeasonId, row.Day, row.Music, (row.ProgramDirty?.Invoke() ?? false).ToString() }),
             ],
             SettingsSection.Weather =>
             [
@@ -561,6 +585,10 @@ public sealed class SettingsViewModel : ObservableObject
             Seasons.Add(new SeasonDraft(season.Id, season.Name, Number(season.Days), saved: true, temperature, season.Music.OrNull() ?? ""));
         }
 
+        Weekdays.Clear();
+        foreach (var day in settings.Calendar.Weekdays.OrNull()?.AsEnumerable() ?? Enumerable.Empty<CalendarWeekday>())
+            Weekdays.Add(new WeekdayDraft(day.Id, day.Name, day.Words.OrNull()?.FirstOrDefault(word => word.Item1 == settings.Locale)?.Item2 ?? "", day, settings.Locale));
+        WeekdayOffset = settings.Calendar.WeekdayOffset.OrNullable() is { } offset ? Number(offset) : "";
         _loadedSeasons = settings.Calendar.Seasons.Select(season => season.Id).ToList();
         Festivals.Clear();
         foreach (var festival in settings.Calendar.Festivals) Festivals.Add(FestivalRow(festival));
@@ -568,7 +596,7 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     private static FestivalDraft FestivalRow(CalendarFestival festival) =>
-        new(festival.Id, festival.Name, festival.SeasonId, Number(festival.Day), festival.Music.OrNull() ?? "");
+        new(festival.Id, festival.Name, festival.SeasonId, Number(festival.Day), festival.Music.OrNull() ?? "") { Program = festival.Program.OrNull() };
 
     private void ShowSkillLevels(IEnumerable<string> values)
     {
@@ -675,7 +703,7 @@ public sealed class SettingsViewModel : ObservableObject
         {
             var seasons = Seasons.Select(row => SettingsForm.Season(row.Id.Trim(), row.Name.Trim(), Parse(row.Days, row.DaysLabel),
                 row.Temperature.Trim().Length == 0 ? null : Parse(row.Temperature, row.TemperatureLabel), row.Music)).ToList();
-            var festivals = Festivals.Select(row => SettingsForm.Festival(row.Id.Trim(), row.Name.Trim(), row.SeasonId.Trim(), Parse(row.Day, row.DayLabel), row.Music)).ToList();
+            var festivals = Festivals.Select(row => SettingsForm.Festival(row.Id.Trim(), row.Name.Trim(), row.SeasonId.Trim(), Parse(row.Day, row.DayLabel), row.Music).WithProgram(row.ReadProgram is null ? row.Program : row.ReadProgram())).ToList();
             if (seasons.Count == 0) throw new FormatException("The calendar needs at least one season.");
             foreach (var season in seasons)
             {
@@ -715,7 +743,13 @@ public sealed class SettingsViewModel : ObservableObject
                     .WithMinutesPerRealSecond(Positive(_minutesPerSecond, MinutesPerSecondLabel))
                     // Absent means on: unchecking writes false, checking clears an explicit false.
                     .WithPauseInModals(_pauseInModals ? (project.Settings.Time.PauseInModals.OrNullable() is null ? null : true) : false))
-                .WithCalendar(project.Settings.Calendar.WithSeasons(seasons).WithFestivals(festivals));
+                .WithCalendar(project.Settings.Calendar.WithSeasons(seasons).WithFestivals(festivals)
+                    .WithWeekdays(Weekdays.Count == 0 && project.Settings.Calendar.Weekdays is null ? null : Weekdays.Select(row =>
+                    {
+                        var words = row.TranslationWords();
+                        return row.Source.WithId(row.Id.Trim()).WithName(row.Name.Trim()).WithWords(words.Count == 0 ? null : words);
+                    }))
+                    .WithWeekdayOffset(string.IsNullOrWhiteSpace(WeekdayOffset) ? null : Whole(WeekdayOffset, "Weekday offset")));
             var name = _name.Trim();
             var version = _version.Trim();
             if (name.Length == 0) throw new FormatException($"{NameLabel} needs a value.");
@@ -926,6 +960,18 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>Saves the combat rules as the form holds them.</summary>
     public bool SaveCombat(CombatSettings combat) => ApplyCombat(combat);
+
+    public bool UseClassicSkills() => _workspace.Current is { } project && SaveProgression(SettingsForm.ClassicSkills(project));
+
+    /// <summary>Saves the grouped progression draft as one undo step.</summary>
+    public bool SaveProgression(ProgressionSettings draft)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.Progression(project, draft));
+        CombatMessage = saved ? _workspace.SavedText("Progression") : EditorStrings.Get("common.noChanges");
+        CombatChanged?.Invoke();
+        return saved;
+    }
 
     /// <summary>Saves the mine's depth bands as their forms hold them (one undo step).</summary>
     public bool SaveMineBands(IEnumerable<MineBand> bands)

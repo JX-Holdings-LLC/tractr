@@ -5,11 +5,13 @@ open FarmEngine.Schemas
 /// A pack in the curated registry (web `src/lib/mod-registry.ts` `RegistryEntry`).
 [<RequireQualifiedAccess>]
 type RegistryEntry =
-    { Id: string
-      Name: string
-      Author: string
-      Description: string
-      Pack: ContentPack }
+    {
+        Id: string
+        Name: string
+        Author: string
+        Description: string
+        Pack: ContentPack
+    }
 
 /// Mod registry v1 (web `loadRegistry`): the curated packs that ship with the editor, the demo
 /// mod and the starter template. Every entry is validated with `PackRules.validateContentPack`
@@ -18,7 +20,7 @@ type RegistryEntry =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module ModRegistry =
     /// docs/modding/examples/demo-mod.json of the web repo (fixtures/projects/demo-mod.json).
-    let demoModJson : string =
+    let demoModJson: string =
         """{
   "manifest": {
     "id": "demo-glow-farm",
@@ -114,7 +116,7 @@ module ModRegistry =
 }"""
 
     /// docs/modding/template/my-first-mod.json of the web repo (fixtures/projects/my-first-mod.json).
-    let templateModJson : string =
+    let templateModJson: string =
         """{
   "manifest": {
     "id": "my-first-mod",
@@ -157,16 +159,21 @@ module ModRegistry =
             | Error _ -> None
             | Ok pack ->
                 let manifest = pack.Manifest
+
                 Some
-                    { RegistryEntry.Id = manifest.Id
-                      Name = manifest.Name
-                      Author = defaultArg manifest.Author "unknown"
-                      Description = defaultArg manifest.Description ""
-                      Pack = pack }
+                    {
+                        RegistryEntry.Id = manifest.Id
+                        Name = manifest.Name
+                        Author = defaultArg manifest.Author "unknown"
+                        Description = defaultArg manifest.Description ""
+                        Pack = pack
+                    }
 
     /// The curated index, in order.
-    let entries () : RegistryEntry list = [ demoModJson; templateModJson ] |> List.choose entry
+    let entries () : RegistryEntry list =
+        [ demoModJson; templateModJson ] |> List.choose entry
 
     /// Whether the project already has the pack (the web shows "Installed" and disables Install).
     let isInstalled (project: GameProject) (packId: string) : bool =
-        project.ContentPacks |> List.exists (fun install -> install.Pack.Manifest.Id = packId)
+        project.ContentPacks
+        |> List.exists (fun install -> install.Pack.Manifest.Id = packId)

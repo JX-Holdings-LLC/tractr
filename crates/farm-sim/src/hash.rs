@@ -13,7 +13,9 @@
 //!   stable JSON, does not keep) does not change the hash;
 //! - options as a tag byte (0 = none, 1 = some) before the value;
 //! - struct fields in declaration order, each behind a tag byte: 1 = written, 0 = skipped
-//!   (`skip_serializing_if`), so an absent optional key and a present value never collide;
+//!   (`skip_serializing_if`), so an absent optional key and a present value never collide.
+//!   Version-3 extension fields instead use tag 2 plus their name when present and no bytes
+//!   when absent, retaining the encoding of classic projects;
 //! - enum variants as their `u32` index before the content (internally tagged enums are
 //!   structs with the tag as their first field).
 //!
@@ -99,6 +101,68 @@ impl Compound<'_> {
 /// Struct fields (and tuples): no length, a presence tag per struct field.
 struct Fields<'a> {
     encoder: &'a mut Encoder,
+    name: &'static str,
+}
+
+/// Version-3 additions are tagged by name when present, and contribute no byte when absent.
+/// Legacy fields retain their positional presence tags. This preserves old replay hashes without
+/// making two different optional extension fields collide when only one of them is populated.
+fn extension_field(record: &str, field: &str) -> bool {
+    matches!(
+        (record, field),
+        ("Npc", "schedules")
+            | ("Item", "buffs" | "fishingGear")
+            | ("MachineTypeDefinition", "fishProduction")
+            | ("ShopStockEntry", "upgrade")
+            | (
+                "ShopDefinition",
+                "closedOn" | "hours" | "keeperNpcId" | "priceModifiers" | "saturation" | "toolUpgrades"
+            )
+            | ("EventOutcome", "buff")
+            | ("FishTableEntry", "rules")
+            | ("FishTable", "filter" | "layered")
+            | ("GameContent", "mines" | "requestBoards")
+            | ("NodeDrop", "seasons")
+            | ("NodeTypeDefinition", "seasons")
+            | ("TileNode", "dormantHealth" | "expiresOnDay" | "spawnedOnDay" | "spawnedSeason")
+            | ("PackContent", "skills")
+            | ("GameProject", "mines" | "requestBoards")
+            | ("QuestObjective", "targetBundleId" | "targetMineId" | "targetMonsterId")
+            | ("Quest", "deadlineDay" | "deadlineDays" | "onFail")
+            | ("PlayerState", "buffs" | "maxHealth" | "perks" | "purchasedUpgrades" | "toolUpgrades")
+            | ("NpcState", "scheduleSelection")
+            | ("QuestProgress", "deadlineDay" | "request")
+            | (
+                "GameState",
+                "currentMineId"
+                    | "festival"
+                    | "festivalVisits"
+                    | "fishCatches"
+                    | "mines"
+                    | "requestBoards"
+                    | "shopSales",
+            )
+            | (
+                "KeptState",
+                "currentMineId"
+                    | "festival"
+                    | "festivalVisits"
+                    | "fishCatches"
+                    | "mines"
+                    | "questDeadlines"
+                    | "requestBoards"
+                    | "requests"
+                    | "shopSales",
+            )
+            | ("KeptGoals", "buffs" | "maxHealth" | "perks" | "purchasedUpgrades" | "toolUpgrades")
+            | ("KeptNpc", "scheduleSelection")
+            | ("CalendarFestival", "program")
+            | ("CalendarConfig", "weekdayOffset" | "weekdays")
+            | ("ProjectSettings", "progression" | "skillDefinitions")
+            | ("Scene", "forageSpawns")
+            | ("StartQuest", "deadlineDay" | "deadlineDays")
+            | ("EventCondition", "mineId")
+    )
 }
 
 macro_rules! write_le {
@@ -220,11 +284,11 @@ impl<'a> ser::Serializer for &'a mut Encoder {
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Fields<'a>, EncodeError> {
-        Ok(Fields { encoder: self })
+        Ok(Fields { encoder: self, name: "" })
     }
 
     fn serialize_tuple_struct(self, _name: &'static str, _len: usize) -> Result<Fields<'a>, EncodeError> {
-        Ok(Fields { encoder: self })
+        Ok(Fields { encoder: self, name: "" })
     }
 
     fn serialize_tuple_variant(
@@ -235,26 +299,26 @@ impl<'a> ser::Serializer for &'a mut Encoder {
         _len: usize,
     ) -> Result<Fields<'a>, EncodeError> {
         self.variant(index);
-        Ok(Fields { encoder: self })
+        Ok(Fields { encoder: self, name: "" })
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<SortedMap<'a>, EncodeError> {
         Ok(SortedMap { encoder: self, entries: Vec::new() })
     }
 
-    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Fields<'a>, EncodeError> {
-        Ok(Fields { encoder: self })
+    fn serialize_struct(self, name: &'static str, _len: usize) -> Result<Fields<'a>, EncodeError> {
+        Ok(Fields { encoder: self, name })
     }
 
     fn serialize_struct_variant(
         self,
-        _name: &'static str,
+        name: &'static str,
         index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Fields<'a>, EncodeError> {
         self.variant(index);
-        Ok(Fields { encoder: self })
+        Ok(Fields { encoder: self, name })
     }
 }
 
@@ -354,13 +418,20 @@ impl ser::SerializeStruct for Fields<'_> {
     type Ok = ();
     type Error = EncodeError;
 
-    fn serialize_field<T: Serialize + ?Sized>(&mut self, _key: &'static str, value: &T) -> Result<(), EncodeError> {
-        self.encoder.out.push(1);
+    fn serialize_field<T: Serialize + ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), EncodeError> {
+        if extension_field(self.name, key) {
+            self.encoder.out.push(2);
+            key.serialize(&mut *self.encoder)?;
+        } else {
+            self.encoder.out.push(1);
+        }
         value.serialize(&mut *self.encoder)
     }
 
-    fn skip_field(&mut self, _key: &'static str) -> Result<(), EncodeError> {
-        self.encoder.out.push(0);
+    fn skip_field(&mut self, key: &'static str) -> Result<(), EncodeError> {
+        if !extension_field(self.name, key) {
+            self.encoder.out.push(0);
+        }
         Ok(())
     }
 
@@ -373,13 +444,20 @@ impl ser::SerializeStructVariant for Fields<'_> {
     type Ok = ();
     type Error = EncodeError;
 
-    fn serialize_field<T: Serialize + ?Sized>(&mut self, _key: &'static str, value: &T) -> Result<(), EncodeError> {
-        self.encoder.out.push(1);
+    fn serialize_field<T: Serialize + ?Sized>(&mut self, key: &'static str, value: &T) -> Result<(), EncodeError> {
+        if extension_field(self.name, key) {
+            self.encoder.out.push(2);
+            key.serialize(&mut *self.encoder)?;
+        } else {
+            self.encoder.out.push(1);
+        }
         value.serialize(&mut *self.encoder)
     }
 
-    fn skip_field(&mut self, _key: &'static str) -> Result<(), EncodeError> {
-        self.encoder.out.push(0);
+    fn skip_field(&mut self, key: &'static str) -> Result<(), EncodeError> {
+        if !extension_field(self.name, key) {
+            self.encoder.out.push(0);
+        }
         Ok(())
     }
 
@@ -393,6 +471,25 @@ mod tests {
     use super::*;
     use indexmap::IndexMap;
     use serde::Serialize;
+
+    #[test]
+    fn additive_fields_preserve_absence_and_distinguish_equal_values_in_different_fields() {
+        #[derive(Serialize)]
+        #[serde(rename = "StartQuest", rename_all = "camelCase")]
+        struct Deadlines {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            deadline_day: Option<u32>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            deadline_days: Option<u32>,
+        }
+        let absent = Deadlines { deadline_day: None, deadline_days: None };
+        assert!(canonical_bytes(&absent).is_empty(), "an absent extension must add no legacy bytes");
+        let fixed = Deadlines { deadline_day: Some(1), deadline_days: None };
+        let relative = Deadlines { deadline_day: None, deadline_days: Some(1) };
+        assert_ne!(hash_state(&fixed), hash_state(&relative));
+        assert_ne!(hash_state(&absent), hash_state(&fixed));
+        assert_ne!(hash_state(&absent), hash_state(&Deadlines { deadline_day: Some(0), deadline_days: None }));
+    }
 
     #[derive(Serialize)]
     struct Sample {

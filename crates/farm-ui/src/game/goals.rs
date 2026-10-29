@@ -27,6 +27,7 @@ pub enum GoalsTab {
     Bundles,
     Achievements,
     Shipped,
+    Fish,
 }
 
 impl GoalsTab {
@@ -37,6 +38,7 @@ impl GoalsTab {
             GoalsTab::Bundles => ("Bundles", "goals.bundles"),
             GoalsTab::Achievements => ("Achievements", "goals.achievements"),
             GoalsTab::Shipped => ("Shipped", "goals.shipped"),
+            GoalsTab::Fish => ("Fish", "goals.fish"),
         }
     }
 }
@@ -56,6 +58,14 @@ pub fn tabs(content: &GameContent) -> Vec<GoalsTab> {
     }
     if content.machine_types.iter().any(|kind| kind.shipping) {
         tabs.push(GoalsTab::Shipped);
+    }
+    if content
+        .fish_tables
+        .iter()
+        .flat_map(|table| &table.entries)
+        .any(|entry| entry.rules.as_ref().is_some_and(|r| r.min_size.is_some()))
+    {
+        tabs.push(GoalsTab::Fish);
     }
     tabs
 }
@@ -357,6 +367,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut GoalsTab, actions
     let content = view.content;
     let state = view.state;
     let subtitle = match *tab {
+        GoalsTab::Fish => lang.format("goals.fishSubtitle", &[&num(state.fish_catches.len())]),
         GoalsTab::Collections => {
             let done = content
                 .collections
@@ -400,7 +411,11 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut GoalsTab, actions
         for candidate in &tabs {
             let (name, label) = candidate.names();
             let button = Button::new(lang.tr(label)).kind(ButtonKind::Tab { selected: candidate == tab });
-            let width = ui.button_width(&button).max(72.0);
+            let width = ui.button_width(&button).max(72.0).min(area.width);
+            if x > area.x && x + width > area.x + area.width {
+                x = area.x;
+                y += tab_height + 6.0;
+            }
             if ui.button(WidgetId::new("goals-tab").with(name), Rect::new(x, y, width, tab_height), button) {
                 *tab = *candidate;
             }
@@ -410,6 +425,14 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, tab: &mut GoalsTab, actions
     }
 
     match *tab {
+        GoalsTab::Fish => {
+            for record in &state.fish_catches {
+                let text = item_name(content, &record.item_id);
+                let note = lang.format("goals.fishSize", &[&num(record.size)]);
+                line_row(ui, Rect::new(area.x, y, area.width, 36.0), true, text, Some(&note), None);
+                y += 40.0;
+            }
+        }
         GoalsTab::Collections => {
             for definition in &content.collections {
                 y += collection(ui, view, area, y, definition, actions);

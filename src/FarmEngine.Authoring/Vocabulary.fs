@@ -21,67 +21,100 @@ type FieldKind =
 /// `n ?? 0` / `n ?? 1`). `Min`/`Max` clamp numbers like the web does. `Empty` labels the
 /// "nothing chosen" entry of an optional reference picker.
 type VocabularyField =
-    { Key: string
-      Label: string
-      Kind: FieldKind
-      Optional: bool
-      Placeholder: string
-      WhenEmpty: float
-      Min: float option
-      Max: float option
-      Empty: string option }
+    {
+        Key: string
+        Label: string
+        Kind: FieldKind
+        Optional: bool
+        Placeholder: string
+        WhenEmpty: float
+        Min: float option
+        Max: float option
+        Empty: string option
+    }
 
 /// Port of `event-vocabulary.ts` and the per-type fields of `event-forms.tsx`: the condition and
 /// outcome types events, actions and minigame tiers share, which fields each type shows, and the
 /// defaults a new or re-typed row starts from.
 module Vocabulary =
     let private field key label kind =
-        { Key = key; Label = label; Kind = kind; Optional = false; Placeholder = ""; WhenEmpty = 0.0; Min = None; Max = None; Empty = None }
+        {
+            Key = key
+            Label = label
+            Kind = kind
+            Optional = false
+            Placeholder = ""
+            WhenEmpty = 0.0
+            Min = None
+            Max = None
+            Empty = None
+        }
 
     let private integer key label = field key label FieldKind.Integer
-    let private optionalInteger key label = { integer key label with Optional = true }
-    let private text key label placeholder = { field key label FieldKind.Text with Placeholder = placeholder }
-    let private reference key label kind = field key label (FieldKind.Reference kind)
+
+    let private optionalInteger key label =
+        { integer key label with
+            Optional = true
+        }
+
+    let private text key label placeholder =
+        { field key label FieldKind.Text with
+            Placeholder = placeholder
+        }
+
+    let private reference key label kind =
+        field key label (FieldKind.Reference kind)
 
     /// `CONDITION_TYPES`, in the web order.
     let conditionTypes =
-        [ "enterTile", "Enter tile/region"
-          "interactTile", "Interact with tile"
-          "friendship", "Friendship threshold"
-          "weather", "Weather"
-          "inventorySpace", "Inventory can receive item"
-          "hasItem", "Has item ≥ n"
-          "flag", "Flag is set/unset"
-          "dayRange", "Day range"
-          "season", "Season"
-          "yearRange", "Year range"
-          "timeOfDay", "Time of day"
-          "questStatus", "Quest status"
-          "festivalId", "Festival"
-          "variable", "Variable compares"
-          "all", "All of these"
-          "any", "Any of these"
-          "not", "None of these"
-          "chance", "Random chance"
-          "scene", "Player is in scene"
-          "hearts", "Hearts with NPC"
-          "dayOfSeason", "Day of the season"
-          "relationship", "Relationship"
-          "money", "Has money ≥ n"
-          "skillLevel", "Skill level ≥ n"
-          "mineFloor", "Reached mine floor"
-          "collection", "Collection holds items"
-          "bundle", "Bundle is complete"
-          "achievement", "Achievement unlocked"
-          "shipped", "Shipped ≥ n"
-          "building", "Has building"
-          "slain", "Monsters slain ≥ n"
-          "birthday", "Today is a birthday" ]
+        [
+            "enterTile", "Enter tile/region"
+            "interactTile", "Interact with tile"
+            "friendship", "Friendship threshold"
+            "weather", "Weather"
+            "inventorySpace", "Inventory can receive item"
+            "hasItem", "Has item ≥ n"
+            "flag", "Flag is set/unset"
+            "dayRange", "Day range"
+            "season", "Season"
+            "yearRange", "Year range"
+            "timeOfDay", "Time of day"
+            "questStatus", "Quest status"
+            "festivalId", "Festival"
+            "weekday", "Weekday"
+            "variable", "Variable compares"
+            "all", "All of these"
+            "any", "Any of these"
+            "not", "None of these"
+            "chance", "Random chance"
+            "scene", "Player is in scene"
+            "hearts", "Hearts with NPC"
+            "dayOfSeason", "Day of the season"
+            "relationship", "Relationship"
+            "money", "Has money ≥ n"
+            "perk", "Perk is chosen"
+            "buff", "Buff is active"
+            "skillLevel", "Skill level ≥ n"
+            "mineFloor", "Reached mine floor"
+            "collection", "Collection holds items"
+            "bundle", "Bundle is complete"
+            "achievement", "Achievement unlocked"
+            "shipped", "Shipped ≥ n"
+            "building", "Has building"
+            "slain", "Monsters slain ≥ n"
+            "birthday", "Today is a birthday"
+        ]
 
     /// How a `variable` condition compares, with the editor's labels.
     let comparisons =
-        [ VariableComparisons.Eq, "="; VariableComparisons.Ne, "≠"; VariableComparisons.Lt, "<"
-          VariableComparisons.Le, "≤"; VariableComparisons.Gt, ">"; VariableComparisons.Ge, "≥" ]
+        [
+            VariableComparisons.Eq, "="
+            VariableComparisons.Ne, "≠"
+            VariableComparisons.Lt, "<"
+            VariableComparisons.Le, "≤"
+            VariableComparisons.Gt, ">"
+            VariableComparisons.Ge, "≥"
+        ]
 
     /// The relationship stages, with the editor's labels.
     let relationshipStatuses = References.relationshipStatuses
@@ -91,105 +124,220 @@ module Vocabulary =
 
     /// The outcome types the editor offers, in its order.
     let outcomeTypes =
-        [ EventOutcomeTypes.ModifyFriendship, "Change friendship"
-          EventOutcomeTypes.ModifyEnergy, "Restore / spend energy"
-          EventOutcomeTypes.WaterArea, "Water nearby soil (magic)"
-          EventOutcomeTypes.Message, "Show message"
-          EventOutcomeTypes.GiveItem, "Give item"
-          EventOutcomeTypes.TakeItem, "Take item"
-          EventOutcomeTypes.GiveMoney, "Give money"
-          EventOutcomeTypes.TakeMoney, "Take money"
-          EventOutcomeTypes.SetFlag, "Set flag"
-          EventOutcomeTypes.ClearFlag, "Clear flag"
-          EventOutcomeTypes.StartQuest, "Start quest"
-          EventOutcomeTypes.CompleteQuest, "Complete quest"
-          EventOutcomeTypes.SpawnNpc, "Spawn NPC"
-          EventOutcomeTypes.RemoveNpc, "Remove NPC"
-          EventOutcomeTypes.ChangeTile, "Change tile"
-          EventOutcomeTypes.WarpPlayer, "Warp player"
-          EventOutcomeTypes.StartDialogue, "Start dialogue"
-          EventOutcomeTypes.LockTransition, "Lock transition"
-          EventOutcomeTypes.UnlockTransition, "Unlock transition"
-          EventOutcomeTypes.PlaySound, "Play sound"
-          EventOutcomeTypes.PerformAction, "Perform action"
-          EventOutcomeTypes.StartMinigame, "Start minigame"
-          EventOutcomeTypes.PlayMusic, "Play music"
-          EventOutcomeTypes.StartCutscene, "Start cutscene"
-          EventOutcomeTypes.SetVariable, "Set variable"
-          EventOutcomeTypes.AddVariable, "Add to variable"
-          EventOutcomeTypes.MoveNpc, "Move NPC"
-          EventOutcomeTypes.SetWeather, "Change the weather"
-          EventOutcomeTypes.GiveExperience, "Give experience"
-          EventOutcomeTypes.AddShopStock, "Add to a shop"
-          EventOutcomeTypes.RemoveShopStock, "Remove from a shop"
-          EventOutcomeTypes.PlaceNode, "Place node"
-          EventOutcomeTypes.RemoveNode, "Remove node"
-          EventOutcomeTypes.PlaceMachine, "Place machine"
-          EventOutcomeTypes.RemoveMachine, "Remove machine"
-          EventOutcomeTypes.SetRelationship, "Set relationship"
-          EventOutcomeTypes.SendMail, "Send a letter"
-          EventOutcomeTypes.ModifyHealth, "Restore / take health" ]
+        [
+            EventOutcomeTypes.ModifyFriendship, "Change friendship"
+            EventOutcomeTypes.ModifyEnergy, "Restore / spend energy"
+            EventOutcomeTypes.WaterArea, "Water nearby soil (magic)"
+            EventOutcomeTypes.Message, "Show message"
+            EventOutcomeTypes.GiveItem, "Give item"
+            EventOutcomeTypes.TakeItem, "Take item"
+            EventOutcomeTypes.GiveMoney, "Give money"
+            EventOutcomeTypes.TakeMoney, "Take money"
+            EventOutcomeTypes.SetFlag, "Set flag"
+            EventOutcomeTypes.ClearFlag, "Clear flag"
+            EventOutcomeTypes.StartQuest, "Start quest"
+            EventOutcomeTypes.CompleteQuest, "Complete quest"
+            EventOutcomeTypes.SpawnNpc, "Spawn NPC"
+            EventOutcomeTypes.RemoveNpc, "Remove NPC"
+            EventOutcomeTypes.ChangeTile, "Change tile"
+            EventOutcomeTypes.WarpPlayer, "Warp player"
+            EventOutcomeTypes.StartDialogue, "Start dialogue"
+            EventOutcomeTypes.LockTransition, "Lock transition"
+            EventOutcomeTypes.UnlockTransition, "Unlock transition"
+            EventOutcomeTypes.PlaySound, "Play sound"
+            EventOutcomeTypes.PerformAction, "Perform action"
+            EventOutcomeTypes.StartMinigame, "Start minigame"
+            EventOutcomeTypes.PlayMusic, "Play music"
+            EventOutcomeTypes.StartCutscene, "Start cutscene"
+            EventOutcomeTypes.SetVariable, "Set variable"
+            EventOutcomeTypes.AddVariable, "Add to variable"
+            EventOutcomeTypes.MoveNpc, "Move NPC"
+            EventOutcomeTypes.SetWeather, "Change the weather"
+            EventOutcomeTypes.GiveExperience, "Give experience"
+            EventOutcomeTypes.AddShopStock, "Add to a shop"
+            EventOutcomeTypes.RemoveShopStock, "Remove from a shop"
+            EventOutcomeTypes.PlaceNode, "Place node"
+            EventOutcomeTypes.RemoveNode, "Remove node"
+            EventOutcomeTypes.PlaceMachine, "Place machine"
+            EventOutcomeTypes.RemoveMachine, "Remove machine"
+            EventOutcomeTypes.SetRelationship, "Set relationship"
+            EventOutcomeTypes.SendMail, "Send a letter"
+            EventOutcomeTypes.SetInventorySize, "Set backpack size"
+            EventOutcomeTypes.AddInventorySize, "Increase backpack size"
+            EventOutcomeTypes.AddMaxEnergy, "Increase maximum energy"
+            EventOutcomeTypes.AddMaxHealth, "Increase maximum health"
+            EventOutcomeTypes.ApplyBuff, "Apply timed buff"
+            EventOutcomeTypes.ModifyHealth, "Restore / take health"
+        ]
 
     /// The label of a condition type (the type itself when unknown).
     let conditionLabel (kind: string) =
-        conditionTypes |> List.tryFind (fun (value, _) -> value = kind) |> Option.map snd |> Option.defaultValue kind
+        conditionTypes
+        |> List.tryFind (fun (value, _) -> value = kind)
+        |> Option.map snd
+        |> Option.defaultValue kind
 
     /// The label of an outcome type (the type itself when unknown, like the web).
     let outcomeLabel (kind: string) =
-        outcomeTypes |> List.tryFind (fun (value, _) -> value = kind) |> Option.map snd |> Option.defaultValue kind
+        outcomeTypes
+        |> List.tryFind (fun (value, _) -> value = kind)
+        |> Option.map snd
+        |> Option.defaultValue kind
 
     /// `ConditionRow`: the fields each condition type shows.
     let conditionFields (kind: string) : VocabularyField list =
         match kind with
         | "enterTile"
-        | "interactTile" -> [ integer "x" "X"; integer "y" "Y"; optionalInteger "x2" "X2 (opt)"; optionalInteger "y2" "Y2 (opt)" ]
-        | "friendship" -> [ reference "npcId" "Character" ReferenceKind.Npc; integer "min" "Minimum friendship" ]
-        | "weather" -> [ field "weatherIds" "Weather IDs" (FieldKind.ReferenceList ReferenceKind.Weather) ]
+        | "interactTile" ->
+            [
+                integer "x" "X"
+                integer "y" "Y"
+                optionalInteger "x2" "X2 (opt)"
+                optionalInteger "y2" "Y2 (opt)"
+            ]
+        | "friendship" ->
+            [
+                reference "npcId" "Character" ReferenceKind.Npc
+                integer "min" "Minimum friendship"
+            ]
+        | "weather" ->
+            [
+                field "weatherIds" "Weather IDs" (FieldKind.ReferenceList ReferenceKind.Weather)
+            ]
         | "hasItem"
-        | "inventorySpace" -> [ reference "itemId" "Item" ReferenceKind.Item; { integer "quantity" "Quantity ≥" with WhenEmpty = 1.0 } ]
-        | "flag" -> [ text "flag" "Flag name" ""; field "value" "Flag state" (FieldKind.Bool("is set", "is NOT set")) ]
+        | "inventorySpace" ->
+            [
+                reference "itemId" "Item" ReferenceKind.Item
+                { integer "quantity" "Quantity ≥" with
+                    WhenEmpty = 1.0
+                }
+            ]
+        | "flag" ->
+            [
+                text "flag" "Flag name" ""
+                field "value" "Flag state" (FieldKind.Bool("is set", "is NOT set"))
+            ]
         | "dayRange" -> [ optionalInteger "minDay" "From day"; optionalInteger "maxDay" "To day" ]
         | "yearRange" -> [ optionalInteger "minYear" "From year"; optionalInteger "maxYear" "To year" ]
         | "timeOfDay" -> [ integer "minMinute" "From minute"; integer "maxMinute" "To minute" ]
         | "season" -> [ field "seasons" "Seasons" (FieldKind.ReferenceList ReferenceKind.Season) ]
+        | "weekday" ->
+            [
+                field "weekdayIds" "Weekdays" (FieldKind.ReferenceList ReferenceKind.Weekday)
+            ]
         | "festivalId" -> [ reference "festivalId" "Festival" ReferenceKind.Festival ]
         | "questStatus" ->
-            [ reference "questId" "Quest" ReferenceKind.Quest
-              field "status" "Status" (FieldKind.OneOf(QuestStatuses.All |> Seq.map (fun s -> s, s) |> List.ofSeq)) ]
+            [
+                reference "questId" "Quest" ReferenceKind.Quest
+                field "status" "Status" (FieldKind.OneOf(QuestStatuses.All |> Seq.map (fun s -> s, s) |> List.ofSeq))
+            ]
         | "variable" ->
-            [ text "name" "Variable" "coins"
-              field "compare" "Compare" (FieldKind.OneOf comparisons)
-              { field "value" "Number" FieldKind.Number with Optional = true }
-              { text "text" "or text" "" with Optional = true; Placeholder = "compare with a text instead" } ]
+            [
+                text "name" "Variable" "coins"
+                field "compare" "Compare" (FieldKind.OneOf comparisons)
+                { field "value" "Number" FieldKind.Number with
+                    Optional = true
+                }
+                { text "text" "or text" "" with
+                    Optional = true
+                    Placeholder = "compare with a text instead"
+                }
+            ]
         | "all"
         | "any"
         | "not" -> [ field "conditions" "Conditions" FieldKind.Conditions ]
-        | "chance" -> [ { field "chance" "Chance (0–1)" FieldKind.Number with Min = Some 0.0; Max = Some 1.0 } ]
+        | "chance" ->
+            [
+                { field "chance" "Chance (0–1)" FieldKind.Number with
+                    Min = Some 0.0
+                    Max = Some 1.0
+                }
+            ]
         | "scene" -> [ field "sceneIds" "Scenes" (FieldKind.ReferenceList ReferenceKind.Scene) ]
         | "hearts" ->
-            [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(the NPC speaking)" }
-              optionalInteger "min" "At least (hearts)"; optionalInteger "max" "At most (hearts)" ]
+            [
+                { reference "npcId" "Character" ReferenceKind.Npc with
+                    Optional = true
+                    Empty = Some "(the NPC speaking)"
+                }
+                optionalInteger "min" "At least (hearts)"
+                optionalInteger "max" "At most (hearts)"
+            ]
         | "dayOfSeason" -> [ optionalInteger "minDay" "From day"; optionalInteger "maxDay" "To day" ]
         | "relationship" ->
-            [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(the NPC speaking, or anyone)" }
-              field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
+            [
+                { reference "npcId" "Character" ReferenceKind.Npc with
+                    Optional = true
+                    Empty = Some "(the NPC speaking, or anyone)"
+                }
+                field "status" "Status" (FieldKind.OneOf relationshipStatuses)
+            ]
         // M5–M7
         | "money" -> [ integer "min" "At least (money)" ]
-        | "skillLevel" -> [ reference "skill" "Skill" ReferenceKind.Skill; { integer "min" "Level ≥" with WhenEmpty = 1.0 } ]
-        | "mineFloor" -> [ { integer "min" "Floor ≥" with WhenEmpty = 1.0 } ]
+        | "perk" ->
+            [
+                reference "skill" "Skill" ReferenceKind.Skill
+                text "perkId" "Perk" ""
+                text "choiceId" "Choice (empty for any)" ""
+            ]
+        | "buff" -> [ text "id" "Buff id" "" ]
+        | "skillLevel" ->
+            [
+                reference "skill" "Skill" ReferenceKind.Skill
+                { integer "min" "Level ≥" with
+                    WhenEmpty = 1.0
+                }
+            ]
+        | "mineFloor" ->
+            [
+                reference "mineId" "Mine" ReferenceKind.Mine
+                { integer "min" "Floor ≥" with
+                    WhenEmpty = 1.0
+                }
+            ]
         | "collection" ->
-            [ reference "collectionId" "Collection" ReferenceKind.Collection
-              { optionalInteger "min" "At least (items)" with Placeholder = "all of them" } ]
+            [
+                reference "collectionId" "Collection" ReferenceKind.Collection
+                { optionalInteger "min" "At least (items)" with
+                    Placeholder = "all of them"
+                }
+            ]
         | "bundle" -> [ reference "bundleId" "Bundle" ReferenceKind.Bundle ]
         | "achievement" -> [ reference "achievementId" "Achievement" ReferenceKind.Achievement ]
         | "shipped" ->
-            [ { reference "itemId" "Item" ReferenceKind.Item with Optional = true; Empty = Some "(everything)" }
-              { integer "min" "At least (units)" with WhenEmpty = 1.0 } ]
-        | "building" -> [ reference "buildingId" "Building" ReferenceKind.Building; { integer "min" "At least" with WhenEmpty = 1.0 } ]
+            [
+                { reference "itemId" "Item" ReferenceKind.Item with
+                    Optional = true
+                    Empty = Some "(everything)"
+                }
+                { integer "min" "At least (units)" with
+                    WhenEmpty = 1.0
+                }
+            ]
+        | "building" ->
+            [
+                reference "buildingId" "Building" ReferenceKind.Building
+                { integer "min" "At least" with
+                    WhenEmpty = 1.0
+                }
+            ]
         | "slain" ->
-            [ { reference "monsterId" "Monster" ReferenceKind.Monster with Optional = true; Empty = Some "(any monster)" }
-              { integer "min" "At least" with WhenEmpty = 1.0 } ]
-        | "birthday" -> [ { reference "npcId" "Character" ReferenceKind.Npc with Optional = true; Empty = Some "(anyone's)" } ]
+            [
+                { reference "monsterId" "Monster" ReferenceKind.Monster with
+                    Optional = true
+                    Empty = Some "(any monster)"
+                }
+                { integer "min" "At least" with
+                    WhenEmpty = 1.0
+                }
+            ]
+        | "birthday" ->
+            [
+                { reference "npcId" "Character" ReferenceKind.Npc with
+                    Optional = true
+                    Empty = Some "(anyone's)"
+                }
+            ]
         | _ -> []
 
     /// `OutcomeFields`: the fields each outcome type shows.
@@ -197,15 +345,34 @@ module Vocabulary =
         let item = reference "itemId" "Item" ReferenceKind.Item
         let npc = reference "npcId" "NPC" ReferenceKind.Npc
         let scene = reference "sceneId" "Scene" ReferenceKind.Scene
-        let hereScene = { scene with Optional = true; Empty = Some "(the player's scene)" }
+
+        let hereScene =
+            { scene with
+                Optional = true
+                Empty = Some "(the player's scene)"
+            }
+
         match kind with
         | EventOutcomeTypes.Message -> [ text "message" "Message" "Message text…" ]
         | EventOutcomeTypes.GiveItem
-        | EventOutcomeTypes.TakeItem -> [ item; { integer "itemQuantity" "Quantity" with WhenEmpty = 1.0 } ]
+        | EventOutcomeTypes.TakeItem ->
+            [
+                item
+                { integer "itemQuantity" "Quantity" with
+                    WhenEmpty = 1.0
+                }
+            ]
         | EventOutcomeTypes.GiveMoney
         | EventOutcomeTypes.TakeMoney -> [ integer "amount" "Amount" ]
         | EventOutcomeTypes.ModifyEnergy -> [ integer "amount" "Energy change" ]
-        | EventOutcomeTypes.WaterArea -> [ { integer "radius" "Radius (0-10 tiles)" with WhenEmpty = 1.0; Min = Some 0.0; Max = Some 10.0 } ]
+        | EventOutcomeTypes.WaterArea ->
+            [
+                { integer "radius" "Radius (0-10 tiles)" with
+                    WhenEmpty = 1.0
+                    Min = Some 0.0
+                    Max = Some 10.0
+                }
+            ]
         | EventOutcomeTypes.ModifyFriendship -> [ npc; integer "amount" "Friendship change" ]
         | EventOutcomeTypes.SetFlag
         | EventOutcomeTypes.ClearFlag -> [ text "flagName" "Flag name" "flag-name" ]
@@ -214,7 +381,12 @@ module Vocabulary =
         | EventOutcomeTypes.SpawnNpc -> [ npc; optionalInteger "x" "X (opt)"; optionalInteger "y" "Y (opt)" ]
         | EventOutcomeTypes.RemoveNpc
         | EventOutcomeTypes.StartDialogue -> [ npc ]
-        | EventOutcomeTypes.ChangeTile -> [ integer "tileX" "X"; integer "tileY" "Y"; reference "newTileType" "New terrain" ReferenceKind.Terrain ]
+        | EventOutcomeTypes.ChangeTile ->
+            [
+                integer "tileX" "X"
+                integer "tileY" "Y"
+                reference "newTileType" "New terrain" ReferenceKind.Terrain
+            ]
         | EventOutcomeTypes.WarpPlayer -> [ scene; integer "x" "X"; integer "y" "Y" ]
         | EventOutcomeTypes.LockTransition
         | EventOutcomeTypes.UnlockTransition -> [ scene; integer "x" "From X"; integer "y" "From Y" ]
@@ -222,29 +394,62 @@ module Vocabulary =
         | EventOutcomeTypes.PerformAction -> [ reference "actionId" "Action" ReferenceKind.Action ]
         | EventOutcomeTypes.StartMinigame -> [ reference "minigameId" "Minigame" ReferenceKind.Minigame ]
         | EventOutcomeTypes.PlayMusic ->
-            [ { reference "soundId" "Music" ReferenceKind.Music with Optional = true; Empty = Some "(the game's own music)" } ]
+            [
+                { reference "soundId" "Music" ReferenceKind.Music with
+                    Optional = true
+                    Empty = Some "(the game's own music)"
+                }
+            ]
         | EventOutcomeTypes.StartCutscene -> [ reference "cutsceneId" "Cutscene" ReferenceKind.Cutscene ]
         | EventOutcomeTypes.SetVariable ->
-            [ text "variable" "Variable" "coins"
-              { field "amount" "Number" FieldKind.Number with Optional = true }
-              { text "text" "or text" "" with Optional = true; Placeholder = "store a text instead" } ]
+            [
+                text "variable" "Variable" "coins"
+                { field "amount" "Number" FieldKind.Number with
+                    Optional = true
+                }
+                { text "text" "or text" "" with
+                    Optional = true
+                    Placeholder = "store a text instead"
+                }
+            ]
         | EventOutcomeTypes.AddVariable -> [ text "variable" "Variable" "coins"; field "amount" "Add" FieldKind.Number ]
         | EventOutcomeTypes.MoveNpc -> [ npc; hereScene; integer "x" "X"; integer "y" "Y" ]
         | EventOutcomeTypes.SetWeather -> [ reference "weatherId" "Weather" ReferenceKind.Weather ]
         | EventOutcomeTypes.GiveExperience -> [ reference "skill" "Skill" ReferenceKind.Skill; integer "amount" "Experience" ]
         | EventOutcomeTypes.AddShopStock ->
-            [ reference "shopId" "Shop" ReferenceKind.Shop; item
-              { optionalInteger "amount" "Price (opt)" with Placeholder = "the item's" }
-              { optionalInteger "itemQuantity" "Daily limit (opt)" with Placeholder = "unlimited" } ]
+            [
+                reference "shopId" "Shop" ReferenceKind.Shop
+                item
+                { optionalInteger "amount" "Price (opt)" with
+                    Placeholder = "the item's"
+                }
+                { optionalInteger "itemQuantity" "Daily limit (opt)" with
+                    Placeholder = "unlimited"
+                }
+            ]
         | EventOutcomeTypes.RemoveShopStock -> [ reference "shopId" "Shop" ReferenceKind.Shop; item ]
         | EventOutcomeTypes.PlaceNode ->
-            [ hereScene; integer "tileX" "X"; integer "tileY" "Y"; reference "nodeTypeId" "Node" ReferenceKind.NodeType ]
+            [
+                hereScene
+                integer "tileX" "X"
+                integer "tileY" "Y"
+                reference "nodeTypeId" "Node" ReferenceKind.NodeType
+            ]
         | EventOutcomeTypes.PlaceMachine ->
-            [ hereScene; integer "tileX" "X"; integer "tileY" "Y"; reference "machineTypeId" "Machine" ReferenceKind.MachineType ]
+            [
+                hereScene
+                integer "tileX" "X"
+                integer "tileY" "Y"
+                reference "machineTypeId" "Machine" ReferenceKind.MachineType
+            ]
         | EventOutcomeTypes.RemoveNode
         | EventOutcomeTypes.RemoveMachine -> [ hereScene; integer "tileX" "X"; integer "tileY" "Y" ]
         | EventOutcomeTypes.SetRelationship -> [ npc; field "status" "Status" (FieldKind.OneOf relationshipStatuses) ]
         | EventOutcomeTypes.SendMail -> [ reference "mailId" "Letter" ReferenceKind.Mail ]
+        | EventOutcomeTypes.SetInventorySize -> [ integer "amount" "Amount" ]
+        | EventOutcomeTypes.AddInventorySize -> [ integer "amount" "Amount" ]
+        | EventOutcomeTypes.AddMaxEnergy -> [ integer "amount" "Amount" ]
+        | EventOutcomeTypes.AddMaxHealth -> [ integer "amount" "Amount" ]
         | EventOutcomeTypes.ModifyHealth -> [ integer "amount" "Health change" ]
         | _ -> []
 
@@ -261,15 +466,28 @@ module Vocabulary =
     let objectiveTargets (kind: string) : string list =
         match kind with
         | QuestObjectiveTypes.Collect
+        | QuestObjectiveTypes.Ship
+        | QuestObjectiveTypes.Catch
         | QuestObjectiveTypes.Craft
         | QuestObjectiveTypes.Gift -> [ "TargetItemId"; "TargetItemQuantity" ]
         | QuestObjectiveTypes.Harvest -> [ "TargetCropType"; "TargetCropQuantity" ]
+        | QuestObjectiveTypes.Hearts -> [ "TargetNpcId"; "TargetItemQuantity" ]
+        | QuestObjectiveTypes.Slay -> [ "TargetMonsterId"; "TargetItemQuantity" ]
+        | QuestObjectiveTypes.Bundle -> [ "TargetBundleId" ]
+        | QuestObjectiveTypes.MineFloor -> [ "TargetMineId"; "TargetItemQuantity" ]
         | QuestObjectiveTypes.Talk -> [ "TargetNpcId" ]
         | QuestObjectiveTypes.Visit -> [ "TargetSceneId" ]
         | _ -> []
 
     let private objectiveTargetProperties =
-        [ "TargetItemId"; "TargetItemQuantity"; "TargetCropType"; "TargetCropQuantity"; "TargetNpcId"; "TargetSceneId" ]
+        [
+            "TargetItemId"
+            "TargetItemQuantity"
+            "TargetCropType"
+            "TargetCropQuantity"
+            "TargetNpcId"
+            "TargetSceneId"
+        ]
 
     /// The fields a cutscene step of each type uses besides its type and label (M2).
     let stepFields (kind: string) : string list =
@@ -289,8 +507,25 @@ module Vocabulary =
         | _ -> []
 
     let private stepProperties =
-        [ "Actor"; "X"; "Y"; "Direction"; "Emote"; "Seconds"; "Text"; "Speaker"; "Options"; "Goto"; "Conditions"; "Mode"; "Color"
-          "SoundId"; "Outcomes"; "Wait"; "Expression" ]
+        [
+            "Actor"
+            "X"
+            "Y"
+            "Direction"
+            "Emote"
+            "Seconds"
+            "Text"
+            "Speaker"
+            "Options"
+            "Goto"
+            "Conditions"
+            "Mode"
+            "Color"
+            "SoundId"
+            "Outcomes"
+            "Wait"
+            "Expression"
+        ]
 
     /// Properties of `owner` a form hides while its `type` discriminator is `kind`.
     let hiddenProperties (owner: string) (kind: string) : string list =
@@ -303,8 +538,12 @@ module Vocabulary =
             stepProperties |> List.filter (fun p -> not (List.contains p shown))
         // An event's subject and minute (M3) apply to some triggers only.
         | "GameEvent" ->
-            [ if not (List.contains kind EventTriggers.WithSubject) then "Subject"
-              if kind <> EventTriggers.Time then "Minute" ]
+            [
+                if not (List.contains kind EventTriggers.WithSubject) then
+                    "Subject"
+                if kind <> EventTriggers.Time then
+                    "Minute"
+            ]
         | _ -> []
 
     /// What `owner.property` holds while the record's `type` is `kind`, where that differs from
@@ -339,20 +578,76 @@ module Vocabulary =
     /// `None` when the type has no special default; the form then starts from the record's own
     /// defaults.
     let newElement (elementType: string) (project: GameProject) (entity: obj) (siblingIds: string list) : obj option =
-        let firstItem () = firstId (References.options ReferenceKind.Item project)
+        let firstItem () =
+            firstId (References.options ReferenceKind.Item project)
+
         match elementType with
-        | "ShopStockEntry" -> some { ShopStockEntry.Default with ItemId = firstItem () }
-        | "RecipeIngredient" -> some ({ ItemId = firstItem (); Quantity = 1.0 } : RecipeIngredient)
-        | "NodeDrop" -> some ({ ItemId = firstItem (); Min = 1.0; Max = 1.0; Weight = 1.0; Extra = [] } : NodeDrop)
-        | "FishTableEntry" -> some ({ ItemId = firstItem (); Weight = 1.0; Difficulty = 0.3 } : FishTableEntry)
-        | "QuestRewardItem" -> some ({ ItemId = firstItem (); Quantity = 1.0 } : QuestRewardItem)
-        | "MineRockWeight" -> some ({ NodeTypeId = firstId (References.options ReferenceKind.NodeType project); Weight = 1.0 } : MineRockWeight)
-        | "WeatherTableEntry" -> some ({ WeatherId = firstId (References.options ReferenceKind.Weather project); Weight = 1.0 } : WeatherTableEntry)
+        | "ShopStockEntry" ->
+            some
+                { ShopStockEntry.Default with
+                    ItemId = firstItem ()
+                }
+        | "RecipeIngredient" ->
+            some (
+                {
+                    ItemId = firstItem ()
+                    Quantity = 1.0
+                }
+                : RecipeIngredient
+            )
+        | "NodeDrop" ->
+            some (
+                { NodeDrop.Default with
+                    ItemId = firstItem ()
+                    Min = 1.0
+                    Max = 1.0
+                    Weight = 1.0
+                    Extra = []
+                }
+                : NodeDrop
+            )
+        | "FishTableEntry" ->
+            some (
+                { FishTableEntry.Default with
+                    ItemId = firstItem ()
+                    Weight = 1.0
+                    Difficulty = 0.3
+                }
+                : FishTableEntry
+            )
+        | "QuestRewardItem" ->
+            some (
+                {
+                    ItemId = firstItem ()
+                    Quantity = 1.0
+                }
+                : QuestRewardItem
+            )
+        | "MineRockWeight" ->
+            some (
+                {
+                    NodeTypeId = firstId (References.options ReferenceKind.NodeType project)
+                    Weight = 1.0
+                }
+                : MineRockWeight
+            )
+        | "WeatherTableEntry" ->
+            some (
+                {
+                    WeatherId = firstId (References.options ReferenceKind.Weather project)
+                    Weight = 1.0
+                }
+                : WeatherTableEntry
+            )
         | "QuestObjective" ->
             some
                 { QuestObjective.Default with
-                    Id = Defaults.nextId "obj" siblingIds; Type = QuestObjectiveTypes.Collect
-                    Description = "New objective"; Completed = false; Progress = 0.0 }
+                    Id = Defaults.nextId "obj" siblingIds
+                    Type = QuestObjectiveTypes.Collect
+                    Description = "New objective"
+                    Completed = false
+                    Progress = 0.0
+                }
         | "DialogueOption" -> some (Defaults.newDialogueOption ())
         | "MinigameResultTier" -> some (Defaults.newResultTier ())
         | "NpcScheduleEntry" ->
@@ -361,36 +656,117 @@ module Vocabulary =
             | _ -> None
         | "GridPoint" ->
             match entity with
-            | :? Npc as npc -> some ({ X = npc.X; Y = npc.Y } : GridPoint)
+            | :? Npc as npc -> some ({ X = npc.X; Y = npc.Y }: GridPoint)
             | _ -> None
         | "Dialogue" ->
             match entity with
             | :? Npc as npc ->
-                let taken = Seq.append (Defaults.allIds project) (npc.Dialogue |> Seq.map (fun d -> d.Id)) |> Seq.append siblingIds
+                let taken =
+                    Seq.append (Defaults.allIds project) (npc.Dialogue |> Seq.map (fun d -> d.Id))
+                    |> Seq.append siblingIds
+
                 let dialogue = Defaults.newDialogue project npc.Id
-                some { dialogue with Id = Defaults.nextId "dialogue" taken }
+
+                some
+                    { dialogue with
+                        Id = Defaults.nextId "dialogue" taken
+                    }
             | _ -> None
         | "EventCondition" -> some (defaultCondition "enterTile" project)
         | "EventOutcome" -> some (defaultOutcome EventOutcomeTypes.Message)
-        | "CutsceneStep" -> some { CutsceneStep.Default with Type = CutsceneStepTypes.Say; Text = Some "..." }
-        | "CutsceneChoice" -> some { CutsceneChoice.Default with Text = "OK" }
-        | "NpcLine" -> some { NpcLine.Default with Text = "Nice day, isn't it?" }
-        | "NpcPortrait" -> some { NpcPortrait.Default with Expression = "happy" }
-        | "TerrainTransform" -> some ({ Action = ToolActions.Till; Tool = None; Into = TileTypes.Soil } : TerrainTransform)
-        | "NeighborRequirement" -> some { NeighborRequirement.Default with Kind = NeighborKinds.Water }
+        | "CutsceneStep" ->
+            some
+                { CutsceneStep.Default with
+                    Type = CutsceneStepTypes.Say
+                    Text = Some "..."
+                }
+        | "CutsceneChoice" ->
+            some
+                { CutsceneChoice.Default with
+                    Text = "OK"
+                }
+        | "NpcLine" ->
+            some
+                { NpcLine.Default with
+                    Text = "Nice day, isn't it?"
+                }
+        | "NpcPortrait" ->
+            some
+                { NpcPortrait.Default with
+                    Expression = "happy"
+                }
+        | "TerrainTransform" ->
+            some (
+                {
+                    Action = ToolActions.Till
+                    Tool = None
+                    Into = TileTypes.Soil
+                }
+                : TerrainTransform
+            )
+        | "NeighborRequirement" ->
+            some
+                { NeighborRequirement.Default with
+                    Kind = NeighborKinds.Water
+                }
         // M5–M7 lists: the first of what they name.
         | "AreaEffect" -> some AreaEffect.Default
-        | "AnimalProduct" -> some { AnimalProduct.Default with ItemId = firstItem () }
+        | "AnimalProduct" ->
+            some
+                { AnimalProduct.Default with
+                    ItemId = firstItem ()
+                }
         | "MoodQuality" ->
             let qualities = References.options ReferenceKind.CropQuality project
-            let quality = if qualities |> List.exists (fun q -> q.Id = CropQualities.Silver) then CropQualities.Silver else firstId qualities
-            some { MoodQuality.Default with MinMood = 70.0; Quality = quality }
+
+            let quality =
+                if qualities |> List.exists (fun q -> q.Id = CropQualities.Silver) then
+                    CropQualities.Silver
+                else
+                    firstId qualities
+
+            some
+                { MoodQuality.Default with
+                    MinMood = 70.0
+                    Quality = quality
+                }
         | "FarmLayout" ->
-            some { FarmLayout.Default with Id = Defaults.nextId "layout" siblingIds; Name = "New layout"; SceneId = project.StartSceneId }
-        | "CollectionReward" -> some { CollectionReward.Default with Count = 1.0 }
-        | "BundleItem" -> some { BundleItem.Default with ItemId = firstItem () }
-        | "MonsterSpawn" -> some { MonsterSpawn.Default with MonsterId = firstId (References.options ReferenceKind.Monster project) }
-        | "MineMonsterWeight" -> some { MineMonsterWeight.Default with MonsterId = firstId (References.options ReferenceKind.Monster project); Weight = 1.0 }
-        | "MineHazard" -> some { MineHazard.Default with TerrainId = firstId (References.options ReferenceKind.Terrain project) }
-        | "MineTreasure" -> some { MineTreasure.Default with ItemId = firstItem (); Weight = 1.0 }
+            some
+                { FarmLayout.Default with
+                    Id = Defaults.nextId "layout" siblingIds
+                    Name = "New layout"
+                    SceneId = project.StartSceneId
+                }
+        | "CollectionReward" ->
+            some
+                { CollectionReward.Default with
+                    Count = 1.0
+                }
+        | "BundleItem" ->
+            some
+                { BundleItem.Default with
+                    ItemId = firstItem ()
+                }
+        | "MonsterSpawn" ->
+            some
+                { MonsterSpawn.Default with
+                    MonsterId = firstId (References.options ReferenceKind.Monster project)
+                }
+        | "MineMonsterWeight" ->
+            some
+                { MineMonsterWeight.Default with
+                    MonsterId = firstId (References.options ReferenceKind.Monster project)
+                    Weight = 1.0
+                }
+        | "MineHazard" ->
+            some
+                { MineHazard.Default with
+                    TerrainId = firstId (References.options ReferenceKind.Terrain project)
+                }
+        | "MineTreasure" ->
+            some
+                { MineTreasure.Default with
+                    ItemId = firstItem ()
+                    Weight = 1.0
+                }
         | _ -> None

@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
 using Avalonia.Media;
 using Avalonia.Threading;
 using FarmEngine.Schemas;
@@ -46,8 +47,11 @@ public sealed class ContentEditorView : UserControl, IRetirable
     private readonly Button _addToInventory;
     private readonly Button _delete;
     private readonly Button _customize;
-    private readonly VisualPreview _art = new();
+    private readonly VisualPreview _art;
+    private readonly EditorPreview? _sharedPreview;
     private readonly List<(Border Holder, VisualRef Visual)> _thumbnails = [];
+    private readonly Dictionary<string, (ContentListRow Row, ListBoxItem Item)> _shownRows = [];
+    private object? _shownAssets;
     private bool _refreshing;
     private bool _attached;
     private bool _readoutsQueued;
@@ -58,9 +62,11 @@ public sealed class ContentEditorView : UserControl, IRetirable
 
     /// <param name="workspace">The open project.</param>
     /// <param name="pickOnMap">"Pick on map" for the forms' tile coordinates (scene id, prompt, what to do with the tile); null hides it.</param>
-    public ContentEditorView(ProjectWorkspace workspace, Action<string, string, Action<int, int>>? pickOnMap = null)
+    public ContentEditorView(ProjectWorkspace workspace, Action<string, string, Action<int, int>>? pickOnMap = null, EditorPreview? preview = null)
     {
         _workspace = workspace;
+        _sharedPreview = preview;
+        _art = new VisualPreview(preview);
         _pickOnMap = pickOnMap;
         ViewModel = new ContentEditorViewModel(workspace, () => IsEffectivelyVisible);
         DataContext = ViewModel;
@@ -230,10 +236,32 @@ public sealed class ContentEditorView : UserControl, IRetirable
         _refreshing = true;
         try
         {
+            var assets = _workspace.Current?.CustomAssets;
+            var sameAssets = ReferenceEquals(_shownAssets, assets);
+            _shownAssets = assets;
+            var next = new Dictionary<string, (ContentListRow Row, ListBoxItem Item)>();
+            var items = new List<ListBoxItem>();
+            foreach (var row in ViewModel.Rows)
+            {
+                var item = sameAssets && _shownRows.TryGetValue(row.Id, out var shown) && shown.Row == row
+                    ? shown.Item : ListRow(row);
+                next[row.Id] = (row, item);
+                items.Add(item);
+            }
+
+            foreach (var old in _shownRows.Values)
+            {
+                if (next.TryGetValue(old.Row.Id, out var kept) && ReferenceEquals(kept.Item, old.Item)) continue;
+                foreach (var image in old.Item.GetLogicalDescendants().OfType<Image>()) VisualPreview.Release(image);
+            }
+
             _entities.SelectedItem = null;
             _entities.Items.Clear();
-            _thumbnails.Clear();
-            foreach (var row in ViewModel.Rows) _entities.Items.Add(ListRow(row));
+            foreach (var item in items) _entities.Items.Add(item);
+            _shownRows.Clear();
+            foreach (var pair in next) _shownRows.Add(pair.Key, pair.Value);
+            var holders = items.SelectMany(item => item.GetLogicalDescendants().OfType<Border>()).ToHashSet();
+            _thumbnails.RemoveAll(thumbnail => !holders.Contains(thumbnail.Holder));
             _entities.SelectedItem = _entities.Items.OfType<ListBoxItem>().FirstOrDefault(item => Equals(item.Tag, ViewModel.SelectedId));
         }
         finally
@@ -302,7 +330,7 @@ public sealed class ContentEditorView : UserControl, IRetirable
         var entity = ViewModel.FormEntity;
         _form.IsVisible = entity is not null;
         if (entity is null || _workspace.Current is not { } project) return;
-        _contentForm = new ContentForm(project, entity, ViewModel.SelectedCategory.EntityType, _form, ViewModel.Report, _pickOnMap);
+        _contentForm = new ContentForm(project, entity, ViewModel.SelectedCategory.EntityType, _form, ViewModel.Report, _pickOnMap, _sharedPreview);
         ViewModel.AttachDraft(_contentForm);
     }
 

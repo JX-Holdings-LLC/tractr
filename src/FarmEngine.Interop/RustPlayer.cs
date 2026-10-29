@@ -153,7 +153,8 @@ public sealed record PlayerSummary(
     double Money,
     string Seed,
     IReadOnlyList<PlayerNamed> Scenes,
-    IReadOnlyList<PlayerNamed> Seasons);
+    IReadOnlyList<PlayerNamed> Seasons,
+    string? WeekdayName = null);
 
 /// <summary>A rectangle in frame pixels.</summary>
 public sealed record PlayerRect(double X, double Y, double Width, double Height)

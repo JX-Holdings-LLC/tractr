@@ -67,7 +67,7 @@ pub fn is_recipe_unlocked(ctx: &EngineContext, state: &GameState, recipe: &Recip
         return true;
     };
     if let Some(skill) = &unlock.skill {
-        if skills::skill_level(state, &skill.skill) < skill.level {
+        if skills::effective_level(ctx, state, &skill.skill) < skill.level {
             return false;
         }
     }
@@ -213,6 +213,12 @@ fn progress_craft_quests(
     let mut effects = Vec::new();
     if let Some(recipe_id) = recipe_id {
         effects.extend(quests::progress_quests(ctx, state, "craft", recipe_id, 1));
+        effects.extend(crate::skills::grant_action_xp_subject(ctx, state, "craft", recipe_id, "crafting", 0));
+    }
+    if recipe_id.is_none() {
+        if let Some(output) = outputs.first() {
+            effects.extend(crate::skills::grant_action_xp_subject(ctx, state, "craft", &output.item_id, "crafting", 0));
+        }
     }
     for output in outputs.iter().filter(|output| Some(output.item_id.as_str()) != recipe_id) {
         effects.extend(quests::progress_quests(ctx, state, "craft", &output.item_id, output.quantity));
@@ -322,14 +328,18 @@ pub(crate) fn keeps_clear(ctx: &EngineContext, state: &GameState, scene_id: &str
             }
         }
     }
-    let mine = &ctx.content.mine;
-    if mine.enabled
-        && mine.entrance_scene_id.as_deref() == Some(scene_id)
-        && mine.entrance_x == Some(x)
-        && mine.entrance_y == Some(y)
-    {
+    if ctx.content.request_boards.iter().any(|board| board.scene_id == scene_id && board.x == x && board.y == y) {
         return true;
     }
+    if mines::definitions(&ctx.content).any(|(_, mine)| {
+        mine.enabled
+            && mine.entrance_scene_id.as_deref() == Some(scene_id)
+            && mine.entrance_x == Some(x)
+            && mine.entrance_y == Some(y)
+    }) {
+        return true;
+    }
+
     mines::is_mine_floor(state, scene_id) && (x, y) == mines::FLOOR_ENTRY
 }
 
@@ -412,7 +422,10 @@ pub fn handle_machine_load(ctx: &EngineContext, state: &mut GameState, recipe_id
         return Vec::new();
     };
     let completes_at_minute = absolute_minute_in(ctx.content.settings.time.minutes_per_day(), state)
-        + i64::from(recipe.processing_minutes) * i64::from(units::MINUTE);
+        + i64::from(recipe.processing_minutes)
+            * i64::from(units::MINUTE)
+            * i64::from(100 - crate::skills::stat_bonus(ctx, state, "craftingSpeed").clamp(-500, 100))
+            / 100;
     if let Some(machine) = state.world.scenes[scene_index].tile_mut(x, y).and_then(|tile| tile.machine.as_mut()) {
         machine.processing = Some(MachineProcessing { recipe_id: recipe_id.to_owned(), completes_at_minute });
     }

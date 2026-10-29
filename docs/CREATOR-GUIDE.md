@@ -121,8 +121,27 @@ to:
   on **Basic**, **Growth** and **Asset** tabs. A crop shows its profit per
   harvest and a summary card. The built-in crops are listed too: **Customize**
   one to change it (deleting your version brings the built-in back).
-- **Quests**: objectives (harvest, collect, talk, visit, craft, gift),
-  rewards, prerequisites and when they are available.
+- **Quests**: objectives (harvest, collect, talk, visit, craft, gift, ship,
+  slay, catch, hearts, bundle and mineFloor), rewards, prerequisites and
+  availability. `deadlineDays` counts playable days including acceptance;
+  `deadlineDay` is an inclusive absolute date. When both are set, the earlier
+  date wins. Expired quests become **failed**, run `onFail` once, and appear
+  in the quest log. A quest-status condition can check failure. Only repeatable
+  quests may restart after failure.
+- **Request boards**: place a board at a scene tile, paint an object to identify
+  it, and add weighted quest templates. `intervalDays` is 1 for daily requests
+  or 7 for weekly requests. Interacting accepts the period's request once.
+  Optional item lists, quantity ranges and money ranges vary item objectives
+  and rewards deterministically from the game seed. Accepted requests keep their
+  rolled values across rotation and saving. A board template should have
+  auto-start disabled; its requests are repeatable.
+- **Mines**: add independently progressing mines, each with a name, entrance,
+  floor dimensions, depth bands, elevator interval and optional music.
+  The original mine remains in Settings and has the reserved id `mine`.
+  Named mine entrances appear on the map and use the same interaction as the
+  original. `mineFloor` conditions and quest objectives accept a mine id;
+  leaving it empty selects the original mine. Progress and elevator checkpoints
+  are saved separately for each mine.
 - **Events**: triggers, conditions and outcomes, for story beats, flags and
   variables (see [Event logic](#event-logic) below).
 - **Shops**: stock (a card per item with its price override, daily limit and
@@ -694,6 +713,11 @@ screen, three save slots with autosave each morning, a pause menu, settings
 (display, audio, rebindable controls, language, text size, a readable font and
 reduced motion) and gamepad support.
 
+The Problems tab warns about names and dialogue containing characters the game's
+font cannot draw, with a link to the affected content. The bundled font covers
+Latin, Greek and Cyrillic; unsupported characters appear as boxes. Right-to-left
+shaping is not supported. Check these warnings before sharing a translated game.
+
 The **Web (browser demo)** target makes a page for itch.io; on phones and
 tablets it shows touch controls (a D-pad, Interact, Sleep, Inventory and
 Menu).
@@ -716,3 +740,163 @@ Shortcuts** lists the editor's shortcuts too.
   ship it on Steam or itch.io.
 - [The game player](PLAYER.md): the player's screens, settings, saves and
   command-line options.
+
+### Seasonal forage and deeper fishing
+
+In **Node types**, set **Seasons** to hide a node outside those seasons. Leave
+it empty for year-round gathering. Each drop may also have its own seasons;
+only the current season's entries participate in the weighted drop roll.
+An authored seasonal node keeps its remaining health while dormant.
+
+In the map's surroundings, **Morning forage** edits a list of spawn tables.
+Give each a unique id, a maximum number of new nodes per morning, weighted
+node types and allowed background terrains. Optional scene tags, seasons and
+rectangular regions restrict where it applies. **Preview eligible tiles** lists
+the coordinates before you save. Paths, doors and their arrival tiles, blocked
+tiles, crops, items, machines and existing nodes are excluded; the live player
+and NPC positions are also excluded at runtime. The first game tick and each
+morning use the game's seed, so identical games spawn identical forage. Set
+**Lifetime days** to remove uncollected forage after that many days; all spawned
+forage clears when the season changes. Workshop **Forage** creates a spawn
+table and its resource node together. Problems warns when no tiles qualify.
+
+In **Fish tables**, **Filter** restricts the minute range (inclusive), weather,
+season and an event condition. Each entry's **Rules → Filter** can narrow it
+further. By default the first eligible table wins, preserving existing games.
+Set **Layered** on that first table to combine entries from every eligible
+table into one weighted roll; the first table still determines the junk roll.
+Entry **Rules** also chooses XP (default 8), enables quality, and sets an
+optional integer size range. Quality uses the game's crop-quality tiers,
+fishing skill and minigame score. The **Catch log** records the best size of
+each species and survives saving and keeping playtest changes.
+
+An item's **Fishing gear** selects `bait` or `tackle`. The first inventory
+stack of each kind is used automatically: bait adds weight to its chosen fish
+ids (empty means all), and tackle reduces escape chance by a percentage and
+can improve quality. One unit of each is consumed only when a fish lands in
+the inventory. No bait is consumed by junk, an escaped fish or a full bag.
+
+A machine's **Fish production** makes a passive trap or pond. Select exactly
+one **Table id** for a trap or **Species item id** for a pond, plus a production
+interval and quantity. On matching absolute game days, an empty machine fills
+with output that the player collects normally. Trap tables respect season,
+time, weather, scene and entry filters; pending output is never overwritten.
+
+### Player progression, skills and food buffs
+
+In **Settings → Player progression**, enable limits for permanent backpack,
+energy and health upgrades. The `setInventorySize`, `addInventorySize`,
+`addMaxEnergy` and `addMaxHealth` event outcomes use `amount` in slots or whole
+points. They clamp to the configured limits and never remove occupied slots.
+The matching plugin capabilities use an integer `amount`. Health upgrades
+require combat. An upgrade changes the maximum; it does not heal the player.
+
+A shop stock line can include an **Upgrade** with a stable id, one of those
+outcome kinds and its amount. The line's item supplies its name, artwork and
+base price; purchasing it applies the upgrade once instead of giving that item.
+Keep the upgrade id stable after shipping a game, since saves remember it.
+A shop's **Tool upgrades** list connects a source item to the next-tier tool
+of the same kind, with a gold cost, materials and a number of nights. Players
+hand in the tool on the shop's Repair tab and collect it there after the
+specified nights. A full backpack leaves the finished tool safely at the shop;
+it returns to its old slot when possible. Closed shops refuse both operations.
+
+The progression form also holds **Skills**. With no definitions the built-in
+XP and bonuses remain unchanged. **Classic skills** creates editable definitions
+with the current curve's farming yield/quality and combat bonuses, classic XP,
+and node/monster training rows from the current project. Definitions replace automatic action training:
+list `harvest`, `gather`, `catch`, `gift`, `talk`, `craft`, `slay` or `ship` and
+its XP for each skill. An optional training **Subject** limits a row to one
+crop/fish/gift/shipped item id, node type id, NPC id, monster type id, or crafted
+recipe id. Machine-output collection uses its first output item id as the craft
+subject. Omit the subject to train on every successful action of that kind.
+Use the existing level curve to set thresholds. Level
+rewards grant stat bonuses and may run event outcomes once on reaching that
+level. Perks offer named choices at a level; the inventory's skills section
+shows XP, the next reward and unlocked choices. Choosing a perk is permanent
+and saved. The `perk` condition checks the skill, perk id and optional choice.
+
+Supported reward stats are `yield`, `quality` (quality tiers), `attack`,
+`defense`, `maxEnergy`, `maxHealth`, `moveSpeed`, `toolEnergyCost`, `fishingEscape`,
+`craftingSpeed` and `sellPrice`. Speed, cost, escape, crafting speed and sale
+bonuses are percentages; other amounts are whole points. Positive tool cost,
+fishing escape and crafting-speed bonuses reduce cost, escape and duration.
+`sellPrice:crop`, for example, limits a sale bonus to the `crop` item category.
+
+Edible items can carry **Buffs**: an id, stat, amount and duration in game
+minutes, plus an optional icon (an asset id, item id, or literal symbol). `applyBuff` outcomes carry the same nested
+`buff` record; plugins need the `applyBuff` capability. A repeat of the same id
+refreshes its duration. Different ids affecting the same stat take the
+strongest magnitude unless marked additive. Buffs are saved, expire by the
+game clock, appear on the HUD with minutes remaining, and clear on sleep
+unless marked **Persists after sleep**. The `buff` condition checks an active
+id. Temporary `skillLevel` bonuses affect skill checks and harvest quality;
+`luck` changes weighted fishing, forage, node and monster rewards. Projects without these optional records
+keep their previous replay behavior.
+
+Skills can also be selected in **Mods → Export selection as pack**. Their
+ids and event `skill` references gain the pack prefix on installation;
+importing the pack adds its definitions to the progression settings.
+
+### Weekdays, changing routines and shop calendars
+
+New projects start with a seven-day week, Monday through Sunday. Settings →
+Calendar also has a **Classic week** preset. Add, remove or reorder its
+weekday rows to make your own week, and set a zero-based **Weekday offset** to
+choose the day on which absolute day 1 falls. The week continues across seasons
+and years. Missing or empty weekdays disable the week, preserving older projects. Each
+row has an id, a name and a translated name for the project's selected language;
+translations already entered for other languages are retained.
+
+The **Weekday** condition accepts one or more ids and works everywhere event
+conditions do. `{weekday}` in game text uses the current language's name, with
+the main name as fallback. The HUD date, Sky preview and Playtest Debug show it.
+
+An NPC's **Schedules** list contains named variants with conditions and stops.
+The first matching variant wins; otherwise the original **Schedule** applies.
+The choice is made each morning and saved. Changing weather reselects the route
+at the next in-game minute; flags and hearts changed during the day apply the
+next morning. An empty matching route means no scheduled destinations that day.
+The stop rows include **Pick on map**, just like the original schedule.
+Problems reports missing scenes, blocked or out-of-bounds stops, duplicate route
+ids, unknown weekday references and variants hidden by an unconditional route.
+
+Shops can set opening **Hours**, **Closed on** weekdays, seasons or festivals,
+and a **Keeper NPC id**. The keeper must be in the player's scene. Hours include
+the opening minute and exclude the closing minute; an opening time later than
+closing represents an overnight shop. Equal times mean always closed. Opening
+through dialogue and every purchase, sale and service recheck these rules.
+
+**Price modifiers** multiply prices in list order when their seasons, weekdays,
+item and conditions match. Buy and sell multipliers are independent. Optional
+**Saturation** lowers the next transaction's sell price after each
+**Quantity per step** sold, stopping at **Minimum multiplier**. Sales stop
+counting after **Recovery days**. A transaction's entire quantity receives the
+quoted price; the next transaction sees the new demand. Demand is saved and
+also retained by **Keep changes**.
+
+### Festival places and activities
+
+The Workshop's **Town festival** pattern creates a festival map, an entrance
+on the chosen tile and a once-per-day prize activity. Its calendar date and
+**Festival program** are editable in Settings → Festivals. The program chooses
+the grounds scene, entrance and arrival tiles, opening/closing minutes and any
+entry conditions. Interact with the entrance on the festival date while it is
+open. Interact with the arrival tile inside to leave; leaving advances the clock
+to closing. **End day** sleeps after leaving. Closing time also ends a visit.
+
+**Attendance** places named NPCs on the grounds and holds their schedules until
+the visit ends. A guest can have a festival dialogue; otherwise its usual daily
+lines and conversation apply. Original positions and routes return on leaving,
+sleeping or an event that moves the player elsewhere. Active visits survive a
+save and load.
+
+A program can provide a **Shop id** and **Shop tile**. That shop is available
+only during a visit. **Activity** supplies a tile and an action, cutscene or
+minigame. Minigame result tiers and actions define their own rewards. An optional
+**Contest** checks for a specified item at or above a minimum quality, chooses
+the best qualifying item, optionally consumes one, then runs its rewards.
+A successful activity can run once per festival day, including after leaving
+and reloading. A failed item check leaves the activity available. **On miss**
+outcomes run overnight when the player did not visit. Problems checks the
+program's locations, hours, guests, dialogues, shop and activity references.

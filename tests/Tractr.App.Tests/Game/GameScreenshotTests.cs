@@ -3,6 +3,8 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
+using FarmEngine.Authoring;
+using FarmEngine.Authoring.Net;
 using Tractr.App.Game;
 using Tractr.App.Tests.Ui;
 using static Tractr.App.Tests.Ui.UiTestHelpers;
@@ -71,10 +73,19 @@ public sealed class GameScreenshotTests
         Walk(host, PhysicalKey.S, s => s.Player.Y >= 9.45);
     }
 
+    // These references cover the legacy calendar without weekdays. New-project weekday HUD
+    // behavior has separate runtime tests; keep this rendering compatibility check stable.
+    private static void UseClassicCalendar(GameTestHost host)
+    {
+        var settings = host.Workspace.Current!.Settings;
+        host.Workspace.Apply(Edits.SetSettings(settings.WithCalendar(settings.Calendar.WithWeekdays(null).WithWeekdayOffset(null))));
+    }
+
     [AvaloniaFact]
     public void PlayMode_StarterFarm()
     {
         using var host = new GameTestHost(seed: Seed);
+        UseClassicCalendar(host);
         host.EnterPlay();
         host.Frames(5);
 
@@ -106,6 +117,7 @@ public sealed class GameScreenshotTests
     public void PlayMode_Dialogue()
     {
         using var host = new GameTestHost(seed: Seed);
+        UseClassicCalendar(host);
         host.EnterPlay();
         host.Frames(2);
 

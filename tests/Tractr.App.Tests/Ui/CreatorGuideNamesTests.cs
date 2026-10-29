@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using FarmEngine.Schemas;
+using Tractr.App.Game;
 using Tractr.App.Tests.Interop;
 using Tractr.App.Views;
 
@@ -69,6 +71,17 @@ public sealed partial class CreatorGuideNamesTests
                         labels.Add(literal.Groups[1].Value.Replace("_", "", StringComparison.Ordinal).TrimEnd('…', '.').Trim());
                     }
                 }
+            }
+        }
+
+        // Generated record fields have real labels even when no source string spells them out.
+        foreach (var type in typeof(GameProject).Assembly.GetTypes().Where(ContentFormSchema.IsRecord))
+        {
+            foreach (var property in ContentFormSchema.FormProperties(type))
+            {
+                var label = ContentFormSchema.Title(property.Name);
+                labels.Add(label);
+                labels.Add(ContentFormSchema.TrimId(label));
             }
         }
 

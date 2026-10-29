@@ -23,6 +23,10 @@ pub struct StartQuest {
     pub id: String,
     pub status: String,
     pub objectives: Vec<StartObjective>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub deadline_days: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub deadline_day: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -104,6 +108,8 @@ impl StartState {
                 .map(|quest| StartQuest {
                     id: quest.id.clone(),
                     status: quest.status.clone(),
+                    deadline_days: quest.deadline_days,
+                    deadline_day: quest.deadline_day,
                     objectives: quest
                         .objectives
                         .iter()

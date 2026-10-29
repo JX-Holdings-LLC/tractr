@@ -17,11 +17,19 @@ let private farmc (args: string list) : int * string * string =
 
 [<Fact>]
 let ``help and version print and exit 0`` () =
-    for help in [ [ "--help" ]; [ "-h" ]; [ "help" ]; [ "compile"; "--help" ]; [ "export"; "x.json"; "-h" ] ] do
+    for help in
+        [
+            [ "--help" ]
+            [ "-h" ]
+            [ "help" ]
+            [ "compile"; "--help" ]
+            [ "export"; "x.json"; "-h" ]
+        ] do
         let code, out, err = farmc help
         Assert.Equal(0, code)
         Assert.Contains("farmc compile <project> --out <game.cart>", out)
         Assert.Equal("", err)
+
     let code, out, _ = farmc [ "--version" ]
     Assert.Equal(0, code)
     Assert.StartsWith("farmc ", out)
@@ -30,18 +38,21 @@ let ``help and version print and exit 0`` () =
 [<Fact>]
 let ``usage errors exit 2 and say what is wrong`` () =
     let cases =
-        [ [], ""
-          [ "build" ], "Unknown command build."
-          [ "--verbose" ], "Unknown option --verbose."
-          [ "compile"; "p.json" ], "compile needs --out."
-          [ "compile"; "--out"; "x.cart" ], "compile needs a project file."
-          [ "compile"; "a.json"; "b.json"; "--out"; "x.cart" ], "compile takes one project file."
-          [ "compile"; "p.json"; "--out"; "x.cart"; "--target"; "web" ], "compile takes no --target"
-          [ "compile"; "p.json"; "--frobnicate" ], "Unknown option --frobnicate."
-          [ "export"; "p.json"; "--out" ], "--out needs a value."
-          // A flag is never taken as the value of the one before it.
-          [ "export"; "p.json"; "--out"; "--no-archive" ], "--out needs a value."
-          [ "export"; "p.json"; "--target"; "--out"; "dist" ], "--target needs a value." ]
+        [
+            [], ""
+            [ "build" ], "Unknown command build."
+            [ "--verbose" ], "Unknown option --verbose."
+            [ "compile"; "p.json" ], "compile needs --out."
+            [ "compile"; "--out"; "x.cart" ], "compile needs a project file."
+            [ "compile"; "a.json"; "b.json"; "--out"; "x.cart" ], "compile takes one project file."
+            [ "compile"; "p.json"; "--out"; "x.cart"; "--target"; "web" ], "compile takes no --target"
+            [ "compile"; "p.json"; "--frobnicate" ], "Unknown option --frobnicate."
+            [ "export"; "p.json"; "--out" ], "--out needs a value."
+            // A flag is never taken as the value of the one before it.
+            [ "export"; "p.json"; "--out"; "--no-archive" ], "--out needs a value."
+            [ "export"; "p.json"; "--target"; "--out"; "dist" ], "--target needs a value."
+        ]
+
     for args, message in cases do
         let code, out, err = farmc args
         Assert.True((code = 2), sprintf "%A exited %d" args code)
@@ -51,7 +62,20 @@ let ``usage errors exit 2 and say what is wrong`` () =
 
 [<Fact>]
 let ``options parse in any order`` () =
-    match Program.parseArguments [ "--out"; "dist"; "--no-archive"; "game.json"; "--target"; "web"; "--target"; "linux-x64" ] Program.emptyArguments with
+    match
+        Program.parseArguments
+            [
+                "--out"
+                "dist"
+                "--no-archive"
+                "game.json"
+                "--target"
+                "web"
+                "--target"
+                "linux-x64"
+            ]
+            Program.emptyArguments
+    with
     | Ok parsed ->
         Assert.Equal<string list>([ "game.json" ], parsed.Positional)
         Assert.Equal<string list>([ "web"; "linux-x64" ], parsed.Targets)
@@ -62,11 +86,13 @@ let ``options parse in any order`` () =
 [<Fact>]
 let ``a bad path or a refused project exits 1 with the message, never a stack trace`` () =
     use temp = new TempDir()
+
     for path in [ ""; temp.Sub "missing.json"; temp.Path ] do
         let code, _, err = farmc [ "compile"; path; "--out"; temp.Sub "x.cart" ]
         Assert.True((code = 1), sprintf "%A exited %d: %s" path code err)
         Assert.DoesNotContain("   at ", err)
         Assert.True(err.Trim().Length > 0)
+
     let broken = temp.Sub "broken.json"
     File.WriteAllText(broken, "{ \"schemaVersion\": 1, ")
     let code, _, err = farmc [ "compile"; broken; "--out"; temp.Sub "x.cart" ]
@@ -94,10 +120,12 @@ let ``compile writes the cartridge with options in any order`` () =
 let ``compile reads a project folder or the project json in one`` () =
     use temp = new TempDir()
     let folder = temp.Sub "farm"
+
     for path, bytes in ProjectFolder.toFiles (starter ()) do
         let file = Path.Combine(folder, path.Replace('/', Path.DirectorySeparatorChar))
         Directory.CreateDirectory(Path.GetDirectoryName file) |> ignore
         File.WriteAllBytes(file, bytes)
+
     for project in [ folder; Path.Combine(folder, ProjectFolder.MainFile) ] do
         let cart = temp.Sub "folder.cart"
         let code, _, err = farmc [ "compile"; project; "--out"; cart ]

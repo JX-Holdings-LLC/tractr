@@ -158,7 +158,7 @@ pub fn handle_give_gift(ctx: &EngineContext, state: &mut GameState, item_id: &st
         reaction: reaction.clone(),
     }));
 
-    effects.extend(skills::grant_xp(ctx, state, "social", 4));
+    effects.extend(skills::grant_action_xp_subject(ctx, state, "gift", item_id, "social", 4));
     if friendship != social_today.friendship {
         effects.extend(events::fire_trigger(ctx, state, &Trigger::about(event_triggers::FRIENDSHIP, &[&npc_def.id])));
     }

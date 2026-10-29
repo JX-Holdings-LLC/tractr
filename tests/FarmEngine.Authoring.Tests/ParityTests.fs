@@ -21,7 +21,8 @@ open FarmEngine.Authoring
 open FarmEngine.Authoring.Tests.TestProjects
 open FarmEngine.Schemas
 
-let private repo (parts: string list) = Path.Combine(Array.ofList (__SOURCE_DIRECTORY__ :: ".." :: ".." :: parts))
+let private repo (parts: string list) =
+    Path.Combine(Array.ofList (__SOURCE_DIRECTORY__ :: ".." :: ".." :: parts))
 
 let private parse (text: string) : Json =
     match Json.parse text with
@@ -46,98 +47,252 @@ type private KitchenSink() =
     /// Numbers the Rust grids keep exactly; fractions where the schema wants 0..1.
     let number (field: string) : float =
         let lower = field.ToLowerInvariant()
-        if [ "chance"; "fraction"; "density"; "score"; "difficulty" ] |> List.exists lower.Contains then 0.5
-        else 2.0
+
+        if
+            [ "chance"; "fraction"; "density"; "score"; "difficulty" ]
+            |> List.exists lower.Contains
+        then
+            0.5
+        else
+            2.0
 
     member this.Value(t: Type, field: string, depth: int) : obj =
         if t = typeof<string> then
             counter <- counter + 1
             box (sprintf "%s-%d" (if field.Length > 0 then field.ToLowerInvariant() else "s") counter)
-        elif t = typeof<float> then box (number field)
-        elif t = typeof<int> then box 2
-        elif t = typeof<uint32> then box 2u
-        elif t = typeof<bool> then box true
+        elif t = typeof<float> then
+            box (number field)
+        elif t = typeof<int> then
+            box 2
+        elif t = typeof<uint32> then
+            box 2u
+        elif t = typeof<bool> then
+            box true
         // A kept playtest's engine state: opaque to F#, a typed `KeptState` to Rust, with every
-        // field of its M5–M7 `goals` (Rust `KeptGoals`).
+        // field of its M5–M7 `goals` plus the newer farming state (Rust `KeptGoals`).
         elif t = typeof<Json> && field = "KeptState" then
             let n = JNumber 2.0
+
             let goals =
                 JObject
-                    [ "storage", JObject [ "sceneId", JString "scene-kept"; "x", n; "y", n ]
-                      "farmLayout", JString "layout-kept"
-                      "shipped", JObject [ "item-kept", n ]
-                      "lastShipment", JArray [ JObject [ "itemId", JString "item-kept"; "quality", JString "silver"; "quantity", n; "money", n ] ]
-                      "collections", JObject [ "collection-kept", JObject [ "items", JArray [ JString "item-kept" ]; "rewarded", n ] ]
-                      "bundles", JObject [ "bundle-kept", JObject [ "handed", JArray [ n ]; "complete", JBool true ] ]
-                      "achievements", JObject [ "achievement-kept", n ]
-                      "mailbox", JArray [ JObject [ "mailId", JString "mail-kept"; "day", n; "read", JBool true; "taken", JBool true ] ]
-                      "mailQueue", JArray [ JString "mail-kept" ]
-                      "monsters",
-                      JArray
-                          [ JObject
-                                [ "id", n; "monsterId", JString "monster-kept"; "sceneId", JString "scene-kept"; "x", JNumber 2.5; "y", JNumber 2.5
-                                  "health", n; "wander", n; "direction", JString "up"; "stunned", n ] ]
-                      "nextMonster", n
-                      "slain", JObject [ "monster-kept", n ]
-                      "health", n ]
-            box (JObject [ "tick", n; "shopPurchasesToday", JObject []; "npcs", JObject []; "mineCurrentFloor", n; "goals", goals ])
-        elif t = typeof<Json> then box (JString "json")
+                    [
+                        "storage", JObject [ "sceneId", JString "scene-kept"; "x", n; "y", n ]
+                        "farmLayout", JString "layout-kept"
+                        "shipped", JObject [ "item-kept", n ]
+                        "lastShipment",
+                        JArray
+                            [
+                                JObject
+                                    [
+                                        "itemId", JString "item-kept"
+                                        "quality", JString "silver"
+                                        "quantity", n
+                                        "money", n
+                                    ]
+                            ]
+                        "collections",
+                        JObject
+                            [
+                                "collection-kept", JObject [ "items", JArray [ JString "item-kept" ]; "rewarded", n ]
+                            ]
+                        "bundles", JObject [ "bundle-kept", JObject [ "handed", JArray [ n ]; "complete", JBool true ] ]
+                        "achievements", JObject [ "achievement-kept", n ]
+                        "mailbox",
+                        JArray
+                            [
+                                JObject
+                                    [
+                                        "mailId", JString "mail-kept"
+                                        "day", n
+                                        "read", JBool true
+                                        "taken", JBool true
+                                    ]
+                            ]
+                        "mailQueue", JArray [ JString "mail-kept" ]
+                        "monsters",
+                        JArray
+                            [
+                                JObject
+                                    [
+                                        "id", n
+                                        "monsterId", JString "monster-kept"
+                                        "sceneId", JString "scene-kept"
+                                        "x", JNumber 2.5
+                                        "y", JNumber 2.5
+                                        "health", n
+                                        "wander", n
+                                        "direction", JString "up"
+                                        "stunned", n
+                                    ]
+                            ]
+                        "nextMonster", n
+                        "slain", JObject [ "monster-kept", n ]
+                        "health", n
+                        "maxHealth", n
+                        "buffs",
+                        JArray
+                            [
+                                JObject
+                                    [
+                                        "definition", SchemaJson.encodeBuffDefinition (this.Value(typeof<BuffDefinition>, "buff", 0) :?> BuffDefinition)
+                                        "source", JString "item-kept"
+                                        "expiresAtMinute", n
+                                    ]
+                            ]
+                        "purchasedUpgrades", JArray [ JString "upgrade-kept" ]
+                        "perks", JObject [ "skill-kept", JString "perk-kept" ]
+                        "toolUpgrades",
+                        JArray
+                            [
+                                JObject
+                                    [
+                                        "shopId", JString "shop-kept"
+                                        "item", SchemaJson.encodeItem (this.Value(typeof<Item>, "item", 0) :?> Item)
+                                        "slot", n
+                                        "readyDay", n
+                                        "wasEquipped", JBool true
+                                    ]
+                            ]
+                    ]
+
+            box (
+                JObject
+                    [
+                        "tick", n
+                        "shopPurchasesToday", JObject []
+                        "npcs",
+                        JObject
+                            [
+                                "npc-kept",
+                                JObject
+                                    [
+                                        "scheduleSelection", JObject [ "day", n; "weather", JString "sunny"; "variant", JString "variant-kept" ]
+                                    ]
+                            ]
+                        "mineCurrentFloor", n
+                        "mines", JObject [ "mine-kept", JObject [ "deepestFloor", n; "currentFloor", n ] ]
+                        "currentMineId", JString "mine-kept"
+                        "questDeadlines", JObject [ "quest-kept", n ]
+                        "requestBoards", JObject [ "board-kept", n ]
+                        "requests",
+                        JObject
+                            [
+                                "quest-kept", SchemaJson.encodeQuest (this.Value(typeof<Quest>, "request", 0) :?> Quest)
+                            ]
+                        "shopSales", JObject [ "shop-kept", JObject [ "item-kept", JObject [ "2", n ] ] ]
+                        "festival",
+                        JObject
+                            [
+                                "festivalId", JString "festival-kept"
+                                "returnSceneId", JString "scene-kept"
+                                "returnX", n
+                                "returnY", n
+                                "npcs", JObject []
+                            ]
+                        "festivalVisits", JObject [ "festival-kept", JObject [ "day", n; "activityDone", JBool true ] ]
+                        "fishCatches", JArray [ JObject [ "itemId", JString "fish-kept"; "size", n; "day", n ] ]
+                        "goals", goals
+                    ]
+            )
+        elif t = typeof<Json> then
+            box (JString "json")
         elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<option<_>> then
             let inner = t.GetGenericArguments().[0]
             let some = FSharpType.GetUnionCases(t) |> Array.find (fun c -> c.Name = "Some")
             let none = FSharpType.GetUnionCases(t) |> Array.find (fun c -> c.Name = "None")
-            if depth > 12 then FSharpValue.MakeUnion(none, [||])
+
+            if depth > 12 then
+                FSharpValue.MakeUnion(none, [||])
             else
                 let value = this.Value(inner, field, depth + 1)
                 // An empty list past the depth limit stays absent: Rust skips the empty lists it
                 // keeps as a `Vec` (M5–M7), so `Some []` would not read back the same.
                 match value with
-                | :? System.Collections.IEnumerable as items when inner.IsGenericType && inner.GetGenericTypeDefinition() = typedefof<list<_>>
-                                                                  && not (items.GetEnumerator().MoveNext()) ->
+                | :? System.Collections.IEnumerable as items when
+                    inner.IsGenericType
+                    && inner.GetGenericTypeDefinition() = typedefof<list<_>>
+                    && not (items.GetEnumerator().MoveNext())
+                    ->
                     FSharpValue.MakeUnion(none, [||])
                 | _ -> FSharpValue.MakeUnion(some, [| value |])
         elif t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<list<_>> then
             let element = t.GetGenericArguments().[0]
+
             let items: obj list =
-                if depth > 12 || field = "Extra" then []
+                if depth > 12 || field = "Extra" then
+                    []
                 elif FSharpType.IsTuple element then
                     // A record (`z.record`): one key.
                     let types = FSharpType.GetTupleElements element
                     counter <- counter + 1
-                    [ FSharpValue.MakeTuple([| box (sprintf "key-%d" counter); this.Value(types.[1], field, depth + 1) |], element) ]
+
+                    [
+                        FSharpValue.MakeTuple([| box (sprintf "key-%d" counter); this.Value(types.[1], field, depth + 1) |], element)
+                    ]
                 // `rngState.s`: a tuple of four state words.
-                elif field = "S" then List.replicate 4 (this.Value(element, field, depth + 1))
-                elif FSharpType.IsUnion element && element <> typeof<Json>
-                     && not (element.IsGenericType && element.GetGenericTypeDefinition() = typedefof<list<_>>) then
+                elif field = "S" then
+                    List.replicate 4 (this.Value(element, field, depth + 1))
+                elif
+                    FSharpType.IsUnion element
+                    && element <> typeof<Json>
+                    && not (element.IsGenericType && element.GetGenericTypeDefinition() = typedefof<list<_>>)
+                then
                     [ for case in FSharpType.GetUnionCases element -> this.Case(case, depth + 1) ]
-                else [ this.Value(element, field, depth + 1) ]
+                else
+                    [ this.Value(element, field, depth + 1) ]
+
             let cases = FSharpType.GetUnionCases t
-            let empty = FSharpValue.MakeUnion(cases |> Array.find (fun c -> c.Name = "Empty"), [||])
+
+            let empty =
+                FSharpValue.MakeUnion(cases |> Array.find (fun c -> c.Name = "Empty"), [||])
+
             let cons = cases |> Array.find (fun c -> c.Name = "Cons")
             List.foldBack (fun item tail -> FSharpValue.MakeUnion(cons, [| item; tail |])) items empty
         elif FSharpType.IsRecord t then
-            let values = [| for f in FSharpType.GetRecordFields t -> this.Value(f.PropertyType, f.Name, depth + 1) |]
+            let values =
+                [|
+                    for f in FSharpType.GetRecordFields t -> this.Value(f.PropertyType, f.Name, depth + 1)
+                |]
+
             FSharpValue.MakeRecord(t, values)
-        elif FSharpType.IsUnion t then this.Case(FSharpType.GetUnionCases(t).[0], depth)
-        else failwithf "kitchen sink: no value for %s (%s)" t.FullName field
+        elif FSharpType.IsUnion t then
+            this.Case(FSharpType.GetUnionCases(t).[0], depth)
+        else
+            failwithf "kitchen sink: no value for %s (%s)" t.FullName field
 
     member this.Case(case: UnionCaseInfo, depth: int) : obj =
         FSharpValue.MakeUnion(case, [| for f in case.GetFields() -> this.Value(f.PropertyType, f.Name, depth + 1) |])
 
-let private kitchenSink<'T> () : 'T = KitchenSink().Value(typeof<'T>, "", 0) :?> 'T
+let private kitchenSink<'T> () : 'T =
+    KitchenSink().Value(typeof<'T>, "", 0) :?> 'T
 
 /// The kitchen-sink project: every field set, at the current schema version, with consistent
 /// pack ids (packs merge only under valid ids).
 let kitchenSinkProject () : GameProject =
-    let project = kitchenSink<GameProject> ()
+    let project = kitchenSink<GameProject>()
+
     let packs =
         project.ContentPacks
         |> List.mapi (fun i install ->
-            let manifest = { install.Pack.Manifest with Id = sprintf "sink-pack-%d" i; Dependencies = [] }
-            { install with Pack = { install.Pack with Manifest = manifest } })
-    { project with SchemaVersion = 9.0; ContentPacks = packs }
+            let manifest =
+                { install.Pack.Manifest with
+                    Id = sprintf "sink-pack-%d" i
+                    Dependencies = []
+                }
 
-let kitchenSinkContent () : GameContent = kitchenSink<GameContent> ()
+            { install with
+                Pack =
+                    { install.Pack with
+                        Manifest = manifest
+                    }
+            })
+
+    { project with
+        SchemaVersion = 9.0
+        ContentPacks = packs
+    }
+
+let kitchenSinkContent () : GameContent = kitchenSink<GameContent>()
 
 [<Fact>]
 let ``the kitchen sinks set every field and round-trip through the F# codecs`` () =
@@ -157,10 +312,17 @@ let ``the kitchen sinks set every field and round-trip through the F# codecs`` (
 let rec firstDifference (path: string) (expected: Json) (actual: Json) : string option =
     match expected, actual with
     | JNumber a, JNumber b ->
-        if a = b || abs (a - b) <= max 0.002 (1e-6 * abs a) then None
-        else Some(sprintf "%s: %s / %s" path (JsNumber.format a) (JsNumber.format b))
+        if a = b || abs (a - b) <= max 0.002 (1e-6 * abs a) then
+            None
+        else
+            Some(sprintf "%s: %s / %s" path (JsNumber.format a) (JsNumber.format b))
     | JObject a, JObject b ->
-        let keys = (List.map fst a) @ (b |> List.map fst |> List.filter (fun key -> not (List.exists (fun (k, _) -> k = key) a)))
+        let keys =
+            (List.map fst a)
+            @ (b
+               |> List.map fst
+               |> List.filter (fun key -> not (List.exists (fun (k, _) -> k = key) a)))
+
         keys
         |> List.tryPick (fun key ->
             match List.tryFind (fun (k, _) -> k = key) a, List.tryFind (fun (k, _) -> k = key) b with
@@ -169,31 +331,44 @@ let rec firstDifference (path: string) (expected: Json) (actual: Json) : string 
             | None, Some(_, y) -> Some(sprintf "%s.%s: (absent) / %s" path key (Json.stringify y))
             | None, None -> None)
     | JArray a, JArray b when a.Length = b.Length ->
-        List.zip a b |> List.indexed |> List.tryPick (fun (i, (x, y)) -> firstDifference (sprintf "%s[%d]" path i) x y)
+        List.zip a b
+        |> List.indexed
+        |> List.tryPick (fun (i, (x, y)) -> firstDifference (sprintf "%s[%d]" path i) x y)
     | _ when expected = actual -> None
     | _ ->
-        let text (json: Json) = let s = Json.stringify json in if s.Length > 300 then s.Substring(0, 300) + "…" else s
+        let text (json: Json) =
+            let s = Json.stringify json in if s.Length > 300 then s.Substring(0, 300) + "…" else s
+
         Some(sprintf "%s: %s / %s" path (text expected) (text actual))
 
 // ── Rust-recorded content, compiled by F# ────────────────────────────────────
 
 let private goldenContent () =
-    Directory.GetFiles(repo [ "fixtures"; "golden"; "content" ], "*.json") |> Array.sort |> List.ofArray
+    Directory.GetFiles(repo [ "fixtures"; "golden"; "content" ], "*.json")
+    |> Array.sort
+    |> List.ofArray
 
 [<Fact>]
 let ``F# compiles the Rust content goldens to the content Rust recorded`` () =
     let failures =
-        [ for file in goldenContent () do
-              let fixture = parse (File.ReadAllText file)
-              let name = Path.GetFileNameWithoutExtension file
-              match ProjectLoad.loadProject (Json.get "project" fixture) with
-              | { Ok = true; Data = Some project } ->
-                  let rust = parse (defaultArg (Json.asString (Json.get "stable" fixture)) "null")
-                  let fsharp = parse (Json.stableStringify (SchemaJson.encodeGameContent (ContentCompiler.compile project)))
-                  match firstDifference "content" rust fsharp with
-                  | Some difference -> yield sprintf "%s (Rust / F#): %s" name difference
-                  | None -> ()
-              | result -> yield sprintf "%s: %s" name (String.concat "; " result.Errors) ]
+        [
+            for file in goldenContent () do
+                let fixture = parse (File.ReadAllText file)
+                let name = Path.GetFileNameWithoutExtension file
+
+                match ProjectLoad.loadProject (Json.get "project" fixture) with
+                | { Ok = true; Data = Some project } ->
+                    let rust = parse (defaultArg (Json.asString (Json.get "stable" fixture)) "null")
+
+                    let fsharp =
+                        parse (Json.stableStringify (SchemaJson.encodeGameContent (ContentCompiler.compile project)))
+
+                    match firstDifference "content" rust fsharp with
+                    | Some difference -> yield sprintf "%s (Rust / F#): %s" name difference
+                    | None -> ()
+                | result -> yield sprintf "%s: %s" name (String.concat "; " result.Errors)
+        ]
+
     Assert.True(failures.IsEmpty, String.concat "\n" failures)
 
 // ── F#-recorded pipeline output, checked by Rust ─────────────────────────────
@@ -204,21 +379,32 @@ let private loadFile (parts: string list) : GameProject =
     | result -> failwithf "%A: %s" parts (String.concat "; " result.Errors)
 
 let private withPack (project: GameProject) (file: string) : GameProject =
-    let pack = decode SchemaJson.decodeContentPack (parse (File.ReadAllText(repo [ "fixtures"; "projects"; file ])))
+    let pack =
+        decode SchemaJson.decodeContentPack (parse (File.ReadAllText(repo [ "fixtures"; "projects"; file ])))
+
     Document.run project (InstallPack pack)
 
 /// The projects both pipelines must agree on (besides the content goldens above).
 let private pipelineCases () : (string * GameProject) list =
-    [ yield "kitchen-sink", kitchenSinkProject ()
-      for id, project in templates () do
-          yield "template-" + id, project
-      yield "fixture-project", loadFile [ "fixtures"; "projects"; "fixture-project.json" ]
-      yield "packs-project", loadFile [ "fixtures"; "projects"; "packs-project.json" ]
-      yield "starter-demo-mod", withPack (starter ()) "demo-mod.json"
-      yield "starter-my-first-mod", withPack (starter ()) "my-first-mod.json"
-      yield "starter-lantern-night", withPack (starter ()) "lantern-night-mod.json"
-      yield "starter-volcano", withPack (starter ()) "volcano-mod.json"
-      yield "starter-county-fair", withPack (starter ()) "county-fair-mod.json" ]
+    [
+        yield "kitchen-sink", kitchenSinkProject ()
+        for id, project in templates () do
+            yield "template-" + id, project
+        yield "fixture-project", loadFile [ "fixtures"; "projects"; "fixture-project.json" ]
+        yield "packs-project", loadFile [ "fixtures"; "projects"; "packs-project.json" ]
+        let classic = starter ()
+
+        yield
+            "starter-classic-skills",
+            classic
+            |> apply (SettingsForm.Progression(classic, SettingsForm.ClassicSkills classic))
+
+        yield "starter-demo-mod", withPack (starter ()) "demo-mod.json"
+        yield "starter-my-first-mod", withPack (starter ()) "my-first-mod.json"
+        yield "starter-lantern-night", withPack (starter ()) "lantern-night-mod.json"
+        yield "starter-volcano", withPack (starter ()) "volcano-mod.json"
+        yield "starter-county-fair", withPack (starter ()) "county-fair-mod.json"
+    ]
 
 /// A section (content, start or presentation) with each top-level value the project carries
 /// unchanged (the scene grids, mostly) written as `{"$project": key}`, which keeps the fixtures
@@ -237,31 +423,46 @@ let private section (project: Json) (json: Json) : Json =
 
 let private record (name: string) (project: GameProject) : Json =
     let json = SchemaJson.encodeGameProject project
+
     JObject
-        [ "name", JString name
-          "project", json
-          "content", section json (SchemaJson.encodeGameContent (ContentCompiler.compile project))
-          "start", section json (CartridgeCompiler.StartSection project)
-          "presentation", section json (CartridgeCompiler.PresentationSection project) ]
+        [
+            "name", JString name
+            "project", json
+            "content", section json (SchemaJson.encodeGameContent (ContentCompiler.compile project))
+            "start", section json (CartridgeCompiler.StartSection project)
+            "presentation", section json (CartridgeCompiler.PresentationSection project)
+        ]
 
 [<Fact>]
 let ``the parity fixtures Rust checks are current`` () =
     let folder = repo [ "fixtures"; "parity" ]
     let recording = Environment.GetEnvironmentVariable "FARM_RECORD_PARITY" = "1"
+
     let files =
-        [ yield "kitchen-sink-content.json", JObject [ "content", SchemaJson.encodeGameContent (kitchenSinkContent ()) ]
-          for name, project in pipelineCases () do
-              yield name + ".json", record name project ]
+        [
+            yield "kitchen-sink-content.json", JObject [ "content", SchemaJson.encodeGameContent (kitchenSinkContent ()) ]
+            for name, project in pipelineCases () do
+                yield name + ".json", record name project
+        ]
+
     if recording then
         Directory.CreateDirectory folder |> ignore
+
         for old in Directory.GetFiles(folder, "*.json") do
             File.Delete old
+
     let stale =
-        [ for file, json in files do
-              let path = Path.Combine(folder, file)
-              let text = Json.stringify json + "\n"
-              if recording then File.WriteAllText(path, text)
-              elif not (File.Exists path) || File.ReadAllText path <> text then yield file ]
+        [
+            for file, json in files do
+                let path = Path.Combine(folder, file)
+                let text = Json.stringify json + "\n"
+
+                if recording then
+                    File.WriteAllText(path, text)
+                elif not (File.Exists path) || File.ReadAllText path <> text then
+                    yield file
+        ]
+
     Assert.True(
         stale.IsEmpty,
         sprintf "stale parity fixtures (rerun with FARM_RECORD_PARITY=1, then cargo test -p farm-sim --test fsharp_parity): %s" (String.concat ", " stale)

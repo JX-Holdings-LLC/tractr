@@ -39,6 +39,9 @@ public sealed class MapCanvas : Control, IDisposable
 
     private RustPreview? _preview;
     private GameProject? _pending;
+    private GameProject? _currentProject;
+
+    internal EditorPreview? SharedPreview { get; init; }
     private int _projectVersion;
     private MapGeometry? _geometry;
     private WriteableBitmap? _bitmap;
@@ -147,15 +150,20 @@ public sealed class MapCanvas : Control, IDisposable
     /// <summary>Sends the project <see cref="SetProject"/> received last, if it has not gone yet.</summary>
     private void ApplyPendingProject()
     {
-        if (_pending is not { } project)
+        if ((_pending ?? (SharedPreview is null ? null : _currentProject)) is not { } project)
         {
             return;
         }
 
         _pending = null;
+        _currentProject = project;
         try
         {
-            if (_preview is null || _preview.IsPoisoned)
+            if (SharedPreview is not null)
+            {
+                _preview = SharedPreview.For(project);
+            }
+            else if (_preview is null || _preview.IsPoisoned)
             {
                 _preview?.Dispose();
                 _preview = RustPreview.Create(project);
@@ -170,7 +178,7 @@ public sealed class MapCanvas : Control, IDisposable
         catch (FarmFfiException ex)
         {
             Error = $"The map can't be drawn: {ex.Message}";
-            _preview?.Dispose();
+            if (SharedPreview is null) _preview?.Dispose();
             _preview = null;
         }
     }
@@ -196,9 +204,10 @@ public sealed class MapCanvas : Control, IDisposable
     {
         _bitmap?.Dispose();
         _bitmap = null;
-        _preview?.Dispose();
+        if (SharedPreview is null) _preview?.Dispose();
         _preview = null;
         _pending = null;
+        _currentProject = null;
     }
 
     /// <summary>A focusable control element, so screen readers read its AutomationProperties.Name.</summary>

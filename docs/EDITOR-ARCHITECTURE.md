@@ -1,118 +1,94 @@
 # Editor architecture (C# app)
 
-This note describes how the Avalonia editor (`src/Tractr.App`) is put
-together today, the structure it is moving towards, and the steps that are
-left. [LANGUAGES.md](LANGUAGES.md) has the rule that decides which language
-owns what: **F# understands the project, Rust runs the game, C# is the
-desktop app**. Within the C# app, the rule this note adds is: **a view shows
-and collects; the decisions and the text it shows come from code that can be
-tested without building the view.**
+The Avalonia editor lives in `src/Tractr.App`.
+[LANGUAGES.md](LANGUAGES.md) defines the language boundary: **F# understands
+the project, Rust runs the game, C# is the desktop app**. Within C#, views
+collect input and draw controls; view models own editable state, validation,
+commands and navigation. They can be tested without constructing Avalonia.
 
-## Where things are today
+## Views and state
 
-| Layer | Files | Built how |
+| Area | View | State and commands |
 |---|---|---|
-| Shell | `Views/MainWindow.axaml`, `AboutWindow.axaml`, `UpdateCenterWindow.axaml` with `ViewModels/MainWindowViewModel`, `AboutViewModel`, `UpdateCenterViewModel`; `ExportGameViewModel` behind `Projects/ExportGameWindow` | MVVM: XAML bound to view models (`Mvvm/ObservableObject`, `RelayCommand`) |
-| Game surface | `Game/GameWorkspaceView` (switches Edit and Play Mode), `Game/PlayModeView`, `Game/DebugDrawer` | Code-built views over the Rust player |
-| Edit Mode tabs with view models | `Game/ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView`, `ContentEditorView` over `ViewModels/EditMode/ProblemsViewModel`, `SettingsViewModel`, `ModsViewModel`, `WorkshopViewModel`, `InterfaceViewModel`, `ContentEditorViewModel` | Code-built views that show and collect; the view model owns the state, calls F# and `ProjectWorkspace` (tests: `tests/Tractr.App.Tests/ViewModels`) |
-| Edit Mode, not yet moved | `Game/EditModeView` (+ `EditModeTools`, `EditModeFind`), `ArtEditorView`, and the fields of `ContentForm` | Code-built `UserControl`s (`Ui` builders) that hold their state and call `ProjectWorkspace` |
-| Project | `Projects/ProjectWorkspace` (the open F# `Document`, undo/redo, autosave), `ProjectStore`, `ProjectDialogs`, `ProjectCommandHandler` | Plain classes; dialogs code-built |
-| Engine | F# `FarmEngine.Authoring` (edits, validation, form metadata, readouts), Rust through `FarmEngine.Interop` | Called by the views and view models |
+| Shell | `MainWindow.axaml`, `AboutWindow.axaml`, `UpdateCenterWindow.axaml`, `ExportGameWindow` | `MainWindowViewModel`, `AboutViewModel`, `UpdateCenterViewModel`, `ExportGameViewModel` |
+| Map | `EditModeView`, `EditModeTools`, `EditModeFind`, `MapCanvas` | `MapEditorViewModel`: brush/layer/tool, strokes, selection, clipboard, scene and door drafts, placement, scene/door edits, navigation and Pick on map |
+| Content | `ContentEditorView` | `ContentEditorViewModel`: category, entry list, selected record, commands, readouts and unsaved-draft prompts |
+| Generated fields | `ContentForm`, its `ListEditor` and `VocabularyEditor` helpers | `ContentDraftViewModel`: JSON draft, field writers, dirty tracking, numeric validation, raw JSON validation and commit |
+| Art | `ArtEditorView` and `ArtEditorView.Layout` | `ArtEditorViewModel`: selection, imports, animation frames/clips, bindings, removals and messages |
+| Other tabs | `ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView` | Matching classes in `ViewModels/EditMode` |
+| Project persistence | `ProjectWorkspace`, `ProjectStore`, project dialogs | Immutable F# `Document`, undo/redo, background autosave and F# project edits |
+| Game surface | `GameWorkspaceView`, `PlayModeView`, `DebugDrawer` | Rust simulation, renderer and runtime UI through `FarmEngine.Interop` |
 
-Edit Mode is where most of the code is. Six of its tabs have view models
-(the target structure below): Problems, Settings, Mods, Workshop, Interface
-and Content. Their views still build their controls in code, but they bind or
-read the view model's state instead of keeping it, and every rule they had
-(drafts, validation messages, what a button does) is tested by driving the
-view model over a `ProjectWorkspace`, without Avalonia. The map tools in
-`EditModeView`, the art studio and the generated content form's fields are
-still code-built views that keep their state in their controls: a rule there
-can only be tested by building the whole editor.
+The map canvas, generated content controls and art previews remain code-built:
+their structure depends on the project. `ContentForm` delegates collection
+rows (including schedules, waypoints and stock cards) to `ListEditor`, and
+conditions/outcomes to `VocabularyEditor`. They collect control values into
+the shared draft model; they do not own separate JSON or dirty state.
+`ContentFormSchema` contains reflection helpers and `ContentFormLayout`
+contains reusable layout pieces.
+
+Map pointer and keyboard events supply tile coordinates to
+`MapEditorViewModel`. The model performs F# edits and retains the brush across
+undo/redo. It owns navigation requests and the pending Pick on map operation;
+the view responds by selecting the tab/scene and focusing or scrolling the
+canvas. Art import decoding and PNG conversion run on a background task,
+then apply one batch on the UI context. A late import cannot modify a
+replacement project or a retired view. Debounced autosave serializes and writes
+an immutable project snapshot on a worker, then publishes its status on the UI
+thread. Edits made during that write stay pending; explicit saves and project
+changes drain the active write and save the latest document before proceeding.
+
+## Refresh and rendering
+
+Content list rows and thumbnail controls survive unrelated changes. A map
+paint keeps an unchanged content form; a changed record, picker context or
+asset refreshes the affected presentation. Hidden tabs catch up when opened.
+The map defers sending a project until it is drawn and sends scene deltas for
+painting, retaining the project's embedded art on the native side.
+
+One `EditorPreview` serves the map, terrain palette, content thumbnails,
+generated-form previews and art studio in an editor. Each caller supplies its
+immutable project before drawing, so an older draft cannot leave another
+surface on the wrong project. The editor owns its lifetime. Standalone test
+views may use their own preview.
+
+Rust builds and decorates only the editor camera's tile window, including
+nearby lights and tall objects that extend into view. The native snapshot
+cache includes the scene, layout and tile window; repeated frames in the
+same window reuse it. Unrestricted snapshot requests retain their existing
+serialization contract.
 
 ## Shared pieces
 
-Use these instead of writing another copy:
-
 | Need | Use |
 |---|---|
-| Open an Edit Mode tab | `EditModeView.SelectedTab` with the `EditorTab` enum (the enum's order is the tab order; `AddTab` asserts it) |
-| Where a Workshop link or a Problems row leads | `EditorNavigation.WorkshopTarget`, `EditorNavigation.ContentCategory` |
-| File sizes, download sizes, "5 minutes ago", numbers in text fields | `DisplayFormat` (`FileSize` is the F# `GameExporter.FormatSize` that Export Game and `farmc` print) |
-| Write a file without leaving half of it behind | `Tractr.Updates.AtomicFile` |
-| Read or change one section of `settings.json` | `SettingsFile` through `AppSettingsStore` / `JsonSettingsStore`; `AppSettingsStore.TryUpdate` for preferences that must never stop the creator |
-| Read or write a file the creator picked | `Projects/PickedFiles` (size caps, atomic local saves) |
-| Ask about unsaved form fields | `ViewModels/EditMode/DraftPrompt` (the question, owned by the view model), shown by `Game/DraftBar` |
-| Run a view model's command from a code-built button | `Ui.CommandButton` (it follows `CanExecute`, and the UI tests' raised Click events run it) |
-| Keep a panel's rows in step with a view model's draft rows | `Game/DraftRows` (rows keep their controls when others move or go) |
-| A temp-folder `ProjectWorkspace` for view model tests | `tests/Tractr.App.Tests/ViewModels/TestWorkspace` |
-| Common controls (buttons, rows, icons, modal cards, accessible names) | `Game/Ui` |
-| Colours, fonts and surfaces | the role brushes and font resources in `App.axaml` and the classes in `Game/GameStyles.axaml` ([brand/APP-UI.md](brand/APP-UI.md)); never a hex value in a view |
-| A label drawn in capitals (kickers, headings) | `Controls/KickerText` (`Ui.Text` makes one for the `h2`, `h3`, `section` and `category` classes) |
-| Reflection over the schema records for generated forms | `Game/ContentFormSchema` (no controls); layout pieces in `Game/ContentFormLayout` |
+| Select an Edit Mode tab | `EditModeView.SelectedTab` / `MapEditorViewModel.Navigate`, using `EditorTab` |
+| Resolve a Workshop or Problems link | `EditorNavigation` |
+| Sizes, relative times and text-field numbers | `DisplayFormat` |
+| Atomic file writes | `Tractr.Updates.AtomicFile` |
+| Read or change `settings.json` | `SettingsFile` through `AppSettingsStore` / `JsonSettingsStore` |
+| Read/write a picked file | `Projects/PickedFiles` |
+| Ask about unsaved fields | `DraftPrompt`, shown by `DraftBar` |
+| Bind a code-built command button | `Ui.CommandButton` |
+| Keep draft rows and controls together | `DraftRows` |
+| Accessible controls and shared layout | `Ui` and `ContentFormLayout` |
+| Editor labels | `EditorStrings`; tab headers and Play Mode toolbar follow language changes |
+| Colours, fonts and surfaces | `App.axaml`, `GameStyles.axaml` and [brand/APP-UI.md](brand/APP-UI.md) |
 
-Error messages name what the creator sees (the field's label, which is also
-its accessible name), never a control's `Name`.
+Error messages use the visible field label, never a control's internal name.
+Test doubles live in the test project: shell placeholders in `Ui/Placeholders`
+and `FakeUpdateService` in `Updates/Testing`. Production always uses the real
+update service; no environment variable substitutes a fake updater.
 
-Test doubles stay in the test project: the shell's placeholder game surface
-and project commands live in `tests/Tractr.App.Tests/Ui/Placeholders.cs`.
-`FakeUpdateService` still ships in `Tractr.Updates` because the
-`TRACTR_FAKE_UPDATES` demo mode ([RELEASING.md](RELEASING.md))
-uses it; see the remaining steps.
+## Verification
 
-## Target structure
+`tests/Tractr.App.Tests/ViewModels` drives map painting, clipboard, scene and
+door validation, Pick on map, content dirty tracking/JSON validation and art
+commands over temporary `ProjectWorkspace`s. `EditModeViewModelRulesTests`
+rejects Avalonia types in these models. Headless UI tests cover generated
+controls, layout, navigation and actual rendering.
 
-Each Edit Mode tab gets a view model, introduced one tab at a time (done for
-Problems, Settings, Mods, Workshop, Interface and Content):
-
-- **The view model owns the state** a tab has today in its controls and
-  fields: the selected entry, the draft, the dirty flag, validation messages,
-  the status line. It calls F# for every decision (edits, validation,
-  readouts, options) and `ProjectWorkspace` to apply edits. It has no
-  Avalonia types, so tests drive it directly (`EditModeViewModelRulesTests`
-  checks that). Opening the tab calls its `Refresh`; a tab that is not on show
-  catches up then instead of on every edit (the view passes whether it is
-  shown).
-- **The view binds to it.** Small, static layouts move to XAML; generated
-  layouts (the schema-driven `ContentForm`, the map canvas) stay in code but
-  read and write the view model rather than holding state.
-- **Navigation goes through one place.** `EditorTab` and `EditorNavigation`
-  are the start: a shell-level navigator (a method on the Edit Mode view
-  model) replaces the callbacks the tabs pass around today (`PickOnMap`, the
-  Workshop's tab keys, the Problems row handler).
-- **Strings go through `EditorStrings`** so every tab can follow the
-  editor's language ([#59](https://github.com/JX-Holdings-LLC/tractr/issues/59)).
-
-## Remaining steps
-
-In order; each step is a separate change that keeps the UI tests passing.
-
-1. **Draft forms first.** Done: the Content, Interface and Settings tabs'
-   view models own their drafts, dirty flags and validation, so the
-   unsaved-fields rules (#87, #70) are tested without the UI, and `DraftBar`
-   shows the view model's `DraftPrompt`. Problems, Mods and Workshop moved
-   too. What is left of this step: the generated content form's fields still
-   live in `ContentForm`'s controls, behind `IContentDraft` (step 2).
-2. **Split `ContentForm` further**: the list rows (schedules, waypoints, stock
-   cards) and the condition and outcome editors become their own controls over
-   the draft, next to the reflection helpers already in `ContentFormSchema`.
-   Then the JSON draft and the field writers move behind `IContentDraft` into
-   a view model, so `IsDirty`, `Commit` and the field errors are tested
-   without the form.
-3. **Map editor state.** Move the map tool state (`Tool`, the brush, the
-   selection, the door form's fields, Pick on map) out of `EditModeView` and
-   `EditModeTools` into a view model; the canvas and toolbar bind to it. The
-   Edit Mode view model then becomes the navigator: the callbacks the tab view
-   models still take (`pickOnMap`, the Workshop's tab keys, the Problems row
-   handler) go through it.
-4. **Art studio.** Split `ArtEditorView` into the asset list, the animation
-   clip editor and the bindings panel, with the frame and clip arithmetic in a
-   view model or F#.
-5. **Localization.** Route the remaining views' text through `EditorStrings`
-   and refresh Play Mode's toolbar when the language changes (#59).
-6. **Demo-only code.** Move `FakeUpdateService` into a test-support assembly
-   and keep the `TRACTR_FAKE_UPDATES` switch only in debug builds,
-   once the release docs no longer point at it for UI demos.
-7. **Tests use the names.** The UI tests still select tabs by index
-   (`SelectedIndex = 1`); move them to `EditModeView.SelectedTab` when the test
-   helpers are next reworked. `EditorStructureTests` pins the enum to the tab
-   order meanwhile.
+The native preview regression paints 50 tiles of a 128×128 map with 4 MB of
+embedded art, verifies scene-only updates and shared-preview identity, and
+compares the resulting pixels with a fresh preview. Rust tests compare
+culled editor views with unrestricted snapshots at multiple camera positions.

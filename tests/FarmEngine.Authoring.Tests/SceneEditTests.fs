@@ -44,7 +44,9 @@ let ``erasing the object layer drops the wall and its collision`` () =
 
 [<Fact>]
 let ``fill rect is clamped to the scene`` () =
-    let project = starter () |> apply (FillRect(farmId, Background, 14, 10, 30, 30, "water"))
+    let project =
+        starter () |> apply (FillRect(farmId, Background, 14, 10, 30, 30, "water"))
+
     let scene = farm project
     Assert.Equal("water", scene.Tiles.[11].[15].Type)
     Assert.Equal("water", scene.Tiles.[10].[14].Type)
@@ -55,16 +57,22 @@ let ``fill rect is clamped to the scene`` () =
 let ``flood fill only touches the connected region of the clicked type`` () =
     let project = starter ()
     let before = farm project
-    let count (s: Scene) (t: string) = s.Tiles |> Seq.sumBy (fun row -> row |> Seq.filter (fun x -> x.Type = t) |> Seq.length)
+
+    let count (s: Scene) (t: string) =
+        s.Tiles
+        |> Seq.sumBy (fun row -> row |> Seq.filter (fun x -> x.Type = t) |> Seq.length)
+
     let soilCount = count before "soil"
     Assert.True(soilCount > 0)
     let filled = project |> apply (FloodFill(farmId, Background, 8, 6, "water"))
     let after = farm filled
     Assert.Equal("water", after.Tiles.[6].[8].Type)
     Assert.Equal(soilCount, count after "water")
+
     for y in 0 .. after.Tiles.Length - 1 do
         for x in 0 .. after.Tiles.[y].Length - 1 do
-            if before.Tiles.[y].[x].Type <> "soil" then Assert.Same(before.Tiles.[y].[x], after.Tiles.[y].[x])
+            if before.Tiles.[y].[x].Type <> "soil" then
+                Assert.Same(before.Tiles.[y].[x], after.Tiles.[y].[x])
 
 [<Fact>]
 let ``flood fill with the same type and no art is a no-op`` () =
@@ -74,7 +82,13 @@ let ``flood fill with the same type and no art is a no-op`` () =
 [<Fact>]
 let ``paste stamps the region and repositions tiles`` () =
     let project = starter ()
-    let region = [ [ tile project farmId 0 0; tile project farmId 1 0 ]; [ tile project farmId 0 1; tile project farmId 1 1 ] ]
+
+    let region =
+        [
+            [ tile project farmId 0 0; tile project farmId 1 0 ]
+            [ tile project farmId 0 1; tile project farmId 1 1 ]
+        ]
+
     let pasted = project |> apply (PasteTiles(farmId, 14, 10, region))
     let t = tile pasted farmId 15 11
     Assert.Equal(15.0, t.X)
@@ -114,11 +128,19 @@ let ``clear crops and items, reset soil and fill scene`` () =
     Assert.True((tile cleared farmId 5 5).Item.IsNone)
     Assert.Same(cleared, cleared |> apply (ClearCropsAndItems farmId))
     let reset = project |> apply (ResetSoil farmId)
-    let anySoil = (farm reset).Tiles |> Seq.exists (fun row -> row |> Seq.exists (fun t -> t.Type = "soil"))
+
+    let anySoil =
+        (farm reset).Tiles
+        |> Seq.exists (fun row -> row |> Seq.exists (fun t -> t.Type = "soil"))
+
     Assert.False anySoil
     Assert.Equal("dry", orEmpty (tile reset farmId 8 6).SoilState)
     let filled = project |> apply (FillScene(farmId, "floor"))
-    let allFloor = (farm filled).Tiles |> Seq.forall (fun row -> row |> Seq.forall (fun t -> t.Type = "floor" && t.Item.IsNone && t.Crop.IsNone))
+
+    let allFloor =
+        (farm filled).Tiles
+        |> Seq.forall (fun row -> row |> Seq.forall (fun t -> t.Type = "floor" && t.Item.IsNone && t.Crop.IsNone))
+
     Assert.True allFloor
 
 [<Fact>]
@@ -152,12 +174,54 @@ let ``add, rename, resize, duplicate and remove scenes`` () =
 let ``removing a scene drops doors into it, its NPCs and events, and moves the player`` () =
     let project = starter ()
     let barn = Defaults.newScene project "Barn" 8 6
-    let door = { SceneTransition.Default with FromX = 8.0; FromY = 11.0; ToSceneId = barn.Id; ToX = 4.0; ToY = 5.0 }
-    let goat = { (Defaults.newNpc project "Goat") with SceneId = barn.Id }
-    let warpOutcome = { EventOutcome.Default with Type = "warpPlayer"; SceneId = Some(barn.Id); X = Some(1.0); Y = Some(1.0) }
-    let warp = { Defaults.newEvent project with SceneId = farmId; Outcomes = [ warpOutcome ] }
-    let inside = { Defaults.newEvent project with Id = "event-inside"; SceneId = barn.Id }
-    let setup = Batch("setup", [ AddScene barn; SetTransition(farmId, door); UpsertNpc goat; UpsertEvent warp; UpsertEvent inside; SetPlayerStart(barn.Id, 2, 2) ])
+
+    let door =
+        { SceneTransition.Default with
+            FromX = 8.0
+            FromY = 11.0
+            ToSceneId = barn.Id
+            ToX = 4.0
+            ToY = 5.0
+        }
+
+    let goat =
+        { (Defaults.newNpc project "Goat") with
+            SceneId = barn.Id
+        }
+
+    let warpOutcome =
+        { EventOutcome.Default with
+            Type = "warpPlayer"
+            SceneId = Some(barn.Id)
+            X = Some(1.0)
+            Y = Some(1.0)
+        }
+
+    let warp =
+        { Defaults.newEvent project with
+            SceneId = farmId
+            Outcomes = [ warpOutcome ]
+        }
+
+    let inside =
+        { Defaults.newEvent project with
+            Id = "event-inside"
+            SceneId = barn.Id
+        }
+
+    let setup =
+        Batch(
+            "setup",
+            [
+                AddScene barn
+                SetTransition(farmId, door)
+                UpsertNpc goat
+                UpsertEvent warp
+                UpsertEvent inside
+                SetPlayerStart(barn.Id, 2, 2)
+            ]
+        )
+
     let built = project |> apply setup
     Assert.Equal(barn.Id, built.Player.SceneId)
     let removed = built |> apply (RemoveScene barn.Id)
@@ -167,7 +231,11 @@ let ``removing a scene drops doors into it, its NPCs and events, and moves the p
     Assert.False(removed.Events |> Seq.exists (fun e -> e.Id = inside.Id))
     Assert.Empty((removed.Events |> Seq.find (fun e -> e.Id = warp.Id)).Outcomes)
     Assert.Equal(farmId, removed.Player.SceneId)
-    let leftovers = errors removed |> List.filter (fun p -> p.Code.StartsWith "content." || p.Code.StartsWith "schema.")
+
+    let leftovers =
+        errors removed
+        |> List.filter (fun p -> p.Code.StartsWith "content." || p.Code.StartsWith "schema.")
+
     Assert.True(leftovers.IsEmpty, describe leftovers)
 
 [<Fact>]
@@ -175,7 +243,16 @@ let ``transitions are keyed by their departure tile`` () =
     let project = starter ()
     let barn = Defaults.newScene project "Barn" 8 6
     let project = project |> apply (AddScene barn)
-    let door = { SceneTransition.Default with FromX = 8.0; FromY = 11.0; ToSceneId = barn.Id; ToX = 4.0; ToY = 5.0 }
+
+    let door =
+        { SceneTransition.Default with
+            FromX = 8.0
+            FromY = 11.0
+            ToSceneId = barn.Id
+            ToX = 4.0
+            ToY = 5.0
+        }
+
     let withDoor = project |> apply (SetTransition(farmId, door))
     Assert.Equal(1, (farm withDoor).Transitions.Length)
     let moved = withDoor |> apply (SetTransition(farmId, { door with ToX = 3.0 }))
@@ -212,9 +289,35 @@ let ``start scene, player start and brush`` () =
 [<Fact>]
 let ``the brush art rides along when painting the selected type`` () =
     let project = starter ()
-    let asset = { CustomAsset.Default with Id = "art-1"; Name = "tiles.png"; Type = "art"; DataUrl = "data:,"; Width = Some(32.0); Height = Some(32.0) }
-    let visual = { VisualRef.Default with AssetId = "art-1" }
-    let painted = project |> apply (Batch("paint art", [ UpsertAsset asset; SelectBrush("water", Some visual); PaintTiles(farmId, Background, [ (3, 3) ], "water") ]))
+
+    let asset =
+        { CustomAsset.Default with
+            Id = "art-1"
+            Name = "tiles.png"
+            Type = "art"
+            DataUrl = "data:,"
+            Width = Some(32.0)
+            Height = Some(32.0)
+        }
+
+    let visual =
+        { VisualRef.Default with
+            AssetId = "art-1"
+        }
+
+    let painted =
+        project
+        |> apply (
+            Batch(
+                "paint art",
+                [
+                    UpsertAsset asset
+                    SelectBrush("water", Some visual)
+                    PaintTiles(farmId, Background, [ (3, 3) ], "water")
+                ]
+            )
+        )
+
     Assert.Equal(Some visual, (tile painted farmId 3 3).Visuals.Value.Background)
     let plain = painted |> apply (PaintTiles(farmId, Background, [ (4, 4) ], "soil"))
     Assert.True((tile plain farmId 4 4).Visuals.IsNone)
@@ -226,13 +329,30 @@ let ``the brush art rides along when painting the selected type`` () =
 [<Fact>]
 let ``the eyedropper picks the tile type and the art on that type's layer`` () =
     let project = starter ()
-    let visual = { VisualRef.Default with AssetId = "art-path" }
-    let painted = project |> apply (Batch("path art", [ PaintTiles(farmId, Overlay, [ (4, 4) ], "path"); SetTileVisual(farmId, Overlay, [ (4, 4) ], Some visual) ]))
+
+    let visual =
+        { VisualRef.Default with
+            AssetId = "art-path"
+        }
+
+    let painted =
+        project
+        |> apply (
+            Batch(
+                "path art",
+                [
+                    PaintTiles(farmId, Overlay, [ (4, 4) ], "path")
+                    SetTileVisual(farmId, Overlay, [ (4, 4) ], Some visual)
+                ]
+            )
+        )
+
     match nonNull (Edits.PickBrush(painted, farmId, 4, 4)) with
     | SelectBrush(tileType, picked) ->
         Assert.Equal("path", tileType)
         Assert.Equal(Some visual, picked)
     | other -> failwithf "expected SelectBrush, got %A" other
+
     let brush = painted |> apply (nonNull (Edits.PickBrush(painted, farmId, 4, 4)))
     Assert.Equal("path", brush.SelectedTileType)
     Assert.Equal(Some visual, brush.SelectedTileVisual)
@@ -242,6 +362,7 @@ let ``the eyedropper picks the tile type and the art on that type's layer`` () =
         Assert.Equal("grass", tileType)
         Assert.True(picked.IsNone)
     | other -> failwithf "expected SelectBrush, got %A" other
+
     Assert.Null(Edits.PickBrush(painted, farmId, 99, 0))
     Assert.Null(Edits.PickBrush(painted, "nope", 0, 0))
 
@@ -251,10 +372,22 @@ let ``the remove tool clears what was placed on a tile and the animals standing 
     let wood = project.Items |> Seq.find (fun i -> i.Id = "material-wood")
     let species = project.AnimalSpecies.Head.Id
     let here = Defaults.newAnimal project species farmId 5 5
+
     let placed =
         project
-        |> apply (Batch("place", [ PlaceNode(farmId, 5, 5, "node-rock"); PlaceItem(farmId, 5, 5, wood); PlaceMachine(farmId, 5, 5, "machine-kitchen")
-                                   UpsertAnimal here; MoveNpc("npc-farmer", farmId, 5, 5) ]))
+        |> apply (
+            Batch(
+                "place",
+                [
+                    PlaceNode(farmId, 5, 5, "node-rock")
+                    PlaceItem(farmId, 5, 5, wood)
+                    PlaceMachine(farmId, 5, 5, "machine-kitchen")
+                    UpsertAnimal here
+                    MoveNpc("npc-farmer", farmId, 5, 5)
+                ]
+            )
+        )
+
     let neighbour = Defaults.newAnimal placed species farmId 6 5
     let placed = placed |> apply (UpsertAnimal neighbour)
     let cleared = placed |> apply (ClearTile(farmId, 5, 5))
@@ -273,7 +406,10 @@ let ``the remove tool clears what was placed on a tile and the animals standing 
 [<Fact>]
 let ``the place tools offer the project's content and put it on the clicked tile`` () =
     let project = starter ()
-    let ids kind = MapPlacement.Choices(kind, project) |> Seq.map (fun o -> o.Id) |> List.ofSeq
+
+    let ids kind =
+        MapPlacement.Choices(kind, project) |> Seq.map (fun o -> o.Id) |> List.ofSeq
+
     Assert.Contains("npc-farmer", ids "npc")
     Assert.Contains("node-rock", ids "nodeType")
     Assert.Equal((ids "nodeType").Length, (ids "nodeType" |> List.distinct).Length)
@@ -282,7 +418,9 @@ let ``the place tools offer the project's content and put it on the clicked tile
     Assert.Equal<string list>(project.AnimalSpecies |> Seq.map (fun s -> s.Id) |> List.ofSeq, ids "animalSpecies")
     Assert.Empty(MapPlacement.Choices("scene", project))
 
-    let place kind id = project |> apply (nonNull (MapPlacement.Place(project, kind, id, farmId, 5, 5)))
+    let place kind id =
+        project |> apply (nonNull (MapPlacement.Place(project, kind, id, farmId, 5, 5)))
+
     let farmer = npc (place "npc" "npc-farmer") "npc-farmer"
     Assert.Equal((farmId, 5.0, 5.0), (farmer.SceneId, farmer.X, farmer.Y))
     Assert.Equal("node-rock", (tile (place "nodeType" "node-rock") farmId 5 5).Node.Value.TypeId)
@@ -302,31 +440,118 @@ let ``the place tools offer the project's content and put it on the clicked tile
 let private crowdedFarm () =
     let project = starter ()
     let barn = Defaults.newScene project "Barn" 8 6
-    let door = { SceneTransition.Default with FromX = 1.0; FromY = 1.0; ToSceneId = farmId; ToX = 15.0; ToY = 11.0 }
-    let farmDoor = { SceneTransition.Default with FromX = 14.0; FromY = 10.0; ToSceneId = barn.Id; ToX = 2.0; ToY = 2.0 }
+
+    let door =
+        { SceneTransition.Default with
+            FromX = 1.0
+            FromY = 1.0
+            ToSceneId = farmId
+            ToX = 15.0
+            ToY = 11.0
+        }
+
+    let farmDoor =
+        { SceneTransition.Default with
+            FromX = 14.0
+            FromY = 10.0
+            ToSceneId = barn.Id
+            ToX = 2.0
+            ToY = 2.0
+        }
+
     let species = project.AnimalSpecies.Head
     let first = project.Npcs.Head
+
     let walker =
         { first with
-            X = 13.0; Y = 9.0
-            Schedule = Some [ { NpcScheduleEntry.Default with Minute = 480.0; SceneId = farmId; X = 15.0; Y = 2.0 } ]
-            PatrolPoints = Some [ { GridPoint.X = 1.0; Y = 1.0 }; { GridPoint.X = 14.0; Y = 11.0 } ] }
+            X = 13.0
+            Y = 9.0
+            Schedule =
+                Some
+                    [
+                        { NpcScheduleEntry.Default with
+                            Minute = 480.0
+                            SceneId = farmId
+                            X = 15.0
+                            Y = 2.0
+                        }
+                    ]
+            PatrolPoints = Some [ { GridPoint.X = 1.0; Y = 1.0 }; { GridPoint.X = 14.0; Y = 11.0 } ]
+        }
+
     let event =
         { GameEvent.Default with
-            Id = "event-edge"; Name = "Edge"; SceneId = farmId; Trigger = EventTriggers.Interact; Active = true
-            Conditions = [ EventCondition.InteractTile { InteractTileCondition.Default with X = 12.0; Y = 10.0; X2 = Some 15.0; Y2 = Some 11.0 } ]
+            Id = "event-edge"
+            Name = "Edge"
+            SceneId = farmId
+            Trigger = EventTriggers.Interact
+            Active = true
+            Conditions =
+                [
+                    EventCondition.InteractTile
+                        { InteractTileCondition.Default with
+                            X = 12.0
+                            Y = 10.0
+                            X2 = Some 15.0
+                            Y2 = Some 11.0
+                        }
+                ]
             Outcomes =
-                [ { EventOutcome.Default with Type = EventOutcomeTypes.ChangeTile; TileX = Some 15.0; TileY = Some 11.0; NewTileType = Some "water" }
-                  { EventOutcome.Default with Type = EventOutcomeTypes.WarpPlayer; SceneId = Some farmId; X = Some 15.0; Y = Some 11.0 } ] }
+                [
+                    { EventOutcome.Default with
+                        Type = EventOutcomeTypes.ChangeTile
+                        TileX = Some 15.0
+                        TileY = Some 11.0
+                        NewTileType = Some "water"
+                    }
+                    { EventOutcome.Default with
+                        Type = EventOutcomeTypes.WarpPlayer
+                        SceneId = Some farmId
+                        X = Some 15.0
+                        Y = Some 11.0
+                    }
+                ]
+        }
+
     let placed =
         project
-        |> apply (Batch("crowd", [ AddScene barn; SetTransition(barn.Id, door); SetTransition(farmId, farmDoor); SetPlayerStart(farmId, 15, 11); UpsertNpc walker; UpsertEvent event ]))
-    let placed = placed |> apply (nonNull (MapPlacement.Place(placed, "animalSpecies", species.Id, farmId, 14, 11)))
-    let placed = placed |> apply (SetMine { placed.Mine with Enabled = true; EntranceSceneId = Some farmId; EntranceX = Some 15.0; EntranceY = Some 11.0 })
+        |> apply (
+            Batch(
+                "crowd",
+                [
+                    AddScene barn
+                    SetTransition(barn.Id, door)
+                    SetTransition(farmId, farmDoor)
+                    SetPlayerStart(farmId, 15, 11)
+                    UpsertNpc walker
+                    UpsertEvent event
+                ]
+            )
+        )
+
+    let placed =
+        placed
+        |> apply (nonNull (MapPlacement.Place(placed, "animalSpecies", species.Id, farmId, 14, 11)))
+
+    let placed =
+        placed
+        |> apply (
+            SetMine
+                { placed.Mine with
+                    Enabled = true
+                    EntranceSceneId = Some farmId
+                    EntranceX = Some 15.0
+                    EntranceY = Some 11.0
+                }
+        )
+
     placed, barn.Id, walker.Id
 
 let private outOfBounds (project: GameProject) =
-    errors project |> List.filter (fun p -> p.Code.ToLowerInvariant().Contains "outofbounds" || p.Message.Contains "out of bounds")
+    errors project
+    |> List.filter (fun p ->
+        p.Code.ToLowerInvariant().Contains "outofbounds"
+        || p.Message.Contains "out of bounds")
 
 [<Fact>]
 let ``shrinking a scene moves the player, NPCs, doors, events, animals and the mine entrance inside`` () =
@@ -357,9 +582,11 @@ let ``shrinking a scene moves the player, NPCs, doors, events, animals and the m
     let animal = shrunk.Animals |> Seq.last
     Assert.Equal((9.0, 7.0), (animal.X, animal.Y))
     let event = shrunk.Events |> Seq.find (fun e -> e.Id = "event-edge")
+
     match event.Conditions.Head with
     | EventCondition.InteractTile t -> Assert.Equal((9.0, 7.0, Some 9.0, Some 7.0), (t.X, t.Y, t.X2, t.Y2))
     | other -> failwithf "expected an interact tile, got %A" other
+
     Assert.Equal((Some 9.0, Some 7.0), (event.Outcomes.[0].TileX, event.Outcomes.[0].TileY))
     Assert.Equal((Some 9.0, Some 7.0), (event.Outcomes.[1].X, event.Outcomes.[1].Y))
     Assert.Equal((Some 9.0, Some 7.0), (shrunk.Mine.EntranceX, shrunk.Mine.EntranceY))
@@ -399,7 +626,10 @@ let ``map markers show doors, arrivals, event tiles, the mine entrance and the p
     Assert.Equal((14, 10, barnId), (door.X, door.Y, door.TargetId))
     let arrival = markers |> List.find (fun m -> m.Kind = "arrival")
     Assert.Equal((15, 11, barnId, 1, 1), (arrival.X, arrival.Y, arrival.TargetId, arrival.FromX, arrival.FromY))
-    let event = markers |> List.find (fun m -> m.Kind = "event" && m.TargetId = "event-edge")
+
+    let event =
+        markers |> List.find (fun m -> m.Kind = "event" && m.TargetId = "event-edge")
+
     Assert.Equal((12, 10, 15, 11), (event.X, event.Y, event.X2, event.Y2))
     Assert.Contains("interact", event.Label)
     Assert.Empty(MapMarkers.ForScene(project, "nope"))

@@ -20,10 +20,12 @@ module internal ChecksVocabulary =
     let private duplicates (context: Context) (sink: Sink) =
         let check (family: string) (path: string) (ids: seq<string>) (target: string -> NavigationTarget) =
             let seen = HashSet<string>()
+
             ids
             |> Seq.iteri (fun i id ->
                 if id.Length > 0 && not (seen.Add id) then
                     sink.Error(sprintf "duplicate.%s" family, sprintf "%s[%d].id" path i, sprintf "Duplicate %s id \"%s\"" family id, Some(target id)))
+
         let p = context.Project
         let ids (list: 'T list option) (id: 'T -> string) = defaultArg list [] |> Seq.map id
         check "terrain" "terrains" (ids p.Terrains (fun t -> t.Id)) NavigationTarget.Terrain
@@ -39,6 +41,7 @@ module internal ChecksVocabulary =
         context.Project.Scenes
         |> List.iteri (fun s scene ->
             let reported = HashSet<string>()
+
             scene.Tiles
             |> List.iteri (fun y row ->
                 row
@@ -49,8 +52,13 @@ module internal ChecksVocabulary =
                                 code,
                                 sprintf "scenes[%d].tiles[%d][%d]" s y x,
                                 sprintf "Scene \"%s\" has tiles of missing %s \"%s\" (first at %d,%d)" scene.Name what id x y,
-                                Some(NavigationTarget.Scene(scene.Id, x, y)))
-                    let terrain (id: string) = if id.Length > 0 && not (context.TerrainIds.Contains id) then report "scene.unknownTerrain" "terrain" id
+                                Some(NavigationTarget.Scene(scene.Id, x, y))
+                            )
+
+                    let terrain (id: string) =
+                        if id.Length > 0 && not (context.TerrainIds.Contains id) then
+                            report "scene.unknownTerrain" "terrain" id
+
                     terrain tile.Type
                     terrain tile.Background
                     tile.Overlay |> Option.iter terrain
@@ -58,12 +66,15 @@ module internal ChecksVocabulary =
                     // Extra layers (M8): a terrain the game has, on a layer the scene has.
                     for layerId, painted in defaultArg tile.Decor [] do
                         terrain painted
+
                         if not (defaultArg scene.Layers [] |> List.exists (fun layer -> layer.Id = layerId)) then
                             report "scene.unknownLayer" "layer" layerId
+
                     match tile.Crop with
                     | Some crop ->
                         if crop.Quality.Length > 0 && not (context.QualityIds.Contains crop.Quality) then
                             report "scene.unknownQuality" "crop quality" crop.Quality
+
                         match crop.Mutation with
                         | Some mutation when mutation.Length > 0 && not (context.MutationIds.Contains mutation) ->
                             report "scene.unknownMutation" "crop mutation" mutation
@@ -72,16 +83,20 @@ module internal ChecksVocabulary =
 
     let private items (context: Context) (sink: Sink) =
         let p = context.Project
+
         p.Items
         |> List.iteri (fun i item ->
             let path = sprintf "items[%d]" i
             let target = Some(NavigationTarget.Item item.Id)
+
             if item.Type.Length > 0 && not (context.CategoryIds.Contains item.Type) then
                 sink.Error("item.unknownCategory", path + ".type", sprintf "Item \"%s\" is of missing kind \"%s\"" item.Name item.Type, target)
+
             match item.ToolType with
             | Some tool when tool.Length > 0 && not (context.ToolIds.Contains tool) ->
                 sink.Error("item.unknownTool", path + ".toolType", sprintf "Item \"%s\" is missing tool \"%s\"" item.Name tool, target)
             | _ -> ())
+
         p.NodeTypes
         |> List.iteri (fun i node ->
             if node.RequiredTool.Length > 0 && not (context.ToolIds.Contains node.RequiredTool) then
@@ -89,26 +104,43 @@ module internal ChecksVocabulary =
                     "nodeType.unknownTool",
                     sprintf "nodeTypes[%d].requiredTool" i,
                     sprintf "Node type \"%s\" needs missing tool \"%s\"" node.Name node.RequiredTool,
-                    Some(NavigationTarget.NodeType node.Id)))
+                    Some(NavigationTarget.NodeType node.Id)
+                ))
 
     let private terrains (context: Context) (sink: Sink) =
         defaultArg context.Project.Terrains []
         |> List.iteri (fun i terrain ->
             let path = sprintf "terrains[%d]" i
             let target = Some(NavigationTarget.Terrain terrain.Id)
+
             if String.IsNullOrWhiteSpace terrain.Name then
                 sink.Warning("terrain.emptyName", path + ".name", sprintf "Terrain \"%s\" has no name" terrain.Id, target)
+
             match terrain.Damage with
             | Some damage when damage < 0.0 ->
                 sink.Error("terrain.damage", path + ".damage", sprintf "Terrain \"%s\" does %g damage; damage cannot be negative" terrain.Name damage, target)
             | _ -> ()
+
             terrain.Transforms
             |> List.iteri (fun k transform ->
                 let tp = sprintf "%s.transforms[%d]" path k
+
                 if transform.Into.Length > 0 && not (context.TerrainIds.Contains transform.Into) then
-                    sink.Error("terrain.unknownInto", tp + ".into", sprintf "Terrain \"%s\" turns into missing terrain \"%s\"" terrain.Name transform.Into, target)
+                    sink.Error(
+                        "terrain.unknownInto",
+                        tp + ".into",
+                        sprintf "Terrain \"%s\" turns into missing terrain \"%s\"" terrain.Name transform.Into,
+                        target
+                    )
+
                 if transform.Into.Length = 0 && terrain.Layer = TileLayers.Background then
-                    sink.Error("terrain.removesBackground", tp + ".into", sprintf "Terrain \"%s\" is ground and can only change into another terrain, not be removed" terrain.Name, target)
+                    sink.Error(
+                        "terrain.removesBackground",
+                        tp + ".into",
+                        sprintf "Terrain \"%s\" is ground and can only change into another terrain, not be removed" terrain.Name,
+                        target
+                    )
+
                 match transform.Tool with
                 | Some tool when tool.Length > 0 && not (context.ToolIds.Contains tool) ->
                     sink.Error("terrain.unknownTool", tp + ".tool", sprintf "Terrain \"%s\" is changed by missing tool \"%s\"" terrain.Name tool, target)
@@ -117,47 +149,77 @@ module internal ChecksVocabulary =
     let private tools (context: Context) (sink: Sink) =
         let all = ContentCompiler.tools context.Project
         let keys = Dictionary<string, string>()
+
         for tool in all do
             match tool.Key with
             | Some key when key.Length > 0 ->
                 let key = key.ToLowerInvariant()
+
                 match keys.TryGetValue key with
                 | true, other ->
-                    sink.Warning("tool.sharedKey", "tools", sprintf "Tools \"%s\" and \"%s\" share the key \"%s\"; both are used when it is pressed" other tool.Name key, Some(NavigationTarget.Tool tool.Id))
+                    sink.Warning(
+                        "tool.sharedKey",
+                        "tools",
+                        sprintf "Tools \"%s\" and \"%s\" share the key \"%s\"; both are used when it is pressed" other tool.Name key,
+                        Some(NavigationTarget.Tool tool.Id)
+                    )
                 | _ -> keys.[key] <- tool.Name
             | _ -> ()
+
         defaultArg context.Project.Tools []
         |> List.iteri (fun i tool ->
             let path = sprintf "tools[%d]" i
             let target = Some(NavigationTarget.Tool tool.Id)
+
             if String.IsNullOrWhiteSpace tool.Name then
                 sink.Warning("tool.emptyName", path + ".name", sprintf "Tool \"%s\" has no name" tool.Id, target)
+
             match tool.Key with
             | Some key when reservedKeys.Contains(key.ToLowerInvariant()) ->
-                sink.Error("tool.reservedKey", path + ".key", sprintf "Tool \"%s\" uses the key \"%s\", which moves the player or opens a menu" tool.Name key, target)
+                sink.Error(
+                    "tool.reservedKey",
+                    path + ".key",
+                    sprintf "Tool \"%s\" uses the key \"%s\", which moves the player or opens a menu" tool.Name key,
+                    target
+                )
             | _ -> ()
+
             if tool.Action = ToolActions.Place then
                 match tool.PlaceTerrain with
                 | Some terrain when context.TerrainIds.Contains terrain -> ()
                 | Some terrain when terrain.Length > 0 ->
                     sink.Error("tool.unknownTerrain", path + ".placeTerrain", sprintf "Tool \"%s\" places missing terrain \"%s\"" tool.Name terrain, target)
                 | _ -> sink.Error("tool.noTerrain", path + ".placeTerrain", sprintf "Tool \"%s\" places terrain but does not say which" tool.Name, target)
+
             match tool.Skill with
-            | Some skill when skill.Length > 0 && not (List.contains skill SaveSchema.SkillNames) ->
+            | Some skill when
+                skill.Length > 0
+                && not (List.contains skill SaveSchema.SkillNames)
+                && not (
+                    defaultArg context.Project.Settings.SkillDefinitions []
+                    |> List.exists (fun definition -> definition.Id = skill)
+                )
+                ->
                 sink.Warning("tool.unknownSkill", path + ".skill", sprintf "Tool \"%s\" trains \"%s\", which is not a skill" tool.Name skill, target)
             | _ -> ()
+
             if tool.Area.IsEmpty && tool.Action <> ToolActions.Fish then
                 sink.Info("tool.noArea", path + ".area", sprintf "Tool \"%s\" has no area; it works on the faced tile" tool.Name, target))
 
     let private qualities (context: Context) (sink: Sink) =
         let mutations = ContentCompiler.cropMutations context.Project
         let shares = mutations |> List.sumBy (fun m -> m.Share)
+
         if shares > 1.0 + 1e-9 then
             sink.Warning(
                 "cropMutation.sharesAboveOne",
                 "cropMutations",
                 sprintf "The crop mutations' shares add up to %g; mutations past a total of 1 never happen" shares,
-                mutations |> List.tryLast |> Option.map (fun m -> NavigationTarget.CropMutation m.Id))
+                mutations
+                |> List.tryLast
+                |> Option.map (fun m -> NavigationTarget.CropMutation m.Id)
+            )
+
         if ContentCompiler.cropQualities context.Project |> List.isEmpty then
             sink.Error("cropQuality.none", "cropQualities", "The game has no crop quality tiers", None)
 
@@ -165,7 +227,10 @@ module internal ChecksVocabulary =
     let private requirements (context: Context) (sink: Sink) =
         let p = context.Project
         let terrains = ContentCompiler.terrains p
-        let sceneTags = HashSet<string>(p.Scenes |> Seq.collect (fun s -> defaultArg s.Tags []))
+
+        let sceneTags =
+            HashSet<string>(p.Scenes |> Seq.collect (fun s -> defaultArg s.Tags []))
+
         defaultArg p.CustomCrops []
         |> List.iteri (fun i crop ->
             match crop.Requirements with
@@ -173,21 +238,42 @@ module internal ChecksVocabulary =
             | Some needs ->
                 let path = sprintf "customCrops[%d].requirements" i
                 let target = Some(NavigationTarget.Crop crop.Id)
+
                 for terrain in needs.Terrains do
                     match terrains |> List.tryFind (fun t -> t.Id = terrain) with
-                    | None -> sink.Error("crop.unknownTerrain", path + ".terrains", sprintf "Crop \"%s\" grows on missing terrain \"%s\"" crop.Name terrain, target)
+                    | None ->
+                        sink.Error("crop.unknownTerrain", path + ".terrains", sprintf "Crop \"%s\" grows on missing terrain \"%s\"" crop.Name terrain, target)
                     | Some t when not t.Plantable ->
-                        sink.Warning("crop.unplantableTerrain", path + ".terrains", sprintf "Crop \"%s\" grows on \"%s\", where nothing can be planted" crop.Name t.Name, target)
+                        sink.Warning(
+                            "crop.unplantableTerrain",
+                            path + ".terrains",
+                            sprintf "Crop \"%s\" grows on \"%s\", where nothing can be planted" crop.Name t.Name,
+                            target
+                        )
                     | _ -> ()
+
                 for fertilizer in needs.Fertilizers do
                     if not (context.ItemIds.Contains fertilizer) then
-                        sink.Error("crop.unknownFertilizer", path + ".fertilizers", sprintf "Crop \"%s\" needs missing fertilizer \"%s\"" crop.Name fertilizer, target)
+                        sink.Error(
+                            "crop.unknownFertilizer",
+                            path + ".fertilizers",
+                            sprintf "Crop \"%s\" needs missing fertilizer \"%s\"" crop.Name fertilizer,
+                            target
+                        )
+
                 for tag in needs.SceneTags do
                     if not (sceneTags.Contains tag) then
-                        sink.Warning("crop.unknownSceneTag", path + ".sceneTags", sprintf "Crop \"%s\" needs scene tag \"%s\", which no scene has" crop.Name tag, target)
+                        sink.Warning(
+                            "crop.unknownSceneTag",
+                            path + ".sceneTags",
+                            sprintf "Crop \"%s\" needs scene tag \"%s\", which no scene has" crop.Name tag,
+                            target
+                        )
+
                 needs.Neighbors
                 |> List.iteri (fun k need ->
                     let np = sprintf "%s.neighbors[%d].id" path k
+
                     match need.Kind, need.Id with
                     | kind, Some id when kind = NeighborKinds.Crop && not (context.CropIds.Contains id) ->
                         sink.Error("crop.unknownNeighbor", np, sprintf "Crop \"%s\" needs neighbours of missing crop \"%s\"" crop.Name id, target)
@@ -199,37 +285,81 @@ module internal ChecksVocabulary =
 
     let private overlays (context: Context) (sink: Sink) =
         let p = context.Project
-        let known = HashSet<string>([ OverlayStyles.Rain; OverlayStyles.Snow ] @ (defaultArg p.Weather.Overlays [] |> List.map (fun o -> o.Id)))
+
+        let known =
+            HashSet<string>(
+                [ OverlayStyles.Rain; OverlayStyles.Snow ]
+                @ (defaultArg p.Weather.Overlays [] |> List.map (fun o -> o.Id))
+            )
+
         p.Weather.Types
         |> List.iteri (fun w weather ->
             match weather.Overlay with
             | Some overlay when overlay.Length > 0 && not (known.Contains overlay) ->
-                sink.Warning("weather.unknownOverlay", sprintf "weather.types[%d].overlay" w, sprintf "Weather \"%s\" shows missing overlay \"%s\" (the game guesses one from the weather's id)" weather.Name overlay, Some NavigationTarget.Settings)
+                sink.Warning(
+                    "weather.unknownOverlay",
+                    sprintf "weather.types[%d].overlay" w,
+                    sprintf "Weather \"%s\" shows missing overlay \"%s\" (the game guesses one from the weather's id)" weather.Name overlay,
+                    Some NavigationTarget.Settings
+                )
             | _ -> ())
 
     /// Music picked by scenes, seasons, festivals and weather (M2) must be music assets.
     let private music (context: Context) (sink: Sink) =
         let p = context.Project
+
         let check (path: string) (owner: string) (music: string option) (target: NavigationTarget option) =
             match music with
             | Some id when id.Length > 0 && not (context.MusicIds.Contains id) ->
-                let what = if context.SoundIds.Contains id then "a sound effect, not music" else "missing"
+                let what =
+                    if context.SoundIds.Contains id then
+                        "a sound effect, not music"
+                    else
+                        "missing"
+
                 sink.Error("music.unknown", path, sprintf "%s plays music \"%s\", which is %s" owner id what, target)
             | _ -> ()
-        p.Scenes |> List.iteri (fun s scene -> check (sprintf "scenes[%d].music" s) (sprintf "Scene \"%s\"" scene.Name) scene.Music (Some(NavigationTarget.Scene(scene.Id, 0, 0))))
+
+        p.Scenes
+        |> List.iteri (fun s scene ->
+            check (sprintf "scenes[%d].music" s) (sprintf "Scene \"%s\"" scene.Name) scene.Music (Some(NavigationTarget.Scene(scene.Id, 0, 0))))
+
         p.Settings.Calendar.Seasons
-        |> List.iteri (fun s season -> check (sprintf "settings.calendar.seasons[%d].music" s) (sprintf "Season \"%s\"" season.Name) season.Music (Some NavigationTarget.Settings))
+        |> List.iteri (fun s season ->
+            check (sprintf "settings.calendar.seasons[%d].music" s) (sprintf "Season \"%s\"" season.Name) season.Music (Some NavigationTarget.Settings))
+
         p.Settings.Calendar.Festivals
-        |> List.iteri (fun f festival -> check (sprintf "settings.calendar.festivals[%d].music" f) (sprintf "Festival \"%s\"" festival.Name) festival.Music (Some NavigationTarget.Settings))
+        |> List.iteri (fun f festival ->
+            check (sprintf "settings.calendar.festivals[%d].music" f) (sprintf "Festival \"%s\"" festival.Name) festival.Music (Some NavigationTarget.Settings))
+
         p.Weather.Types
-        |> List.iteri (fun w weather -> check (sprintf "weather.types[%d].music" w) (sprintf "Weather \"%s\"" weather.Name) weather.Music (Some NavigationTarget.Settings))
+        |> List.iteri (fun w weather ->
+            check (sprintf "weather.types[%d].music" w) (sprintf "Weather \"%s\"" weather.Name) weather.Music (Some NavigationTarget.Settings))
+
         p.CustomAssets
         |> List.iteri (fun a asset ->
             if asset.Type = CustomAssetTypes.Sound || asset.Type = CustomAssetTypes.Music then
                 let url = asset.DataUrl.ToLowerInvariant()
-                let audio = [ "data:audio/ogg"; "data:audio/vorbis"; "data:audio/wav"; "data:audio/x-wav"; "data:audio/wave"; "data:audio/vnd.wave" ] |> List.exists url.StartsWith
-                let what = if asset.Type = CustomAssetTypes.Music then "Music" else "Sound"
+
+                let audio =
+                    [
+                        "data:audio/ogg"
+                        "data:audio/vorbis"
+                        "data:audio/wav"
+                        "data:audio/x-wav"
+                        "data:audio/wave"
+                        "data:audio/vnd.wave"
+                    ]
+                    |> List.exists url.StartsWith
+
+                let what =
+                    if asset.Type = CustomAssetTypes.Music then
+                        "Music"
+                    else
+                        "Sound"
+
                 let path = sprintf "customAssets[%d].dataUrl" a
+
                 if not audio then
                     sink.Error("asset.notAudio", path, sprintf "%s \"%s\" is not an OGG or WAV file" what asset.Name, Some(NavigationTarget.Asset asset.Id))
                 else
@@ -238,13 +368,19 @@ module internal ChecksVocabulary =
                     match AudioFiles.checkDataUrl asset.DataUrl with
                     | Ok _ -> ()
                     | Error reason ->
-                        sink.Error("asset.audioUnreadable", path, sprintf "%s \"%s\" won't play: %s" what asset.Name reason, Some(NavigationTarget.Asset asset.Id)))
+                        sink.Error(
+                            "asset.audioUnreadable",
+                            path,
+                            sprintf "%s \"%s\" won't play: %s" what asset.Name reason,
+                            Some(NavigationTarget.Asset asset.Id)
+                        ))
 
     /// `playMusic` and `startCutscene` outcomes (M2), wherever outcomes are.
     let private outcomeChecks (context: Context) (sink: Sink) (path: string) (label: string) (target: NavigationTarget option) (outcomes: EventOutcome list) =
         outcomes
         |> List.iteri (fun o outcome ->
             let opath = sprintf "%s.outcomes[%d]" path o
+
             match outcome.Type with
             | EventOutcomeTypes.PlayMusic ->
                 match outcome.SoundId with
@@ -266,13 +402,32 @@ module internal ChecksVocabulary =
 
     let private allOutcomes (context: Context) (sink: Sink) =
         let p = context.Project
-        p.Events |> List.iteri (fun e event -> outcomeChecks context sink (sprintf "events[%d]" e) (sprintf "Event \"%s\"" event.Name) (Some(NavigationTarget.Event event.Id)) event.Outcomes)
-        p.Actions |> List.iteri (fun a action -> outcomeChecks context sink (sprintf "actions[%d]" a) (sprintf "Action \"%s\"" action.Name) (Some(NavigationTarget.Action action.Id)) action.Outcomes)
+
+        p.Events
+        |> List.iteri (fun e event ->
+            outcomeChecks context sink (sprintf "events[%d]" e) (sprintf "Event \"%s\"" event.Name) (Some(NavigationTarget.Event event.Id)) event.Outcomes)
+
+        p.Actions
+        |> List.iteri (fun a action ->
+            outcomeChecks
+                context
+                sink
+                (sprintf "actions[%d]" a)
+                (sprintf "Action \"%s\"" action.Name)
+                (Some(NavigationTarget.Action action.Id))
+                action.Outcomes)
+
         p.Minigames
         |> List.iteri (fun m minigame ->
             minigame.ResultTiers
             |> List.iteri (fun t tier ->
-                outcomeChecks context sink (sprintf "minigames[%d].resultTiers[%d]" m t) (sprintf "Minigame \"%s\"" minigame.Name) (Some(NavigationTarget.Minigame minigame.Id)) tier.Outcomes))
+                outcomeChecks
+                    context
+                    sink
+                    (sprintf "minigames[%d].resultTiers[%d]" m t)
+                    (sprintf "Minigame \"%s\"" minigame.Name)
+                    (Some(NavigationTarget.Minigame minigame.Id))
+                    tier.Outcomes))
 
     let private cutscenes (context: Context) (sink: Sink) =
         defaultArg context.Project.Cutscenes []
@@ -280,37 +435,49 @@ module internal ChecksVocabulary =
             let path = sprintf "cutscenes[%d]" c
             let target = Some(NavigationTarget.Cutscene cutscene.Id)
             let label = sprintf "Cutscene \"%s\"" cutscene.Name
+
             if cutscene.Steps.IsEmpty then
                 sink.Warning("cutscene.empty", path + ".steps", sprintf "%s has no steps" label, target)
+
             let labels = HashSet<string>()
+
             cutscene.Steps
             |> List.iteri (fun k step ->
                 match step.Label with
                 | Some l when l.Length > 0 && not (labels.Add l) ->
                     sink.Error("cutscene.duplicateLabel", sprintf "%s.steps[%d].label" path k, sprintf "%s has two steps labelled \"%s\"" label l, target)
                 | _ -> ())
+
             let actor (sp: string) (field: string) (id: string option) =
                 match id with
                 | Some id when id.Length > 0 && id <> "player" && not (context.NpcIds.Contains id) ->
                     sink.Error("cutscene.unknownActor", sp + "." + field, sprintf "%s uses missing NPC \"%s\"" label id, target)
                 | _ -> ()
+
             let goto (sp: string) (field: string) (id: string) =
                 if id.Length > 0 && not (labels.Contains id) then
                     sink.Error("cutscene.unknownLabel", sp + "." + field, sprintf "%s goes to missing step label \"%s\"" label id, target)
+
             cutscene.Steps
             |> List.iteri (fun k step ->
                 let sp = sprintf "%s.steps[%d]" path k
+
                 let needs (field: string) (present: bool) =
                     if not present then
                         sink.Error("cutscene.missingField", sp + "." + field, sprintf "%s has a %s step with no %s" label step.Type field, target)
+
                 actor sp "actor" step.Actor
+
                 match step.Type with
                 | CutsceneStepTypes.Say ->
                     needs "text" (hasValue step.Text)
                     actor sp "speaker" step.Speaker
                 | CutsceneStepTypes.Choice ->
-                    if step.Options.IsEmpty then needs "options" false
-                    step.Options |> List.iteri (fun o option -> goto sp (sprintf "options[%d].goto" o) option.Goto)
+                    if step.Options.IsEmpty then
+                        needs "options" false
+
+                    step.Options
+                    |> List.iteri (fun o option -> goto sp (sprintf "options[%d].goto" o) option.Goto)
                 | CutsceneStepTypes.Jump ->
                     needs "goto" (hasValue step.Goto)
                     goto sp "goto" (text step.Goto)

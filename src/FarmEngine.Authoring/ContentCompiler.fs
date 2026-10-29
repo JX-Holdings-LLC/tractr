@@ -6,7 +6,9 @@ open FarmEngine.Schemas
 /// Project -> immutable game content. Gameplay state is created by Rust; authored
 /// defaults, pack composition and locale selection are resolved here before cartridge writing.
 module ContentCompiler =
-    let private integer (value: float) = not (Double.IsNaN value || Double.IsInfinity value) && Math.Truncate value = value
+    let private integer (value: float) =
+        not (Double.IsNaN value || Double.IsInfinity value)
+        && Math.Truncate value = value
 
     /// A custom crop as the crop definition the engine gets, undeclared fields included. Through
     /// JSON, so every field the two
@@ -22,8 +24,10 @@ module ContentCompiler =
         (Builtin.crops (), Option.defaultValue [] custom)
         ||> List.fold (fun crops crop ->
             let definition = cropOfCustom crop
+
             if crops |> List.exists (fun (id, _) -> id = crop.Id) then
-                crops |> List.map (fun (id, existing) -> if id = crop.Id then id, definition else id, existing)
+                crops
+                |> List.map (fun (id, existing) -> if id = crop.Id then id, definition else id, existing)
             else
                 crops @ [ crop.Id, definition ])
 
@@ -33,16 +37,20 @@ module ContentCompiler =
         (builtins, Option.defaultValue [] own)
         ||> List.fold (fun merged definition ->
             let id = idOf definition
+
             if merged |> List.exists (fun existing -> idOf existing = id) then
-                merged |> List.map (fun existing -> if idOf existing = id then definition else existing)
+                merged
+                |> List.map (fun existing -> if idOf existing = id then definition else existing)
             else
                 merged @ [ definition ])
 
     /// The game's terrains: the built-in ones with the project's over them.
-    let terrains (project: GameProject) = overBuiltins (fun (t: TerrainDefinition) -> t.Id) (Builtin.terrains ()) project.Terrains
+    let terrains (project: GameProject) =
+        overBuiltins (fun (t: TerrainDefinition) -> t.Id) (Builtin.terrains ()) project.Terrains
 
     /// The game's tools: the built-in ones with the project's over them.
-    let tools (project: GameProject) = overBuiltins (fun (t: ToolDefinition) -> t.Id) (Builtin.tools ()) project.Tools
+    let tools (project: GameProject) =
+        overBuiltins (fun (t: ToolDefinition) -> t.Id) (Builtin.tools ()) project.Tools
 
     /// The game's item categories: the built-in ones with the project's over them.
     let itemCategories (project: GameProject) =
@@ -59,17 +67,26 @@ module ContentCompiler =
     let private validDays (days: float) = integer days && days > 0.0
 
     let private validWeather (weather: WeatherConfig) =
-        (weather.Types |> List.forall (fun t -> t.CropDamageChance >= 0.0 && t.CropDamageChance <= 1.0))
-        && (weather.Table |> List.forall (fun (_, entries) -> entries |> List.forall (fun entry -> entry.Weight > 0.0)))
+        (weather.Types
+         |> List.forall (fun t -> t.CropDamageChance >= 0.0 && t.CropDamageChance <= 1.0))
+        && (weather.Table
+            |> List.forall (fun (_, entries) -> entries |> List.forall (fun entry -> entry.Weight > 0.0)))
 
     /// The project's items, or the built-in catalog when it has none.
     let items (project: GameProject) =
-        if not (List.isEmpty project.Items) then project.Items else Builtin.items ()
+        if not (List.isEmpty project.Items) then
+            project.Items
+        else
+            Builtin.items ()
 
     /// Built-in and mine node types the project does not replace, then the project's own.
     let nodeTypes (project: GameProject) =
         let ids = project.NodeTypes |> List.map (fun d -> d.Id) |> Set.ofList
-        let builtIn = Builtin.nodeTypes () @ Builtin.mineNodeTypes () |> List.filter (fun d -> not (ids.Contains d.Id))
+
+        let builtIn =
+            Builtin.nodeTypes () @ Builtin.mineNodeTypes ()
+            |> List.filter (fun d -> not (ids.Contains d.Id))
+
         builtIn @ project.NodeTypes
 
     /// The project's settings with each invalid part replaced by its default (an invalid day
@@ -80,61 +97,95 @@ module ContentCompiler =
     let settings (project: GameProject) =
         let s = project.Settings
         let defaults = SettingsSchema.DefaultProjectSettings
+
         { s with
-            Movement = if not (Double.IsNaN s.Movement.PlayerSpeed) && s.Movement.PlayerSpeed > 0.0 then s.Movement else defaults.Movement
-            MaxEnergy = if s.MaxEnergy > 0.0 then s.MaxEnergy else defaults.MaxEnergy
+            Movement =
+                if not (Double.IsNaN s.Movement.PlayerSpeed) && s.Movement.PlayerSpeed > 0.0 then
+                    s.Movement
+                else
+                    defaults.Movement
+            MaxEnergy =
+                if s.MaxEnergy > 0.0 then
+                    s.MaxEnergy
+                else
+                    defaults.MaxEnergy
             CollapseEnergyFraction =
-                if s.CollapseEnergyFraction >= 0.0 && s.CollapseEnergyFraction <= 1.0 then s.CollapseEnergyFraction else defaults.CollapseEnergyFraction
-            CollapseMoneyPenalty = if s.CollapseMoneyPenalty >= 0.0 then s.CollapseMoneyPenalty else defaults.CollapseMoneyPenalty
-            Time = if SettingsSchema.validTime s.Time then s.Time else defaults.Time
+                if s.CollapseEnergyFraction >= 0.0 && s.CollapseEnergyFraction <= 1.0 then
+                    s.CollapseEnergyFraction
+                else
+                    defaults.CollapseEnergyFraction
+            CollapseMoneyPenalty =
+                if s.CollapseMoneyPenalty >= 0.0 then
+                    s.CollapseMoneyPenalty
+                else
+                    defaults.CollapseMoneyPenalty
+            Time =
+                if SettingsSchema.validTime s.Time then
+                    s.Time
+                else
+                    defaults.Time
             Calendar =
                 { s.Calendar with
                     Seasons = s.Calendar.Seasons |> List.filter (fun season -> validDays season.Days)
-                    Festivals = s.Calendar.Festivals |> List.filter (fun festival -> validDays festival.Day) }
-            SkillLevelCurve = if s.SkillLevelCurve |> List.exists Double.IsNaN then defaults.SkillLevelCurve else s.SkillLevelCurve }
+                    Festivals = s.Calendar.Festivals |> List.filter (fun festival -> validDays festival.Day)
+                }
+            SkillLevelCurve =
+                if s.SkillLevelCurve |> List.exists Double.IsNaN then
+                    defaults.SkillLevelCurve
+                else
+                    s.SkillLevelCurve
+        }
 
     /// The project's weather, or the default weather when it would not load.
     let weather (project: GameProject) =
-        if validWeather project.Weather then project.Weather else MigrationsSchema.DefaultWeatherConfig()
+        if validWeather project.Weather then
+            project.Weather
+        else
+            MigrationsSchema.DefaultWeatherConfig()
 
-    let private nonEmpty (list: 'T list option) : 'T list option = list |> Option.filter (List.isEmpty >> not)
+    let private nonEmpty (list: 'T list option) : 'T list option =
+        list |> Option.filter (List.isEmpty >> not)
 
     let baseContent (project: GameProject) : GameContent =
-        { ContentVersion = GameContentSchema.CurrentContentVersion
-          Crops = mergeCrops project.CustomCrops
-          Items = items project
-          Npcs = project.Npcs
-          Dialogues = project.Dialogues
-          Quests = project.Quests
-          Events = project.Events
-          Shops = project.Shops
-          NodeTypes = nodeTypes project
-          Settings = settings project
-          Recipes = project.Recipes
-          MachineTypes = project.MachineTypes
-          Weather = weather project
-          AnimalSpecies = project.AnimalSpecies
-          FishTables = project.FishTables
-          Mine = project.Mine
-          Actions = project.Actions
-          Minigames = project.Minigames
-          Scenes = project.Scenes
-          StartSceneId = project.StartSceneId
-          Terrains = terrains project
-          Tools = tools project
-          ItemCategories = itemCategories project
-          CropQualities = cropQualities project
-          CropMutations = cropMutations project
-          Cutscenes = Option.defaultValue [] project.Cutscenes
-          HeartEvents = Option.defaultValue [] project.HeartEvents
-          // M5–M7 content comes straight from the project's lists (Rust
-          // `create_base_content_from_project`); an empty list is left out, as serde skips it.
-          BuildingTypes = nonEmpty project.BuildingTypes
-          Collections = nonEmpty project.Collections
-          Bundles = nonEmpty project.Bundles
-          Achievements = nonEmpty project.Achievements
-          Mail = nonEmpty project.Mail
-          Monsters = nonEmpty project.Monsters }
+        {
+            ContentVersion = GameContentSchema.CurrentContentVersion
+            Crops = mergeCrops project.CustomCrops
+            Items = items project
+            Npcs = project.Npcs
+            Dialogues = project.Dialogues
+            Quests = project.Quests
+            RequestBoards = nonEmpty project.RequestBoards
+            Events = project.Events
+            Shops = project.Shops
+            NodeTypes = nodeTypes project
+            Settings = settings project
+            Recipes = project.Recipes
+            MachineTypes = project.MachineTypes
+            Weather = weather project
+            AnimalSpecies = project.AnimalSpecies
+            FishTables = project.FishTables
+            Mine = project.Mine
+            Mines = nonEmpty project.Mines
+            Actions = project.Actions
+            Minigames = project.Minigames
+            Scenes = project.Scenes
+            StartSceneId = project.StartSceneId
+            Terrains = terrains project
+            Tools = tools project
+            ItemCategories = itemCategories project
+            CropQualities = cropQualities project
+            CropMutations = cropMutations project
+            Cutscenes = Option.defaultValue [] project.Cutscenes
+            HeartEvents = Option.defaultValue [] project.HeartEvents
+            // M5–M7 content comes straight from the project's lists (Rust
+            // `create_base_content_from_project`); an empty list is left out, as serde skips it.
+            BuildingTypes = nonEmpty project.BuildingTypes
+            Collections = nonEmpty project.Collections
+            Bundles = nonEmpty project.Bundles
+            Achievements = nonEmpty project.Achievements
+            Mail = nonEmpty project.Mail
+            Monsters = nonEmpty project.Monsters
+        }
 
     let compile (project: GameProject) =
         let installs = project.ContentPacks

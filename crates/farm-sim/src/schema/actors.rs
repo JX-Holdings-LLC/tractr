@@ -84,6 +84,16 @@ pub struct NpcScheduleEntry {
     pub extra: Map<String, Value>,
 }
 
+/// A conditional daily route; the first matching variant wins.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NpcScheduleVariant {
+    pub id: String,
+    pub name: String,
+    pub conditions: Vec<super::EventCondition>,
+    pub stops: Vec<NpcScheduleEntry>,
+}
+
 /// An integer tile coordinate: TS inline `{ x: int, y: int }` objects in
 /// `NPCSchema.patrolPoints` and `NpcStateSchema.path`.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -144,6 +154,8 @@ pub struct Npc {
     /// Time-based schedule (M3): sorted by minute; latest passed entry wins.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule: Option<Vec<NpcScheduleEntry>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedules: Option<Vec<NpcScheduleVariant>>,
     /// Gift preferences (M4 social); unlisted items are neutral.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gift_tastes: Option<GiftTastes>,

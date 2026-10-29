@@ -63,6 +63,12 @@ pub enum Command {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         quality: Option<String>,
     },
+    #[serde(rename = "choosePerk")]
+    ChoosePerk { skill: String, perk_id: String, choice_id: String },
+    #[serde(rename = "upgradeTool")]
+    UpgradeTool { item_id: String },
+    #[serde(rename = "collectToolUpgrade")]
+    CollectToolUpgrade { item_id: String },
     #[serde(rename = "repairTool")]
     RepairTool { item_id: String },
     #[serde(rename = "craft")]
@@ -209,6 +215,9 @@ impl Command {
             Self::CloseShop => "closeShop",
             Self::BuyItem { .. } => "buyItem",
             Self::SellItem { .. } => "sellItem",
+            Self::ChoosePerk { .. } => "choosePerk",
+            Self::UpgradeTool { .. } => "upgradeTool",
+            Self::CollectToolUpgrade { .. } => "collectToolUpgrade",
             Self::RepairTool { .. } => "repairTool",
             Self::Craft { .. } => "craft",
             Self::PlaceMachine { .. } => "placeMachine",

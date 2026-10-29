@@ -1,7 +1,9 @@
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Interop;
+using FarmEngine.Schemas;
 using Tractr.App;
+using Tractr.App.Game;
 
 namespace Tractr.App.Tests.Interop;
 
@@ -11,6 +13,39 @@ namespace Tractr.App.Tests.Interop;
 /// </summary>
 public sealed class RustPreviewTests
 {
+    [NativeFact]
+    public void LargeMapStrokeSharesThePreviewWithoutResendingEmbeddedArt()
+    {
+        var project = ProjectCatalog.CreateInitialProject(0);
+        var sceneId = project.Player.SceneId;
+        project = Documents.Preview(project, Edits.ResizeScene(sceneId, 128, 128));
+        // An unused multi-MB asset makes accidental full-project transfers expensive without
+        // making this a decoder benchmark; only referenced images need decoding.
+        var asset = CustomAsset.Default.WithId("large-art").WithType("art")
+            .WithDataUrl("data:image/png;base64," + new string('A', 4 * 1024 * 1024));
+        project = project.WithCustomAssets([asset]);
+        using var shared = new EditorPreview();
+        var native = shared.For(project);
+        var initial = project;
+        var camera = new PreviewCamera(12, 12, 224, 168);
+        for (var x = 0; x < 50; x++)
+        {
+            project = Documents.Preview(project, Edits.PaintTile(sceneId, x, 2, "water"));
+            Assert.Same(native, shared.For(project));
+            native.Render(sceneId, 28, 12, camera);
+        }
+
+        Assert.Equal(50, native.SceneUpdates);
+        Assert.Equal(0, native.ProjectUpdates);
+        var painted = native.Render(sceneId, 28, 12, camera).Pixels;
+        // A thumbnail drawing an older draft cannot leave the map on that version.
+        Assert.Same(native, shared.For(initial));
+        Assert.Same(native, shared.For(project));
+        Assert.True(painted.AsSpan().SequenceEqual(native.Render(sceneId, 28, 12, camera).Pixels));
+        using var reference = RustPreview.Create(project);
+        Assert.True(painted.AsSpan().SequenceEqual(reference.Render(sceneId, 28, 12, camera).Pixels));
+    }
+
     [NativeFact]
     public void PreviewDrawsTheSkyItIsAskedFor()
     {

@@ -90,7 +90,7 @@ public sealed class ProjectStoreTests
         var loaded = store.Load("fixture");
         Assert.True(loaded.Ok, string.Join("; ", loaded.Errors));
         Assert.Equal("fixture", loaded.Project!.Id);
-        Assert.Equal(ProjectSchema.CurrentProjectSchemaVersion, loaded.Project.SchemaVersion);
+        Assert.Equal(ProjectSchema.ClassicProjectSchemaVersion, loaded.Project.SchemaVersion);
         Assert.NotEmpty(loaded.Project.Scenes);
     }
 

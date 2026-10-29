@@ -10,40 +10,77 @@ module Builtin =
         let add id name seed value days stages seasons regrow regrowthDays size low high chance =
             id,
             { CropDefinition.Default with
-                Id = id; Name = name; SeedCost = seed; BaseHarvestValue = value
-                GrowthDays = Some days; Stages = stages; Seasons = seasons
-                CanRegrow = regrow; RegrowthDays = regrowthDays
+                Id = id
+                Name = name
+                SeedCost = seed
+                BaseHarvestValue = value
+                GrowthDays = Some days
+                Stages = stages
+                Seasons = seasons
+                CanRegrow = regrow
+                RegrowthDays = regrowthDays
                 MultiTile = (size |> Option.map (fun (w, h) -> { Width = w; Height = h }))
-                YieldMin = low; YieldMax = high; MutationChance = Some chance }
-        [ add "wheat" "Wheat" 10.0 25.0 3.0 4.0 ["spring"; "fall"] false None None 1.0 2.0 0.01
-          add "corn" "Corn" 15.0 40.0 5.0 5.0 ["summer"; "fall"] false None None 1.0 3.0 0.015
-          add "tomato" "Tomato" 20.0 50.0 4.0 5.0 ["summer"] true (Some 2.0) None 1.0 3.0 0.02
-          add "carrot" "Carrot" 8.0 20.0 2.0 4.0 ["spring"; "fall"; "winter"] false None None 1.0 2.0 0.008
-          add "potato" "Potato" 12.0 30.0 4.0 4.0 ["spring"; "fall"] false None None 2.0 4.0 0.012
-          add "strawberry" "Strawberry" 30.0 60.0 4.0 5.0 ["spring"] true (Some 2.0) None 1.0 2.0 0.025
-          add "pumpkin" "Pumpkin" 50.0 150.0 7.0 6.0 ["fall"] false None (Some(2.0, 2.0)) 1.0 1.0 0.05
-          add "cauliflower" "Cauliflower" 40.0 120.0 6.0 5.0 ["spring"] false None (Some(2.0, 2.0)) 1.0 1.0 0.04
-          add "blueberry" "Blueberry" 35.0 70.0 5.0 5.0 ["summer"] true (Some 2.0) None 2.0 5.0 0.03 ]
+                YieldMin = low
+                YieldMax = high
+                MutationChance = Some chance
+            }
+
+        [
+            add "wheat" "Wheat" 10.0 25.0 3.0 4.0 [ "spring"; "fall" ] false None None 1.0 2.0 0.01
+            add "corn" "Corn" 15.0 40.0 5.0 5.0 [ "summer"; "fall" ] false None None 1.0 3.0 0.015
+            add "tomato" "Tomato" 20.0 50.0 4.0 5.0 [ "summer" ] true (Some 2.0) None 1.0 3.0 0.02
+            add "carrot" "Carrot" 8.0 20.0 2.0 4.0 [ "spring"; "fall"; "winter" ] false None None 1.0 2.0 0.008
+            add "potato" "Potato" 12.0 30.0 4.0 4.0 [ "spring"; "fall" ] false None None 2.0 4.0 0.012
+            add "strawberry" "Strawberry" 30.0 60.0 4.0 5.0 [ "spring" ] true (Some 2.0) None 1.0 2.0 0.025
+            add "pumpkin" "Pumpkin" 50.0 150.0 7.0 6.0 [ "fall" ] false None (Some(2.0, 2.0)) 1.0 1.0 0.05
+            add "cauliflower" "Cauliflower" 40.0 120.0 6.0 5.0 [ "spring" ] false None (Some(2.0, 2.0)) 1.0 1.0 0.04
+            add "blueberry" "Blueberry" 35.0 70.0 5.0 5.0 [ "summer" ] true (Some 2.0) None 2.0 5.0 0.03
+        ]
 
     let items () : Item list =
         let result = ResizeArray<Item>()
+
         for _, crop in crops () do
             result.Add
                 { Item.Default with
-                    Id = "seed-" + crop.Id; Name = crop.Name + " Seeds"
-                    Description = "Plant these to grow " + crop.Name.ToLowerInvariant(); Type = "seed"
-                    Stackable = true; MaxStack = 99.0; Value = crop.SeedCost; CropType = Some crop.Id }
+                    Id = "seed-" + crop.Id
+                    Name = crop.Name + " Seeds"
+                    Description = "Plant these to grow " + crop.Name.ToLowerInvariant()
+                    Type = "seed"
+                    Stackable = true
+                    MaxStack = 99.0
+                    Value = crop.SeedCost
+                    CropType = Some crop.Id
+                }
+
             result.Add
                 { Item.Default with
-                    Id = "crop-" + crop.Id; Name = crop.Name
-                    Description = "Fresh " + crop.Name.ToLowerInvariant(); Type = "crop"
-                    Stackable = true; MaxStack = 99.0; Value = crop.BaseHarvestValue; CropType = Some crop.Id }
+                    Id = "crop-" + crop.Id
+                    Name = crop.Name
+                    Description = "Fresh " + crop.Name.ToLowerInvariant()
+                    Type = "crop"
+                    Stackable = true
+                    MaxStack = 99.0
+                    Value = crop.BaseHarvestValue
+                    CropType = Some crop.Id
+                }
+
         let tool id name description value kind tier =
             { Item.Default with
-                Id = id; Name = name; Description = description; Type = "tool"; Stackable = false
-                MaxStack = 1.0; Value = value; ToolType = Some kind; ToolPower = Some tier
+                Id = id
+                Name = name
+                Description = description
+                Type = "tool"
+                Stackable = false
+                MaxStack = 1.0
+                Value = value
+                ToolType = Some kind
+                ToolPower = Some tier
                 ToolTier = (if tier = 2.0 then Some 2.0 else None)
-                Durability = Some(100.0 * tier); MaxDurability = Some(100.0 * tier) }
+                Durability = Some(100.0 * tier)
+                MaxDurability = Some(100.0 * tier)
+            }
+
         result.Add(tool "tool-hoe" "Hoe" "Till grass into soil for planting" 50.0 "hoe" 1.0)
         result.Add(tool "tool-watering-can" "Watering Can" "Water your crops to help them grow" 50.0 "watering-can" 1.0)
         result.Add(tool "tool-axe" "Axe" "Chop down trees and wooden objects" 100.0 "axe" 1.0)
@@ -53,10 +90,18 @@ module Builtin =
         result.Add(tool "tool-watering-can-2" "Copper Watering Can" "Waters a wider area with less effort" 250.0 "watering-can" 2.0)
         result.Add(tool "tool-axe-2" "Copper Axe" "Fells trees in fewer swings" 400.0 "axe" 2.0)
         result.Add(tool "tool-pickaxe-2" "Copper Pickaxe" "Cracks boulders lesser picks cannot" 500.0 "pickaxe" 2.0)
+
         let plain id name description kind maxStack value =
             { Item.Default with
-                Id = id; Name = name; Description = description; Type = kind
-                Stackable = true; MaxStack = maxStack; Value = value }
+                Id = id
+                Name = name
+                Description = description
+                Type = kind
+                Stackable = true
+                MaxStack = maxStack
+                Value = value
+            }
+
         result.Add(plain "material-wood" "Wood" "Sturdy timber from trees and stumps" "material" 999.0 5.0)
         result.Add(plain "material-stone" "Stone" "Rough stone chipped from rocks" "material" 999.0 4.0)
         result.Add(plain "material-fiber" "Fiber" "Plant fiber cut from weeds" "material" 999.0 2.0)
@@ -84,146 +129,378 @@ module Builtin =
     /// The built-in terrains (M1): the seven tile types of a game without its own.
     let terrains () : TerrainDefinition list =
         let terrain id name layer color : TerrainDefinition =
-            { TerrainDefinition.Default with Id = id; Name = name; Layer = layer; Color = color }
-        let tilled : TerrainTransform list = [ { Action = ToolActions.Till; Tool = None; Into = TileTypes.Soil } ]
-        [ { terrain TileTypes.Grass "Grass" TileLayers.Background "#5b9a4a" with Transforms = tilled }
-          { terrain TileTypes.Soil "Soil" TileLayers.Background "#7a6545" with Plantable = true }
-          { terrain TileTypes.Water "Water" TileLayers.Background "#3075b0" with WaterSource = true; Fishable = true }
-          terrain TileTypes.Path "Path" TileLayers.Overlay "#b5a48d"
-          { terrain TileTypes.Wall "Wall" TileLayers.Object "#5e5a68" with Walkable = false; BlocksLight = true }
-          terrain TileTypes.Door "Door" TileLayers.Object "#8a6a3f"
-          { terrain TileTypes.Floor "Floor" TileLayers.Background "#b5a48d" with Transforms = tilled } ]
+            { TerrainDefinition.Default with
+                Id = id
+                Name = name
+                Layer = layer
+                Color = color
+            }
+
+        let tilled: TerrainTransform list =
+            [
+                {
+                    Action = ToolActions.Till
+                    Tool = None
+                    Into = TileTypes.Soil
+                }
+            ]
+
+        [
+            { terrain TileTypes.Grass "Grass" TileLayers.Background "#5b9a4a" with
+                Transforms = tilled
+            }
+            { terrain TileTypes.Soil "Soil" TileLayers.Background "#7a6545" with
+                Plantable = true
+            }
+            { terrain TileTypes.Water "Water" TileLayers.Background "#3075b0" with
+                WaterSource = true
+                Fishable = true
+            }
+            terrain TileTypes.Path "Path" TileLayers.Overlay "#b5a48d"
+            { terrain TileTypes.Wall "Wall" TileLayers.Object "#5e5a68" with
+                Walkable = false
+                BlocksLight = true
+            }
+            terrain TileTypes.Door "Door" TileLayers.Object "#8a6a3f"
+            { terrain TileTypes.Floor "Floor" TileLayers.Background "#b5a48d" with
+                Transforms = tilled
+            }
+        ]
 
     /// The built-in tools (M1): the six of a game without its own. Tier 2 waters and tills a row
     /// of three.
     let tools () : ToolDefinition list =
-        let single : ToolArea list = [ { Width = 1.0; Length = 1.0 } ]
-        let widening : ToolArea list = [ { Width = 1.0; Length = 1.0 }; { Width = 3.0; Length = 1.0 } ]
+        let single: ToolArea list = [ { Width = 1.0; Length = 1.0 } ]
+
+        let widening: ToolArea list =
+            [ { Width = 1.0; Length = 1.0 }; { Width = 3.0; Length = 1.0 } ]
+
         let tool id name description action key energy area skill : ToolDefinition =
             { ToolDefinition.Default with
-                Id = id; Name = name; Description = description; Action = action; Key = key
-                EnergyCost = energy; Area = area; Skill = skill }
-        [ tool ToolTypes.WateringCan "Watering Can" "Water crops to help them grow faster" ToolActions.Water (Some "q") 2.0 widening None
-          tool ToolTypes.Hoe "Hoe" "Till grass into farmable soil" ToolActions.Till (Some "t") 4.0 widening None
-          tool ToolTypes.Axe "Axe" "Chop down trees and wooden obstacles" ToolActions.Break (Some "r") 6.0 single None
-          tool ToolTypes.Pickaxe "Pickaxe" "Break rocks and mine for ore" ToolActions.Break (Some "f") 8.0 single (Some "mining")
-          tool ToolTypes.Scythe "Scythe" "Harvest crops in a large area" ToolActions.Harvest (Some "c") 5.0 single None
-          tool ToolTypes.FishingRod "Fishing Rod" "Catch fish from water tiles" ToolActions.Fish None 3.0 single None ]
+                Id = id
+                Name = name
+                Description = description
+                Action = action
+                Key = key
+                EnergyCost = energy
+                Area = area
+                Skill = skill
+            }
+
+        [
+            tool ToolTypes.WateringCan "Watering Can" "Water crops to help them grow faster" ToolActions.Water (Some "q") 2.0 widening None
+            tool ToolTypes.Hoe "Hoe" "Till grass into farmable soil" ToolActions.Till (Some "t") 4.0 widening None
+            tool ToolTypes.Axe "Axe" "Chop down trees and wooden obstacles" ToolActions.Break (Some "r") 6.0 single None
+            tool ToolTypes.Pickaxe "Pickaxe" "Break rocks and mine for ore" ToolActions.Break (Some "f") 8.0 single (Some "mining")
+            tool ToolTypes.Scythe "Scythe" "Harvest crops in a large area" ToolActions.Harvest (Some "c") 5.0 single None
+            tool ToolTypes.FishingRod "Fishing Rod" "Catch fish from water tiles" ToolActions.Fish None 3.0 single None
+        ]
 
     /// The built-in item categories (M1): the eight item types of a game without its own.
     let itemCategories () : ItemCategoryDefinition list =
-        let category id name : ItemCategoryDefinition = { ItemCategoryDefinition.Default with Id = id; Name = name }
-        [ { category ItemTypes.Seed "Seed" with Plantable = true }
-          { category ItemTypes.Tool "Tool" with Equippable = true; Giftable = false }
-          category ItemTypes.Crop "Crop"
-          category ItemTypes.Gift "Gift"
-          { category ItemTypes.Quest "Quest item" with Sellable = false }
-          { category ItemTypes.Fertilizer "Fertilizer" with Fertilizer = true }
-          category ItemTypes.Material "Material"
-          category ItemTypes.Fish "Fish" ]
+        let category id name : ItemCategoryDefinition =
+            { ItemCategoryDefinition.Default with
+                Id = id
+                Name = name
+            }
+
+        [
+            { category ItemTypes.Seed "Seed" with
+                Plantable = true
+            }
+            { category ItemTypes.Tool "Tool" with
+                Equippable = true
+                Giftable = false
+            }
+            category ItemTypes.Crop "Crop"
+            category ItemTypes.Gift "Gift"
+            { category ItemTypes.Quest "Quest item" with
+                Sellable = false
+            }
+            { category ItemTypes.Fertilizer "Fertilizer" with
+                Fertilizer = true
+            }
+            category ItemTypes.Material "Material"
+            category ItemTypes.Fish "Fish"
+        ]
 
     /// The built-in crop quality tiers (M1), ranked.
     let cropQualities () : CropQualityDefinition list =
         let quality id name price yieldBy mutationBy stars color : CropQualityDefinition =
             { CropQualityDefinition.Default with
-                Id = id; Name = name; PriceMultiplier = price; YieldMultiplier = yieldBy
-                MutationMultiplier = mutationBy; Stars = stars; Color = color }
-        [ quality CropQualities.Normal "Normal" 1.0 1.0 1.0 0.0 "#9a9a9a"
-          quality CropQualities.Silver "Silver" 1.25 1.1 1.2 1.0 "#c0c8d0"
-          quality CropQualities.Gold "Gold" 1.5 1.3 1.5 2.0 "#e8b830"
-          quality CropQualities.Iridium "Iridium" 2.0 1.5 2.0 3.0 "#a050d0" ]
+                Id = id
+                Name = name
+                PriceMultiplier = price
+                YieldMultiplier = yieldBy
+                MutationMultiplier = mutationBy
+                Stars = stars
+                Color = color
+            }
+
+        [
+            quality CropQualities.Normal "Normal" 1.0 1.0 1.0 0.0 "#9a9a9a"
+            quality CropQualities.Silver "Silver" 1.25 1.1 1.2 1.0 "#c0c8d0"
+            quality CropQualities.Gold "Gold" 1.5 1.3 1.5 2.0 "#e8b830"
+            quality CropQualities.Iridium "Iridium" 2.0 1.5 2.0 3.0 "#a050d0"
+        ]
 
     /// The built-in crop mutations (M1), in roll order: the rarest first.
     let cropMutations () : CropMutationDefinition list =
         let mutation id name yieldBy share color : CropMutationDefinition =
-            { CropMutationDefinition.Default with Id = id; Name = name; YieldMultiplier = yieldBy; Share = share; Color = color }
-        [ mutation CropMutations.Ancient "Ancient" 3.0 0.1 "#7a5ab0"
-          mutation CropMutations.Golden "Golden" 2.5 0.2 "#e8b830"
-          mutation CropMutations.Giant "Giant" 2.0 0.7 "#5b9a4a" ]
+            { CropMutationDefinition.Default with
+                Id = id
+                Name = name
+                YieldMultiplier = yieldBy
+                Share = share
+                Color = color
+            }
+
+        [
+            mutation CropMutations.Ancient "Ancient" 3.0 0.1 "#7a5ab0"
+            mutation CropMutations.Golden "Golden" 2.5 0.2 "#e8b830"
+            mutation CropMutations.Giant "Giant" 2.0 0.7 "#5b9a4a"
+        ]
 
     /// The built-in weather overlays (M1).
     let weatherOverlays () : WeatherOverlayDefinition list =
-        [ { WeatherOverlayDefinition.Default with Id = OverlayStyles.Rain; Style = OverlayStyles.Rain; Color = "#d8ecff9a"; Tint = Some "#c8d2e6" }
-          { WeatherOverlayDefinition.Default with Id = OverlayStyles.Snow; Style = OverlayStyles.Snow; Color = "#ffffffdc" } ]
+        [
+            { WeatherOverlayDefinition.Default with
+                Id = OverlayStyles.Rain
+                Style = OverlayStyles.Rain
+                Color = "#d8ecff9a"
+                Tint = Some "#c8d2e6"
+            }
+            { WeatherOverlayDefinition.Default with
+                Id = OverlayStyles.Snow
+                Style = OverlayStyles.Snow
+                Color = "#ffffffdc"
+            }
+        ]
 
     let private node id name health tool tier item low high respawn color blocking : NodeTypeDefinition =
         { NodeTypeDefinition.Default with
-            Id = id; Name = name; Health = health; RequiredTool = tool; RequiredToolTier = tier
-            Drops = [ { ItemId = item; Min = low; Max = high; Weight = 1.0; Extra = [] } ]
-            RespawnDays = Some respawn; Color = color; BlocksMovement = blocking }
+            Id = id
+            Name = name
+            Health = health
+            RequiredTool = tool
+            RequiredToolTier = tier
+            Drops =
+                [
+                    { NodeDrop.Default with
+                        ItemId = item
+                        Min = low
+                        Max = high
+                        Weight = 1.0
+                        Extra = []
+                    }
+                ]
+            RespawnDays = Some respawn
+            Color = color
+            BlocksMovement = blocking
+        }
 
     let nodeTypes () =
-        [ node "node-tree" "Tree" 4.0 "axe" 1.0 "material-wood" 2.0 4.0 None "#3f6d33" true
-          node "node-stump" "Stump" 2.0 "axe" 1.0 "material-wood" 1.0 2.0 (Some 3.0) "#6d5233" true
-          node "node-rock" "Rock" 3.0 "pickaxe" 1.0 "material-stone" 1.0 3.0 (Some 3.0) "#8a8a95" true
-          node "node-boulder" "Boulder" 6.0 "pickaxe" 2.0 "material-stone" 4.0 8.0 None "#5e5e6b" true
-          node "node-weeds" "Weeds" 1.0 "scythe" 1.0 "material-fiber" 1.0 2.0 (Some 2.0) "#7d9a3f" false ]
+        [
+            node "node-tree" "Tree" 4.0 "axe" 1.0 "material-wood" 2.0 4.0 None "#3f6d33" true
+            node "node-stump" "Stump" 2.0 "axe" 1.0 "material-wood" 1.0 2.0 (Some 3.0) "#6d5233" true
+            node "node-rock" "Rock" 3.0 "pickaxe" 1.0 "material-stone" 1.0 3.0 (Some 3.0) "#8a8a95" true
+            node "node-boulder" "Boulder" 6.0 "pickaxe" 2.0 "material-stone" 4.0 8.0 None "#5e5e6b" true
+            node "node-weeds" "Weeds" 1.0 "scythe" 1.0 "material-fiber" 1.0 2.0 (Some 2.0) "#7d9a3f" false
+        ]
 
     let mineNodeTypes () =
-        [ node "node-mine-rock" "Mine Rock" 2.0 "pickaxe" 1.0 "material-stone" 1.0 2.0 None "#6e6e78" true
-          node "node-copper-ore" "Copper Node" 3.0 "pickaxe" 1.0 "ore-copper" 1.0 3.0 None "#b87333" true
-          node "node-iron-ore" "Iron Node" 4.0 "pickaxe" 2.0 "ore-iron" 1.0 3.0 None "#a19d94" true
-          node "node-quartz" "Quartz Crystal" 2.0 "pickaxe" 1.0 "gem-quartz" 1.0 1.0 None "#cfe3ee" true ]
+        [
+            node "node-mine-rock" "Mine Rock" 2.0 "pickaxe" 1.0 "material-stone" 1.0 2.0 None "#6e6e78" true
+            node "node-copper-ore" "Copper Node" 3.0 "pickaxe" 1.0 "ore-copper" 1.0 3.0 None "#b87333" true
+            node "node-iron-ore" "Iron Node" 4.0 "pickaxe" 2.0 "ore-iron" 1.0 3.0 None "#a19d94" true
+            node "node-quartz" "Quartz Crystal" 2.0 "pickaxe" 1.0 "gem-quartz" 1.0 1.0 None "#cfe3ee" true
+        ]
 
     let mineBands () =
         let rock id weight : MineRockWeight = { NodeTypeId = id; Weight = weight }
-        [ { MineBand.Default with
-              FromFloor = 1.0; ToFloor = 7.0; Density = 0.3
-              Rocks = [ rock "node-mine-rock" 6.0; rock "node-copper-ore" 3.0; rock "node-quartz" 1.0 ] }
-          { MineBand.Default with
-              FromFloor = 8.0; ToFloor = 20.0; Density = 0.35
-              Rocks = [ rock "node-mine-rock" 4.0; rock "node-copper-ore" 3.0; rock "node-iron-ore" 3.0; rock "node-quartz" 1.0 ] } ]
+
+        [
+            { MineBand.Default with
+                FromFloor = 1.0
+                ToFloor = 7.0
+                Density = 0.3
+                Rocks =
+                    [
+                        rock "node-mine-rock" 6.0
+                        rock "node-copper-ore" 3.0
+                        rock "node-quartz" 1.0
+                    ]
+            }
+            { MineBand.Default with
+                FromFloor = 8.0
+                ToFloor = 20.0
+                Density = 0.35
+                Rocks =
+                    [
+                        rock "node-mine-rock" 4.0
+                        rock "node-copper-ore" 3.0
+                        rock "node-iron-ore" 3.0
+                        rock "node-quartz" 1.0
+                    ]
+            }
+        ]
 
     let machineTypes () =
         let machine id name description color : MachineTypeDefinition =
             { MachineTypeDefinition.Default with
-                Id = id; Name = name; Description = description; Color = color; ItemId = Some id
-                BlocksMovement = true; StationCategories = [] }
-        [ machine "machine-furnace" "Furnace" "Smelts ore into metal bars" "#8a4a3a"
-          machine "machine-preserves" "Preserves Jar" "Preserves crops into higher-value goods" "#7a4a8a" ]
+                Id = id
+                Name = name
+                Description = description
+                Color = color
+                ItemId = Some id
+                BlocksMovement = true
+                StationCategories = []
+            }
+
+        [
+            machine "machine-furnace" "Furnace" "Smelts ore into metal bars" "#8a4a3a"
+            machine "machine-preserves" "Preserves Jar" "Preserves crops into higher-value goods" "#7a4a8a"
+        ]
 
     let recipes () =
-        let ingredients xs = xs |> List.map (fun (id, quantity) -> ({ ItemId = id; Quantity = quantity } : RecipeIngredient))
+        let ingredients xs =
+            xs
+            |> List.map (fun (id, quantity) -> ({ ItemId = id; Quantity = quantity }: RecipeIngredient))
+
         let recipe id name inputs output minutes machine category skill : RecipeDefinition =
             { RecipeDefinition.Default with
-                Id = id; Name = name; Inputs = ingredients inputs; Outputs = ingredients [ output ]
-                ProcessingMinutes = minutes; MachineTypeId = machine; Category = category
+                Id = id
+                Name = name
+                Inputs = ingredients inputs
+                Outputs = ingredients [ output ]
+                ProcessingMinutes = minutes
+                MachineTypeId = machine
+                Category = category
                 Unlock =
                     skill
                     |> Option.map (fun (kind, level) ->
-                        { RecipeUnlock.Default with Skill = Some { Skill = kind; Level = level } }) }
-        [ recipe "recipe-craft-furnace" "Furnace" ["material-stone", 10.0; "ore-copper", 2.0] ("machine-furnace", 1.0) 0.0 None "crafting" None
-          recipe "recipe-craft-preserves-jar" "Preserves Jar" ["material-wood", 12.0; "material-stone", 4.0] ("machine-preserves", 1.0) 0.0 None "crafting" (Some("farming", 1.0))
-          recipe "recipe-craft-hay" "Hay Bundle" ["material-fiber", 3.0] ("feed-hay", 2.0) 0.0 None "farming" None
-          recipe "recipe-smelt-copper" "Copper Bar" ["ore-copper", 3.0; "material-wood", 1.0] ("bar-copper", 1.0) 120.0 (Some "machine-furnace") "smithing" None
-          recipe "recipe-smelt-iron" "Iron Bar" ["ore-iron", 3.0; "material-wood", 1.0] ("bar-iron", 1.0) 180.0 (Some "machine-furnace") "smithing" (Some("mining", 2.0))
-          recipe "recipe-preserve-wheat" "Wheat Preserves" ["crop-wheat", 3.0] ("food-preserves", 1.0) 360.0 (Some "machine-preserves") "cooking" None ]
+                        { RecipeUnlock.Default with
+                            Skill = Some { Skill = kind; Level = level }
+                        })
+            }
+
+        [
+            recipe "recipe-craft-furnace" "Furnace" [ "material-stone", 10.0; "ore-copper", 2.0 ] ("machine-furnace", 1.0) 0.0 None "crafting" None
+            recipe
+                "recipe-craft-preserves-jar"
+                "Preserves Jar"
+                [ "material-wood", 12.0; "material-stone", 4.0 ]
+                ("machine-preserves", 1.0)
+                0.0
+                None
+                "crafting"
+                (Some("farming", 1.0))
+            recipe "recipe-craft-hay" "Hay Bundle" [ "material-fiber", 3.0 ] ("feed-hay", 2.0) 0.0 None "farming" None
+            recipe
+                "recipe-smelt-copper"
+                "Copper Bar"
+                [ "ore-copper", 3.0; "material-wood", 1.0 ]
+                ("bar-copper", 1.0)
+                120.0
+                (Some "machine-furnace")
+                "smithing"
+                None
+            recipe
+                "recipe-smelt-iron"
+                "Iron Bar"
+                [ "ore-iron", 3.0; "material-wood", 1.0 ]
+                ("bar-iron", 1.0)
+                180.0
+                (Some "machine-furnace")
+                "smithing"
+                (Some("mining", 2.0))
+            recipe "recipe-preserve-wheat" "Wheat Preserves" [ "crop-wheat", 3.0 ] ("food-preserves", 1.0) 360.0 (Some "machine-preserves") "cooking" None
+        ]
 
     let animalSpecies () =
         let species id name cost product interval adult color : AnimalSpeciesDefinition =
             { AnimalSpeciesDefinition.Default with
-                Id = id; Name = name; PurchaseCost = cost; FeedItemId = Some "feed-hay"; ProductItemId = product
-                ProductIntervalDays = interval; DaysToAdult = adult; Color = color }
-        [ species "animal-chicken" "Chicken" 400.0 "product-egg" 1.0 3.0 "#e8e0c3"
-          species "animal-cow" "Cow" 1500.0 "product-milk" 2.0 5.0 "#d3b28a" ]
+                Id = id
+                Name = name
+                PurchaseCost = cost
+                FeedItemId = Some "feed-hay"
+                ProductItemId = product
+                ProductIntervalDays = interval
+                DaysToAdult = adult
+                Color = color
+            }
+
+        [
+            species "animal-chicken" "Chicken" 400.0 "product-egg" 1.0 3.0 "#e8e0c3"
+            species "animal-cow" "Cow" 1500.0 "product-milk" 2.0 5.0 "#d3b28a"
+        ]
 
     let fishTables () =
-        let entry id weight difficulty : FishTableEntry = { ItemId = id; Weight = weight; Difficulty = difficulty }
-        [ { FishTable.Default with
-              Id = "fish-table-default"; Name = "Pond Fish"; JunkChance = 0.15; JunkItemId = Some "junk-boot"
-              Entries = [ entry "fish-carp" 6.0 0.15; entry "fish-perch" 3.0 0.35; entry "fish-catfish" 1.0 0.6 ] } ]
+        let entry id weight difficulty : FishTableEntry =
+            { FishTableEntry.Default with
+                ItemId = id
+                Weight = weight
+                Difficulty = difficulty
+            }
+
+        [
+            { FishTable.Default with
+                Id = "fish-table-default"
+                Name = "Pond Fish"
+                JunkChance = 0.15
+                JunkItemId = Some "junk-boot"
+                Entries =
+                    [
+                        entry "fish-carp" 6.0 0.15
+                        entry "fish-perch" 3.0 0.35
+                        entry "fish-catfish" 1.0 0.6
+                    ]
+            }
+        ]
 
     let shop () =
-        let entry id : ShopStockEntry = { ShopStockEntry.Default with ItemId = id }
+        let entry id : ShopStockEntry =
+            { ShopStockEntry.Default with
+                ItemId = id
+            }
+
         let stock =
-            [ for _, crop in crops () do
-                  yield { entry ("seed-" + crop.Id) with Seasons = Some crop.Seasons }
-              yield entry "fertilizer-basic"
-              yield { entry "fertilizer-quality" with DailyLimit = Some 5.0 }
-              for id in [ "tool-hoe"; "tool-watering-can"; "tool-axe"; "tool-pickaxe"; "tool-scythe"
-                          "tool-hoe-2"; "tool-watering-can-2"; "tool-axe-2"; "tool-pickaxe-2"
-                          "tool-fishing-rod"; "feed-hay"; "machine-furnace"; "machine-preserves" ] do
-                  yield entry id ]
+            [
+                for _, crop in crops () do
+                    yield
+                        { entry ("seed-" + crop.Id) with
+                            Seasons = Some crop.Seasons
+                        }
+                yield entry "fertilizer-basic"
+                yield
+                    { entry "fertilizer-quality" with
+                        DailyLimit = Some 5.0
+                    }
+                for id in
+                    [
+                        "tool-hoe"
+                        "tool-watering-can"
+                        "tool-axe"
+                        "tool-pickaxe"
+                        "tool-scythe"
+                        "tool-hoe-2"
+                        "tool-watering-can-2"
+                        "tool-axe-2"
+                        "tool-pickaxe-2"
+                        "tool-fishing-rod"
+                        "feed-hay"
+                        "machine-furnace"
+                        "machine-preserves"
+                    ] do
+                    yield entry id
+            ]
+
         { ShopDefinition.Default with
-            Id = "shop-general"; Name = "General Store"; Stock = stock
-            SellPriceMultiplier = 1.0; BuysItems = true; RepairsTools = true; RepairCostPerPoint = 0.5 }
+            Id = "shop-general"
+            Name = "General Store"
+            Stock = stock
+            SellPriceMultiplier = 1.0
+            BuysItems = true
+            RepairsTools = true
+            RepairCostPerPoint = 0.5
+        }

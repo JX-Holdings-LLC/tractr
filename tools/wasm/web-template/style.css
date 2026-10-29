@@ -20,10 +20,11 @@ html, body { margin: 0; height: 100%; background: #10140f; color: #e8e2cf; font:
 #touch .right { grid-area: right; }
 #touch .down { grid-area: down; }
 #touch .actions { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
-#touch .row { display: flex; gap: 8px; }
+#touch .row { display: grid; grid-template-columns: repeat(2, 52px); gap: 8px; }
+#touch .pad button { min-width: 56px; min-height: 56px; }
 #touch button { min-width: 52px; min-height: 52px; border-radius: 12px; border: 2px solid rgba(232, 226, 207, 0.55);
   background: rgba(16, 20, 15, 0.55); color: #e8e2cf; font: 20px system-ui, sans-serif; touch-action: none;
   -webkit-tap-highlight-color: transparent; }
 #touch button.round { border-radius: 50%; }
-#touch button.primary { min-width: 64px; min-height: 64px; background: rgba(176, 60, 44, 0.75); font-weight: bold; }
+#touch button.primary { min-width: 72px; min-height: 72px; background: rgba(176, 60, 44, 0.75); font-weight: bold; }
 #touch button.held { background: rgba(232, 226, 207, 0.35); }

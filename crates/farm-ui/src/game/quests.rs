@@ -19,7 +19,13 @@ struct Objective {
     target: u32,
 }
 
-fn objectives(view: &GameView<'_>, quest: &Quest, progress: Option<&QuestProgress>, completed: bool) -> Vec<Objective> {
+fn objectives(
+    view: &GameView<'_>,
+    quest: &Quest,
+    progress: Option<&QuestProgress>,
+    completed: bool,
+    lang: Lang,
+) -> Vec<Objective> {
     quest
         .objectives
         .iter()
@@ -31,7 +37,20 @@ fn objectives(view: &GameView<'_>, quest: &Quest, progress: Option<&QuestProgres
                 .find(|value| *value != 0)
                 .unwrap_or(1);
             Objective {
-                text: fill(view, &objective.description),
+                text: if progress.is_some_and(|p| p.request.is_some())
+                    && matches!(objective.r#type.as_str(), "collect" | "ship" | "catch" | "craft")
+                {
+                    let key = match objective.r#type.as_str() {
+                        "ship" => "quests.requestShip",
+                        "catch" => "quests.requestCatch",
+                        "craft" => "quests.requestCraft",
+                        _ => "quests.requestCollect",
+                    };
+                    let name = item_name(view.content, objective.target_item_id.as_deref().unwrap_or(""));
+                    lang.format(key, &[&target, &name])
+                } else {
+                    fill(view, &objective.description)
+                },
                 done: completed || entry.is_some_and(|entry| entry.completed),
                 amount: entry.map_or(objective.progress, |entry| entry.progress),
                 target,
@@ -62,11 +81,16 @@ fn rewards_line(view: &GameView<'_>, quest: &Quest, completed: bool, lang: Lang)
 fn card(ui: &mut Ui, view: &GameView<'_>, area: Rect, top: f32, quest: &Quest, completed: bool) -> f32 {
     let colors = ui.theme().colors;
     let progress = view.state.quests.get(&quest.id);
+    let quest = progress.and_then(|p| p.request.as_deref()).unwrap_or(quest);
     let inner_x = area.x + 12.0;
     let width = area.width - 24.0;
     let text = if completed { colors.muted } else { colors.text };
     let name = fill(view, &quest.name);
-    let description = fill(view, &quest.description);
+    let mut description = fill(view, &quest.description);
+    if let Some(day) = progress.and_then(|p| p.deadline_day) {
+        description.push('\n');
+        description.push_str(&ui.lang().format("quests.deadline", &[&day]));
+    }
 
     // Measure first: the row background goes under everything.
     let title_height = ui.line_height(16.5);
@@ -75,7 +99,7 @@ fn card(ui: &mut Ui, view: &GameView<'_>, area: Rect, top: f32, quest: &Quest, c
     } else {
         ui.paragraph_height(&description, 12.5, FontId::Regular, width) + 4.0
     };
-    let objectives = objectives(view, quest, progress, completed);
+    let objectives = objectives(view, quest, progress, completed, ui.lang());
     let count_width = 64.0;
     let objective_width = width - 22.0 - count_width;
     let objective_heights: Vec<f32> = objectives
@@ -98,7 +122,14 @@ fn card(ui: &mut Ui, view: &GameView<'_>, area: Rect, top: f32, quest: &Quest, c
     let title_width = ui.label(title_rect, &name, 16.5, FontId::Bold, text, Align::Start);
     if completed {
         let cy = title_rect.y + title_rect.height / 2.0;
-        ui.chip(inner_x + title_width + 8.0, cy, "\u{2713} Complete", 11.5, fade(colors.primary, 0.18), colors.primary);
+        ui.chip(
+            inner_x + title_width + 8.0,
+            cy,
+            ui.lang().tr("quests.complete"),
+            11.5,
+            fade(colors.primary, 0.18),
+            colors.primary,
+        );
     }
     y += title_height;
     if !description.is_empty() {
@@ -150,6 +181,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
         view.content.quests.iter().filter(|q| status(q) == Some(quest_statuses::ACTIVE)).collect();
     let completed: Vec<&Quest> =
         view.content.quests.iter().filter(|q| status(q) == Some(quest_statuses::COMPLETED)).collect();
+    let failed: Vec<&Quest> =
+        view.content.quests.iter().filter(|q| status(q) == Some(quest_statuses::FAILED)).collect();
     let lang = ui.lang();
     let subtitle = lang.format("quests.subtitle", &[&active.len(), &completed.len()]);
     let modal = ui.begin_modal(ModalSpec {
@@ -167,7 +200,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
     }
     let area = modal.body;
     let mut y = modal.top;
-    if active.is_empty() && completed.is_empty() {
+    if active.is_empty() && completed.is_empty() && failed.is_empty() {
         y += ui.empty_state(area, y, Icon::Star, lang.tr("quests.empty"), lang.tr("quests.emptyDetail"));
     }
     if !active.is_empty() {
@@ -180,6 +213,12 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, actions: &mut Vec<GameActio
         y += ui.section(area, y, lang.tr("quests.completed"), None);
         for quest in completed {
             y += card(ui, view, area, y, quest, true) + 10.0;
+        }
+    }
+    if !failed.is_empty() {
+        y += ui.section(area, y, lang.tr("quests.failed"), None);
+        for quest in failed {
+            y += card(ui, view, area, y, quest, false) + 10.0;
         }
     }
     ui.end_modal(y);

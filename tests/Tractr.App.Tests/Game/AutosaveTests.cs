@@ -52,6 +52,7 @@ public sealed class AutosaveTests
         Assert.Equal(original, Saved(workspace));
 
         Wait(time, 0.4);
+        PumpUntil(() => !workspace.HasPendingSave);
         Assert.False(workspace.HasPendingSave);
         Assert.Equal("Second", Saved(workspace));
         Assert.Equal(0, time.PendingTimers);
@@ -75,7 +76,95 @@ public sealed class AutosaveTests
         Wait(time, 0.99);
         Assert.Equal("Flushed", Saved(workspace));
         Wait(time, 0.01);
+        PumpUntil(() => !workspace.HasPendingSave);
         Assert.Equal("Later", Saved(workspace));
+        workspace.ReleaseLock();
+    }
+
+    [AvaloniaFact]
+    public void ABackgroundFailureKeepsTheDraftAndReportsStatusOnTheUiThread()
+    {
+        using var dir = new TempDir();
+        var (workspace, time) = Open(dir);
+        var path = workspace.Store.PathFor(workspace.Current!.Id);
+        File.Delete(path);
+        Directory.CreateDirectory(path);
+        var uiThread = Environment.CurrentManagedThreadId;
+        var notifications = new List<int>();
+        workspace.SaveStatusChanged += (_, _) => notifications.Add(Environment.CurrentManagedThreadId);
+        Rename(workspace, "Unsaved draft");
+        Wait(time, 1);
+        PumpUntil(() => workspace.SaveError is not null);
+        Assert.True(workspace.HasPendingSave);
+        Assert.False(workspace.IsSaving);
+        Assert.Equal("Unsaved draft", workspace.Current!.Name);
+        Assert.All(notifications, thread => Assert.Equal(uiThread, thread));
+        Directory.Delete(path);
+        Assert.True(workspace.RetrySave());
+        Assert.Equal("Unsaved draft", Saved(workspace));
+        workspace.ReleaseLock();
+    }
+
+    private sealed class BlockingStoreClock : TimeProvider, IDisposable
+    {
+        public ManualResetEventSlim Entered { get; } = new(false);
+        public ManualResetEventSlim Release { get; } = new(false);
+        public bool Block { get; set; }
+        public int WriterThread { get; private set; }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            if (Block)
+            {
+                WriterThread = Environment.CurrentManagedThreadId;
+                Entered.Set();
+                if (!Release.Wait(TimeSpan.FromSeconds(20))) throw new TimeoutException("Test did not release the background writer.");
+            }
+            return DateTimeOffset.UtcNow;
+        }
+
+        public void Dispose()
+        {
+            Release.Set();
+            Entered.Dispose();
+            Release.Dispose();
+        }
+    }
+
+    [AvaloniaFact]
+    public void AutosaveRunsOffTheUiThreadAndFlushKeepsEditsMadeWhileItWrites()
+    {
+        using var dir = new TempDir();
+        using var clock = new BlockingStoreClock();
+        var time = new TestTime(DateTimeOffset.UtcNow);
+        var workspace = new ProjectWorkspace(new ProjectStore(dir.Path, clock),
+            new AppSettingsStore(Path.Combine(dir.Path, "settings.json")), Delay, time);
+        Assert.Empty(workspace.OpenStartupProject());
+        var uiThread = Environment.CurrentManagedThreadId;
+        clock.Block = true;
+        try
+        {
+            Rename(workspace, "Snapshot");
+            Wait(time, 1);
+            PumpUntil(() => clock.Entered.IsSet);
+            Assert.True(workspace.IsSaving);
+            Assert.NotEqual(uiThread, clock.WriterThread);
+            // The UI can apply another immutable project while disk work is blocked.
+            Rename(workspace, "Latest edit");
+            Assert.Equal("Latest edit", workspace.Current!.Name);
+        }
+        finally
+        {
+            clock.Block = false;
+            clock.Release.Set();
+            workspace.FlushPendingSave();
+        }
+        Assert.False(workspace.IsSaving);
+        Assert.False(workspace.HasPendingSave);
+        Assert.Equal("Latest edit", Saved(workspace));
+        // A queued completion from the old snapshot must not replace the flushed state.
+        Pump();
+        Assert.Equal("Latest edit", Saved(workspace));
         workspace.ReleaseLock();
     }
 

@@ -65,8 +65,14 @@ fn player_is_adjacent(state: &GameState, npc: &NpcState) -> bool {
 }
 
 /// Latest schedule entry whose minute has passed (entries sorted by minute).
-fn active_schedule_entry(def: &Npc, time_minutes: u32) -> Option<&NpcScheduleEntry> {
-    let schedule = def.schedule.as_ref()?;
+fn active_schedule_entry<'a>(def: &'a Npc, npc: &NpcState, time_minutes: u32) -> Option<&'a NpcScheduleEntry> {
+    let schedule = npc
+        .schedule_selection
+        .as_ref()
+        .and_then(|selection| selection.variant.as_ref())
+        .and_then(|id| def.schedules.as_ref()?.iter().find(|variant| &variant.id == id))
+        .map(|variant| &variant.stops)
+        .or(def.schedule.as_ref())?;
     if schedule.is_empty() {
         return None;
     }
@@ -108,6 +114,41 @@ fn to_grid_path(path: Option<Vec<PathPoint>>) -> Option<Vec<GridPoint>> {
     path.map(|points| points.into_iter().map(|p| GridPoint { x: p.x, y: p.y }).collect())
 }
 
+/// Choose each morning, and again after weather changes. Story/hearts changes take effect
+/// the following morning. The selection survives save/load, including a default-route choice.
+pub fn select_schedules(ctx: &EngineContext, state: &mut GameState) {
+    for def in &ctx.content.npcs {
+        let Some(variants) = def.schedules.as_ref().filter(|variants| !variants.is_empty()) else { continue };
+        let Some(npc) = state.npcs.get(&def.id) else { continue };
+        if npc
+            .schedule_selection
+            .as_ref()
+            .is_some_and(|selection| selection.day == state.clock.day && selection.weather == state.clock.weather_id)
+        {
+            continue;
+        }
+        let variant = variants
+            .iter()
+            .find(|variant| {
+                crate::events::conditions_hold(
+                    ctx,
+                    state,
+                    &variant.conditions,
+                    &crate::events::ConditionScope { speaker: Some(&def.id), salt: &def.id, ..Default::default() },
+                )
+            })
+            .map(|variant| variant.id.clone());
+        if let Some(npc) = state.npcs.get_mut(&def.id) {
+            npc.path = None;
+            npc.schedule_selection = Some(crate::schema::NpcScheduleSelection {
+                day: state.clock.day,
+                weather: state.clock.weather_id.clone(),
+                variant,
+            });
+        }
+    }
+}
+
 /// C# returned a new state; here NPCs advance in place.
 ///
 /// The C# tracks `changed`/reference equality to decide whether to write an NPC back; every
@@ -116,11 +157,16 @@ pub fn advance_npcs(ctx: &EngineContext, state: &mut GameState, minutes: u32) {
     if minutes == 0 {
         return;
     }
+    select_schedules(ctx, state);
     let movers: Vec<&Npc> = ctx
         .content
         .npcs
         .iter()
-        .filter(|def| def.can_move || def.schedule.as_ref().is_some_and(|schedule| !schedule.is_empty()))
+        .filter(|def| {
+            def.can_move
+                || def.schedule.as_ref().is_some_and(|schedule| !schedule.is_empty())
+                || def.schedules.as_ref().is_some_and(|variants| !variants.is_empty())
+        })
         .collect();
     if movers.is_empty() {
         return;
@@ -134,7 +180,7 @@ pub fn advance_npcs(ctx: &EngineContext, state: &mut GameState, minutes: u32) {
     let directed = crate::cutscenes::directed_npcs(ctx, state);
 
     for def in movers {
-        if directed.contains(&def.id) {
+        if directed.contains(&def.id) || crate::festivals::attending(state, &def.id) {
             continue;
         }
         // A spouse who moved in stays home (M4).
@@ -158,7 +204,7 @@ pub fn advance_npcs(ctx: &EngineContext, state: &mut GameState, minutes: u32) {
 fn advance_npc(ctx: &EngineContext, state: &mut GameState, def: &Npc, npc: NpcState, stay_inside: bool, rng: &mut Rng) {
     // Indoors the storm does not matter: an NPC keeps a schedule that stays inside (#34).
     let indoor = |scene_id: &str| state.world.scenes.iter().any(|scene| scene.id == scene_id && scene.is_indoor());
-    let schedule_target = active_schedule_entry(def, state.clock.time_minutes)
+    let schedule_target = active_schedule_entry(def, &npc, state.clock.time_minutes)
         .filter(|target| !stay_inside || (indoor(&npc.scene_id) && indoor(&target.scene_id)));
 
     let mut npc = npc;

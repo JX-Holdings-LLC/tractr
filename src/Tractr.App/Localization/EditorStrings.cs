@@ -10,9 +10,9 @@ public sealed record EditorLanguage(string Code, string NativeName);
 /// names, the Play Mode toolbar, the whole menu bar, the welcome tour and the shortcuts list,
 /// and the Edit Mode controls M1 and M2 added (the map's sky preview and brushes, a scene's
 /// surroundings, sounds and music, the game's words, weather overlays and sky). The game's
-/// interface is localized by the Rust player (farm-ui); the rest of the editor's tabs, forms and
+/// interface is localized by the Rust player (farm-ui); the rest of the editor's forms and
 /// Problems stay English until the full editor pass (ROADMAP "Later"). Edit Mode reads its
-/// strings when it is built, so a language change shows there once a project is opened again.
+/// form strings when it is built; tab headers update immediately when the language changes.
 /// <para>
 /// <see cref="Get(string)"/> looks a key up in the current <see cref="Language"/>, falls back to
 /// English, then to the key itself. The language is an app setting
@@ -32,6 +32,15 @@ public static class EditorStrings
 
     private static readonly Dictionary<string, string> En = new(StringComparer.Ordinal)
     {
+        // Edit Mode tab headers.
+        ["tab.map"] = "Map",
+        ["tab.content"] = "Content",
+        ["tab.problems"] = "Problems",
+        ["tab.settings"] = "Settings",
+        ["tab.mods"] = "Mods",
+        ["tab.art"] = "Art",
+        ["tab.workshop"] = "Workshop",
+        ["tab.interface"] = "Interface",
         // Web i18n.ts `mode.*` and `toolbar.*`.
         ["mode.play"] = "Play Mode",
         ["mode.edit"] = "Edit Mode",
@@ -224,6 +233,10 @@ public static class EditorStrings
         ["scene.monstersPlaceholder"] = "slime 3 in 2,2-10,8",
         ["scene.layers"] = "Extra layers (one per line)",
         ["scene.layersName"] = "Scene layers",
+        ["scene.forage"] = "Morning forage",
+        ["scene.foragePreview"] = "Preview eligible tiles",
+        ["scene.forageRemove"] = "Remove table",
+        ["scene.forageAdd"] = "Add spawn table",
         ["scene.layersTip"] = "Layers beyond background, overlay and object, painted with terrains from the Layer list: an id, then above for one drawn over the player (roofs, treetops). Scenery: they never block. Saved with the surroundings.",
         ["scene.layersPlaceholder"] = "treetops above",
         ["map.extraLayer"] = "Layer: {0}",
@@ -269,7 +282,7 @@ public static class EditorStrings
         ["welcome.edit.title"] = "Construye en el Modo Editor",
         ["welcome.edit.body"] = "Pinta el terreno con las herramientas del mapa (pincel, rectángulo, relleno), coloca personajes, recursos y objetos, y añade puertas entre escenas. Deshaz cualquier cambio con Ctrl+Z.",
         ["welcome.content.title"] = "Hazlo tuyo",
-        ["welcome.content.body"] = "Añade cultivos, personajes con diálogos, misiones, tiendas y eventos en la pestaña Content, parte de un patrón del Workshop e importa arte en la pestaña Art. Los cambios hechos al jugar se descartan al volver, salvo que actives Conservar cambios.",
+        ["welcome.content.body"] = "Añade cultivos, personajes con diálogos, misiones, tiendas y eventos en la pestaña Contenido, parte de un patrón del Taller e importa arte en la pestaña Arte. Los cambios hechos al jugar se descartan al volver, salvo que actives Conservar cambios.",
         ["welcome.share.title"] = "Comparte tu juego",
         ["welcome.share.body"] = "File → Export Game (Ctrl+Shift+E) crea juegos independientes para Windows y Linux (también Steam Deck) que cualquiera puede jugar sin el editor.",
         ["welcome.guide"] = "Guía completa del creador",
@@ -304,6 +317,15 @@ public static class EditorStrings
         ["shortcuts.options"] = "Elegir una opción de diálogo",
         ["shortcuts.rebind"] = "Los jugadores pueden reasignar las teclas del juego en Ajustes → Controles.",
         ["common.close"] = "Cerrar",
+        // Edit Mode tab headers.
+        ["tab.map"] = "Mapa",
+        ["tab.content"] = "Contenido",
+        ["tab.problems"] = "Problemas",
+        ["tab.settings"] = "Configuración",
+        ["tab.mods"] = "Mods",
+        ["tab.art"] = "Arte",
+        ["tab.workshop"] = "Taller",
+        ["tab.interface"] = "Interfaz",
         // Edit Mode: the map's sky preview.
         ["sky.label"] = "Cielo",
         ["sky.name"] = "Vista previa del cielo",
@@ -418,6 +440,10 @@ public static class EditorStrings
         ["scene.monstersPlaceholder"] = "slime 3 in 2,2-10,8",
         ["scene.layers"] = "Capas extra (una por línea)",
         ["scene.layersName"] = "Capas de la escena",
+        ["scene.forage"] = "Recolección matutina",
+        ["scene.foragePreview"] = "Ver casillas disponibles",
+        ["scene.forageRemove"] = "Eliminar tabla",
+        ["scene.forageAdd"] = "Añadir tabla",
         ["scene.layersTip"] = "Capas además del fondo, la superposición y el objeto, pintadas con terrenos de la lista Capa: un id, y above para una que se dibuja sobre el jugador (tejados, copas de árboles). Son decorado: nunca bloquean. Se guarda con el entorno.",
         ["scene.layersPlaceholder"] = "treetops above",
         ["map.extraLayer"] = "Capa: {0}",

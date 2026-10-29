@@ -641,6 +641,7 @@ fn one_invalid_setting_no_longer_resets_every_setting() {
             season_id: "spring".to_owned(),
             day: 0,
             music: None,
+            ..CalendarFestival::default()
         },
         CalendarFestival {
             id: "good".to_owned(),
@@ -648,6 +649,7 @@ fn one_invalid_setting_no_longer_resets_every_setting() {
             season_id: "spring".to_owned(),
             day: 4,
             music: None,
+            ..CalendarFestival::default()
         },
     ];
     assert!(!state::is_valid_settings(&settings));

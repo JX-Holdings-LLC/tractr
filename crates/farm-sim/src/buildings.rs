@@ -153,15 +153,17 @@ fn tile_free(ctx: &EngineContext, state: &GameState, scene: &Scene, x: i32, y: i
 /// Whether the open shop builds `building_id` (its `buildings` list).
 fn shop_builds(ctx: &EngineContext, state: &GameState, building_id: &str) -> bool {
     let Some(session) = &state.shop else { return false };
-    crate::economy::find_shop(ctx, state, &session.shop_id)
-        .is_some_and(|shop| shop.buildings.iter().any(|id| id == building_id))
+    crate::economy::find_shop(ctx, state, &session.shop_id).is_some_and(|shop| {
+        crate::commerce::shop_is_open(ctx, state, &shop) && shop.buildings.iter().any(|id| id == building_id)
+    })
 }
 
 /// Whether the open shop sells animals of `species_id`.
 fn shop_sells_animal(ctx: &EngineContext, state: &GameState, species_id: &str) -> bool {
     let Some(session) = &state.shop else { return false };
-    crate::economy::find_shop(ctx, state, &session.shop_id)
-        .is_some_and(|shop| shop.animals.iter().any(|id| id == species_id))
+    crate::economy::find_shop(ctx, state, &session.shop_id).is_some_and(|shop| {
+        crate::commerce::shop_is_open(ctx, state, &shop) && shop.animals.iter().any(|id| id == species_id)
+    })
 }
 
 /// `orderBuilding`, `upgradeBuilding` and `buyAnimal` under [`crate::CommandRules::Player`]:

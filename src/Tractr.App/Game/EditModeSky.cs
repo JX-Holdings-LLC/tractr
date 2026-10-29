@@ -30,6 +30,7 @@ public sealed partial class EditModeView
     ];
 
     private readonly CheckBox _showSky = new() { Name = "ShowSky", VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _skyWeekday = new() { Name = "SkyWeekday" };
     private readonly ComboBox _skyTime = new() { Name = "SkyTime", MinWidth = 110 };
     private readonly ComboBox _skySeason = new() { Name = "SkySeason", MinWidth = 110 };
     private readonly ComboBox _skyWeather = new() { Name = "SkyWeather", MinWidth = 110 };
@@ -77,7 +78,7 @@ public sealed partial class EditModeView
         }
 
         _skyRow = Ui.HStack(8,
-            Ui.Text(EditorStrings.Get("sky.time"), "hud-label"), _skyTime,
+            _skyWeekday, Ui.Text(EditorStrings.Get("sky.time"), "hud-label"), _skyTime,
             Ui.Text(EditorStrings.Get("sky.season"), "hud-label"), _skySeason,
             Ui.Text(EditorStrings.Get("sky.weather"), "hud-label"), _skyWeather,
             Ui.Text(EditorStrings.Get("sky.note"), "muted", "small"));
@@ -94,6 +95,8 @@ public sealed partial class EditModeView
     /// </summary>
     private void RefreshSky(GameProject project, Scene? scene)
     {
+        _skyWeekday.Text = FarmEngine.Schemas.SettingsSchema.weekdayName(project.Settings.Calendar, project.CurrentDay, project.Settings.Locale).OrNull() ?? "";
+        _skyWeekday.IsVisible = _skyWeekday.Text.Length > 0;
         var seasons = project.Settings.Calendar.Seasons;
         var weathers = project.Weather.Types;
         var key = string.Join('\u001f', seasons.Select(s => $"{s.Id}\u001e{s.Name}").Append("\u001d").Concat(weathers.Select(w => $"{w.Id}\u001e{w.Name}")));

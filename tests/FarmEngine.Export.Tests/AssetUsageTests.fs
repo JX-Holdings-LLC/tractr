@@ -9,7 +9,8 @@ open FarmEngine.Schemas
 
 let private png = makePng 16 16 false
 
-let private unusedIds (project: GameProject) = AssetUsage.unused project |> List.map (fun a -> a.Id)
+let private unusedIds (project: GameProject) =
+    AssetUsage.unused project |> List.map (fun a -> a.Id)
 
 [<Fact>]
 let ``assets nothing refers to are unused`` () =
@@ -19,22 +20,66 @@ let ``assets nothing refers to are unused`` () =
 [<Fact>]
 let ``bindings, frames, tile art and the export icon count as use`` () =
     let frameSource = asset "art-frames" png
+
     let animated =
-        let clip = { AnimationClip.Default with Name = "walk"; Frames = [ { ArtFrame.Default with AssetId = Some "art-frames"; Width = 16.0; Height = 16.0 } ] }
-        { asset "art-player" png with Animations = Some [ clip ] }
+        let clip =
+            { AnimationClip.Default with
+                Name = "walk"
+                Frames =
+                    [
+                        { ArtFrame.Default with
+                            AssetId = Some "art-frames"
+                            Width = 16.0
+                            Height = 16.0
+                        }
+                    ]
+            }
+
+        { asset "art-player" png with
+            Animations = Some [ clip ]
+        }
+
     let npcArt = asset "art-npc" (makePng 16 16 true)
-    let tile = { asset "art-grass" png with Type = CustomAssetTypes.Tile; TileType = Some TileTypes.Grass }
+
+    let tile =
+        { asset "art-grass" png with
+            Type = CustomAssetTypes.Tile
+            TileType = Some TileTypes.Grass
+        }
+
     let icon = asset "art-icon" (makePng 256 256 false)
     let brushOnly = asset "art-brush" png
+
     let project =
         starter ()
         |> withAssets [ frameSource; animated; npcArt; tile; icon; brushOnly ]
         |> fun p ->
             { p with
-                PlayerVisual = Some { VisualRef.Default with AssetId = "art-player" }
-                SelectedTileVisual = Some { VisualRef.Default with AssetId = "art-brush" } }
-        |> fun p -> { p with Npcs = { p.Npcs[0] with Visual = Some { VisualRef.Default with AssetId = npcArt.Id } } :: List.tail p.Npcs }
+                PlayerVisual =
+                    Some
+                        { VisualRef.Default with
+                            AssetId = "art-player"
+                        }
+                SelectedTileVisual =
+                    Some
+                        { VisualRef.Default with
+                            AssetId = "art-brush"
+                        }
+            }
+        |> fun p ->
+            { p with
+                Npcs =
+                    { p.Npcs[0] with
+                        Visual =
+                            Some
+                                { VisualRef.Default with
+                                    AssetId = npcArt.Id
+                                }
+                    }
+                    :: List.tail p.Npcs
+            }
         |> withExport (fun s -> { s with IconAssetId = Some "art-icon" })
+
     Assert.Equal<string list>([ "art-brush" ], unusedIds project)
 
 [<Fact>]
@@ -49,4 +94,5 @@ let ``unused assets become export warnings and stay out of the cartridge`` () =
     match CartridgeReader.read (CartridgeCompiler.Compile project) with
     | Ok cart -> Assert.Empty cart.Assets
     | Error message -> failwith message
+
     Assert.Empty(AssetUsage.used project)

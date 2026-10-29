@@ -4,32 +4,57 @@ open FarmEngine.Schemas
 
 /// A loaded project or exported game: the parsed and validated value, or why there is none.
 type LoadResult<'T> =
-    { Ok: bool
-      Data: 'T option
-      Errors: string list }
+    {
+        Ok: bool
+        Data: 'T option
+        Errors: string list
+    }
 
 /// Loading projects and exported games: the schema version check, the typed parse
 /// (`SchemaJson`) and the schema checks (`SchemaChecks`, at most 20 errors, like zod's
-/// `safeParse` shown in the editor). Only the current schema version loads; there are no
-/// migrations from older ones. Never throws.
+/// `safeParse` shown in the editor). Classic version 2 and additive version 3 load without changing
+/// their values. Never throws.
 module ProjectLoad =
-    let private failed (errors: string list) : LoadResult<'T> = { Ok = false; Data = None; Errors = errors }
+    let private failed (errors: string list) : LoadResult<'T> =
+        {
+            Ok = false
+            Data = None
+            Errors = errors
+        }
 
     /// Why `raw` cannot be read as a `noun` of the current schema version, if it cannot.
     let private versionError (noun: string) (raw: Json) : string option =
         let current = ProjectSchema.CurrentProjectSchemaVersion
+
         match raw with
         | JObject _ ->
             match Json.get "schemaVersion" raw with
-            | JNumber v when v = current -> None
+            | JNumber v when v = current || v = ProjectSchema.ClassicProjectSchemaVersion -> None
             | JNumber v when v > current ->
                 Some(
-                    noun + " schema version " + JsNumber.format v + " is newer than this engine supports ("
-                    + JsNumber.format current + "). Update the engine."
+                    noun
+                    + " schema version "
+                    + JsNumber.format v
+                    + " is newer than this engine supports ("
+                    + JsNumber.format current
+                    + "). Update the engine."
                 )
             | JNumber v ->
-                Some(noun + " schema version " + JsNumber.format v + " is not supported (this engine reads version " + JsNumber.format current + ").")
-            | _ -> Some(noun + " data has no schemaVersion (this engine reads version " + JsNumber.format current + ").")
+                Some(
+                    noun
+                    + " schema version "
+                    + JsNumber.format v
+                    + " is not supported (this engine reads version "
+                    + JsNumber.format current
+                    + ")."
+                )
+            | _ ->
+                Some(
+                    noun
+                    + " data has no schemaVersion (this engine reads version "
+                    + JsNumber.format current
+                    + ")."
+                )
         | _ -> Some(noun + " data is not an object")
 
     /// The version check, the typed parse and the checks; `prepare` runs on the parsed value
@@ -43,8 +68,14 @@ module ProjectLoad =
                 | Error issue -> failed [ issue ]
                 | Ok value ->
                     let value = prepare value
+
                     match List.truncate 20 (validate value) with
-                    | [] -> { Ok = true; Data = Some value; Errors = [] }
+                    | [] ->
+                        {
+                            Ok = true
+                            Data = Some value
+                            Errors = []
+                        }
                     | errors -> failed errors
             with error ->
                 failed [ noun + " data could not be read: " + error.Message ]
@@ -62,7 +93,8 @@ module ProjectLoad =
     let loadProjectText (text: string) : LoadResult<GameProject> = parseThen "Project" loadProject text
 
     /// A project as JSON (members in schema order).
-    let toJson (project: GameProject) : Json = SchemaJson.encodeGameProject project
+    let toJson (project: GameProject) : Json =
+        SchemaJson.encodeGameProject project |> ProjectVersion.forSave
 
     /// A project as indented JSON text, for project files.
     let toText (project: GameProject) : string = Json.stringifyIndented (toJson project)

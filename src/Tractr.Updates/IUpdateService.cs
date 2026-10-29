@@ -2,7 +2,7 @@ namespace Tractr.Updates;
 
 /// <summary>
 /// Low-level update operations. <see cref="VelopackUpdateService"/> is the real
-/// implementation; <see cref="Testing.FakeUpdateService"/> is a scriptable fake.
+/// implementation. Tests supply a scriptable fake from the test assembly.
 /// UI code should talk to <see cref="UpdateCoordinator"/> instead of this interface.
 /// </summary>
 public interface IUpdateService

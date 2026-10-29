@@ -63,14 +63,17 @@ let ``defaults match the web forms`` () =
     let minigame = Defaults.newMinigame project
     Assert.Equal("timing-bar", minigame.Kind)
     Assert.Equal(JNumber 0.9, field "speed" minigame.Config)
+
     match Defaults.defaultCondition "timeOfDay" project with
     | EventCondition.TimeOfDay timeOfDay ->
         Assert.Equal(360.0, timeOfDay.MinMinute)
         Assert.Equal(720.0, timeOfDay.MaxMinute)
     | other -> failwithf "unexpected %A" other
+
     match Defaults.defaultCondition "season" project with
     | EventCondition.Season season -> Assert.Equal("spring", season.Seasons.[0])
     | other -> failwithf "unexpected %A" other
+
     let scene = Defaults.newSceneWith project "Cave" 8 6 "wall"
     Assert.Equal(6, scene.Tiles.Length)
     Assert.True(scene.Tiles.[0].[0].Collision)
@@ -78,11 +81,28 @@ let ``defaults match the web forms`` () =
 
 [<Fact>]
 let ``a new scene filled with a game's terrain puts it on the terrain's own layer`` () =
-    let terrain id layer walkable = { TerrainDefinition.Default with Id = id; Name = id; Layer = layer; Color = "#405060"; Walkable = walkable }
+    let terrain id layer walkable =
+        { TerrainDefinition.Default with
+            Id = id
+            Name = id
+            Layer = layer
+            Color = "#405060"
+            Walkable = walkable
+        }
+
     let project =
         { starter () with
-            Terrains = Some [ terrain "crystal" "object" false; terrain "moss" "overlay" true; terrain "lava" "background" false ] }
-    let tile (fill: string) = (Defaults.newSceneWith project "Alien" 3 2 fill).Tiles.[1].[2]
+            Terrains =
+                Some
+                    [
+                        terrain "crystal" "object" false
+                        terrain "moss" "overlay" true
+                        terrain "lava" "background" false
+                    ]
+        }
+
+    let tile (fill: string) =
+        (Defaults.newSceneWith project "Alien" 3 2 fill).Tiles.[1].[2]
     // The built-in rule would have put each of these on the background.
     let crystal = tile "crystal"
     Assert.Equal(("crystal", "grass", Some "crystal", None, true), (crystal.Type, crystal.Background, crystal.Object, crystal.Overlay, crystal.Collision))
@@ -92,7 +112,10 @@ let ``a new scene filled with a game's terrain puts it on the terrain's own laye
     Assert.Equal(("lava", None, None, true), (lava.Background, lava.Overlay, lava.Object, lava.Collision))
     // The same tile as filling a grass scene with it.
     let blank = Defaults.newScene project "Alien" 3 2
-    let filled = project |> apply (AddScene blank) |> apply (FillScene(blank.Id, "crystal"))
+
+    let filled =
+        project |> apply (AddScene blank) |> apply (FillScene(blank.Id, "crystal"))
+
     Assert.Equal(crystal, (filled.Scenes |> List.find (fun s -> s.Id = blank.Id)).Tiles.[1].[2])
     let grass = tile "grass"
     Assert.Equal(("grass", "grass", None, None, false), (grass.Type, grass.Background, grass.Overlay, grass.Object, grass.Collision))
@@ -105,29 +128,40 @@ let newContentEdits (project: GameProject) : (string * Edit) list =
     let species = Defaults.newAnimalSpecies project
     let withSpecies = Document.run project (UpsertAnimalSpecies species)
     let barn = Defaults.newScene project "Barn" 16 12
-    [ "npc", UpsertNpc npc
-      "dialogue", Batch("npc + dialogue", [ UpsertNpc npc; UpsertDialogue dialogue ])
-      "item", UpsertItem(Defaults.newItem project)
-      "crop", UpsertCrop(Defaults.newCrop project)
-      "quest", UpsertQuest(Defaults.newQuest project)
-      "event", UpsertEvent(Defaults.newEvent project)
-      "shop", UpsertShop(Defaults.newShop project)
-      "recipe", UpsertRecipe(Defaults.newRecipe project)
-      "machineType", UpsertMachineType(Defaults.newMachineType project)
-      "nodeType", UpsertNodeType(Defaults.newNodeType project)
-      "animalSpecies", UpsertAnimalSpecies species
-      "animal", Batch("species + animal", [ UpsertAnimalSpecies species; UpsertAnimal(Defaults.newAnimal withSpecies species.Id "scene-farm" 4 4) ])
-      "fishTable", UpsertFishTable(Defaults.newFishTable project)
-      "action", UpsertAction(Defaults.newAction project)
-      "minigame", UpsertMinigame(Defaults.newMinigame project)
-      "scene", AddScene barn
-      "transition", Batch("scene + door", [ AddScene barn; SetTransition("scene-farm", Defaults.newTransition barn.Id) ])
-      "panel", SetGamePanels [ Defaults.newGamePanel project ]
-      "mine", SetMine(Defaults.mineEnabled project true) ]
+
+    [
+        "npc", UpsertNpc npc
+        "dialogue", Batch("npc + dialogue", [ UpsertNpc npc; UpsertDialogue dialogue ])
+        "item", UpsertItem(Defaults.newItem project)
+        "crop", UpsertCrop(Defaults.newCrop project)
+        "quest", UpsertQuest(Defaults.newQuest project)
+        "event", UpsertEvent(Defaults.newEvent project)
+        "shop", UpsertShop(Defaults.newShop project)
+        "recipe", UpsertRecipe(Defaults.newRecipe project)
+        "machineType", UpsertMachineType(Defaults.newMachineType project)
+        "nodeType", UpsertNodeType(Defaults.newNodeType project)
+        "animalSpecies", UpsertAnimalSpecies species
+        "animal",
+        Batch(
+            "species + animal",
+            [
+                UpsertAnimalSpecies species
+                UpsertAnimal(Defaults.newAnimal withSpecies species.Id "scene-farm" 4 4)
+            ]
+        )
+        "fishTable", UpsertFishTable(Defaults.newFishTable project)
+        "action", UpsertAction(Defaults.newAction project)
+        "minigame", UpsertMinigame(Defaults.newMinigame project)
+        "scene", AddScene barn
+        "transition", Batch("scene + door", [ AddScene barn; SetTransition("scene-farm", Defaults.newTransition barn.Id) ])
+        "panel", SetGamePanels [ Defaults.newGamePanel project ]
+        "mine", SetMine(Defaults.mineEnabled project true)
+    ]
 
 [<Fact>]
 let ``every default passes validation when added`` () =
     let project = starter ()
+
     for (name, edit) in newContentEdits project do
         let next = Document.run project edit
         Assert.NotSame(project, next)

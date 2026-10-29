@@ -247,6 +247,11 @@ catalog! {
     MACHINE_CANNOT_RUN = "msg.machineCannotRun" => "This machine cannot run that recipe.";
     STARTED_RECIPE = "msg.startedRecipe" => "Started {0}";
     // Shops.
+    FESTIVAL_UNAVAILABLE = "msg.festivalUnavailable" => "The festival grounds have no safe entrance.";
+    FESTIVAL_CLOSED = "msg.festivalClosed" => "The festival is not open now.";
+    FESTIVAL_ALREADY_PLAYED = "msg.festivalAlreadyPlayed" => "You have already taken part today.";
+    FESTIVAL_CONTEST_ITEM = "msg.festivalContestItem" => "Bring a qualifying item to enter the contest.";
+    SHOP_CLOSED = "msg.shopClosed" => "This shop is closed.";
     SHOP_MISSING = "msg.shopMissing" => "That shop does not exist.";
     TALK_TO_SHOPKEEPER = "msg.talkToShopkeeper" => "Talk to the shopkeeper to shop.";
     NO_SHOP_OPEN = "msg.noShopOpen" => "No shop is open.";

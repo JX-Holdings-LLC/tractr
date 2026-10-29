@@ -163,7 +163,9 @@ pub fn handle_use_tool(ctx: &EngineContext, state: &mut GameState, tool_type: &s
     let power = tool_slot.item.tool_power.unwrap_or(tier);
     // An unknown tool type does nothing but strike nodes (which refuse it), for no energy.
     let definition = ctx.tool(tool_type).cloned().unwrap_or_default();
-    let energy_cost = energy::effective_energy_cost(&definition, tier);
+    let discount = skills::stat_bonus(ctx, state, "toolEnergyCost").clamp(-500, 100);
+    let energy_cost = (i64::from(energy::effective_energy_cost(&definition, tier)) * i64::from(100 - discount) / 100)
+        .min(i64::from(i32::MAX)) as i32;
     let area = definition.area_at(tier);
     let tool = &tool_slot.item;
     let background = ctx.terrain(&target.tile.background);
@@ -547,6 +549,9 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
     let facing = world_movement::facing_target(state);
     let target_x = facing.x;
     let target_y = facing.y;
+    if let Some(effects) = crate::festivals::interact(ctx, state, target_x, target_y) {
+        return effects;
+    }
 
     // Authored interact-events take priority over built-in interactions (M3). JS compared the
     // state before and after (`eventResult.state !== state`), which differs exactly when an
@@ -573,7 +578,9 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
                 let dialogue_id = npc_def.dialogue.first().map(|dialogue| dialogue.id.clone()).unwrap_or_default();
                 state.dialogue = Some(DialogueState { npc_id: npc_def.id.clone(), dialogue_id, line });
                 relationships::note_talk(ctx, state, &npc_def.id);
-                return quests::progress_quests(ctx, state, "talk", &npc_def.id, 1);
+                let mut effects = quests::progress_quests(ctx, state, "talk", &npc_def.id, 1);
+                effects.extend(skills::grant_action_xp_subject(ctx, state, "talk", &npc_def.id, "social", 0));
+                return effects;
             }
         }
         return Vec::new();
@@ -606,16 +613,24 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
         return vec![Effect::say(message_levels::INFO, messages::MACHINE_IDLE.with(&[&name]))];
     }
 
+    if let Some(board) = ctx
+        .content
+        .request_boards
+        .iter()
+        .find(|board| board.scene_id == state.player.scene_id && board.x == target.x && board.y == target.y)
+    {
+        return quests::accept_board(ctx, state, board);
+    }
+
     // Mine (M4f): entrance descends (elevator checkpoint when unlocked);
     // interacting near the entry tile of a floor climbs out.
-    let mine_config = &ctx.content.mine;
-    if mine_config.enabled
-        && state.player.scene_id == mine_config.entrance_scene_id.as_deref().unwrap_or("")
-        && target.x == mine_config.entrance_x.unwrap_or(-1)
-        && target.y == mine_config.entrance_y.unwrap_or(-1)
-    {
-        let floor = mines::elevator_floor(mine_config, state);
-        return mines::descend_mine(ctx, state, floor);
+    if let Some((id, _)) = mines::definitions(&ctx.content).find(|(_, mine)| {
+        mine.enabled
+            && mine.entrance_scene_id.as_deref() == Some(state.player.scene_id.as_str())
+            && mine.entrance_x == Some(target.x)
+            && mine.entrance_y == Some(target.y)
+    }) {
+        return mines::enter_mine(ctx, state, id);
     }
     if mines::is_mine_floor(state, &state.player.scene_id) && (target.x, target.y) == mines::FLOOR_ENTRY {
         return mines::exit_mine(ctx, state);
@@ -674,13 +689,25 @@ fn harvest_crop(ctx: &EngineContext, state: &mut GameState, scene_id: &str, x: i
 
     // Quality is decided at harvest: the planted quality, raised by farming skill.
     let tiers = ctx.crop_qualities();
-    let quality = crops::harvest_quality(tiers, &crop.quality, skills::skill_level(state, "farming"));
+    let skill_bonus = if ctx.content.settings.skill_definitions().is_empty() {
+        i64::from(skills::effective_level(ctx, state, "farming"))
+    } else {
+        i64::from(skills::stat_bonus(ctx, state, "skillLevel"))
+    };
+    let quality_bonus = i64::from(skills::stat_bonus(ctx, state, "quality"));
+    let quality_level = (skill_bonus + quality_bonus * 3).clamp(0, i64::from(u32::MAX)) as u32;
+    let quality = crops::harvest_quality(tiers, &crop.quality, quality_level);
     let tier = tiers.iter().find(|tier| tier.id == quality);
     let mut rng = Rng::new(state.rng.clone());
     let mutation = crops::roll_mutation(Some(definition), tier, ctx.crop_mutations(), &mut rng);
     // Farming skill: +1 yield per 4 levels (M4g)
     let quantity = crops::roll_yield(Some(definition), tier, mutation, &mut rng)
-        .saturating_add(skills::farming_yield_bonus(state));
+        .saturating_add(if ctx.content.settings.skill_definitions().is_empty() {
+            skills::effective_level(ctx, state, "farming") / 4
+        } else {
+            0
+        })
+        .saturating_add(skills::stat_bonus(ctx, state, "yield").max(0) as u32);
     let mutation = mutation.map(|mutation| mutation.name.clone());
     // What the harvest is worth at a shop's base price: the quality value of the units added
     // (a mutation pays through its larger yield).
@@ -745,7 +772,7 @@ fn harvest_crop(ctx: &EngineContext, state: &mut GameState, scene_id: &str, x: i
         quality: quality.clone(),
     }));
 
-    effects.extend(skills::grant_xp(ctx, state, "farming", 8));
+    effects.extend(skills::grant_action_xp_subject(ctx, state, "harvest", &crop_item.id, "farming", 8));
     effects.extend(quests::progress_quests(ctx, state, "harvest", &crop.r#type, quantity));
     effects.extend(events::fire_trigger(
         ctx,

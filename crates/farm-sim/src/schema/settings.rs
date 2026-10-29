@@ -29,6 +29,74 @@ pub struct CalendarSeason {
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
+pub struct FestivalAttendance {
+    pub npc_id: String,
+    #[serde(with = "crate::units::int")]
+    pub x: i32,
+    #[serde(with = "crate::units::int")]
+    pub y: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dialogue_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FestivalContest {
+    pub item_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum_quality: Option<String>,
+    pub consume_item: bool,
+    pub rewards: Vec<super::EventOutcome>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FestivalActivity {
+    #[serde(with = "crate::units::int")]
+    pub x: i32,
+    #[serde(with = "crate::units::int")]
+    pub y: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minigame_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cutscene_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contest: Option<FestivalContest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FestivalProgram {
+    pub scene_id: String,
+    pub entrance_scene_id: String,
+    #[serde(with = "crate::units::int")]
+    pub entrance_x: i32,
+    #[serde(with = "crate::units::int")]
+    pub entrance_y: i32,
+    #[serde(with = "crate::units::int")]
+    pub arrival_x: i32,
+    #[serde(with = "crate::units::int")]
+    pub arrival_y: i32,
+    #[serde(with = "crate::units::count")]
+    pub open_minute: u32,
+    #[serde(with = "crate::units::count")]
+    pub close_minute: u32,
+    pub end_day: bool,
+    pub attendance: Vec<FestivalAttendance>,
+    pub conditions: Vec<super::EventCondition>,
+    pub on_miss: Vec<super::EventOutcome>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shop_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shop_tile: Option<super::GridPoint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activity: Option<FestivalActivity>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
 pub struct CalendarFestival {
     pub id: String,
     pub name: String,
@@ -37,9 +105,20 @@ pub struct CalendarFestival {
     /// 1-based day within that season. int, positive.
     #[serde(with = "crate::units::count")]
     pub day: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub program: Option<FestivalProgram>,
     /// A music asset that plays all festival day (M2).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub music: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CalendarWeekday {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub words: Option<IndexMap<String, String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,11 +128,17 @@ pub struct CalendarConfig {
     pub seasons: Vec<CalendarSeason>,
     /// Named festival days, each pinned to a season + day-of-season.
     pub festivals: Vec<CalendarFestival>,
+    /// Absent in legacy projects; an empty list disables the week.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weekdays: Option<Vec<CalendarWeekday>>,
+    /// Zero-based offset of absolute day 1 in the week.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub weekday_offset: Option<u32>,
 }
 
 impl Default for CalendarConfig {
     fn default() -> Self {
-        Self { seasons: classic_calendar_seasons(), festivals: Vec::new() }
+        Self { seasons: classic_calendar_seasons(), festivals: Vec::new(), weekdays: None, weekday_offset: None }
     }
 }
 
@@ -165,6 +250,11 @@ pub struct ProjectSettings {
     /// Player health, monsters and fainting (M7); absent: no combat.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub combat: Option<CombatSettings>,
+    /// Optional caps for permanent player upgrades.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progression: Option<super::ProgressionLimits>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill_definitions: Option<Vec<super::SkillDefinition>>,
 }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
@@ -282,6 +372,8 @@ impl Default for ProjectSettings {
             character_creator: None,
             farm: None,
             combat: None,
+            progression: None,
+            skill_definitions: None,
         }
     }
 }
@@ -304,4 +396,10 @@ pub fn classic_calendar_seasons() -> Vec<CalendarSeason> {
 /// TS `DEFAULT_PROJECT_SETTINGS = ProjectSettingsSchema.parse({})`.
 pub fn default_project_settings() -> ProjectSettings {
     ProjectSettings::default()
+}
+
+impl ProjectSettings {
+    pub fn skill_definitions(&self) -> &[super::SkillDefinition] {
+        self.skill_definitions.as_deref().unwrap_or(&[])
+    }
 }

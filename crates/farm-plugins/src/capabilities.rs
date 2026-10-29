@@ -60,6 +60,11 @@ pub const MUTATION_TYPES: &[&str] = &[
     "removeMachine",
     "setRelationship",
     "sendMail",
+    "setInventorySize",
+    "addInventorySize",
+    "addMaxEnergy",
+    "addMaxHealth",
+    "applyBuff",
     "modifyHealth",
 ];
 
@@ -91,6 +96,7 @@ pub const SCOPED_MUTATION_TYPES: &[&str] = &[
     "removeMachine",
     "setRelationship",
     "sendMail",
+    "applyBuff",
 ];
 
 /// Flags no plugin may write: `event:<id>:fired` re-arms or disables one-shot events.
@@ -294,6 +300,10 @@ impl MutationGrants {
             }
             PluginMutation::SendMail { mail_id } => {
                 PluginMutation::SendMail { mail_id: scope.resolve("mailId", mail_id)? }
+            }
+            PluginMutation::ApplyBuff { mut buff } => {
+                buff.id = scope.resolve("buff.id", buff.id)?;
+                PluginMutation::ApplyBuff { buff }
             }
             other => other,
         };

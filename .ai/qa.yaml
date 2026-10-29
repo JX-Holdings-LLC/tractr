@@ -41,6 +41,8 @@ levels:
       - cargo clippy --locked --workspace --all-targets -- -D warnings
       - dotnet format whitespace Tractr.sln --no-restore --verify-no-changes
       - dotnet format style Tractr.sln --no-restore --verify-no-changes
+      - dotnet tool restore
+      - dotnet fantomas check src tests tools
       - python3 tools/ci/text-style.py
       - npx --yes markdownlint-cli2@0.23.3
   unit:

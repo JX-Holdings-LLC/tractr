@@ -370,3 +370,47 @@ fn modify_energy_saturates_out_of_range_amounts() {
     events::apply_outcomes(&ctx, &mut state, &[huge], 0);
     assert_eq!(state.player.energy, state.player.max_energy);
 }
+
+#[test]
+fn signed_temporary_skill_and_quality_modifiers_reduce_harvest_bonuses() {
+    use farm_sim::schema::{BuffDefinition, SkillDefinition, SkillReward};
+    for authored in [false, true] {
+        for (stat, amount) in [("skillLevel", -3), ("quality", -1)] {
+            let (ctx, mut state) = make_engine("harvest-debuff", |project| {
+                if authored {
+                    project.settings.skill_definitions = Some(vec![SkillDefinition {
+                        id: "farming".into(),
+                        rewards: vec![SkillReward {
+                            level: 3,
+                            stat: "quality".into(),
+                            amount: 1,
+                            ..Default::default()
+                        }],
+                        ..Default::default()
+                    }]);
+                }
+            });
+            state.player.skills.insert("farming".into(), SkillState { xp: 300, level: 3 });
+            mature_wheat(&ctx, &mut state);
+            farm_sim::buffs::apply(
+                &ctx,
+                &mut state,
+                &BuffDefinition {
+                    id: "debuff".into(),
+                    stat: stat.into(),
+                    amount,
+                    duration_minutes: 60,
+                    ..Default::default()
+                },
+                "event",
+            );
+            apply_command(&ctx, &mut state, &Command::Interact);
+            let slot = state.player.inventory.iter().find(|slot| slot.item.id == "crop-wheat").expect("harvested");
+            assert!(
+                slot.quality.as_deref().is_none_or(|quality| quality == "normal"),
+                "authored={authored} stat={stat}: {:?}",
+                slot.quality
+            );
+        }
+    }
+}

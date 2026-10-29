@@ -11,8 +11,8 @@
 
 use crate::{view_json, Rgba};
 use farm_render::{
-    apply_graphics, editor_snapshot, preview_atmosphere, GraphicsSource, SkyPreview, SnapshotCamera, WorldRenderer,
-    WorldSnapshot,
+    apply_graphics, editor_snapshot_window, preview_atmosphere, GraphicsSource, SkyPreview, SnapshotCamera, TileWindow,
+    WorldRenderer, WorldSnapshot,
 };
 use farm_sim::schema::{GameContent, GameProject};
 use serde::Deserialize;
@@ -131,13 +131,14 @@ fn decorated_editor_snapshot(
     scene_id: &str,
     tile_size: f64,
     padding: f64,
+    window: Option<TileWindow>,
 ) -> Result<WorldSnapshot, String> {
     let scene = project
         .scenes
         .iter()
         .find(|scene| scene.id == scene_id)
         .ok_or_else(|| format!("Scene {scene_id} not found."))?;
-    let mut snapshot = editor_snapshot(project, content, scene, tile_size, padding);
+    let mut snapshot = editor_snapshot_window(project, content, scene, tile_size, padding, window);
     apply_graphics(&mut snapshot, graphics, scene, 0.0, false);
     Ok(snapshot)
 }
@@ -228,7 +229,8 @@ pub fn render_json(request: &[u8]) -> Result<RenderOutput, String> {
             check_layout(tile_size, padding)?;
             let content = farm_sim::create_content_from_project(&project);
             let graphics = GraphicsSource::from_project(&project);
-            let snapshot = decorated_editor_snapshot(&project, &content, &graphics, &scene_id, tile_size, padding)?;
+            let snapshot =
+                decorated_editor_snapshot(&project, &content, &graphics, &scene_id, tile_size, padding, None)?;
             Ok(RenderOutput::Json(view_json::to_json(&snapshot)))
         }
         RenderRequest::Rasterize { snapshot, scale } => {
@@ -249,12 +251,13 @@ pub struct HostPreview {
     graphics: GraphicsSource,
     renderer: WorldRenderer,
     /// The decorated snapshot of the last scene rendered and its layout (scene id, tile size,
-    /// padding): scrolling only moves the camera over it. Dropped by every project change.
+    /// padding and tile window). Sub-tile scrolling reuses it; a new window only builds its
+    /// visible tiles. Dropped by every project change.
     snapshot: Option<(SnapshotKey, WorldSnapshot)>,
 }
 
-/// Scene id, tile size and padding (as bits) of a cached snapshot.
-type SnapshotKey = (String, u64, u64);
+/// Scene id, tile size and padding (as bits), and tile window of a cached snapshot.
+type SnapshotKey = (String, u64, u64, Option<TileWindow>);
 
 impl std::fmt::Debug for HostPreview {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -336,7 +339,11 @@ impl HostPreview {
             }
             None => None,
         };
-        let key = (request.scene_id, request.tile_size.to_bits(), request.padding.to_bits());
+        let window = request
+            .camera
+            .as_ref()
+            .map(|camera| TileWindow::for_camera(camera, request.padding, request.tile_size + 1.0, 2));
+        let key = (request.scene_id, request.tile_size.to_bits(), request.padding.to_bits(), window);
         let snapshot = match &mut self.snapshot {
             Some((cached, snapshot)) if *cached == key => snapshot,
             slot => {
@@ -347,6 +354,7 @@ impl HostPreview {
                     &key.0,
                     request.tile_size,
                     request.padding,
+                    window,
                 )?;
                 &mut slot.insert((key, snapshot)).1
             }
@@ -515,12 +523,36 @@ mod tests {
         let content = farm_sim::create_content_from_project(&parsed);
         let graphics = GraphicsSource::from_project(&parsed);
         let scene = parsed.scenes.iter().find(|scene| scene.id == scene_id).unwrap();
-        let mut snapshot = decorated_editor_snapshot(&parsed, &content, &graphics, scene_id, 28.0, 12.0).unwrap();
+        let mut snapshot = decorated_editor_snapshot(&parsed, &content, &graphics, scene_id, 28.0, 12.0, None).unwrap();
         snapshot.atmosphere = Some(farm_render::scene_atmosphere(&content, scene, 720.0, "spring", Some("rain")));
         assert_eq!(rgba(super::render(&mut WorldRenderer::new(), &snapshot, 1.0).unwrap()), rain);
 
         let missing = br#"{"sceneId":"nowhere","sky":{"timeMinutes":0}}"#;
         assert_eq!(preview.render(missing).unwrap_err(), "Scene nowhere not found.");
+    }
+
+    #[test]
+    fn editor_camera_culls_before_decoration_and_matches_the_full_snapshot() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../../fixtures/golden/content/starter-farm.json")).unwrap();
+        let project: GameProject = serde_json::from_value(fixture["project"].clone()).unwrap();
+        let content = farm_sim::create_content_from_project(&project);
+        let graphics = GraphicsSource::from_project(&project);
+        let scene_id = &project.player.scene_id;
+        let mut preview = HostPreview::new(fixture["project"].to_string().as_bytes()).unwrap();
+        for x in [12.0, 180.0, 320.0] {
+            let camera = SnapshotCamera { x, y: 40.0, width: 90.0, height: 70.0 };
+            let request = serde_json::json!({"sceneId": scene_id, "tileSize": 28, "padding": 12, "camera": camera});
+            let actual = preview.render(request.to_string().as_bytes()).unwrap();
+            let (_, partial) = preview.snapshot.as_ref().unwrap();
+            assert!(partial.tile_window.is_some());
+            assert!(partial.tiles.iter().map(Vec::len).sum::<usize>() < (partial.width * partial.height) as usize);
+            let mut full =
+                decorated_editor_snapshot(&project, &content, &graphics, scene_id, 28.0, 12.0, None).unwrap();
+            full.camera = Some(camera);
+            let expected = rgba(super::render(&mut WorldRenderer::new(), &full, 1.0).unwrap());
+            assert_eq!(actual, expected, "camera x={x}");
+        }
     }
 
     #[test]

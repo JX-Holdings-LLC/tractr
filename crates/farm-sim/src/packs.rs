@@ -70,6 +70,7 @@ pub fn pack_id_of(id: &str) -> Option<&str> {
 /// content must stay untouched, and cross-pack references must be written fully qualified by the
 /// author.
 const REFERENCE_KEYS: &[&str] = &[
+    "icon",
     "itemId",
     "cropType",
     "machineTypeId",
@@ -82,6 +83,10 @@ const REFERENCE_KEYS: &[&str] = &[
     "offerQuestId",
     "questId",
     "targetNPCId",
+    "targetMonsterId",
+    "targetBundleId",
+    "targetMineId",
+    "mineId",
     "targetCropType",
     "shopId",
     "giver",
@@ -91,6 +96,8 @@ const REFERENCE_KEYS: &[&str] = &[
     "nodeTypeId",
     "weatherId",
     "targetItemId",
+    "speciesItemId",
+    "tableId",
     "requiredItemId",
     "giftItemId",
     "actionId",
@@ -105,12 +112,16 @@ const REFERENCE_KEYS: &[&str] = &[
     "achievementId",
     "mailId",
     "monsterId",
+    "skill",
+    "fromItemId",
+    "toItemId",
 ];
 
 /// Keys holding arrays of reference strings: quest prerequisites, a shop's buildings and
 /// animals, a species' housing and a collection's items (M9). Objects in such a list (a bundle's
 /// lines) are rewritten like any other value.
-const REFERENCE_LIST_KEYS: &[&str] = &["prerequisites", "buildings", "animals", "housing", "items"];
+const REFERENCE_LIST_KEYS: &[&str] =
+    &["fishIds", "weatherIds", "prerequisites", "buildings", "animals", "housing", "items"];
 
 fn rewrite_references(value: &Value, pack_id: &str, local_ids: &IndexSet<String>) -> Value {
     match value {
@@ -203,6 +214,7 @@ fn collection_ids(content: &PackContent) -> Vec<&str> {
     ids.extend(content.achievements.iter().flatten().map(|d| d.id.as_str()));
     ids.extend(content.mail.iter().flatten().map(|d| d.id.as_str()));
     ids.extend(content.monsters.iter().flatten().map(|d| d.id.as_str()));
+    ids.extend(content.skills.iter().flatten().map(|d| d.id.as_str()));
     ids
 }
 
@@ -288,6 +300,17 @@ pub fn namespace_pack(pack: &ContentPack) -> ContentPack {
         achievements: source.achievements.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         mail: source.mail.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
         monsters: source.monsters.as_ref().map(|list| rewrite_collection(list, pack_id, &local_ids)),
+        skills: source.skills.as_ref().map(|list| {
+            let mut skills = rewrite_collection(list, pack_id, &local_ids);
+            for skill in &mut skills {
+                for training in &mut skill.training {
+                    if let Some(subject) = training.subject.as_mut().filter(|id| local_ids.contains(id.as_str())) {
+                        *subject = namespaced_id(pack_id, subject);
+                    }
+                }
+            }
+            skills
+        }),
         game_panels: source.game_panels.as_ref().map(|panels| namespace_panels(panels, pack_id, &local_ids)),
         strings: source.strings.clone(),
         extra: source.extra.clone(),
@@ -616,6 +639,7 @@ struct MergeSlots<'a> {
     achievements: &'a mut Vec<crate::schema::AchievementDefinition>,
     mail: &'a mut Vec<crate::schema::MailDefinition>,
     monsters: &'a mut Vec<crate::schema::MonsterDefinition>,
+    skills: &'a mut Option<Vec<crate::schema::SkillDefinition>>,
 }
 
 fn merge_pack(
@@ -678,6 +702,9 @@ fn merge_pack(
     merger.merge_array(c.achievements.as_deref().unwrap_or_default(), |d| &d.id, slots.achievements, "achievement");
     merger.merge_array(c.mail.as_deref().unwrap_or_default(), |d| &d.id, slots.mail, "letter");
     merger.merge_array(c.monsters.as_deref().unwrap_or_default(), |d| &d.id, slots.monsters, "monster");
+    if let Some(skills) = c.skills.as_ref().filter(|skills| !skills.is_empty()) {
+        merger.merge_array(skills, |d| &d.id, slots.skills.get_or_insert_with(Vec::new), "skill");
+    }
 }
 
 /// Whether a pack declares any content: definitions, a player start or string tables.
@@ -797,6 +824,7 @@ fn merge_packs(base: &GameContent, installs: &[PackInstallation], locale: &str) 
                 achievements: &mut content.achievements,
                 mail: &mut content.mail,
                 monsters: &mut content.monsters,
+                skills: &mut content.settings.skill_definitions,
             },
             &mut problems,
         );

@@ -178,6 +178,8 @@ pub struct Scene {
     /// Its extra layers beyond background, overlay and object, in drawing order (M8).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub layers: Option<Vec<SceneLayer>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub forage_spawns: Option<Vec<super::ForageSpawnTable>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

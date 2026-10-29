@@ -12,11 +12,21 @@ let ``project info and settings`` () =
     Assert.Equal("Sunny Acres", renamed.Name)
     Assert.Equal("1.2.0", renamed.Version)
     Assert.Same(renamed, renamed |> apply (SetProjectInfo("Sunny Acres", "1.2.0")))
-    let settings = { project.Settings with EnergyEnabled = false }
+
+    let settings =
+        { project.Settings with
+            EnergyEnabled = false
+        }
+
     let changed = project |> apply (SetSettings settings)
     Assert.False changed.Settings.EnergyEnabled
     Assert.Same(changed, changed |> apply (SetSettings settings))
-    let graphics = { GraphicsSettings.Default with PixelArt = false }
+
+    let graphics =
+        { GraphicsSettings.Default with
+            PixelArt = false
+        }
+
     Assert.False((project |> apply (SetGraphics graphics)).Graphics.Value.PixelArt)
 
 [<Fact>]
@@ -24,7 +34,10 @@ let ``export settings keep identity through rename, JSON and undo`` () =
     let project = starter ()
     let settings = Defaults.newExportSettings project
     Assert.StartsWith("local.", settings.GameId)
-    let doc = Document.create project |> Document.apply (SetExportSettings(Some settings))
+
+    let doc =
+        Document.create project |> Document.apply (SetExportSettings(Some settings))
+
     let renamed = doc |> Document.apply (SetProjectInfo("Another Farm", "2.0.0"))
     Assert.Equal(settings.GameId, renamed.Project.Export.Value.GameId)
     let restored = roundTrip renamed.Project
@@ -40,14 +53,31 @@ let ``removing a season drops its festivals and weather row but never the last s
     let calendar = project.Settings.Calendar
     let festival = (Defaults.newFestival project calendar).Value
     let festival = { festival with SeasonId = "summer" }
-    let withFestival = { calendar with Festivals = ([ festival ]) }
-    let project = project |> apply (SetSettings({ project.Settings with Calendar = withFestival }))
+
+    let withFestival =
+        { calendar with
+            Festivals = ([ festival ])
+        }
+
+    let project =
+        project
+        |> apply (
+            SetSettings(
+                { project.Settings with
+                    Calendar = withFestival
+                }
+            )
+        )
+
     Assert.True(project.Weather.Table |> List.exists (fun (key, _) -> key = "summer"))
     let removed = project |> apply (RemoveSeason "summer")
     Assert.False(removed.Settings.Calendar.Seasons |> Seq.exists (fun s -> s.Id = "summer"))
     Assert.Empty removed.Settings.Calendar.Festivals
     Assert.False(removed.Weather.Table |> List.exists (fun (key, _) -> key = "summer"))
-    let leftovers = errors removed |> List.filter (fun p -> p.Code.StartsWith "calendar.")
+
+    let leftovers =
+        errors removed |> List.filter (fun p -> p.Code.StartsWith "calendar.")
+
     Assert.True(leftovers.IsEmpty, describe leftovers)
     let one = removed |> apply (RemoveSeason "fall") |> apply (RemoveSeason "winter")
     Assert.Equal(1, one.Settings.Calendar.Seasons.Length)
@@ -56,9 +86,27 @@ let ``removing a season drops its festivals and weather row but never the last s
 [<Fact>]
 let ``removing a season drops its sky look and Problems reports one left behind`` () =
     let project = starter ()
-    let look tint = { AtmosphereLook.Default with FoliageTint = Some tint }
-    let sky = { AllSeasons = AtmosphereLook.Default; Seasons = [ "summer", look "#80a060"; "winter", look "#b8d0e8" ] }
-    let project = project |> apply (SetSettings { project.Settings with Atmosphere = Some sky })
+
+    let look tint =
+        { AtmosphereLook.Default with
+            FoliageTint = Some tint
+        }
+
+    let sky =
+        {
+            AllSeasons = AtmosphereLook.Default
+            Seasons = [ "summer", look "#80a060"; "winter", look "#b8d0e8" ]
+        }
+
+    let project =
+        project
+        |> apply (
+            SetSettings
+                { project.Settings with
+                    Atmosphere = Some sky
+                }
+        )
+
     let removed = project |> apply (RemoveSeason "summer")
     Assert.Equal<string list>([ "winter" ], removed.Settings.Atmosphere.Value.Seasons |> List.map fst)
     // Nothing left set: the key goes, as the Settings form leaves it out.
@@ -67,8 +115,19 @@ let ``removing a season drops its sky look and Problems reports one left behind`
     Assert.DoesNotContain("atmosphere.unknownSeason", Problems.collect removed |> List.map (fun p -> p.Code))
 
     // A look for a season the calendar lacks (an older file, a hand edit) is a warning in Settings.
-    let stale = removed |> apply (SetSettings { removed.Settings with Atmosphere = Some sky })
-    let problem = Problems.collect stale |> List.find (fun p -> p.Code = "atmosphere.unknownSeason")
+    let stale =
+        removed
+        |> apply (
+            SetSettings
+                { removed.Settings with
+                    Atmosphere = Some sky
+                }
+        )
+
+    let problem =
+        Problems.collect stale
+        |> List.find (fun p -> p.Code = "atmosphere.unknownSeason")
+
     Assert.True(problem.IsWarning)
     Assert.Equal("settings.atmosphere.seasons.summer", problem.Path)
     Assert.Equal("The sky has a look for unknown season \"summer\"", problem.Message)
@@ -77,9 +136,33 @@ let ``removing a season drops its sky look and Problems reports one left behind`
 [<Fact>]
 let ``assets bind and unbind everywhere`` () =
     let project = starter ()
-    let asset = { CustomAsset.Default with Id = "art-cow"; Name = "cow.png"; Type = "art"; DataUrl = "data:,"; Width = Some(16.0); Height = Some(16.0) }
-    let visual = { VisualRef.Default with AssetId = "art-cow" }
-    let bindAll = Batch("art", [ UpsertAsset asset; BindVisual(NpcVisual "npc-farmer", Some visual); BindVisual(ItemVisual "material-wood", Some visual); BindVisual(PlayerVisual, Some visual) ])
+
+    let asset =
+        { CustomAsset.Default with
+            Id = "art-cow"
+            Name = "cow.png"
+            Type = "art"
+            DataUrl = "data:,"
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
+    let visual =
+        { VisualRef.Default with
+            AssetId = "art-cow"
+        }
+
+    let bindAll =
+        Batch(
+            "art",
+            [
+                UpsertAsset asset
+                BindVisual(NpcVisual "npc-farmer", Some visual)
+                BindVisual(ItemVisual "material-wood", Some visual)
+                BindVisual(PlayerVisual, Some visual)
+            ]
+        )
+
     let bound = project |> apply bindAll
     Assert.Equal(Some visual, (npc bound "npc-farmer").Visual)
     Assert.Equal(Some visual, bound.PlayerVisual)
@@ -91,7 +174,10 @@ let ``assets bind and unbind everywhere`` () =
     Assert.True unbound.PlayerVisual.IsNone
     Assert.True((unbound.Items |> Seq.find (fun i -> i.Id = "material-wood")).Visual.IsNone)
     Assert.False(unbound.CustomAssets |> Seq.exists (fun a -> a.Id = "art-cow"))
-    let artAfter = errors unbound |> List.filter (fun p -> p.Code.StartsWith "graphics.")
+
+    let artAfter =
+        errors unbound |> List.filter (fun p -> p.Code.StartsWith "graphics.")
+
     Assert.True(artAfter.IsEmpty, describe artAfter)
     let unboundPlayer = bound |> apply (SetPlayerVisual None)
     Assert.True unboundPlayer.PlayerVisual.IsNone
@@ -100,8 +186,19 @@ let ``assets bind and unbind everywhere`` () =
 let ``packs install once, toggle, reorder, remove and import`` () =
     let project = blank ()
     let pack = ProjectCatalog.CreateContentDefaultPack()
-    let other = { pack with Manifest = { pack.Manifest with Id = "other-pack"; Name = "Other" } }
-    let installed = project |> apply (Batch("install", [ InstallPack pack; InstallPack other ]))
+
+    let other =
+        { pack with
+            Manifest =
+                { pack.Manifest with
+                    Id = "other-pack"
+                    Name = "Other"
+                }
+        }
+
+    let installed =
+        project |> apply (Batch("install", [ InstallPack pack; InstallPack other ]))
+
     Assert.Equal(2, installed.ContentPacks.Length)
     Assert.Same(installed, installed |> apply (InstallPack pack))
     let disabled = installed |> apply (SetPackEnabled("other-pack", false))
@@ -121,9 +218,28 @@ let ``packs install once, toggle, reorder, remove and import`` () =
 let ``moving a season reorders the year and keeps festivals and weather on their season`` () =
     let project = starter ()
     let calendar = project.Settings.Calendar
-    let festival = { (Defaults.newFestival project calendar).Value with SeasonId = "summer"; Day = 5.0 }
-    let project = project |> apply (SetSettings { project.Settings with Calendar = { calendar with Festivals = [ festival ] } })
-    let ids (p: GameProject) = p.Settings.Calendar.Seasons |> List.map (fun s -> s.Id)
+
+    let festival =
+        { (Defaults.newFestival project calendar).Value with
+            SeasonId = "summer"
+            Day = 5.0
+        }
+
+    let project =
+        project
+        |> apply (
+            SetSettings
+                { project.Settings with
+                    Calendar =
+                        { calendar with
+                            Festivals = [ festival ]
+                        }
+                }
+        )
+
+    let ids (p: GameProject) =
+        p.Settings.Calendar.Seasons |> List.map (fun s -> s.Id)
+
     let moved = project |> apply (MoveSeason("summer", -1))
     Assert.Equal<string list>([ "summer"; "spring"; "fall"; "winter" ], ids moved)
     Assert.Equal<CalendarFestival list>(project.Settings.Calendar.Festivals, moved.Settings.Calendar.Festivals)
@@ -151,23 +267,38 @@ let ``weather odds save the changed cells as one undo step`` () =
     Assert.Contains("storm", weatherIds)
     let before = SettingsForms.weatherWeight project "spring" "storm"
     let sunny = SettingsForms.weatherWeight project "spring" "sun"
+
     let edit =
-        SettingsForms.weatherOdds project
-            [ "spring", "storm", before + 4.0
-              "spring", "sun", sunny // unchanged: no edit
-              "summer", "rain", -3.0 // negative → removed
-              "monsoon", "storm", 5.0 // unknown season: ignored
-              "spring", "hail", 2.0 ] // unknown type: ignored
+        SettingsForms.weatherOdds
+            project
+            [
+                "spring", "storm", before + 4.0
+                "spring", "sun", sunny // unchanged: no edit
+                "summer", "rain", -3.0 // negative → removed
+                "monsoon", "storm", 5.0 // unknown season: ignored
+                "spring", "hail", 2.0
+            ] // unknown type: ignored
+
     match edit with
     | Batch(_, edits) -> Assert.Equal(2, edits.Length)
     | other -> failwithf "expected a batch, got %A" other
+
     let doc = Document.create project |> Document.apply edit
     Assert.Equal(before + 4.0, SettingsForms.weatherWeight doc.Project "spring" "storm")
     Assert.Equal(0.0, SettingsForms.weatherWeight doc.Project "summer" "rain")
     Assert.Equal(sunny, SettingsForms.weatherWeight doc.Project "spring" "sun")
     Assert.Same(project, (Document.undo doc).Project)
     // Saving the same values again changes nothing.
-    let again = SettingsForms.weatherOdds doc.Project [ "spring", "storm", before + 4.0; "spring", "sun", sunny; "spring", "snow", nan; "spring", "fog", infinity ]
+    let again =
+        SettingsForms.weatherOdds
+            doc.Project
+            [
+                "spring", "storm", before + 4.0
+                "spring", "sun", sunny
+                "spring", "snow", nan
+                "spring", "fog", infinity
+            ]
+
     Assert.Same(doc, doc |> Document.apply again)
     Assert.Equal(0.0, SettingsForms.cleanWeight nan)
     Assert.Equal(0.0, SettingsForms.cleanWeight -1.0)
@@ -205,40 +336,93 @@ let ``the mine card fills defaults on enable and clamps its fields`` () =
     Assert.False (SettingsForms.mine enabled false "scene-farm" 1.0 1.0 3.0 0.5).Enabled
 
 let private artAsset (id: string) (name: string) =
-    { CustomAsset.Default with Id = id; Name = name; Type = "art"; DataUrl = sprintf "data:image/png;base64,%s" name; Width = Some 16.0; Height = Some 16.0 }
+    { CustomAsset.Default with
+        Id = id
+        Name = name
+        Type = "art"
+        DataUrl = sprintf "data:image/png;base64,%s" name
+        Width = Some 16.0
+        Height = Some 16.0
+    }
 
 [<Fact>]
 let ``several imported images are one undo step with distinct ids`` () =
     let project = starter () |> apply (UpsertAsset(artAsset "art-1" "old.png"))
     // The C# importer names every file of a pick against the same project, so the ids collide.
-    let edit = ArtLibrary.importAssets project [ artAsset "art-1" "a.png"; artAsset "art-1" "b.png"; artAsset "art-custom" "c.png"; artAsset "" "d.png" ]
+    let edit =
+        ArtLibrary.importAssets
+            project
+            [
+                artAsset "art-1" "a.png"
+                artAsset "art-1" "b.png"
+                artAsset "art-custom" "c.png"
+                artAsset "" "d.png"
+            ]
+
     let doc = Document.create project |> Document.apply edit
     let ids = doc.Project.CustomAssets |> List.map (fun a -> a.Id, a.Name)
-    Assert.Equal<(string * string) list>([ "art-1", "old.png"; "art-2", "a.png"; "art-3", "b.png"; "art-custom", "c.png"; "art-4", "d.png" ], ids)
+
+    Assert.Equal<(string * string) list>(
+        [
+            "art-1", "old.png"
+            "art-2", "a.png"
+            "art-3", "b.png"
+            "art-custom", "c.png"
+            "art-4", "d.png"
+        ],
+        ids
+    )
+
     Assert.Same(project, (Document.undo doc).Project)
     Assert.Same(project, project |> apply (ArtLibrary.importAssets project []))
 
 [<Fact>]
 let ``remove unused art deletes only what nothing uses, as one undo step`` () =
     let project = starter ()
-    let visual id = Some { VisualRef.Default with AssetId = id }
+
+    let visual id =
+        Some { VisualRef.Default with AssetId = id }
+
     let project =
         project
         |> apply (
             Batch(
                 "art",
-                [ UpsertAsset(artAsset "art-used" "used.png")
-                  UpsertAsset(artAsset "art-frame" "frame.png")
-                  UpsertAsset(artAsset "art-spare" "spare.png")
-                  UpsertAsset(artAsset "art-extra" "extra.png")
-                  BindVisual(PlayerVisual, visual "art-used") ]
-            ))
+                [
+                    UpsertAsset(artAsset "art-used" "used.png")
+                    UpsertAsset(artAsset "art-frame" "frame.png")
+                    UpsertAsset(artAsset "art-spare" "spare.png")
+                    UpsertAsset(artAsset "art-extra" "extra.png")
+                    BindVisual(PlayerVisual, visual "art-used")
+                ]
+            )
+        )
     // An animation frame of used art keeps its source image.
     let used = project.CustomAssets |> List.find (fun a -> a.Id = "art-used")
-    let clip = { AnimationClip.Default with Name = "idle"; Loop = true; Frames = [ { ArtFrame.Default with AssetId = Some "art-frame"; Width = 16.0; Height = 16.0; Ticks = 6.0 } ] }
-    let project = project |> apply (UpsertAsset { used with Animations = Some [ clip ] })
+
+    let clip =
+        { AnimationClip.Default with
+            Name = "idle"
+            Loop = true
+            Frames =
+                [
+                    { ArtFrame.Default with
+                        AssetId = Some "art-frame"
+                        Width = 16.0
+                        Height = 16.0
+                        Ticks = 6.0
+                    }
+                ]
+        }
+
+    let project =
+        project |> apply (UpsertAsset { used with Animations = Some [ clip ] })
+
     Assert.Equal<string list>([ "art-spare"; "art-extra" ], ArtLibrary.unused project |> List.map (fun a -> a.Id))
-    let doc = Document.create project |> Document.apply (ArtLibrary.removeUnused project)
+
+    let doc =
+        Document.create project |> Document.apply (ArtLibrary.removeUnused project)
+
     Assert.Equal<string list>([ "art-used"; "art-frame" ], doc.Project.CustomAssets |> List.map (fun a -> a.Id))
     Assert.Equal(project.PlayerVisual, doc.Project.PlayerVisual)
     Assert.Same(project, (Document.undo doc).Project)
@@ -249,13 +433,48 @@ let ``remove unused art deletes only what nothing uses, as one undo step`` () =
 let ``reordering packs with a duplicated id keeps every install`` () =
     let pack = ProjectCatalog.CreateContentDefaultPack()
     let a1 = { Pack = pack; Enabled = true }
-    let a2 = { Pack = { pack with Manifest = { pack.Manifest with Name = "Second copy" } }; Enabled = false }
-    let b = { Pack = { pack with Manifest = { pack.Manifest with Id = "b-pack"; Name = "B" } }; Enabled = true }
+
+    let a2 =
+        {
+            Pack =
+                { pack with
+                    Manifest =
+                        { pack.Manifest with
+                            Name = "Second copy"
+                        }
+                }
+            Enabled = false
+        }
+
+    let b =
+        {
+            Pack =
+                { pack with
+                    Manifest =
+                        { pack.Manifest with
+                            Id = "b-pack"
+                            Name = "B"
+                        }
+                }
+            Enabled = true
+        }
     // Installs that share an id only come from a file (InstallPack refuses them); Problems reports them.
-    let project = { blank () with ContentPacks = [ a1; a2; b ] }
-    let order (p: GameProject) = p.ContentPacks |> List.map (fun i -> i.Pack.Manifest.Name)
+    let project =
+        { blank () with
+            ContentPacks = [ a1; a2; b ]
+        }
+
+    let order (p: GameProject) =
+        p.ContentPacks |> List.map (fun i -> i.Pack.Manifest.Name)
+
     Assert.Same(project, project |> apply (ReorderPacks [ "content-default"; "content-default" ]))
-    Assert.Same(project, project |> apply (ReorderPacks [ "content-default"; "content-default"; "b-pack"; "nope" ]))
+
+    Assert.Same(
+        project,
+        project
+        |> apply (ReorderPacks [ "content-default"; "content-default"; "b-pack"; "nope" ])
+    )
+
     Assert.Equal<string list>([ "B"; a1.Pack.Manifest.Name; "Second copy" ], order (project |> apply (ReorderPacks [ "b-pack" ])))
     Assert.Equal<string list>([ a1.Pack.Manifest.Name; "B"; "Second copy" ], order (project |> apply (ReorderPacks [ "content-default"; "b-pack" ])))
     // ModsEditor's up arrow on B: B swaps with its neighbour, nothing is lost or doubled.
@@ -268,16 +487,40 @@ let ``removing the only season of a list keeps the list closed`` () =
     let project = starter ()
     let winterOnly = Some [ "winter" ]
     let item = project.Items.Head.Id
+
     let shop =
         { Defaults.newShop project with
             Stock =
-                [ { ShopStockEntry.Default with ItemId = item; Seasons = winterOnly }
-                  { ShopStockEntry.Default with ItemId = item; Seasons = Some [ "winter"; "spring" ] } ] }
-    let quest = { Defaults.newQuest project with AvailableSeasons = winterOnly }
+                [
+                    { ShopStockEntry.Default with
+                        ItemId = item
+                        Seasons = winterOnly
+                    }
+                    { ShopStockEntry.Default with
+                        ItemId = item
+                        Seasons = Some [ "winter"; "spring" ]
+                    }
+                ]
+        }
+
+    let quest =
+        { Defaults.newQuest project with
+            AvailableSeasons = winterOnly
+        }
+
     let event =
         { Defaults.newEvent project with
-            Conditions = [ EventCondition.Season { Seasons = [ "winter" ] }; EventCondition.Season { Seasons = [ "winter"; "fall" ] } ] }
-    let project = project |> apply (Batch("setup", [ UpsertShop shop; UpsertQuest quest; UpsertEvent event ]))
+            Conditions =
+                [
+                    EventCondition.Season { Seasons = [ "winter" ] }
+                    EventCondition.Season { Seasons = [ "winter"; "fall" ] }
+                ]
+        }
+
+    let project =
+        project
+        |> apply (Batch("setup", [ UpsertShop shop; UpsertQuest quest; UpsertEvent event ]))
+
     let removed = project |> apply (RemoveSeason "winter")
     let stock = (removed.Shops |> List.find (fun s -> s.Id = shop.Id)).Stock
     // An empty or absent list would mean "every season": the removed id stays, and never comes.
@@ -285,7 +528,14 @@ let ``removing the only season of a list keeps the list closed`` () =
     Assert.Equal(Some [ "spring" ], stock.[1].Seasons)
     Assert.Equal(winterOnly, (removed.Quests |> List.find (fun q -> q.Id = quest.Id)).AvailableSeasons)
     let conditions = (removed.Events |> List.find (fun e -> e.Id = event.Id)).Conditions
-    Assert.Equal<EventCondition list>([ EventCondition.Season { Seasons = [ "winter" ] }; EventCondition.Season { Seasons = [ "fall" ] } ], conditions)
+
+    Assert.Equal<EventCondition list>(
+        [
+            EventCondition.Season { Seasons = [ "winter" ] }
+            EventCondition.Season { Seasons = [ "fall" ] }
+        ],
+        conditions
+    )
     // Problems says which content waits for the missing season.
     let codes = Problems.collect removed |> List.map (fun p -> p.Code)
     Assert.Contains("shop.unknownSeason", codes)
@@ -294,13 +544,23 @@ let ``removing the only season of a list keeps the list closed`` () =
 
 [<Fact>]
 let ``daylight keys read one minute and colour per line, in minute order`` () =
-    let keys = SettingsForms.parseDaylight "Spring daylight" "1200 #8080C0\n\n  360, #ffd8a0 "
+    let keys =
+        SettingsForms.parseDaylight "Spring daylight" "1200 #8080C0\n\n  360, #ffd8a0 "
+
     Assert.Equal<(float * string) list>([ 360.0, "#ffd8a0"; 1200.0, "#8080c0" ], keys |> List.map (fun k -> k.Minute, k.Color))
     Assert.Equal("360 #ffd8a0\n1200 #8080c0", SettingsForms.daylightText keys)
-    let error = Assert.Throws<System.FormatException>(fun () -> SettingsForms.parseDaylight "Spring daylight" "360 #ffd8a0\nnoon orange" |> ignore)
+
+    let error =
+        Assert.Throws<System.FormatException>(fun () ->
+            SettingsForms.parseDaylight "Spring daylight" "360 #ffd8a0\nnoon orange"
+            |> ignore)
+
     Assert.Equal("Spring daylight line 2 needs a minute of the day and a colour, like 360 #ffd8a0.", error.Message)
     Assert.Equal(None, SettingsForms.look "Spring" "" " ")
-    let tint = Assert.Throws<System.FormatException>(fun () -> SettingsForms.look "Spring" "" "green" |> ignore)
+
+    let tint =
+        Assert.Throws<System.FormatException>(fun () -> SettingsForms.look "Spring" "" "green" |> ignore)
+
     Assert.Equal("Spring foliage tint must be a colour like #ffd8a0.", tint.Message)
 
 [<Fact>]
@@ -308,7 +568,11 @@ let ``the atmosphere keeps only what is set and seasons the calendar has`` () =
     let project = starter ()
     let all = SettingsForms.look "All seasons" "360 #ffd8a0" ""
     let spring = SettingsForms.look "Spring" "" "#80a060"
-    let next = project |> apply (SettingsForms.atmosphere project all [ "spring", spring; "summer", None; "ghost", spring ])
+
+    let next =
+        project
+        |> apply (SettingsForms.atmosphere project all [ "spring", spring; "summer", None; "ghost", spring ])
+
     let atmosphere = next.Settings.Atmosphere.Value
     Assert.Equal(1, atmosphere.AllSeasons.Daylight.Length)
     Assert.Equal<string list>([ "spring" ], atmosphere.Seasons |> List.map fst)
@@ -317,42 +581,80 @@ let ``the atmosphere keeps only what is set and seasons the calendar has`` () =
 
 [<Fact>]
 let ``the game's words need a money placeholder and keep their translations`` () =
-    let current = Some { GameWords.Default with Locales = [ "es", { GameWords.Default with Energy = Some "Energía" } ] }
-    let words = SettingsForms.words current "{0} credits" " Oxygen " [ "farming", "Gardening"; "mining", " " ]
+    let current =
+        Some
+            { GameWords.Default with
+                Locales =
+                    [
+                        "es",
+                        { GameWords.Default with
+                            Energy = Some "Energía"
+                        }
+                    ]
+            }
+
+    let words =
+        SettingsForms.words current "{0} credits" " Oxygen " [ "farming", "Gardening"; "mining", " " ]
+
     Assert.Equal(Some "{0} credits", words.Value.Money)
     Assert.Equal(Some "Oxygen", words.Value.Energy)
     Assert.Equal<(string * string) list>([ "farming", "Gardening" ], words.Value.Skills)
     Assert.Equal(1, words.Value.Locales.Length)
     Assert.Equal(None, SettingsForms.words None "" "" [ "farming", "" ])
-    Assert.Throws<System.FormatException>(fun () -> SettingsForms.words None "credits" "" [] |> ignore) |> ignore
+
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.words None "credits" "" [] |> ignore)
+    |> ignore
 
 [<Fact>]
 let ``weather looks set overlays, each type's overlay and music, as one edit`` () =
     let project = starter ()
-    let dust = SettingsForms.overlay "dust-storm" OverlayStyles.Dust "#C8B090" 2.0 1.0 "#e0d0b0"
+
+    let dust =
+        SettingsForms.overlay "dust-storm" OverlayStyles.Dust "#C8B090" 2.0 1.0 "#e0d0b0"
+
     Assert.Equal("#c8b090", dust.Color)
     let weather = project.Weather.Types.[0]
-    let next = project |> apply (SettingsForms.weatherLooks project [ dust ] [ weather.Id, "dust-storm", "music-1" ])
+
+    let next =
+        project
+        |> apply (SettingsForms.weatherLooks project [ dust ] [ weather.Id, "dust-storm", "music-1" ])
+
     Assert.Equal<string list>([ "dust-storm" ], next.Weather.Overlays.Value |> List.map (fun o -> o.Id))
     Assert.Equal((Some "dust-storm", Some "music-1"), (next.Weather.Types.[0].Overlay, next.Weather.Types.[0].Music))
     Assert.True((project.Weather.Table = next.Weather.Table))
     let none = next |> apply (SettingsForms.weatherLooks next [] [ weather.Id, "", "" ])
     Assert.True(none.Weather.Overlays.IsNone)
     Assert.Equal((None, None), (none.Weather.Types.[0].Overlay, none.Weather.Types.[0].Music))
-    Assert.Throws<System.FormatException>(fun () -> SettingsForms.weatherLooks project [ dust; dust ] [] |> ignore) |> ignore
-    Assert.Throws<System.FormatException>(fun () -> SettingsForms.overlay "x" "hail" "#ffffff" 1.0 1.0 null |> ignore) |> ignore
+
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.weatherLooks project [ dust; dust ] [] |> ignore)
+    |> ignore
+
+    Assert.Throws<System.FormatException>(fun () -> SettingsForms.overlay "x" "hail" "#ffffff" 1.0 1.0 null |> ignore)
+    |> ignore
 
 [<Fact>]
 let ``scene surroundings are stored only when set`` () =
     let project = starter ()
     let sceneId = project.Scenes.[0].Id
     let look = SettingsForms.look "Scene" "0 #202040" ""
-    let next = project |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ " cave "; ""; "cave"; "damp" ], Some "music-1", look))
+
+    let next =
+        project
+        |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ " cave "; ""; "cave"; "damp" ], Some "music-1", look))
+
     let scene = next.Scenes.[0]
     Assert.Equal((Some true, Some 8.0, Some [ "cave"; "damp" ], Some "music-1"), (scene.Dark, scene.Temperature, scene.Tags, scene.Music))
     Assert.Equal(1, scene.Atmosphere.Value.Daylight.Length)
-    Assert.Same(next, next |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ "cave"; "damp" ], Some "music-1", look)))
-    let cleared = next |> apply (SetSceneEnvironment(sceneId, false, None, [], Some "", None))
+
+    Assert.Same(
+        next,
+        next
+        |> apply (SetSceneEnvironment(sceneId, true, Some 8.0, [ "cave"; "damp" ], Some "music-1", look))
+    )
+
+    let cleared =
+        next |> apply (SetSceneEnvironment(sceneId, false, None, [], Some "", None))
+
     let scene = cleared.Scenes.[0]
     Assert.Equal((None, None, None, None), (scene.Dark, scene.Temperature, scene.Tags, scene.Music))
     Assert.True(scene.Atmosphere.IsNone)

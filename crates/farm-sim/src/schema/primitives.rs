@@ -84,7 +84,14 @@ pub mod quest_objective_types {
     pub const CRAFT: &str = "craft";
     pub const GIFT: &str = "gift";
 
-    pub const ALL: &[&str] = &[COLLECT, HARVEST, TALK, VISIT, CRAFT, GIFT];
+    pub const SHIP: &str = "ship";
+    pub const SLAY: &str = "slay";
+    pub const CATCH: &str = "catch";
+    pub const HEARTS: &str = "hearts";
+    pub const BUNDLE: &str = "bundle";
+    pub const MINE_FLOOR: &str = "mineFloor";
+    pub const ALL: &[&str] =
+        &[COLLECT, HARVEST, TALK, VISIT, CRAFT, GIFT, SHIP, SLAY, CATCH, HEARTS, BUNDLE, MINE_FLOOR];
 }
 
 /// TS `SoilStateSchema`.

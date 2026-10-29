@@ -208,6 +208,23 @@ static STARTER: LazyLock<Starter> = LazyLock::new(|| {
     let mut play_project = project.clone();
     input::add_cutscenes(&mut play_project);
     input::add_farm(&mut play_project);
+    // Conditional routines participate in the command/tick/save fuzz paths (#192).
+    play_project.settings.calendar.weekdays =
+        Some(vec![farm_sim::schema::CalendarWeekday { id: "workday".into(), name: "Workday".into(), words: None }]);
+    for npc in &mut play_project.npcs {
+        npc.schedules = Some(vec![farm_sim::schema::NpcScheduleVariant {
+            id: "rainy".into(),
+            name: "Rainy route".into(),
+            conditions: vec![farm_sim::schema::EventCondition::Weather { weather_ids: vec!["rain".into()] }],
+            stops: vec![farm_sim::schema::NpcScheduleEntry {
+                minute: 360,
+                scene_id: npc.scene_id.clone(),
+                x: farm_sim::units::tile_of(npc.x),
+                y: farm_sim::units::tile_of(npc.y),
+                ..Default::default()
+            }],
+        }]);
+    }
     let play_content = state::create_content_from_project(&play_project);
     let play_ids = Ids::of(&play_content);
     Starter { project, project_json, content, target, play_project, play_content, play_ids }

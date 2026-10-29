@@ -5,7 +5,8 @@ open FarmEngine.Authoring
 open FarmEngine.Authoring.Tests.TestProjects
 open FarmEngine.Schemas
 
-let private paint x y tileType = PaintTiles("scene-farm", TileRules.layerOf tileType, [ (x, y) ], tileType)
+let private paint x y tileType =
+    PaintTiles("scene-farm", TileRules.layerOf tileType, [ (x, y) ], tileType)
 
 [<Fact>]
 let ``painting a tile records one undo entry`` () =
@@ -32,7 +33,10 @@ let ``a no-op edit returns the same document`` () =
 [<Fact>]
 let ``a batch is one undo step`` () =
     let doc = Document.create (starter ())
-    let batch = Batch("three tiles", [ paint 1 1 "water"; paint 2 1 "water"; paint 3 1 "water" ])
+
+    let batch =
+        Batch("three tiles", [ paint 1 1 "water"; paint 2 1 "water"; paint 3 1 "water" ])
+
     let applied = doc |> Document.apply batch
     Assert.Equal(1, applied.Past.Length)
     Assert.Equal("water", (tile applied.Project "scene-farm" 3 1).Type)
@@ -44,19 +48,30 @@ let ``a batch is one undo step`` () =
 let ``an empty batch or a batch of no-ops is not recorded`` () =
     let doc = Document.create (starter ())
     Assert.Same(doc, doc |> Document.apply (Batch("nothing", [])))
-    Assert.Same(doc, doc |> Document.apply (Batch("still nothing", [ RenameScene("scene-farm", "Farm"); RemoveNpc "nobody" ])))
+
+    Assert.Same(
+        doc,
+        doc
+        |> Document.apply (Batch("still nothing", [ RenameScene("scene-farm", "Farm"); RemoveNpc "nobody" ]))
+    )
 
 [<Fact>]
 let ``history is capped at the undo limit`` () =
     let mutable doc = Document.create (starter ())
+
     for i in 0 .. Document.UndoLimit + 9 do
         let tileType = if i % 2 = 0 then "water" else "soil"
         doc <- doc |> Document.apply (paint 1 1 tileType)
+
     Assert.Equal(Document.UndoLimit, doc.Past.Length)
 
 [<Fact>]
 let ``a new edit clears the redo stack`` () =
-    let doc = Document.create (starter ()) |> Document.apply (paint 1 1 "water") |> Document.undo
+    let doc =
+        Document.create (starter ())
+        |> Document.apply (paint 1 1 "water")
+        |> Document.undo
+
     Assert.True(Document.canRedo doc)
     let branched = doc |> Document.apply (paint 2 2 "soil")
     Assert.False(Document.canRedo branched)
@@ -65,11 +80,13 @@ let ``a new edit clears the redo stack`` () =
 let ``a drag stroke is one undo entry`` () =
     let project = starter ()
     let doc = Document.create project
+
     let stroked =
         doc
         |> Document.applyInStroke "s1" (paint 1 1 "water")
         |> Document.applyInStroke "s1" (paint 2 1 "water")
         |> Document.applyInStroke "s1" (paint 3 1 "water")
+
     Assert.Equal(1, stroked.Past.Length)
     Assert.Equal(Some "s1", stroked.Stroke)
     Assert.Equal("water", (tile stroked.Project "scene-farm" 3 1).Type)
@@ -80,7 +97,12 @@ let ``a drag stroke is one undo entry`` () =
 [<Fact>]
 let ``a second stroke starts a new entry and a plain edit ends the stroke`` () =
     let doc = Document.create (starter ())
-    let first = doc |> Document.applyInStroke "s1" (paint 1 1 "water") |> Document.applyInStroke "s1" (paint 2 1 "water")
+
+    let first =
+        doc
+        |> Document.applyInStroke "s1" (paint 1 1 "water")
+        |> Document.applyInStroke "s1" (paint 2 1 "water")
+
     let second = first |> Document.applyInStroke "s2" (paint 1 2 "soil")
     Assert.Equal(2, second.Past.Length)
     let plain = second |> Document.apply (paint 5 5 "path")
@@ -118,12 +140,22 @@ let ``run gives a preview without touching history`` () =
 
 [<Fact>]
 let ``picking a brush is not an undo step`` () =
-    let art = Some { VisualRef.Default with AssetId = "art-water" }
+    let art =
+        Some
+            { VisualRef.Default with
+                AssetId = "art-water"
+            }
+
     let painted =
         Document.create (starter ())
         |> Document.applyWithoutHistory (SelectBrush("soil", None))
         |> Document.apply (paint 1 1 "soil")
-    let doc = painted |> Document.applyInStroke "s1" (paint 2 2 "soil") |> Document.applyWithoutHistory (SelectBrush("water", art))
+
+    let doc =
+        painted
+        |> Document.applyInStroke "s1" (paint 2 2 "soil")
+        |> Document.applyWithoutHistory (SelectBrush("water", art))
+
     Assert.Equal(2, doc.Past.Length)
     Assert.Equal(None, doc.Stroke)
     Assert.Equal("water", doc.Project.SelectedTileType)
@@ -148,13 +180,19 @@ let ``single tile edits on a big scene share the untouched rows with history`` (
     // Warm up so the measured loop does not count JIT work.
     doc <- doc |> Document.apply (paint 0 0 "soil")
     let before = System.GC.GetAllocatedBytesForCurrentThread()
-    for i in 1 .. 100 do
-        doc <- doc |> Document.apply (paint (i % 256) (i * 7 % 256) (if i % 2 = 0 then "water" else "soil"))
+
+    for i in 1..100 do
+        doc <-
+            doc
+            |> Document.apply (paint (i % 256) (i * 7 % 256) (if i % 2 = 0 then "water" else "soil"))
+
     let allocated = System.GC.GetAllocatedBytesForCurrentThread() - before
     // A whole-scene copy per edit was ~2.6 MB, so 100 edits were ~260 MB.
     Assert.True(allocated < 40L * 1024L * 1024L, sprintf "100 single-tile edits allocated %d bytes" allocated)
     let rows = System.Collections.Generic.HashSet<Tile list>(HashIdentity.Reference)
+
     for past in doc.Project :: doc.Past do
-        for row in (farm past).Tiles do rows.Add row |> ignore
+        for row in (farm past).Tiles do
+            rows.Add row |> ignore
     // 256 shared rows plus at most one new row per remembered edit.
     Assert.True(rows.Count <= 256 + Document.UndoLimit + 1, sprintf "%d distinct rows" rows.Count)

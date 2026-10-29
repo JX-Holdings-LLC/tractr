@@ -225,13 +225,15 @@ dependency (`cargo machete`).
 Development builds (`dotnet run`, an IDE, or an unzipped `dotnet publish`
 folder) are not Velopack installs. The Update Center then shows
 **"Updates are available only in the installed app"** and offers a link to the
-installer instead of checking. To work on the Update Center UI without an
-install, set `TRACTR_FAKE_UPDATES` to `available`, `uptodate`,
-`error` or `notinstalled`:
+installer instead of checking. Exercise the Update Center without an install
+through the headless UI tests, which inject their fake service explicitly:
 
 ```sh
-TRACTR_FAKE_UPDATES=available dotnet run --project src/Tractr.App
+dotnet test tests/Tractr.App.Tests --filter FullyQualifiedName~UpdateCenterWindowTests
 ```
+
+The fake service lives only in the tests. Production builds always use the
+real updater; environment variables cannot replace it.
 
 ## Unsigned builds and SmartScreen
 

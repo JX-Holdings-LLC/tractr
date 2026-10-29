@@ -975,12 +975,19 @@ impl Player {
 
     // ── UI ─────────────────────────────────────────────────────────────
 
-    /// Frame pixels per interface unit: the layout fits a 1280×800 design in host layout pixels
-    /// (between 75 % and 300 %), times the density and the interface size setting. A phone
-    /// (390×844 CSS pixels at density 3) lays out 520 units wide at 3 × 0.75 pixels each.
+    /// Frame pixels per interface unit. Narrow touch screens use a 390×640 CSS-pixel
+    /// design; desktop hosts retain the 1280×800 design. Account for the controls before
+    /// fitting the phone layout, so rotating a phone cannot push dialogs below the safe area.
     fn ui_scale(&self, width: u32, height: u32) -> f32 {
         let density = self.host_view.density;
-        let fit = (width as f32 / density / 1280.0).min(height as f32 / density / 800.0).clamp(0.75, 3.0);
+        let css_width = width as f32 / density;
+        let css_height = height as f32 / density;
+        let fit = if self.host_view.touch_controls && css_width < 700.0 {
+            (css_width / 390.0).min((css_height - self.host_view.inset_bottom / density).max(1.0) / 640.0)
+        } else {
+            (css_width / 1280.0).min(css_height / 800.0)
+        }
+        .clamp(0.75, 3.0);
         density * fit * self.settings.display.ui_scale.clamp(0.5, 2.0)
     }
 

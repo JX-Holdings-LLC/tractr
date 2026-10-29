@@ -5,12 +5,16 @@ open FarmEngine.Authoring
 open FarmEngine.Authoring.Tests.TestProjects
 open FarmEngine.Schemas
 
-let private packsProject () = projectOf (readJson [ "Fixtures"; "packs-project.json" ])
+let private packsProject () =
+    projectOf (readJson [ "Fixtures"; "packs-project.json" ])
 
 [<Fact>]
 let ``localization uses later packs and unknown locales change nothing`` () =
     let installs = (packsProject ()).ContentPacks
-    let merged, _ = PackMerge.mergeIntoContent (ContentCompiler.baseContent (packsProject ())) installs
+
+    let merged, _ =
+        PackMerge.mergeIntoContent (ContentCompiler.baseContent (packsProject ())) installs
+
     Assert.NotEqual(merged, PackMerge.applyLocaleStrings merged installs "fr")
     Assert.Same(merged, PackMerge.applyLocaleStrings merged installs "xx")
     Assert.Same(merged, PackMerge.applyLocaleStrings merged installs "")
@@ -20,22 +24,113 @@ let ``localization uses later packs and unknown locales change nothing`` () =
 [<Fact>]
 let ``pack order and merge handle overrides missing dependencies and cycles`` () =
     let baseContent = ContentCompiler.baseContent (blank ())
+
     let alpha =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = "alpha"; Name = "Alpha"; Version = "1.0.0" }; Content = { PackContent.Default with Items = [ item "ore" "Alpha Ore" ] } }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = "alpha"
+                    Name = "Alpha"
+                    Version = "1.0.0"
+                }
+            Content =
+                { PackContent.Default with
+                    Items = [ item "ore" "Alpha Ore" ]
+                }
+        }
+
     let beta =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = "beta"; Name = "Beta"; Version = "1.0.0"; Dependencies = [ { PackDependency.Default with PackId = "alpha" } ]; Overrides = [ "alpha:ore" ] }; Content = { PackContent.Default with Items = [ item "alpha:ore" "Better Ore" ] } }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = "beta"
+                    Name = "Beta"
+                    Version = "1.0.0"
+                    Dependencies =
+                        [
+                            { PackDependency.Default with
+                                PackId = "alpha"
+                            }
+                        ]
+                    Overrides = [ "alpha:ore" ]
+                }
+            Content =
+                { PackContent.Default with
+                    Items = [ item "alpha:ore" "Better Ore" ]
+                }
+        }
+
     let gamma =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = "gamma"; Name = "Gamma"; Version = "1.0.0"; Dependencies = [ { PackDependency.Default with PackId = "missing" } ] }; Content = { PackContent.Default with Items = [ item "alpha:ore" "Undeclared Ore" ] } }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = "gamma"
+                    Name = "Gamma"
+                    Version = "1.0.0"
+                    Dependencies =
+                        [
+                            { PackDependency.Default with
+                                PackId = "missing"
+                            }
+                        ]
+                }
+            Content =
+                { PackContent.Default with
+                    Items = [ item "alpha:ore" "Undeclared Ore" ]
+                }
+        }
+
     let delta =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = "delta"; Name = "Delta"; Version = "1.0.0"; Dependencies = [ { PackDependency.Default with PackId = "epsilon" } ] } }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = "delta"
+                    Name = "Delta"
+                    Version = "1.0.0"
+                    Dependencies =
+                        [
+                            { PackDependency.Default with
+                                PackId = "epsilon"
+                            }
+                        ]
+                }
+        }
+
     let epsilon =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = "epsilon"; Name = "Epsilon"; Version = "1.0.0"; Dependencies = [ { PackDependency.Default with PackId = "delta" } ] } }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = "epsilon"
+                    Name = "Epsilon"
+                    Version = "1.0.0"
+                    Dependencies =
+                        [
+                            { PackDependency.Default with
+                                PackId = "delta"
+                            }
+                        ]
+                }
+        }
+
     let installs =
-        [ { PackInstallation.Default with Pack = gamma }
-          { PackInstallation.Default with Pack = beta }
-          { PackInstallation.Default with Pack = alpha }
-          { PackInstallation.Default with Pack = delta }
-          { PackInstallation.Default with Pack = epsilon } ]
+        [
+            { PackInstallation.Default with
+                Pack = gamma
+            }
+            { PackInstallation.Default with
+                Pack = beta
+            }
+            { PackInstallation.Default with
+                Pack = alpha
+            }
+            { PackInstallation.Default with
+                Pack = delta
+            }
+            { PackInstallation.Default with
+                Pack = epsilon
+            }
+        ]
+
     let ordered, _ = PackMerge.resolveOrder installs
     // Dependencies load before their dependents; the cycle is broken where it was found.
     Assert.Equal<string list>([ "gamma"; "alpha"; "beta"; "epsilon"; "delta" ], ordered |> List.map (fun p -> p.Manifest.Id))
@@ -48,8 +143,27 @@ let ``pack order and merge handle overrides missing dependencies and cycles`` ()
 [<Fact>]
 let ``disabled packs leave content intact and report no problems`` () =
     let baseContent = ContentCompiler.baseContent (blank ())
+
     let disabled =
-        [ { PackInstallation.Default with Enabled = false; Pack = { ContentPack.Default with Manifest = { PackManifest.Default with Id = "disabled"; Name = "Disabled"; Version = "1.0.0" }; Content = { PackContent.Default with Items = [ item "ore" "Ore" ] } } } ]
+        [
+            { PackInstallation.Default with
+                Enabled = false
+                Pack =
+                    { ContentPack.Default with
+                        Manifest =
+                            { PackManifest.Default with
+                                Id = "disabled"
+                                Name = "Disabled"
+                                Version = "1.0.0"
+                            }
+                        Content =
+                            { PackContent.Default with
+                                Items = [ item "ore" "Ore" ]
+                            }
+                    }
+            }
+        ]
+
     let merged, problems = PackMerge.mergeIntoContent baseContent disabled
     Assert.Same(baseContent, merged)
     Assert.Empty problems
@@ -57,26 +171,87 @@ let ``disabled packs leave content intact and report no problems`` () =
 [<Fact>]
 let ``packs without the contentInject permission load no content`` () =
     let baseContent = ContentCompiler.baseContent (blank ())
-    let manifest id = { PackManifest.Default with Id = id; Name = id; Version = "1.0.0" }
+
+    let manifest id =
+        { PackManifest.Default with
+            Id = id
+            Name = id
+            Version = "1.0.0"
+        }
+
     let blocked =
         { ContentPack.Default with
-            Manifest = { manifest "blocked" with Permissions = { PackPermissions.Default with ContentInject = false } }
-            Content = { PackContent.Default with Items = [ item "ore" "Ore" ]; Strings = [ "fr", [ "item:ore:name", "Minerai" ] ] } }
-    let allowed = { ContentPack.Default with Manifest = manifest "allowed"; Content = { PackContent.Default with Items = [ item "ore" "Ore" ] } }
-    let installs = [ { PackInstallation.Default with Pack = blocked }; { PackInstallation.Default with Pack = allowed } ]
+            Manifest =
+                { manifest "blocked" with
+                    Permissions =
+                        { PackPermissions.Default with
+                            ContentInject = false
+                        }
+                }
+            Content =
+                { PackContent.Default with
+                    Items = [ item "ore" "Ore" ]
+                    Strings = [ "fr", [ "item:ore:name", "Minerai" ] ]
+                }
+        }
+
+    let allowed =
+        { ContentPack.Default with
+            Manifest = manifest "allowed"
+            Content =
+                { PackContent.Default with
+                    Items = [ item "ore" "Ore" ]
+                }
+        }
+
+    let installs =
+        [
+            { PackInstallation.Default with
+                Pack = blocked
+            }
+            { PackInstallation.Default with
+                Pack = allowed
+            }
+        ]
+
     let merged, problems = PackMerge.mergeIntoContent baseContent installs
     Assert.DoesNotContain(merged.Items, fun i -> i.Id = "blocked:ore")
     Assert.Contains(merged.Items, fun i -> i.Id = "allowed:ore")
-    let warning = "Pack 'blocked' ships content but does not have the contentInject permission — its content is not loaded"
-    Assert.Equal<PackProblem list>([ { PackId = "blocked"; Severity = "warning"; Message = warning } ], problems)
+
+    let warning =
+        "Pack 'blocked' ships content but does not have the contentInject permission — its content is not loaded"
+
+    Assert.Equal<PackProblem list>(
+        [
+            {
+                PackId = "blocked"
+                Severity = "warning"
+                Message = warning
+            }
+        ],
+        problems
+    )
+
     Assert.Same(merged, PackMerge.applyLocaleStrings merged installs "fr")
     let project = blank ()
     let imported, importProblems = PackMerge.applyToProject project blocked
     Assert.Same(project, imported)
     Assert.Equal<string list>([ warning ], importProblems |> List.map (fun p -> p.Message))
     // Plugins only: nothing to warn about.
-    let pluginsOnly = { blocked with Content = PackContent.Default }
-    let _, quiet = PackMerge.mergeIntoContent baseContent [ { PackInstallation.Default with Pack = pluginsOnly } ]
+    let pluginsOnly =
+        { blocked with
+            Content = PackContent.Default
+        }
+
+    let _, quiet =
+        PackMerge.mergeIntoContent
+            baseContent
+            [
+                { PackInstallation.Default with
+                    Pack = pluginsOnly
+                }
+            ]
+
     Assert.Empty quiet
 
 [<Fact>]
@@ -85,9 +260,13 @@ let ``importing the starter pack into a blank project materializes its content``
     let project, problems = PackMerge.applyToProject (blank ()) pack
     // The blank project already carries the built-in catalog: those ids collide and the earlier
     // definition stays (a warning each), never an error.
-    Assert.All(problems, fun p ->
-        Assert.Equal("warning", p.Severity)
-        Assert.Contains("without declaring it in manifest.overrides", p.Message))
+    Assert.All(
+        problems,
+        fun p ->
+            Assert.Equal("warning", p.Severity)
+            Assert.Contains("without declaring it in manifest.overrides", p.Message)
+    )
+
     let ids (items: seq<'T>) (id: 'T -> string) = items |> Seq.map id |> List.ofSeq
     Assert.Equal<string list>(ids pack.Content.Items (fun i -> i.Id), ids project.Items (fun i -> i.Id))
     Assert.Equal<string list>([ "npc-farmer"; "npc-merchant" ], ids project.Npcs (fun n -> n.Id))
@@ -103,11 +282,19 @@ let ``importing the starter pack into a blank project materializes its content``
 [<Fact>]
 let ``the demo mod validates merges its crop machine and recipe and namespaces ids`` () =
     let pack = validPack (readJson [ "Fixtures"; "demo-mod.json" ])
-    let project = { (starter ()) with ContentPacks = [ { Pack = pack; Enabled = true } ] }
+
+    let project =
+        { (starter ()) with
+            ContentPacks = [ { Pack = pack; Enabled = true } ]
+        }
+
     let content = ContentCompiler.compile project
     Assert.True(content.Crops |> List.exists (fun (id, _) -> id = "demo-glow-farm:glowshroom"))
     Assert.Contains(content.MachineTypes, fun m -> m.Id = "demo-glow-farm:machine-glow-vat")
-    let recipe = content.Recipes |> Seq.find (fun r -> r.Id = "demo-glow-farm:recipe-glow-jelly")
+
+    let recipe =
+        content.Recipes |> Seq.find (fun r -> r.Id = "demo-glow-farm:recipe-glow-jelly")
+
     Assert.Equal(Some "demo-glow-farm:machine-glow-vat", recipe.MachineTypeId)
     Assert.Equal("demo-glow-farm:crop-glowshroom", recipe.Inputs.[0].ItemId)
     // A reload (serialize, parse) compiles to the same content.
@@ -137,17 +324,31 @@ let private localizedPack () =
 
 let private localizedContent (locale: string) =
     let project = starter ()
+
     let project =
         { project with
-            ContentPacks = [ { Pack = localizedPack (); Enabled = true } ]
-            Settings = { project.Settings with Locale = locale } }
+            ContentPacks =
+                [
+                    {
+                        Pack = localizedPack ()
+                        Enabled = true
+                    }
+                ]
+            Settings =
+                { project.Settings with
+                    Locale = locale
+                }
+        }
+
     ContentCompiler.compile project
 
 /// Port of the C# PolishAndEcosystemTests locale cases (m7 i18n).
 [<Fact>]
 let ``pack string tables apply for the project locale with authored fallback`` () =
     let content = localizedContent "es"
-    let itemName id = (content.Items |> Seq.find (fun i -> i.Id = id)).Name
+
+    let itemName id =
+        (content.Items |> Seq.find (fun i -> i.Id = id)).Name
     // The pack's own item: its key was namespaced along with the id.
     Assert.Equal("Amuleto", itemName "translations:charm")
     // A base-content reference stays fully qualified and applies directly.
@@ -163,12 +364,22 @@ let ``pack string tables apply for the project locale with authored fallback`` (
 
 // ── Vocabulary and story (M11) ───────────────────────────────────────────────
 
-let private volcano () = validPack (readJson [ "Fixtures"; "volcano-mod.json" ])
+let private volcano () =
+    validPack (readJson [ "Fixtures"; "volcano-mod.json" ])
 
 [<Fact>]
 let ``packs add vocabulary by plain id and namespace their cutscenes and heart events`` () =
     let pack = volcano ()
-    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = pack } ]
+
+    let merged, problems =
+        PackMerge.mergeIntoContent
+            (ContentCompiler.baseContent (blank ()))
+            [
+                { PackInstallation.Default with
+                    Pack = pack
+                }
+            ]
+
     Assert.Empty problems
     // Lava joins the built-in terrains; the listed override replaces the built-in grass.
     Assert.Equal((Builtin.terrains ()).Length + 1, merged.Terrains.Length)
@@ -180,8 +391,20 @@ let ``packs add vocabulary by plain id and namespace their cutscenes and heart e
     Assert.Equal(Some "volcano:eruption", (merged.Events |> List.find (fun e -> e.Id = "volcano:first-rumble")).Outcomes.Head.CutsceneId)
 
     // Without the override, the built-in grass stays and the pack hears about it.
-    let unlisted = { pack with Manifest = { pack.Manifest with Overrides = [] } }
-    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = unlisted } ]
+    let unlisted =
+        { pack with
+            Manifest = { pack.Manifest with Overrides = [] }
+        }
+
+    let merged, problems =
+        PackMerge.mergeIntoContent
+            (ContentCompiler.baseContent (blank ()))
+            [
+                { PackInstallation.Default with
+                    Pack = unlisted
+                }
+            ]
+
     Assert.Equal("Grass", (merged.Terrains |> List.find (fun t -> t.Id = "grass")).Name)
     Assert.Contains(problems, fun p -> p.Message.Contains "redefines terrain 'grass'")
 
@@ -199,11 +422,20 @@ let ``importing a pack writes its vocabulary and story into the project`` () =
 
 // ── Building, goals and combat content (M9) ──────────────────────────────────
 
-let private countyFair () = validPack (readJson [ "Fixtures"; "county-fair-mod.json" ])
+let private countyFair () =
+    validPack (readJson [ "Fixtures"; "county-fair-mod.json" ])
 
 [<Fact>]
 let ``packs add buildings collections bundles achievements letters and monsters namespaced`` () =
-    let merged, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ { PackInstallation.Default with Pack = countyFair () } ]
+    let merged, problems =
+        PackMerge.mergeIntoContent
+            (ContentCompiler.baseContent (blank ()))
+            [
+                { PackInstallation.Default with
+                    Pack = countyFair ()
+                }
+            ]
+
     Assert.Empty problems
     let buildings = defaultArg merged.BuildingTypes []
     Assert.Equal<string list>([ "county-fair:fair-barn"; "county-fair:grand-barn" ], buildings |> List.map (fun b -> b.Id))
@@ -219,9 +451,11 @@ let ``packs add buildings collections bundles achievements letters and monsters 
     Assert.Equal("county-fair:ribbon", prize.Items.Head.ItemId)
     let achievements = defaultArg merged.Achievements []
     Assert.Equal<string list>([ "county-fair:blue-ribbon"; "county-fair:pest-control" ], achievements |> List.map (fun a -> a.Id))
+
     match achievements.Head.Conditions.Head with
     | EventCondition.Bundle condition -> Assert.Equal("county-fair:prize-table", condition.BundleId)
     | other -> failwithf "expected a bundle condition, got %A" other
+
     let letter = (defaultArg merged.Mail []).Head
     Assert.Equal("county-fair:fair-letter", letter.Id)
     Assert.Equal("See you at the fair", letter.Subject)
@@ -237,7 +471,12 @@ let ``packs add buildings collections bundles achievements letters and monsters 
 let ``importing a pack writes its building goals and combat content into the project`` () =
     let project, problems = PackMerge.applyToProject (blank ()) (countyFair ())
     Assert.Empty problems
-    Assert.Equal<string list>([ "county-fair:fair-barn"; "county-fair:grand-barn" ], project.BuildingTypes |> Option.defaultValue [] |> List.map (fun b -> b.Id))
+
+    Assert.Equal<string list>(
+        [ "county-fair:fair-barn"; "county-fair:grand-barn" ],
+        project.BuildingTypes |> Option.defaultValue [] |> List.map (fun b -> b.Id)
+    )
+
     Assert.Equal<string list>([ "county-fair:ribbons" ], project.Collections |> Option.defaultValue [] |> List.map (fun c -> c.Id))
     Assert.Equal<string list>([ "county-fair:prize-table" ], project.Bundles |> Option.defaultValue [] |> List.map (fun b -> b.Id))
     Assert.Equal(2, project.Achievements |> Option.defaultValue [] |> List.length)
@@ -249,20 +488,52 @@ let ``importing a pack writes its building goals and combat content into the pro
 
 [<Fact>]
 let ``packs with the uiPanels permission add game panels after the games own`` () =
-    let install = { PackInstallation.Default with Pack = countyFair () }
+    let install =
+        { PackInstallation.Default with
+            Pack = countyFair ()
+        }
+
     let panels = PackMerge.gamePanels [ install ]
     Assert.Equal<string list>([ "county-fair:fair-board" ], panels |> List.map (fun p -> p.Id))
     // Items and actions the pack defines are namespaced; flags are named as written.
     Assert.Equal<string list>([ "county-fair:ribbon"; "county-fair:barn-raised"; "" ], panels.Head.Entries |> List.map (fun e -> e.Value))
     // The game's own panels come first in what the game shows.
-    let project = { blank () with GamePanels = Some [ { GamePanel.Default with Id = "own"; Title = "Own" } ]; ContentPacks = [ install ] }
+    let project =
+        { blank () with
+            GamePanels =
+                Some
+                    [
+                        { GamePanel.Default with
+                            Id = "own"
+                            Title = "Own"
+                        }
+                    ]
+            ContentPacks = [ install ]
+        }
+
     match CartridgeCompiler.PresentationSection project |> Json.get "gamePanels" with
     | JArray shown -> Assert.Equal<string list>([ "own"; "county-fair:fair-board" ], shown |> List.choose (Json.get "id" >> Json.asString))
     | other -> failwithf "expected a list, got %A" other
     // Without the permission they are not shown, and the merge says why.
-    let hidden = { install with Pack = { install.Pack with Manifest = { install.Pack.Manifest with Permissions = { install.Pack.Manifest.Permissions with UiPanels = false } } } }
+    let hidden =
+        { install with
+            Pack =
+                { install.Pack with
+                    Manifest =
+                        { install.Pack.Manifest with
+                            Permissions =
+                                { install.Pack.Manifest.Permissions with
+                                    UiPanels = false
+                                }
+                        }
+                }
+        }
+
     Assert.Empty(PackMerge.gamePanels [ hidden ])
-    let _, problems = PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ hidden ]
+
+    let _, problems =
+        PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) [ hidden ]
+
     Assert.Contains(problems, fun p -> p.Message.Contains "does not have the uiPanels permission")
     // Importing the pack writes its panel into the project.
     let imported, _ = PackMerge.applyToProject (blank ()) (countyFair ())

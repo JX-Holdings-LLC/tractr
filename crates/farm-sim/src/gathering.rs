@@ -60,6 +60,10 @@ pub fn strike_node(
         return NodeStrikeOutcome::default();
     };
 
+    if !crate::foraging::in_season(definition.seasons.as_deref(), &state.clock.season) {
+        return NodeStrikeOutcome::default();
+    }
+
     if let Some(refused) = tool_refusal(ctx, definition, tool_type, tool_tier) {
         return NodeStrikeOutcome { effects: vec![refused], struck: false };
     }
@@ -90,7 +94,7 @@ pub fn strike_node(
         // Skill XP (M4g): each tool trains its skill (the pickaxe mining), foraging by default.
         let skill = ctx.tool(tool_type).and_then(|tool| tool.skill.clone()).unwrap_or_else(|| "foraging".to_owned());
         let skill = skill.as_str();
-        effects.extend(skills::grant_xp(ctx, state, skill, 5));
+        effects.extend(skills::grant_action_xp_subject(ctx, state, "gather", &node.type_id, skill, 5));
 
         // Mine floors: breaking a rock can reveal the ladder down (M4f).
         effects.extend(mines::maybe_reveal_ladder(ctx, state, scene_id, x, y));
@@ -128,17 +132,24 @@ fn tool_refusal(
 }
 
 /// Roll the weighted drop table once: at most one drop.
-fn roll_drops(definition: &NodeTypeDefinition, rng: &mut Rng) -> Vec<GatherDrop> {
-    roll_drop_table(&definition.drops, rng)
+fn roll_drops(definition: &NodeTypeDefinition, season: &str, rng: &mut Rng, luck: i32) -> Vec<GatherDrop> {
+    let drops: Vec<_> = definition
+        .drops
+        .iter()
+        .filter(|drop| crate::foraging::in_season(drop.seasons.as_deref(), season))
+        .cloned()
+        .collect();
+    roll_drop_table(&drops, rng, luck)
 }
 
 /// Roll a weighted drop table once (a node's or a monster's): at most one drop.
-pub(crate) fn roll_drop_table(table: &[crate::schema::NodeDrop], rng: &mut Rng) -> Vec<GatherDrop> {
+pub(crate) fn roll_drop_table(table: &[crate::schema::NodeDrop], rng: &mut Rng, luck: i32) -> Vec<GatherDrop> {
     let mut drops: Vec<GatherDrop> = Vec::new();
     if table.is_empty() {
         return drops;
     }
-    let weights: Vec<u32> = table.iter().map(|drop| drop.weight).collect();
+    let mut weights: Vec<u32> = table.iter().map(|drop| drop.weight).collect();
+    crate::buffs::luck_weights(&mut weights, luck);
     if let Some(index) = rng.weighted(&weights) {
         let drop = &table[index];
         let quantity = if drop.max > drop.min {
@@ -166,7 +177,7 @@ fn deplete_node(
     effects: &mut Effects,
 ) -> Vec<GatherDrop> {
     let mut rng = Rng::new(state.rng.clone());
-    let drops = roll_drops(definition, &mut rng);
+    let drops = roll_drops(definition, &state.clock.season, &mut rng, skills::stat_bonus(ctx, state, "luck"));
 
     let mut added_drops: Vec<GatherDrop> = Vec::new();
     let mut inventory = state.player.inventory.clone();
@@ -189,7 +200,7 @@ fn deplete_node(
     let depleted_on_day = state.clock.day;
     // The tile exists: the node was read from it.
     if let Some(tile) = state.world.scenes[scene_index].tile_mut(x, y) {
-        if definition.respawn_after().is_some() {
+        if definition.respawn_after().is_some() && node.spawned_on_day.is_none() {
             tile.node = Some(TileNode {
                 type_id: node.type_id.clone(),
                 remaining_health: 0,
@@ -218,6 +229,30 @@ fn deplete_node(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn luck_changes_node_and_monster_loot_without_extra_random_draws() {
+        let table = vec![
+            crate::schema::NodeDrop { item_id: "common".into(), weight: 100, min: 1, max: 1, ..Default::default() },
+            crate::schema::NodeDrop { item_id: "rare".into(), weight: 10, min: 1, max: 1, ..Default::default() },
+        ];
+        let mut counts = [0; 3];
+        for seed in 0..1024 {
+            let initial = crate::rng::create_rng_state_from_u32(seed);
+            let mut legacy = Rng::new(initial.clone());
+            let expected = legacy.weighted(&[100, 10]).unwrap();
+            for (index, luck) in [-100, 0, 100].into_iter().enumerate() {
+                let mut rng = Rng::new(initial.clone());
+                let drops = roll_drop_table(&table, &mut rng, luck);
+                assert_eq!(rng.state, legacy.state, "luck must not draw extra randomness");
+                if luck == 0 {
+                    assert_eq!(drops[0].item_id, table[expected].item_id);
+                }
+                counts[index] += usize::from(drops[0].item_id == "rare");
+            }
+        }
+        assert!(counts[0] < counts[1] && counts[1] < counts[2], "{counts:?}");
+    }
 
     #[test]
     fn replace_first_dash_only_touches_the_first_occurrence() {
@@ -290,6 +325,57 @@ mod m2_systems_tests {
         assert!(state.world.scenes[0].tiles[3][3].node.is_none()); // trees don't respawn
         let wood = state.player.inventory.iter().find(|s| s.item.id == "material-wood").expect("wood dropped");
         assert!((2..=4).contains(&wood.quantity));
+    }
+
+    #[test]
+    fn a_luck_buff_changes_the_final_node_strike_reward() {
+        let (ctx, mut state) = with_tree(1);
+        let mut content = ctx.content;
+        content.node_types.iter_mut().find(|node| node.id == "node-tree").unwrap().drops = vec![
+            crate::schema::NodeDrop {
+                item_id: "material-wood".into(),
+                weight: 100,
+                min: 1,
+                max: 1,
+                ..Default::default()
+            },
+            crate::schema::NodeDrop {
+                item_id: "material-stone".into(),
+                weight: 10,
+                min: 1,
+                max: 1,
+                ..Default::default()
+            },
+        ];
+        let ctx = EngineContext::new(content);
+        state.rng = (0..1024)
+            .map(crate::rng::create_rng_state_from_u32)
+            .find(|seed| {
+                let mut plain = crate::rng::Rng::new(seed.clone());
+                let mut lucky = plain.clone();
+                plain.weighted(&[100, 10]) == Some(0) && lucky.weighted(&[200, 110]) == Some(1)
+            })
+            .unwrap();
+        let mut lucky = state.clone();
+        crate::buffs::apply(
+            &ctx,
+            &mut lucky,
+            &crate::schema::BuffDefinition {
+                id: "luck".into(),
+                stat: "luck".into(),
+                amount: 100,
+                duration_minutes: 10,
+                ..Default::default()
+            },
+            "test",
+        );
+        apply_command(&ctx, &mut state, &use_tool("axe"));
+        apply_command(&ctx, &mut lucky, &use_tool("axe"));
+        assert_eq!(
+            crate::inventory::count_item(&lucky.player.inventory, "material-stone"),
+            crate::inventory::count_item(&state.player.inventory, "material-stone") + 1
+        );
+        assert_eq!(lucky.rng, state.rng);
     }
 
     #[test]
