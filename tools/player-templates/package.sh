@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stages one player template folder for Export Game (docs/EXPORT.md "Player templates"):
+# Stages one player template folder for Export Game (docs/dev/EXPORT-INTERNALS.md "Player templates"):
 #
 #   <out>/<target>/farm-player[.exe]   the player built for <target>
 #                                      (web: farm_wasm_bg.wasm, farm_wasm.js from tools/wasm/build.sh,

@@ -88,6 +88,47 @@ public sealed class HelpAndWelcomeTests
         Assert.Equal("https://example.com/", HelpContent.ResolveLink("https://example.com/"));
     }
 
+    [Fact]
+    public void CreatorGuide_PicturesAreEmbedded()
+    {
+        var images = MarkdownParser.Parse(HelpContent.CreatorGuideMarkdown()).OfType<MarkdownImage>().ToList();
+        Assert.NotEmpty(images);
+        foreach (var image in images)
+        {
+            Assert.StartsWith(HelpContent.GuideMediaFolder, image.Url, StringComparison.Ordinal);
+            Assert.False(string.IsNullOrWhiteSpace(image.Alt), image.Url + " has no description");
+            using var stream = HelpContent.GuideImage(image.Url);
+            Assert.True(stream is not null, image.Url + " is not embedded");
+        }
+
+        Assert.Null(HelpContent.GuideImage("media/other.png"));
+        Assert.Null(HelpContent.GuideImage(HelpContent.GuideMediaFolder + "../tractr-hero.png"));
+    }
+
+    [Fact]
+    public void CreatorGuide_LinksToItsOwnHeadingsResolve()
+    {
+        var blocks = MarkdownParser.Parse(HelpContent.CreatorGuideMarkdown());
+        var anchors = blocks.OfType<MarkdownHeading>()
+            .Select(h => Tractr.App.Controls.MarkdownView.Anchor(string.Concat(h.Inlines.Select(i => i.Text))))
+            .ToHashSet(StringComparer.Ordinal);
+        IEnumerable<MarkdownInline> Inlines(MarkdownBlock block) => block switch
+        {
+            MarkdownParagraph p => p.Inlines,
+            MarkdownListItem li => li.Inlines,
+            MarkdownTable t => t.Rows.SelectMany(row => row.SelectMany(cell => cell)),
+            _ => [],
+        };
+        var broken = blocks.SelectMany(Inlines)
+            .Select(i => i.LinkUrl)
+            .OfType<string>()
+            .Where(url => url.StartsWith('#') && !anchors.Contains(url[1..]))
+            .ToList();
+        Assert.True(broken.Count == 0, "No heading for: " + string.Join(", ", broken));
+        Assert.Equal("your-games-world", Tractr.App.Controls.MarkdownView.Anchor("Your game's world"));
+        Assert.Equal("1-start-a-project", Tractr.App.Controls.MarkdownView.Anchor("1. Start a project"));
+    }
+
     [AvaloniaFact]
     public void Welcome_OpensOnFirstRun_AndNotAfterItWasDismissed()
     {
@@ -142,13 +183,24 @@ public sealed class HelpAndWelcomeTests
         PumpUntil(() => window.OpenCreatorGuide is not null, "creator guide");
         var guide = window.OpenCreatorGuide!;
         Assert.True(guide.Guide.Document.Children.Count > 20);
+        // Its pictures are drawn, not shown as links.
+        Assert.NotEmpty(guide.Guide.Document.Children.OfType<Image>());
+        Assert.Contains(guide.Guide.Document.Children.OfType<Grid>(), g => g.Classes.Contains("md-table"));
         var guideText = AllVisibleText(guide);
         Assert.Contains("Keep changes", guideText, StringComparison.Ordinal);
         Assert.Contains("Workshop", guideText, StringComparison.Ordinal);
-        // Its links open on GitHub.
-        var link = guide.Guide.GetVisualDescendants().OfType<HyperlinkButton>()
+        var links = guide.Guide.GetVisualDescendants().OfType<HyperlinkButton>()
             .Concat(Avalonia.LogicalTree.LogicalExtensions.GetLogicalDescendants(guide.Guide).OfType<HyperlinkButton>())
-            .First();
+            .Distinct()
+            .ToList();
+        // A link to one of its headings scrolls there, without leaving the app.
+        var anchor = links.First(l => ToolTip.GetTip(l) is "#event-logic");
+        anchor.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Assert.Empty(launcher.Opened);
+        Assert.True(guide.Guide.ScrollToAnchor("#your-games-world"));
+        Assert.False(guide.Guide.ScrollToAnchor("#no-such-heading"));
+        // Its other links open on GitHub.
+        var link = links.First(l => ToolTip.GetTip(l) is string url && !url.StartsWith('#'));
         link.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.StartsWith(HelpContent.DocsBaseUrl, Assert.Single(launcher.Opened), StringComparison.Ordinal);
         Click(guide, FindByName<Button>(guide, "CreatorGuideCloseButton"));

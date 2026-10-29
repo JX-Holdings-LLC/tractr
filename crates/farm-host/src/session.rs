@@ -1,4 +1,4 @@
-//! Headless engine sessions for tools and tests (docs/LANGUAGES.md "FFI: .NET → Rust").
+//! Headless engine sessions for tools and tests (docs/dev/ARCHITECTURE.md "FFI: .NET → Rust").
 //!
 //! A session accepts project JSON or the F# FlatBuffers cartridge. Commands and
 //! effects cross as JSON arrays, and state is stable JSON. The graphical player is

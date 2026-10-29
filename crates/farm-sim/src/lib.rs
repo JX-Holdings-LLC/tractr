@@ -4,13 +4,13 @@
 //! It does no I/O, spawns no threads and never reads a clock. Same seed + same command log ⇒
 //! the same state, byte for byte, on every platform (WebAssembly included).
 //!
-//! **Native numerics** (docs/NUMERICS.md): every quantity is an integer in a fixed
+//! **Native numerics** (docs/dev/NUMERICS.md): every quantity is an integer in a fixed
 //! unit ([`units`]); game logic never does float arithmetic (`clippy::float_arithmetic` is
 //! denied outside [`units`], which converts authoring numbers at the JSON boundary). The state
 //! hash is xxh3-64 over a canonical binary encoding ([`hash`]). Rust is the reference
 //! implementation: the golden replays are recorded from this crate.
 //!
-//! Layout (docs/CONVENTIONS.md): the data shapes live in [`schema`],
+//! Layout (docs/dev/CONVENTIONS.md): the data shapes live in [`schema`],
 //! the root modules are the engine files, and gameplay systems live in their folders
 //! (`farming`, …).
 #![forbid(unsafe_code)]

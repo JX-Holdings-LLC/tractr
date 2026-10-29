@@ -306,7 +306,7 @@ let ``the kitchen sinks set every field and round-trip through the F# codecs`` (
 // ── Comparing the two sides ──────────────────────────────────────────────────
 
 /// The first difference between two JSON trees, as `path: expected / actual`. Numbers may differ
-/// by what the engine's fixed-point grids make of them (docs/NUMERICS.md: a chance on a 2⁻³²
+/// by what the engine's fixed-point grids make of them (docs/dev/NUMERICS.md: a chance on a 2⁻³²
 /// grid reads 0.03 back as 0.030000000027939677, a speed of 4.5 tiles a second is 1843/8192 of
 /// a tile a tick, 4.49951171875): up to 0.002, or a millionth of a large number.
 let rec firstDifference (path: string) (expected: Json) (actual: Json) : string option =

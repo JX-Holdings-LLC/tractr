@@ -34,7 +34,7 @@
 
   <!--
     Player templates for development builds. Export copies a prebuilt farm-player from
-    players/<target>/ next to the app (docs/EXPORT.md "Player templates"). The release workflow
+    players/<target>/ next to the app (docs/dev/EXPORT-INTERNALS.md "Player templates"). The release workflow
     builds both templates and passes them in with -p:FarmPlayerTemplatesDir=<dir>; otherwise
     this builds farm-player for the host with cargo and writes its template.json. The files flow
     to every project that references this one (the app, farmc, the tests), like farm_ffi does.

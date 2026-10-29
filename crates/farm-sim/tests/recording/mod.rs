@@ -1,5 +1,5 @@
 //! The record and bless switches of the golden tests (`FARM_RECORD_GOLDENS`,
-//! `FARM_PLAYER_BLESS`, `FARM_RENDER_BLESS`; docs/NUMERICS.md "Goldens").
+//! `FARM_PLAYER_BLESS`, `FARM_RENDER_BLESS`; docs/dev/NUMERICS.md "Goldens").
 //!
 //! - A switch is on only when set to exactly `1`; `0` or an empty value leaves it off.
 //! - Recording rewrites only the files whose contents change, then fails the test with a

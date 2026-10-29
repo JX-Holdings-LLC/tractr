@@ -174,7 +174,7 @@ they are deterministic and synchronous with the frame. Their errors are in
 
 - `hashState(state)`: the state hash (16 hex digits) of a `GameState` given as JSON text or an
   object, so `hashState(player.stateJson()) === player.hash()`. Since v9 the
-  state hash is xxh3-64 over the state's canonical binary encoding (docs/NUMERICS.md), not a hash
+  state hash is xxh3-64 over the state's canonical binary encoding (docs/dev/NUMERICS.md), not a hash
   of its JSON text.
 - `sfxCues()`, `sfxSamples(cue, sampleRate)`, `musicSamples(name, sampleRate)` (the built-in
   music and ambience loops a frame's `info.music` names; a game's own audio is

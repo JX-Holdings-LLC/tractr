@@ -5,8 +5,8 @@ namespace Tractr.App.Markdown;
 
 /// <summary>
 /// Small, forgiving Markdown parser for release notes: ATX headings, paragraphs,
-/// bullet/numbered lists (nested by indent), fenced code, block quotes, rules, and
-/// inline <c>**bold**</c>, <c>*italic*</c>, <c>`code`</c>, <c>[links](url)</c> and
+/// bullet/numbered lists (nested by indent), fenced code, block quotes, rules, pipe tables,
+/// images on a line of their own, and inline <c>**bold**</c>, <c>*italic*</c>, <c>`code`</c>, <c>[links](url)</c> and
 /// bare URLs. Raw HTML tags are dropped. Anything unrecognised is shown as text.
 /// </summary>
 public static partial class MarkdownParser
@@ -67,6 +67,35 @@ public static partial class MarkdownParser
             {
                 FlushParagraph();
                 blocks.Add(new MarkdownHeading(heading.Groups[1].Length, ParseInlines(heading.Groups[2].Value.TrimEnd('#', ' '))));
+                continue;
+            }
+
+            if (trimmed.StartsWith('|'))
+            {
+                FlushParagraph();
+                var rows = new List<IReadOnlyList<IReadOnlyList<MarkdownInline>>>();
+                var hasHeader = false;
+                for (; i < lines.Length && lines[i].TrimStart().StartsWith('|'); i++)
+                {
+                    var row = lines[i].Trim();
+                    if (TableRuleRegex().IsMatch(row))
+                    {
+                        hasHeader = rows.Count == 1;
+                        continue;
+                    }
+
+                    rows.Add([.. TableCells(row).Select(ParseInlines)]);
+                }
+
+                i--;
+                blocks.Add(new MarkdownTable(rows, hasHeader));
+                continue;
+            }
+
+            if (ImageRegex().Match(trimmed) is { Success: true } image)
+            {
+                FlushParagraph();
+                blocks.Add(new MarkdownImage(image.Groups[1].Value, image.Groups[2].Value));
                 continue;
             }
 
@@ -200,6 +229,39 @@ public static partial class MarkdownParser
         return result;
     }
 
+    /// <summary>The cells of a table row: split on unescaped pipes, without the outer ones.</summary>
+    private static IEnumerable<string> TableCells(string row)
+    {
+        var cell = new StringBuilder();
+        var inCode = false;
+        var end = row.EndsWith('|') && !row.EndsWith("\\|", StringComparison.Ordinal) ? row.Length - 1 : row.Length;
+        for (var i = 1; i < end; i++)
+        {
+            var c = row[i];
+            if (c == '\\' && i + 1 < end && row[i + 1] == '|')
+            {
+                cell.Append('|');
+                i++;
+            }
+            else if (c == '`')
+            {
+                inCode = !inCode;
+                cell.Append(c);
+            }
+            else if (c == '|' && !inCode)
+            {
+                yield return cell.ToString().Trim();
+                cell.Clear();
+            }
+            else
+            {
+                cell.Append(c);
+            }
+        }
+
+        yield return cell.ToString().Trim();
+    }
+
     private static int Depth(int indent) => Math.Min(3, indent / 2);
 
     private static bool IsEscapable(char c) => "\\`*_{}[]()#+-.!>|~".Contains(c, StringComparison.Ordinal);
@@ -231,6 +293,12 @@ public static partial class MarkdownParser
 
     [GeneratedRegex(@"\G\[([^\]]+)\]\(([^)\s]+)(?:\s+""[^""]*"")?\)")]
     private static partial Regex LinkRegex();
+
+    [GeneratedRegex(@"^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$")]
+    private static partial Regex TableRuleRegex();
+
+    [GeneratedRegex(@"^!\[([^\]]*)\]\(([^)\s]+)(?:\s+""[^""]*"")?\)$")]
+    private static partial Regex ImageRegex();
 
     [GeneratedRegex(@"\Ghttps?://[^\s<>()\[\]]+", RegexOptions.IgnoreCase)]
     private static partial Regex BareUrlRegex();

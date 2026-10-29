@@ -1,110 +1,89 @@
 # Pack plugins
 
-A content pack can ship **plugins**: small JavaScript programs that react to
-what happens in the game. A plugin registers handlers with
-`api.on(hook, fn)`; a handler gets the hook's payload as plain JSON and
-answers with a list of **mutations** such as
-`{ type: 'giveMoney', amount: 10 }`. Plugins never touch the game state
-themselves. Each answer is checked and then runs as a `pluginMutation`
-command, so it enters the command log like anything the player does, and a
-replay of that log needs no plugins. A plugin can also define its own
+A [content pack](PACKS.md) can ship **plugins**: small JavaScript programs
+that react to what happens in the game and add systems of their own. A
+plugin registers handlers with `api.on(hook, fn)`; a handler gets the hook's
+payload as plain JSON and answers with a list of **mutations**, changes such
+as `{ type: 'giveMoney', amount: 10 }`. A plugin can also define its own
 minigame kinds, which it runs and draws frame by frame
 ([Minigames](#minigames)).
 
-Plugins run in `farm-plugins`: QuickJS compiled to WebAssembly, one isolated
-instance per plugin, run by the wasmi interpreter with deterministic budgets.
-The same sandbox runs in the editor's Play Mode, in exported games and in the
-web player (`farm-wasm`).
+![How a plugin changes a game: the game steps, a hook fires, your handler runs in its sandbox and returns mutations, the permissions are checked, and the changes apply before the next tick.](media/plugins/plugin-flow.png)
 
-```json
-{
-  "manifest": {
-    "id": "glow-farm", "name": "Glow Farm", "version": "1.0.0",
-    "permissions": {
-      "hooks": ["onDayStart"],
-      "mutations": ["message", "giveItem"]
-    }
-  },
-  "plugins": [{
-    "id": "morning-hum",
-    "hooks": ["onDayStart"],
-    "source": "api.on('onDayStart', p => [{ type: 'message', text: 'Day ' + p.day }, { type: 'giveItem', itemId: 'seed-glowshroom', quantity: 1 }])"
-  }]
-}
-```
+Plugins never touch the game state themselves. Each answer is checked
+against the permissions the player approved and then runs as a command,
+like anything the player does, so a recording of a game replays the same
+without the plugins. Plugins run in a sandbox (a JavaScript engine compiled
+to WebAssembly, one isolated instance per plugin) with deterministic
+budgets, the same in the editor's Play Mode, exported games and the web demo.
 
-## Permissions
+## Your first plugin
 
-The manifest's `permissions` are what the player approves when installing
-the pack. The Mods tab's install review shows them.
+This plugin greets the player each morning and, every seventh day, gives
+them a seed of the pack's own.
 
-| Permission | Default | What it allows |
-|---|---|---|
-| `hooks` | none | The hooks the pack's plugins may hear. A plugin hears the hooks in its own `hooks` list that the manifest also lists. |
-| `mutations` | see below | What the plugins may answer with. |
-| `contentInject` | `true` | Whether the pack's content (definitions, `playerStart`, string tables) loads. When it is `false`, nothing of it loads, the Problems panel warns if the pack has content, and its plugins still run. |
-| `uiPanels` | `false` | Whether the pack's game panels (`content.gamePanels`) show on the game screen, after the game's own ([Game panels](#game-panels)). Without it they are not shown, and the Problems panel warns if the pack has some. It does not depend on `contentInject`. |
-| `minigames` | none | The minigame kinds the pack's plugins may define ([Minigames](#minigames)). A plugin defines the kinds in its own `minigames` list that the manifest also lists. |
+1. **Start a pack** ([Make your first pack](PACKS.md#make-your-first-pack))
+   with an item `seed-glowshroom`.
+2. **Ask for what the plugin needs** in the manifest: the hooks it listens to
+   and the changes it makes.
+3. **Write the plugin.** `source` is the body of a JavaScript function that
+   gets `api`; JSON needs the source on one line, so keep longer plugins in a
+   `.js` file while you write them and paste them in as a string.
 
-### Mutation capabilities
+   ```json
+   {
+     "manifest": {
+       "id": "glow-farm", "name": "Glow Farm", "version": "1.0.0",
+       "permissions": {
+         "hooks": ["onDayStart"],
+         "mutations": ["message", "giveItem"]
+       }
+     },
+     "content": { "items": [ … ] },
+     "plugins": [{
+       "id": "morning-hum",
+       "hooks": ["onDayStart"],
+       "source": "api.on('onDayStart', p => { var out = [{ type: 'message', text: 'Good morning! Day ' + p.day }]; if (p.day % 7 === 0) out.push({ type: 'giveItem', itemId: 'seed-glowshroom', quantity: 1 }); return out; });"
+     }]
+   }
+   ```
 
-Each entry of `permissions.mutations` allows one mutation type:
+   The same source, laid out:
 
-| Entry | Allows |
-|---|---|
-| `"message"`, `"playSound"` | Messages and sounds. |
-| `"giveMoney"`, `"takeMoney"`, `"modifyEnergy"`, `"grantXp"`, `"setWeather"` | That change, with any value the schema allows. |
-| `"setFlag"`, `"giveItem"`, `"takeItem"`, `"modifyFriendship"`, `"startQuest"`, `"warpPlayer"`, `"startDialogue"`, `"performAction"`, `"startMinigame"` | That change, for the pack's **own** content only (see below). `"giveItem:own"` means the same. |
-| `"moveNpc"`, `"startCutscene"`, `"setVariable"`, `"addVariable"`, `"addShopStock"`, `"removeShopStock"`, `"placeNode"`, `"removeNode"`, `"placeMachine"`, `"removeMachine"`, `"setRelationship"`, `"sendMail"` | The event outcome of that name ([Outcome mutations](#outcome-mutations)), for the pack's own content only, like the row above. |
-| `"modifyHealth"` | The `modifyHealth` outcome, with any value the schema allows. |
-| `"giveItem:any"` (any of the types above with `:any`) | That change for any id: your game's content, base content and other packs. |
-| `"*"` | Everything, with any ids. |
+   ```js
+   api.on('onDayStart', p => {
+     var out = [{ type: 'message', text: 'Good morning! Day ' + p.day }];
+     if (p.day % 7 === 0) out.push({ type: 'giveItem', itemId: 'seed-glowshroom', quantity: 1 });
+     return out;
+   });
+   ```
 
-**Own content.** For the types that name content, a plain id means the
-plugin's own pack: `setFlag` with `flag: 'met'` from pack `glow-farm` sets
-the flag `glow-farm:met`, and `giveItem` with `itemId: 'seed'` gives
-`glow-farm:seed`. Ids already written as `glow-farm:…` are kept. Ids of
-other packs (`other-pack:seed`) are refused unless the pack has `type:any`;
-so is your game's own content, because a plain id always means the pack's. With `:any`, ids are used exactly as
-written. A base pack's own definitions keep plain ids, so its plugins need
-`:any` to name them.
+4. **Install and review** it in the Mods tab: the review lists the hooks and
+   changes you asked for.
+5. **Playtest** (F5) and sleep (Z) to reach the next morning. The message
+   shows as a toast. If something is wrong, the debug drawer's plugin errors
+   and an error toast say why ([When a plugin fails](#when-a-plugin-fails)).
+6. **Iterate**: remove the pack, edit the file and install it again.
 
-**Without `permissions.mutations`** (packs written before it existed) the
-plugins get `message`, `playSound`, `setFlag`, `giveItem` and `takeItem` for
-their own content, and their answers to `onEffect` and `onCommand` are
-dropped: those hooks are for watching unless the pack declares what its
-plugins do.
+`itemId: 'seed-glowshroom'` means the pack's own `glow-farm:seed-glowshroom`
+([Own content](#own-content)). The complete version of this pack is
+[demo-mod.json](../fixtures/projects/demo-mod.json).
 
-**Never allowed:** flags (and variables, which are flags) starting with
-`event:`. The engine keeps one-shot events there (`event:<id>:fired`), so a
-plugin could re-arm or switch off the game's events.
+## How plugins run
 
-**Always allowed:** `saveData` ([Saved data](#saved-data)): it keeps only the
-plugin's own data.
-
-### Outcome mutations
-
-These run the event outcome of the same name (Creator Guide, [Event
-logic](CREATOR-GUIDE.md#event-logic)), with its meaning: an unknown id does
-nothing, a node or machine goes only on a free tile, and so on. Coordinates
-are tiles of the largest scene (0 to 511); a `sceneId` left out means the
-scene the NPC is in (`moveNpc`) or the player's (the tile mutations).
-
-| Mutation | Fields |
-|---|---|
-| `moveNpc` | `npcId`, `sceneId` (optional), `x`, `y` |
-| `startCutscene` | `cutsceneId` |
-| `setVariable` | `variable`, `value`: a number (at most 1e9 either way) or a string (at most 4096 characters). `true`/`false` is `setFlag`. |
-| `addVariable` | `variable`, `amount`: an integer, -1,000,000 to 1,000,000 |
-| `addShopStock` | `shopId`, `itemId`, `price` (optional, whole gold, 0 to 1,000,000; absent: the item's price), `dailyLimit` (optional, 1 to 999) |
-| `removeShopStock` | `shopId`, `itemId` |
-| `placeNode` / `removeNode` | `sceneId` (optional), `x`, `y`; `nodeTypeId` for `placeNode` |
-| `placeMachine` / `removeMachine` | `sceneId` (optional), `x`, `y`; `machineTypeId` for `placeMachine` |
-| `setRelationship` | `npcId`, `status`: `single`, `dating`, `engaged` or `married` |
-| `sendMail` | `mailId`: the letter arrives the next morning |
-| `modifyHealth` | `delta`: an integer, -1000 to 1000 (with combat on) |
-
-Variables count toward the plugin's 256 different flags per session.
+- **Handlers** are registered with `api.on(hookName, handler)` when the
+  plugin starts. A handler returns an array of mutations, or nothing (`[]`).
+  The plugin's top-level code runs once per sandbox instance, so keep it to
+  registering handlers and setting up variables.
+- **A plugin hears a hook** when the hook is in both its own `hooks` list and
+  the manifest's `permissions.hooks`.
+- **JavaScript variables last for a session** but are not saved: they start
+  over when a game loads, when a playtest restarts and when the plugin is
+  restarted after a failure. Keep what must last with
+  [saveData](#saved-data).
+- **The sandbox has no clock and no outside world**: no files, no network,
+  `Date.now()` is always 0 and `Math.random()` gives the same sequence in
+  every run ([Determinism](#determinism)).
 
 ## Hooks
 
@@ -133,6 +112,103 @@ order below.
 | `onWeatherRoll` | The night rolled the weather ([Timing](#timing)) | `{ weatherId, day }` |
 | `onCommand`, `onEffect` | Every player command; every effect of a step | `{ commandType }`; `{ effectType }` |
 | `onLoad` | The game started or was loaded with the plugin attached ([Saved data](#saved-data)) | `{ data }` |
+
+## Mutations
+
+A handler answers with an array of mutation objects, each with a `type`.
+Ids are strings and amounts are whole numbers. A mutation outside its ranges
+is refused ([When a plugin fails](#when-a-plugin-fails)).
+
+| Mutation | Fields |
+|---|---|
+| `message` | `text`, at most 500 characters: a toast |
+| `playSound` | `soundId`: a built-in sound (`ui`, `coin`, `harvest`, `quest`, `success`, `error`, …) or a sound asset |
+| `giveItem`, `takeItem` | `itemId`, `quantity` (1 to 999) |
+| `giveMoney`, `takeMoney` | `amount` (1 to 1,000,000) |
+| `setFlag` | `flag`, `value`: `true`/`false`, a number or a string (at most 4096 characters) |
+| `modifyFriendship` | `npcId`, `delta` (-1000 to 1000) |
+| `grantXp` | `skill`, `amount` (1 to 10,000) |
+| `modifyEnergy` | `delta`, whole energy points (-1000 to 1000) |
+| `setWeather` | `weatherId`: today's weather |
+| `startQuest` | `questId` |
+| `warpPlayer` | `sceneId`, `x`, `y`: a tile (a blocked or off-map tile lands on the nearest walkable one) |
+| `startDialogue` | `npcId`, `dialogueId` (optional) |
+| `performAction` | `actionId`: run a creator action |
+| `startMinigame` | `minigameId` |
+| `saveData` | `data`: see [Saved data](#saved-data) |
+
+These run the event outcome of the same name ([Event
+logic](CREATOR-GUIDE.md#event-logic)), with its meaning: an unknown id does
+nothing, a node or machine goes only on a free tile, and so on. Coordinates
+are tiles (0 to 511); a `sceneId` left out means the scene the NPC is in
+(`moveNpc`) or the player's (the tile mutations).
+
+| Mutation | Fields |
+|---|---|
+| `moveNpc` | `npcId`, `sceneId` (optional), `x`, `y` |
+| `startCutscene` | `cutsceneId` |
+| `setVariable` | `variable`, `value`: a number (at most 1e9 either way) or a string (at most 4096 characters). `true`/`false` is `setFlag`. |
+| `addVariable` | `variable`, `amount`: -1,000,000 to 1,000,000 |
+| `addShopStock` | `shopId`, `itemId`, `price` (optional, whole gold, 0 to 1,000,000; absent: the item's price), `dailyLimit` (optional, 1 to 999) |
+| `removeShopStock` | `shopId`, `itemId` |
+| `placeNode` / `removeNode` | `sceneId` (optional), `x`, `y`; `nodeTypeId` for `placeNode` |
+| `placeMachine` / `removeMachine` | `sceneId` (optional), `x`, `y`; `machineTypeId` for `placeMachine` |
+| `setRelationship` | `npcId`, `status`: `single`, `dating`, `engaged` or `married` |
+| `sendMail` | `mailId`: the letter arrives the next morning |
+| `modifyHealth` | `delta`: -1000 to 1000 (with combat on) |
+| `setInventorySize`, `addInventorySize` | `amount`: -1000 to 1000 backpack slots, within the game's progression limits; an occupied slot is never taken away |
+| `addMaxEnergy`, `addMaxHealth` | `amount`: -1000 to 1000 points, within the game's progression limits |
+| `applyBuff` | `buff`: `id`, `stat`, `amount` (-1000 to 1000), `durationMinutes` (1 to 525,600), and optionally `icon`, `persistsAfterSleep` and `additive`; at most 2048 bytes. Reusing an id restarts that buff. At most 64 buffs are active. |
+
+Variables count toward the plugin's 256 different flags per session.
+
+## Permissions
+
+The manifest's `permissions` are what the player approves when installing
+the pack ([Permissions](PACKS.md#permissions) has the whole list). For
+plugins, three matter:
+
+- `hooks`: the hooks the pack's plugins may hear.
+- `mutations`: the changes they may answer with (below).
+- `minigames`: the minigame kinds they may define ([Minigames](#minigames)).
+
+### Mutation capabilities
+
+Each entry of `permissions.mutations` allows one mutation type:
+
+| Entry | Allows |
+|---|---|
+| `"message"`, `"playSound"` | Messages and sounds. |
+| `"giveMoney"`, `"takeMoney"`, `"modifyEnergy"`, `"grantXp"`, `"setWeather"`, `"modifyHealth"`, `"setInventorySize"`, `"addInventorySize"`, `"addMaxEnergy"`, `"addMaxHealth"` | That change, with any value its fields allow. |
+| `"setFlag"`, `"giveItem"`, `"takeItem"`, `"modifyFriendship"`, `"startQuest"`, `"warpPlayer"`, `"startDialogue"`, `"performAction"`, `"startMinigame"`, `"moveNpc"`, `"startCutscene"`, `"setVariable"`, `"addVariable"`, `"addShopStock"`, `"removeShopStock"`, `"placeNode"`, `"removeNode"`, `"placeMachine"`, `"removeMachine"`, `"setRelationship"`, `"sendMail"`, `"applyBuff"` | That change, for the pack's **own** content only (below). `"giveItem:own"` means the same. |
+| `"giveItem:any"` (any of the types above with `:any`) | That change for any id: the game's content, base content and other packs. |
+| `"*"` | Everything, with any ids. |
+
+Ask for as little as the plugin needs: creators read the list before they
+install, and a pack asking for `"*"` is a harder sell.
+
+### Own content
+
+For the types that name content, a plain id means the
+plugin's own pack: `setFlag` with `flag: 'met'` from pack `glow-farm` sets
+the flag `glow-farm:met`, and `giveItem` with `itemId: 'seed'` gives
+`glow-farm:seed`. Ids already written as `glow-farm:…` are kept. Ids of
+other packs (`other-pack:seed`) are refused unless the pack has `type:any`;
+so is the game's own content, because a plain id always means the pack's.
+With `:any`, ids are used exactly as written. A base pack's own definitions keep plain ids, so its plugins need
+`:any` to name them.
+
+**Without `permissions.mutations`** the plugins get `message`, `playSound`,
+`setFlag`, `giveItem` and `takeItem` for their own content, and their answers to `onEffect` and `onCommand` are
+dropped: those hooks are for watching unless the pack declares what its
+plugins do.
+
+**Never allowed:** flags (and variables, which are flags) starting with
+`event:`. The engine keeps one-shot events there (`event:<id>:fired`), so a
+plugin could re-arm or switch off the game's events.
+
+**Always allowed:** `saveData` ([Saved data](#saved-data)): it keeps only the
+plugin's own data.
 
 ## Saved data
 
@@ -186,14 +262,8 @@ Panel ids are namespaced (`county-fair:fair-board`), and so are the items and
 actions entries name when the pack defines them. Flags are named as written:
 a plugin's own flags are `packId:flag`, so a panel can show what the pack's
 plugins keep there. The game shows the panels of its enabled packs, in load
-order, after its own. [fixtures/projects/county-fair-mod.json](../fixtures/projects/county-fair-mod.json)
-is an example pack with a panel and the building, goal and combat content packs
-can add.
-
-A refused or malformed mutation is dropped; the others in the same answer
-still run. The plugin errors list (the editor's Play Mode drawer, the game's
-error toasts) says why. Unknown entries in `permissions.mutations` are
-ignored and the Problems panel warns about them.
+order, after its own. [county-fair-mod.json](../fixtures/projects/county-fair-mod.json)
+is an example pack with a panel.
 
 ## Timing
 
@@ -307,6 +377,8 @@ and any other id `playSound` can play), at the player's sound-effect
 volume. They are cosmetic, like the frames: they need no mutation permission
 and never enter the command log. An id the game does not know plays nothing.
 
+![The minigame canvas: 400 by 240 units, origin top left, y down, with a text command (y is the baseline), a sprite command and a rectangle command.](media/plugins/minigame-canvas.png)
+
 **Draw commands** use minigame coordinates: the canvas is 400 × 240, origin
 top left, `y` down, scaled into the window and clipped to it.
 
@@ -379,8 +451,8 @@ twice the fuel its first start used.
   every plugin and every run.
 - A minigame session depends only on its start and its input: the same
   config, seed and input (keys and pointer) give the same states, frames,
-  sounds and score on every machine (its `Math.random()` starts the same way in every session; use
-  `info.seed` for variety). The seed comes from the game's cosmetic
+  sounds and score on every machine (its `Math.random()` starts the same way
+  in every session; use `info.seed` for variety). The seed comes from the game's cosmetic
   randomness, and only the score enters the command log.
 - Passing the state into the sandbox and back costs about 260 fuel per byte
   each frame, so a 16 KiB state uses about 4 of a frame's 10 million. Keep
@@ -391,54 +463,41 @@ twice the fuel its first start used.
   session's history; what must last goes in `saveData` and comes back in
   `onLoad` ([Saved data](#saved-data)), also after a rebuild: a plugin
   rebuilt after a strike hears `onLoad` again before the next tick, with
-  the data it has saved so far. Replays are not affected: the command log, with the plugins'
-  answers in it, is the replay.
-- In the web player (`farm-wasm`) plugins run on the calling thread (a page
-  that wants them off the main thread runs the whole player in a Worker), and
-  the budgets above were measured natively: wasmi inside WebAssembly is
-  slower, so the same fuel takes longer there.
+  the data it has saved so far. Replays are not affected: the command log,
+  with the plugins' answers in it, is the replay.
+- In the web demo the same fuel takes longer than on the desktop (the
+  sandbox runs inside the browser's WebAssembly), but a handler finishes or
+  fails the same way in both.
 
-## Sandbox hardening
+## When a plugin fails
 
-Notes for engine developers (the 2026-09-30 audit's defence-in-depth items).
+Nothing a plugin does can stop or slow the game past its budgets. When
+something goes wrong, the plugin's errors list (the debug drawer in Play
+Mode, error toasts in the game) says what and why:
 
-- **wasmi's tail-call dispatch.** wasmi runs each WebAssembly instruction
-  with a tail call that LLVM turns into a jump at opt-level 2 and above. If a
-  build broke that (wasmi below opt-level 2, debug assertions in wasmi,
-  sanitizers), every instruction would grow the native stack and a plugin
-  using its whole budget would crash the process, editor included. The root
-  `Cargo.toml` turns off wasmi's debug assertions in every profile, and the
-  `farm-plugins` test
-  `a_plugin_running_its_whole_budget_fits_in_a_small_native_stack` runs a
-  full 50-million-instruction budget on a 512 KiB thread, so a broken build
-  fails CI instead of crashing players. Builds that cannot keep those
-  settings turn on `farm-plugins`' `portable-dispatch` feature (wasmi's loop
-  dispatch: slower, never stack-bound).
-- **WASI stubs.** The guest imports only inert `wasi_snapshot_preview1`
-  stubs. `random_get` checks the range against linear memory before it
-  allocates anything (the current guest does not import it).
-- **The minigame API needs no guest change.** `api.minigame` is a line of
-  JavaScript (`farm_plugins::PRELUDE`) that runs before every plugin's
-  source and registers the minigame as the handler of the hook
-  `minigame:<name>` through the guest's own `api.on`. Only a minigame
-  session's instance is granted that hook, so the hook handlers' instance
-  never registers one, and one guest call per frame runs `update` and `draw`.
-  Everything the plugin answers is checked on the host side
-  (`farm_runtime::canvas::parse_canvas`, the state and score rules), so the
-  prelude is a convenience, not a boundary: a plugin that rewrites it only
-  breaks its own minigame.
-- **Output sizes.** The host never copies more than 1 MiB of an answer or
-  1 KB of an error text out of the guest, however large the plugin makes
-  them. The guest itself still copies a thrown message in full into its own
-  memory (within its 40 MiB); cutting it there too needs a guest rebuild
-  (`tools/plugin-guest/build.sh`), which is left for the next guest change.
+| What happened | What the game does |
+|---|---|
+| A mutation is malformed, out of range or not permitted | That mutation is dropped; the others in the same answer still apply. |
+| `permissions.mutations` has an entry the game doesn't know | It is ignored, and Problems warns. |
+| A handler throws | It gives no mutations this time. Not a strike. |
+| A handler runs out of fuel or memory, or recurses too deep | The call stops: a strike. |
+| Three strikes within 100 calls | The plugin is off for the rest of the session. |
+| A minigame throws, runs out of fuel or answers something malformed | The minigame ends as failed with score 0. |
 
-### Player progression mutations
+After a strike the plugin restarts from its source, so its variables start
+over and it hears `onLoad` again with what it saved. The limits are in
+[Limits](#limits).
 
-Optional capabilities `setInventorySize`, `addInventorySize`, `addMaxEnergy`
-and `addMaxHealth` take an integer `amount` between -1000 and 1000 and apply the
-same configured limits as event outcomes. An occupied backpack slot is never
-lost. `applyBuff` takes a `buff` record (`id`, `stat`, integer `amount`, positive
-`durationMinutes`, optional `icon`, `persistsAfterSleep` and `additive`). The
-payload is bounded to 2048 bytes, duration to 525600 minutes, amount to ±1000,
-and at most 64 active buffs are retained. Reusing a buff id refreshes it.
+Common causes:
+
+- **Nothing happens.** The hook is missing from the manifest's
+  `permissions.hooks` or the plugin's `hooks` (it needs both), or the
+  mutation type is missing from `permissions.mutations`.
+- **"not permitted" on an id.** A plain id means the pack's own content; to
+  give the game's own `turnip`, ask for `"giveItem:any"`.
+- **A change a step late.** Answers apply before the *next* tick
+  ([Timing](#timing)); `onWeatherRoll` answers come after the night's
+  watering.
+
+How the sandbox is built and hardened is in
+[Plugin sandbox internals](dev/PLUGIN-SANDBOX.md).

@@ -3,7 +3,7 @@ namespace FarmEngine.Schemas
 open FarmEngine.Authoring
 
 // Generated once from the C# records of FarmEngine.Schemas (a port of packages/engine-schemas), then
-// kept by hand. Numbers are `float` in authoring units (tiles, points, minutes; docs/NUMERICS.md):
+// kept by hand. Numbers are `float` in authoring units (tiles, points, minutes; docs/dev/NUMERICS.md):
 // project JSON keeps them, and the Rust engine converts them to fixed-unit integers when it loads
 // a cartridge. `option` is an optional or nullable field; `Extra` keeps the keys the schema does
 // not declare, in order.

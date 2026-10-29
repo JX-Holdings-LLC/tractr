@@ -1,7 +1,7 @@
 //! Loading saves: the save version check, the parse into [`GameState`] and the `GameState`
 //! checks (from `SchemaValidation.ValidateGameState`).
 //!
-//! Saves belong to the player's machine, so Rust owns their format (docs/LANGUAGES.md "Saves
+//! Saves belong to the player's machine, so Rust owns their format (docs/dev/ARCHITECTURE.md "Saves
 //! (Rust only)"). A save is the `GameState` JSON in authoring units. Only the current save
 //! version ([`CURRENT_SAVE_VERSION`]) loads; there are no migrations from older ones. Parsing
 //! quantizes the state onto the engine's integer grids (`farm_sim::units`: positions to 1/8192

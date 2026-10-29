@@ -5,7 +5,7 @@ open System.IO
 open System.Reflection
 open System.Text.Json
 
-/// A prebuilt `farm-player` for one target (docs/EXPORT.md "Player templates"): a folder with
+/// A prebuilt `farm-player` for one target (docs/dev/EXPORT-INTERNALS.md "Player templates"): a folder with
 /// the executable, `template.json` (`{ "target", "version", "sha256", "files" }`) and the
 /// player's third-party license notices (and for the web, the page files).
 type PlayerTemplate =

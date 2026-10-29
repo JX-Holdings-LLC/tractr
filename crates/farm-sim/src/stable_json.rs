@@ -6,7 +6,7 @@
 //! `serde_json::Value` tree first: each object is written in the order its fields arrive, and
 //! only an object whose keys did not arrive in stable order is rearranged, by copying its
 //! members once into sorted order. Saving the state runs this on the simulation thread
-//! (docs/LANGUAGES.md "Saves"). The first version built the tree and sorted it
+//! (docs/dev/ARCHITECTURE.md "Saves"). The first version built the tree and sorted it
 //! ([`stringify_via_value`]); it stays as the reference the writer is tested against, and as
 //! the fallback for what the writer does not handle itself (a map key that is not a string or
 //! an integer, a 128-bit integer beyond 64 bits, an `f32`), so the output never depends on

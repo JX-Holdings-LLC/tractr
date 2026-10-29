@@ -1,4 +1,4 @@
-//! Save files across game updates (docs/EXPORT.md "Tests": a save from version 1 of a game still
+//! Save files across game updates (docs/dev/EXPORT-INTERNALS.md "Tests": a save from version 1 of a game still
 //! loads after content is added to and removed from that game).
 
 use farm_cart::save_file::{cart_hash, compare_versions};

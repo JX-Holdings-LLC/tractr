@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks that the version numbers in the repository agree (docs/RELEASING.md "Versions").
+# Checks that the version numbers in the repository agree (docs/dev/RELEASING.md "Versions").
 #
 #   tools/release/versions.sh                  release.json, the Cargo workspace version and the
 #                                              Directory.Build.props default are the same X.Y.Z,

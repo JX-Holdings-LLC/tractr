@@ -1,6 +1,6 @@
 //! `farm-ffi`: the C ABI that `FarmEngine.Interop` (C#) binds to.
 //!
-//! Conventions (docs/LANGUAGES.md "FFI: .NET → Rust"):
+//! Conventions (docs/dev/ARCHITECTURE.md "FFI: .NET → Rust"):
 //! - coarse, handle-based, batched calls; never one call per tile or entity;
 //! - Rust allocates result buffers, .NET copies what it needs and frees them with
 //!   [`fe_bytes_free`]; no pointer into Rust memory outlives the next call on that handle;

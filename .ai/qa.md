@@ -65,11 +65,11 @@ Report these as **skipped**, not blocked:
 
 ## Risky areas
 
-- Golden fixtures and determinism (`fixtures/golden`, `docs/NUMERICS.md`).
+- Golden fixtures and determinism (`fixtures/golden`, `docs/dev/NUMERICS.md`).
 - The plugin sandbox: budgets, permissions and hostile packs
   (`crates/farm-plugins`, `docs/PLUGINS.md`).
 - Importing projects, packs, images and saves from other people (F# project loading,
   `crates/farm-cart`).
 - Export Game: templates, archives, PE patching (`docs/EXPORT.md`).
-- The Update Center (Velopack and GitHub Releases, `docs/RELEASING.md`).
-- F#/Rust schema parity: the two project pipelines (`docs/LANGUAGES.md`).
+- The Update Center (Velopack and GitHub Releases, `docs/dev/RELEASING.md`).
+- F#/Rust schema parity: the two project pipelines (`docs/dev/ARCHITECTURE.md`).

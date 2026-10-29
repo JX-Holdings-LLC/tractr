@@ -2,7 +2,7 @@
 //! `packages/engine-schemas`). One C# file → one module here, everything re-exported flat.
 //!
 //! Serialization rules: simulation quantities are integers in fixed units, read from and written
-//! to JSON in authoring units through the `crate::units` serde adapters (docs/NUMERICS.md; only
+//! to JSON in authoring units through the `crate::units` serde adapters (docs/dev/NUMERICS.md; only
 //! screen-facing fields stay `f64`), JSON names are camelCase, optional fields are omitted when
 //! `None`, present-as-null fields (zod `.nullable()`) are plain `Option`s that serialize `null`,
 //! property initializers are the struct's `Default` (applied when a key is missing), and zod

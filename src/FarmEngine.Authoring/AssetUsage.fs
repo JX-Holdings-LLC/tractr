@@ -3,7 +3,7 @@ namespace FarmEngine.Authoring
 open System.Collections.Generic
 open FarmEngine.Schemas
 
-/// Which custom assets the game uses (docs/EXPORT.md "Only used assets ship"). The cartridge
+/// Which custom assets the game uses (docs/dev/EXPORT-INTERNALS.md "Principles"). The cartridge
 /// compiler leaves the others out, and Export Game lists them as warnings.
 module AssetUsage =
     /// Every string value in a JSON tree.

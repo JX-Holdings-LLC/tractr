@@ -5,7 +5,7 @@ namespace FarmEngine.Authoring
 /// `!== undefined` test. There is no `undefined` value: code that would store `undefined`
 /// removes the key instead, which is what `JSON.stringify` makes of it.
 ///
-/// No reflection, no System.Text.Json, no I/O (docs/LANGUAGES.md "F# conventions"). Conversion
+/// No reflection, no System.Text.Json, no I/O (docs/dev/ARCHITECTURE.md "F# conventions"). Conversion
 /// from and to System.Text.Json lives in FarmEngine.Authoring.Net.
 type Json =
     | JNull

@@ -51,7 +51,7 @@ fn fixtures() -> Vec<(String, Value)> {
 }
 
 /// The differences between two JSON trees (at most 40). Numbers may differ by what the
-/// fixed-point grids make of them (docs/NUMERICS.md: 0.03 on the 2⁻³² chance grid, a speed on
+/// fixed-point grids make of them (docs/dev/NUMERICS.md: 0.03 on the 2⁻³² chance grid, a speed on
 /// 1/8192 of a tile a tick) when `grid` is set; otherwise they must be equal.
 fn differences(path: &str, expected: &Value, actual: &Value, grid: bool, out: &mut Vec<String>) {
     const LIMIT: usize = 40;

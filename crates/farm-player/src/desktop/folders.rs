@@ -1,4 +1,4 @@
-//! User folders (docs/EXPORT.md "Proper user folders"): saves in `<data dir>/<gameId>/saves/`,
+//! User folders (docs/PLAYER.md "Saves"): saves in `<data dir>/<gameId>/saves/`,
 //! screenshots in `<data dir>/<gameId>/screenshots/`, settings in
 //! `<config dir>/<gameId>/settings.toml`. On Windows the company, when set, comes
 //! first (`%APPDATA%\<company>\<gameId>\`). `FARM_PLAYER_USER_DIR` puts both under one folder

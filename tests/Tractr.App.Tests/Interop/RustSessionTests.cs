@@ -20,7 +20,7 @@ public sealed class RustSessionTests
     public void CreatedStateHashesLikeTheContentGolden()
     {
         // The content golden records the state hash of createGameState(project, "content:starter-farm")
-        // (xxh3 over the canonical binary state since v9, docs/NUMERICS.md).
+        // (xxh3 over the canonical binary state since v9, docs/dev/NUMERICS.md).
         using var golden = JsonDocument.Parse(File.ReadAllText(RepoFile("fixtures", "golden", "content", "starter-farm.json")));
         var project = RecordJson.Parse<GameProject>(golden.RootElement.GetProperty("project").GetRawText());
         using var session = RustSession.Create(project, "content:starter-farm");

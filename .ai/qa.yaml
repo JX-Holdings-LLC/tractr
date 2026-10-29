@@ -102,11 +102,11 @@ skip:
 
 risky_areas:
   - Golden fixtures (fixtures/golden, fixtures/player, fixtures/render): never re-record in QA; a diff is a finding.
-  - Plugin sandbox (crates/farm-plugins, docs/PLUGINS.md): budgets, permissions, hostile packs.
+  - Plugin sandbox (crates/farm-plugins, docs/PLUGINS.md, docs/dev/PLUGIN-SANDBOX.md): budgets, permissions, hostile packs.
   - Project, pack and save import (F# project loading, crates/farm-cart): untrusted files.
-  - Export Game (src/FarmEngine.Export, docs/EXPORT.md): templates, archives, PE patching.
+  - Export Game (src/FarmEngine.Export, docs/dev/EXPORT-INTERNALS.md): templates, archives, PE patching.
   - Update Center (src/Tractr.Updates): Velopack and GitHub Releases.
-  - F#/Rust schema parity (two project pipelines, docs/LANGUAGES.md).
+  - F#/Rust schema parity (two project pipelines, docs/dev/ARCHITECTURE.md).
 
 issues:
   labels: [qa]

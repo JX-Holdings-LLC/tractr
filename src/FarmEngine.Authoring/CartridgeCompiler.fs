@@ -7,7 +7,7 @@ open FarmEngine.Schemas
 /// The deterministic F# cartridge compiler (format 3, `schemas/cart.fbs`). A project is split
 /// into the compiled content, the inputs of a new game (`start`, Rust `StartState`) and what
 /// presentation reads (`presentation`, Rust `Presentation`); the player never reads project
-/// JSON. The sections are JSON in authoring units (docs/NUMERICS.md); the engine converts their
+/// JSON. The sections are JSON in authoring units (docs/dev/NUMERICS.md); the engine converts their
 /// numbers to its fixed-unit integers when it reads them. Every base64 `data:` URL inside them
 /// moves to the asset table and is replaced by `asset:<id>`, where the id is a content hash, so
 /// equal files are stored once and ids never depend on order.

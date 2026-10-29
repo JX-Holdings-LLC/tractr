@@ -24,7 +24,7 @@ ignored = ["farm-plugins"]
 libfuzzer-sys = "0.4"
 farm-fuzz = { path = "../crates/farm-fuzz" }
 # wasmi's tail-call dispatch relies on optimizations sanitizer builds may not do (see the root
-# Cargo.toml and docs/PLUGINS.md "Sandbox hardening").
+# Cargo.toml and docs/dev/PLUGIN-SANDBOX.md "Hardening").
 farm-plugins = { path = "../crates/farm-plugins", features = ["portable-dispatch"] }
 
 # Its own workspace, so the main one never builds it.

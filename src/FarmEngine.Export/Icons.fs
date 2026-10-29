@@ -41,7 +41,7 @@ module Icons =
     /// How the icon is resampled: bilinear from the nearest mipmap when it shrinks, bilinear at
     /// its own size (Mitchell would blur it), Mitchell cubic when it grows. That is what
     /// SkiaSharp 2.88's high filter quality chose; sizes between two mipmap levels come out
-    /// slightly different (docs/SKIA-MIGRATION.md).
+    /// slightly different (docs/dev/IMAGE-SAFETY.md).
     let private sampling (scale: float32) =
         if scale < 1.0f then
             SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Nearest)

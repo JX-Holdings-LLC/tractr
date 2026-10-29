@@ -16,7 +16,7 @@ serde.workspace = true
 serde_json.workspace = true
 indexmap.workspace = true
 ryu-js.workspace = true
-# The state hash: xxh3-64 over the canonical binary encoding (docs/NUMERICS.md).
+# The state hash: xxh3-64 over the canonical binary encoding (docs/dev/NUMERICS.md).
 twox-hash = { version = "2", default-features = false, features = ["xxhash3_64", "std"] }
 
 [dev-dependencies]

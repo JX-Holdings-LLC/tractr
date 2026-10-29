@@ -3,7 +3,7 @@
 //! A cartridge (format 3) splits a project into compiled content, the inputs of a new game
 //! ([`farm_sim::StartState`]) and what presentation reads ([`farm_sim::Presentation`]), so the
 //! player never reads project JSON. The sections are JSON in authoring units, converted to the
-//! simulation's fixed-unit integers as they are read (docs/NUMERICS.md). Embedded files live in
+//! simulation's fixed-unit integers as they are read (docs/dev/NUMERICS.md). Embedded files live in
 //! an asset table and are referenced from the JSON as `asset:<id>` strings.
 
 use farm_cart_schema::farm_engine::cart::{cartridge_buffer_has_identifier, root_as_cartridge};

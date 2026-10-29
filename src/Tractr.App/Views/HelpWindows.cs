@@ -32,6 +32,12 @@ public static class HelpContent
         return $"https://github.com/JX-Holdings-LLC/tractr/blob/{reference}/docs/";
     }
 
+    /// <summary>Folder of the guide's pictures, relative to the docs folder; they are embedded beside the guide.</summary>
+    public const string GuideMediaFolder = "media/guide/";
+
+    /// <summary>Manifest name prefix of the embedded guide pictures (see the app's .csproj).</summary>
+    public const string GuideImageResourcePrefix = "Tractr.App.Guide.";
+
     /// <summary>The creator guide's Markdown.</summary>
     public static string CreatorGuideMarkdown()
     {
@@ -39,6 +45,21 @@ public static class HelpContent
             ?? throw new InvalidOperationException($"The creator guide resource {CreatorGuideResource} is missing.");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    /// <summary>An embedded picture of the guide by its URL in the Markdown, or null for any other image.</summary>
+    public static Stream? GuideImage(string url)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+        if (!url.StartsWith(GuideMediaFolder, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var name = url[GuideMediaFolder.Length..];
+        return name.Contains('/', StringComparison.Ordinal)
+            ? null
+            : typeof(HelpContent).Assembly.GetManifestResourceStream(GuideImageResourcePrefix + name);
     }
 
     /// <summary>A link of the guide as a URL to open: web links as they are, docs relative to the repository.</summary>
@@ -204,8 +225,20 @@ public sealed class CreatorGuideWindow : HelpWindowBase
         : base("CreatorGuideWindow", EditorStrings.Get("guide.title"), 760, 720)
     {
         ArgumentNullException.ThrowIfNull(launcher);
-        Guide = new MarkdownView { Name = "CreatorGuideView", Markdown = HelpContent.CreatorGuideMarkdown() };
-        Guide.LinkClicked += (_, url) => launcher.Open(HelpContent.ResolveLink(url));
+        Guide = new MarkdownView
+        {
+            Name = "CreatorGuideView",
+            ImageSource = HelpContent.GuideImage,
+            Markdown = HelpContent.CreatorGuideMarkdown(),
+        };
+        Guide.LinkClicked += (_, url) =>
+        {
+            // A link to a heading of the guide scrolls there; any other opens in the browser.
+            if (!url.StartsWith('#') || !Guide.ScrollToAnchor(url))
+            {
+                launcher.Open(HelpContent.ResolveLink(url.StartsWith('#') ? "CREATOR-GUIDE.md" + url : url));
+            }
+        };
         var footer = Footer(CloseButton("CreatorGuideCloseButton"));
         DockPanel.SetDock(footer, Dock.Bottom);
         Content = new DockPanel

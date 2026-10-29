@@ -2,7 +2,7 @@
 //! (port of engine-core/src/rng.ts / `Rng.cs`). Algorithm: xoshiro128** (Blackman & Vigna),
 //! 128-bit state. State lives in `GameState.rng` so a saved game resumes its random stream
 //! deterministically. All arithmetic wraps, matching `Math.imul` and `>>> 0`. Draws are used as
-//! integers (docs/NUMERICS.md "Randomness"): chances compare against thresholds out of 2³², ranges
+//! integers (docs/dev/NUMERICS.md "Randomness"): chances compare against thresholds out of 2³², ranges
 //! and weighted picks scale the draw with a 64-bit multiply and shift.
 
 use serde::{Deserialize, Serialize};

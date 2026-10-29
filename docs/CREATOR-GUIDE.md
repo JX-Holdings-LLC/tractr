@@ -1,9 +1,34 @@
 # Creator guide: build a farm game without code
 
-This guide walks through Tractr on the desktop: start a project, build
-the world in **Edit Mode**, playtest in **Play Mode**, and export a game that
+This guide walks through Tractr on the desktop: start a project, build the
+world in **Edit Mode**, playtest in **Play Mode**, and export a game that
 anyone can play. Everything happens in the editor; you never need to write
 code. The editor shows this guide under **Help → Creator Guide** (F1).
+
+![Five steps from a new project to a shipped game: New Project, Edit Mode, Play Mode, Problems and Export Game, with Play Mode and Problems leading back to Edit Mode.](media/guide/workflow.png)
+
+New to Tractr? Read sections 1, 3 and 4 first, then come back to section 2
+for the part of your game you are working on. For installing Tractr see
+[Install and update](INSTALL.md); when something does not work, see
+[Troubleshooting](TROUBLESHOOTING.md).
+
+Contents:
+
+- [1. Start a project](#1-start-a-project)
+- [2. Build the world in Edit Mode](#2-build-the-world-in-edit-mode): the
+  [map](#map), [content](#content), [your game's world](#your-games-world),
+  [people](#people-and-relationships), [events](#event-logic),
+  [cutscenes](#cutscenes), [quests](#quests-request-boards-and-mines),
+  [the farm](#building-the-farm), [gathering and fishing](#gathering-forage-and-fishing),
+  [progression](#player-progression-skills-and-food-buffs),
+  [the calendar](#weekdays-routines-and-shop-calendars), [festivals](#festivals),
+  [goals](#long-term-goals), [combat](#combat-and-adventure),
+  [sound](#sound-and-music), [art](#art), [Workshop](#workshop),
+  [Interface](#interface), [Mods](#mods), [Settings](#settings) and
+  [Problems](#problems)
+- [3. Playtest in Play Mode](#3-playtest-in-play-mode)
+- [4. Share your game](#4-share-your-game)
+- [Player controls](#player-controls-default)
 
 ## 1. Start a project
 
@@ -18,18 +43,32 @@ code. The editor shows this guide under **Help → Creator Guide** (F1).
   where the elder and the lantern keeper wait.
 - **Blank**: an empty scene and the default item catalog.
 
-**File → Open Project** (Ctrl+O) lists your projects. They are saved
-automatically in the app's data folder (`%APPDATA%\Tractr` on
-Windows, `~/.config/Tractr` on Linux,
-`~/Library/Application Support/Tractr` on macOS), one *project folder* each under
-`projects/`: `project.json`, a file per scene, NPC, dialogue and item
-(`scenes/`, `npcs/`, `dialogue/`, `items/`), and your art and sounds as
-ordinary image and sound files in `assets/`. A big game opens quickly, and a
-team can keep the folder in git and review and merge each other's changes:
-a scene's tiles are one line of the map per row. A save writes only the
-files that changed and leaves anything else you keep in the folder (a
-README, `.git`) alone. A project from before 0.10 moves into its folder the
-next time it is saved.
+**File → Open Project** (Ctrl+O) lists your projects. Tractr saves them
+automatically in its data folder:
+
+| System | Projects folder |
+|---|---|
+| Windows | `%APPDATA%\Tractr\projects\` |
+| Linux | `~/.config/Tractr/projects/` |
+| macOS | `~/Library/Application Support/Tractr/projects/` |
+
+Each project is a folder of ordinary files:
+
+```text
+WillowCreek/
+  project.json      settings, content lists and everything else
+  scenes/           one file per scene; a map's tiles are one line per row
+  npcs/             one file per NPC
+  dialogue/         one file per dialogue
+  items/            one file per item
+  assets/           your art and sounds as image and sound files
+```
+
+A big game opens quickly, and a team can keep the folder in git and review
+and merge each other's changes. A save writes only the files that changed
+and leaves anything else you keep in the folder (a README, `.git`) alone. An
+older single-file project opens as it is and becomes a folder the next time
+it is saved.
 
 **File → Export Project JSON** writes the whole project as one file you can
 keep anywhere or send to someone, and **Import Project JSON** brings one back
@@ -39,43 +78,23 @@ copied into `projects/` shows up in Open Project by itself.
 
 ## 2. Build the world in Edit Mode
 
-Press **F6** (or the mode button in the header) for Edit Mode. The editor has
-eight tabs: Map, Content, Problems, Settings, Mods, Art, Workshop and Interface.
-Undo and redo work everywhere: **Ctrl+Z** and **Ctrl+Y**.
+Press **F6** (or the mode button in the header) for Edit Mode. Undo and redo
+work everywhere: **Ctrl+Z** and **Ctrl+Y**.
+
+![The eight tabs of Edit Mode: Map, Content, Problems, Settings, Mods, Art, Workshop and Interface, each with what it holds.](media/guide/edit-mode-tabs.png)
+
+The filter box above each list narrows it by name or id, and **Ctrl+K** (or
+`Ctrl+P`) finds any entry, scene or art in the whole project.
 
 ### Map
 
 Pick a scene in the **Scene** list above the map; zoom with **−**, **+** and
-**Fit**. Hover a tile to inspect it. The map works from the keyboard too: click
-it or Tab to it, move the gold editing cursor with the **arrow keys**, and
-press **Enter** or **Space** to use the current tool there (Rectangle and
-Select take two presses, one per corner; **Esc** cancels). While the map has
-focus, letter keys pick the tools: `V` Inspect, `B` Brush, `R` Rectangle,
-`G` Fill area, `I` Pick, `M` Select, `E` Erase layer, `X` Block, `U`
-Unblock, `D` Door and `P` Player start. Screen readers announce the tile
-under the cursor. Picking a brush is not an undo step.
-
-The **Sky** box above the map previews the scene as the game draws it: tick
-it, pick a time of day (**Morning**, **Noon**, **Evening** or **Night**), a
-season and a weather, and the map shows the day/night tint, the foliage tint
-and the weather overlay for them (the scene's own look first, then the
-season's and the game's; an indoor scene has no weather). The rain and snow
-stand still. It starts off so the map stays easy to read, and it is only a
-view: it isn't saved and isn't an undo step.
-
-Markers on the map show doors (`D`), where doors from other scenes arrive
-(`A`), event triggers (`!`, with their region outlined), the mine entrance
-(`M`) and the player start (`S`); the **Markers** box above the map hides
-them. With **Inspect**, click a marker to open it: the door form, the event in
-Content, the door an arrival comes from, or the mine settings. Wherever a form
-asks for a tile (a door's arrival, the Workshop's tile, an event's tile, an NPC
-schedule stop or waypoint, the mine entrance), **Pick on map** lets you click
-it instead: the map shows the right scene, and **Esc** cancels.
+**Fit**. Hover a tile to inspect it.
 
 The side panel holds the tools (drag its edge to make it wider):
 
 - **Tile brush**: the terrain to paint (grass, soil, water, path, wall, door,
-  floor, and your own tiles from the Art tab).
+  floor, and your own terrains).
 - **Map tools**: **Brush** paints one tile at a time (click and drag),
   **Rectangle** fills a rectangle, **Fill area** floods connected tiles,
   **Pick** takes the terrain under the cursor as the brush, **Select** marks
@@ -93,7 +112,6 @@ The side panel holds the tools (drag its edge to make it wider):
   start**, **Fill scene** with one tile, **Clear crops/items** and **Reset soil**.
   **Indoor (no weather)** marks a greenhouse or interior: rain doesn't water its
   soil, storms don't damage its crops, and no rain or snow falls on screen.
-  Scenes can be up to 512×512 tiles.
   Under the size boxes, the calculator shows the tile count and aspect ratio,
   and warns when a resize would cut tiles off. Shrinking moves the player
   start, NPCs (with their schedules and waypoints), animals, door arrivals,
@@ -104,165 +122,42 @@ The side panel holds the tools (drag its edge to make it wider):
   below shows every door of the scene; **Duplicate** starts a copy of a door
   on the next free tile, ready to adjust and save.
 
-### Content
+#### Working from the keyboard
 
-The Content tab edits everything the game is made of. Pick a category, select
-an entry (or click **New** to start one), change its fields and click **Save
-changes**. Lists show each entry's art, and forms preview the art they point
-to:
+Click the map or Tab to it, move the gold editing cursor with the **arrow
+keys**, and press **Enter** or **Space** to use the current tool there
+(Rectangle and Select take two presses, one per corner; **Esc** cancels).
+While the map has focus, letter keys pick the tools: `V` Inspect, `B` Brush,
+`R` Rectangle, `G` Fill area, `I` Pick, `M` Select, `E` Erase layer, `X`
+Block, `U` Unblock, `D` Door and `P` Player start. Screen readers announce
+the tile under the cursor. Picking a brush is not an undo step.
 
-- **NPCs** and **Dialogue**: characters, where they stand, their daily
-  schedules (a row per stop: the time of day, the scene and the tile), patrol
-  waypoints and gift tastes, and dialogue trees whose options can open shops,
-  offer quests, or depend on friendship, items and flags. In the game the
-  dialogue box shows the NPC's art.
-- **Items** and **Crops**: the item catalog (tools and their tiers, seeds,
-  materials, gifts) and crops with growth days, seasons, regrowth and yields,
-  on **Basic**, **Growth** and **Asset** tabs. A crop shows its profit per
-  harvest and a summary card. The built-in crops are listed too: **Customize**
-  one to change it (deleting your version brings the built-in back).
-- **Quests**: objectives (harvest, collect, talk, visit, craft, gift, ship,
-  slay, catch, hearts, bundle and mineFloor), rewards, prerequisites and
-  availability. `deadlineDays` counts playable days including acceptance;
-  `deadlineDay` is an inclusive absolute date. When both are set, the earlier
-  date wins. Expired quests become **failed**, run `onFail` once, and appear
-  in the quest log. A quest-status condition can check failure. Only repeatable
-  quests may restart after failure.
-- **Request boards**: place a board at a scene tile, paint an object to identify
-  it, and add weighted quest templates. `intervalDays` is 1 for daily requests
-  or 7 for weekly requests. Interacting accepts the period's request once.
-  Optional item lists, quantity ranges and money ranges vary item objectives
-  and rewards deterministically from the game seed. Accepted requests keep their
-  rolled values across rotation and saving. A board template should have
-  auto-start disabled; its requests are repeatable.
-- **Mines**: add independently progressing mines, each with a name, entrance,
-  floor dimensions, depth bands, elevator interval and optional music.
-  The original mine remains in Settings and has the reserved id `mine`.
-  Named mine entrances appear on the map and use the same interaction as the
-  original. `mineFloor` conditions and quest objectives accept a mine id;
-  leaving it empty selects the original mine. Progress and elevator checkpoints
-  are saved separately for each mine.
-- **Events**: triggers, conditions and outcomes, for story beats, flags and
-  variables (see [Event logic](#event-logic) below).
-- **Shops**: stock (a card per item with its price override, daily limit and
-  the seasons it's sold in), prices and tool repair.
-- **Recipes**, **Node types** and **Machine types**: hand crafting, the
-  resources trees and rocks drop, and machines that process ingredients. A
-  recipe's category groups it in the game's crafting menu, and the editor
-  shows its profit per craft and per hour of machine time. The built-in node
-  types (trees, rocks, weeds, mine rocks and ore) are listed and can be
-  customized like crops. Players can pick an idle machine back up from the
-  crafting menu; doors, door arrivals and the mine entrance stay clear of
-  machines.
-- **Animal species** and **Fish tables**: what animals produce, and which fish
-  bite in each scene and season.
-- **Actions** and **Minigames**: an action is a named bundle of effects (give
-  an item, set a flag, show a message, start a minigame) that an item's
-  **Use** button, a dialogue option, an event or a hotkey can run. A minigame
-  is a short challenge whose score picks the reward. Its **Kind** is one of
-  the games built into the player: **Timing bar**, **Hold to catch**,
-  **Simple battle**, **Rhythm tap**, **Moving target** and **Memory
-  sequence**, or a kind an enabled content pack defines (listed as
-  `pack:name (from Pack Name)`; its plugin runs and draws the game, see
-  [docs/PLUGINS.md](PLUGINS.md#minigames)). Each built-in kind's settings
-  show as fields with their defaults (clear one to play the default); a
-  pack kind's settings are passed to its plugin as written. A kind the game
-  doesn't have plays as a single "Go!" button that scores 0.5, which
-  Problems warns about (also when the pack of a pack kind is missing, turned
-  off or lacks the permission), as it does about settings a built-in kind
-  doesn't read or numbers outside their range.
+#### Markers and Pick on map
 
-- **Terrains**, **Tools**, **Item kinds**, **Crop qualities** and **Crop
-  mutations**: the vocabulary of your game's world (see
-  [Your game's world](#your-games-world) below). The built-in ones are listed
-  and can be customized like crops.
-- **Cutscenes**: scenes that play out over time (see
-  [Cutscenes](#cutscenes) below).
-- **Heart events**: cutscenes that play once at a number of hearts with an
-  NPC (see [People and relationships](#people-and-relationships) below).
-- **Buildings**: barns, coops, sheds, greenhouses and house upgrades a
-  builder puts up (see [Building the farm](#building-the-farm) below).
-- **Collections**, **Bundles**, **Achievements** and **Mail**: goals that
-  last a whole game, and letters (see [Long-term goals](#long-term-goals)
-  below).
-- **Monsters**: what the player fights when combat is on (see
-  [Combat and adventure](#combat-and-adventure) below).
+Markers on the map show doors (`D`), where doors from other scenes arrive
+(`A`), event triggers (`!`, with their region outlined), the mine entrance
+(`M`) and the player start (`S`); the **Markers** box above the map hides
+them. With **Inspect**, click a marker to open it: the door form, the event in
+Content, the door an arrival comes from, or the mine settings. Wherever a form
+asks for a tile (a door's arrival, the Workshop's tile, an event's tile, an NPC
+schedule stop or waypoint, the mine entrance), **Pick on map** lets you click
+it instead: the map shows the right scene, and **Esc** cancels.
 
-Every nested field also has an **Edit as JSON** box, for pasting or bulk
-changes.
+#### Previewing the sky
 
-The filter box above the list narrows it by name or id, and **Ctrl+K** (or
-`Ctrl+P`) finds any entry, scene or art in the whole project. Fields you
-haven't saved stay as typed when you switch tabs or undo something elsewhere;
-choosing another entry asks whether to save them first, and they are saved
-before another project opens or the editor closes. A number outside its range
-is reported by name instead of being changed for you.
-
-### Your game's world
-
-A game doesn't have to be a farm on Earth. The ground, the tools, the kinds of
-item, the crop quality tiers and the sky are all content, so a game on an
-alien planet can have regolith instead of grass, a plasma cutter instead of an
-axe, and twin suns instead of one. A new project starts with the classic
-vocabulary; change any of it in the Content tab.
-
-- **Terrains** are what a tile can be. Each one is painted on a layer (ground,
-  path or object) and has its rules: whether the player can **walk** on it,
-  whether crops can be **planted** on it (soil), whether it counts as **water**
-  for crops that need water nearby, whether the fishing rod works on it,
-  whether it **blocks light**, the **energy** a player loses stepping onto it
-  (lava, acid), and whether it keeps the weather off like a greenhouse floor.
-  Its **transforms** say which tool action turns it into what: the built-in
-  grass and floor become soil when tilled. A transform can name one tool, or
-  apply to every tool with that action. The map's palette lists your
-  terrains with their colour (or their art, when you give them some).
-- **Tools** have an **action**: water, till, harvest, fish, break, transform
-  (apply a terrain's transform: a plasma cutter turning rock walls into
-  floor), place (put down a terrain: a terraformer laying water) or plant (a
-  seed drone sowing the seeds you hold). Every tool still strikes the
-  gathering node it faces. A tool has its **key** in play, its energy cost
-  (15% less per tier above the first), the **area** it covers at each tier (a
-  row across the player's facing, and rows ahead) and the skill its node
-  breaks train. An item is a tool when its kind is equippable and its
-  **tool type** names the tool.
-- **Item kinds** (the item's **type**) say what items of the kind do: planted
-  (seeds), fertilize, equipped as a tool, **eaten** for energy (the item's own
-  energy, or the kind's), placed, given as gifts, sold to shops.
-- **Crop qualities** are the tiers a harvest comes out at, ranked in list
-  order: each has its price, yield and mutation-chance multipliers, its stars
-  and colour. Fertilized soil plants at the second tier, and every three
-  farming levels raise a harvest one tier. **Crop mutations** are rare
-  harvests that yield more; each takes its **share** of a crop's mutation
-  chance, checked in list order (shares above a total of 1 never happen).
-- **Growth requirements** (a crop's **Requirements**): the terrains it can be
-  planted on, the scene tags it needs (`greenhouse`, `cave`), fertilizers it
-  must be planted with, light or dark, a temperature range, and neighbours (a
-  number of crops of a type, of a terrain, or of water within a radius). A
-  crop whose light, temperature or neighbours aren't right on a night doesn't
-  grow that night. Scenes have **dark**, **temperature** and **tags**;
-  seasons have a temperature too (a scene's own wins). A place with no
-  temperature suits every crop.
-- **The sky**: in **Settings**, the day/night tint is a list of keyframes
-  (a minute of the day and a colour the scene is multiplied by), with a
-  foliage tint, for the whole game and per season; a scene can have its own.
-  **Minutes per day** sets the length of a day (1440 is 24 hours): the clock,
-  time-of-day conditions, machines and the tint follow it. Weather types pick
-  an **overlay**: the built-in rain and snow, or your own (rain streaks, snow
-  flakes, drifting dust, or just a tint) with its colour, density, speed and
-  screen tint. Acid rain is a green rain overlay with a tint.
-- **Words**: in **Settings**, how money is written (`{0} credits`), what
-  energy is called (`Oxygen`) and the skills' names, with translations per
-  language. The game's HUD, shops, inventory and quest log use them.
-
-Problems lists a tile, item, node type or event that names a terrain, tool,
-kind or tier the game doesn't have, a tool whose key moves the player or
-opens a menu, and requirements that name what doesn't exist.
+The **Sky** box above the map previews the scene as the game draws it: tick
+it, pick a time of day (**Morning**, **Noon**, **Evening** or **Night**), a
+season and a weather, and the map shows the day/night tint, the foliage tint,
+the lights and the weather overlay for them (the scene's own look first, then
+the season's and the game's; an indoor scene has no weather). The rain and
+snow stand still. It starts off so the map stays easy to read, and it is only
+a view: it isn't saved and isn't an undo step.
 
 ### Bigger maps, layers and lights
 
-- *Size*: a scene can be up to 512 tiles a side (256 before 0.10). The
-  game only draws and builds what the camera shows, so a big map costs
-  little more than a small one to play.
+- *Size*: a scene can be up to 512 tiles a side. The game only draws and
+  builds what the camera shows, so a big map costs little more than a small
+  one to play.
 - *Extra layers*: besides background, overlay and object, a scene can have
   its own layers. List them in the scene panel's **Extra layers (one per line)** box, one
   per line: an id (`rugs`), or an id and `above` (`treetops above`) for a
@@ -276,9 +171,11 @@ opens a menu, and requirements that name what doesn't exist.
   neighbours of the same terrain. Without art, the game draws its edges
   where it meets another terrain, so a pond or a path has a shore or a
   border. With art, give the terrain's asset an animation clip named
-  `autotile` with 16 frames: the game draws frame `n`, where `n` adds 1 when
-  the tile above is the same terrain, 2 for the one to the right, 4 below
-  and 8 to the left (frame 0 stands alone, frame 15 is surrounded).
+  `autotile` with 16 frames, in the order below. Off the map counts as the
+  same terrain, so a field that reaches the edge has no seam.
+
+  ![How autotile frames are numbered: the tile above adds 1, the right 2, below 4 and the left 8; frame 0 stands alone and frame 15 is surrounded.](media/guide/autotile.png)
+
 - *Tall objects*: an object-layer terrain's **Tall** (0 to 8) is how many
   tiles it rises above its own tile: a tree, a lamp post, a high fence. It is
   drawn standing, in front of what is behind it and behind what is in front,
@@ -292,127 +189,129 @@ opens a menu, and requirements that name what doesn't exist.
   once grown), glowing crystals (a node, until broken), lava (a terrain,
   even on an extra layer) and a building's lit windows (once it stands). The
   darker the day/night tint, the more a light stands out; at noon it adds
-  nothing.
-  The Sky box above the map shows them at **Night**.
+  nothing. The Sky box above the map shows them at **Night**.
 
 Problems lists a tile painted on a layer its scene doesn't have, a light
 outside its ranges and two extra layers with one id.
 
-### Sound and music
+### Content
 
-Import sound effects and music as **OGG** or **WAV** files in the Art tab
-(as **Sound** or **Music** assets); they ship inside the exported game. The
-`playSound` outcome plays a sound asset (or a built-in sound by name). Music
-can be set per **scene**, **season**, **weather** (outdoors) and **festival**,
-and the `playMusic` outcome (or a cutscene's music step) plays a music asset
-until the player changes scene, however they get there (a door, a warp, a
-mine ladder, a debug teleport). What plays, first match wins: the music an
-event or cutscene chose, today's festival, the weather, the scene, the
-season. With none of those, the built-in music plays as before.
+The Content tab edits everything the game is made of. Pick a category, select
+an entry (or click **New** to start one), change its fields and click **Save
+changes**. Lists show each entry's art, and forms preview the art they point
+to. Every nested field also has an **Edit as JSON** box, for pasting or bulk
+changes.
 
-In the Art tab's sound list, **Play** plays the selected sound or music once
-(press it again to stop), through the same decoder the game uses. **Rename**
-changes the name the editor shows; the asset's id stays, so everything that
-plays it still does. Problems lists a file the game can't play (cut short,
-damaged, Ogg Opus instead of Ogg Vorbis, a compressed WAV, longer than 10
-minutes) as an error: the game would leave it out and play the built-in sound
-or music in its place.
+| Category | What it holds | More |
+|---|---|---|
+| **NPCs**, **Dialogue** | Characters, where they stand, schedules, gift tastes, daily lines, portraits; dialogue trees whose options open shops, offer quests or depend on friendship, items and flags | [People and relationships](#people-and-relationships) |
+| **Items**, **Crops** | The item catalog (tools and their tiers, seeds, materials, gifts, food) and crops with growth days, seasons, regrowth and yields, on **Basic**, **Growth** and **Asset** tabs. A crop shows its profit per harvest | [Your game's world](#your-games-world) |
+| **Quests**, **Request boards**, **Mines** | Objectives, rewards and deadlines; boards of rotating requests; extra mines | [Quests, request boards and mines](#quests-request-boards-and-mines) |
+| **Events** | Triggers, conditions and outcomes, for story beats, flags and variables | [Event logic](#event-logic) |
+| **Shops** | Stock (a card per item with its price override, daily limit and the seasons it's sold in), prices, opening hours and tool repair | [Weekdays, routines and shop calendars](#weekdays-routines-and-shop-calendars) |
+| **Recipes**, **Node types**, **Machine types** | Hand crafting, the resources trees and rocks drop, and machines that process ingredients. A recipe's category groups it in the game's crafting menu, and the editor shows its profit per craft and per hour of machine time | [Building the farm](#building-the-farm) |
+| **Animal species**, **Fish tables** | What animals produce, and which fish bite where and when | [Gathering, forage and fishing](#gathering-forage-and-fishing) |
+| **Actions**, **Minigames** | Named bundles of effects, and short challenges whose score picks a reward | [Actions and minigames](#actions-and-minigames) |
+| **Terrains**, **Tools**, **Item kinds**, **Crop qualities**, **Crop mutations** | The vocabulary of your game's world | [Your game's world](#your-games-world) |
+| **Cutscenes**, **Heart events** | Scenes that play out over time | [Cutscenes](#cutscenes) |
+| **Buildings** | Barns, coops, sheds, greenhouses and house upgrades a builder puts up | [Building the farm](#building-the-farm) |
+| **Collections**, **Bundles**, **Achievements**, **Mail** | Goals that last a whole game, and letters | [Long-term goals](#long-term-goals) |
+| **Monsters** | What the player fights when combat is on | [Combat and adventure](#combat-and-adventure) |
 
-### Cutscenes
+The built-in crops, node types, terrains, tools, item kinds, crop qualities
+and mutations are listed too: **Customize** one to change it (deleting your
+version brings the built-in back). Players can pick an idle machine back up
+from the crafting menu; doors, door arrivals and the mine entrance stay clear
+of machines.
 
-A cutscene is a list of steps that run one after another, over time. Start
-one from an event, an action or a dialogue option with the `startCutscene`
-outcome. While it plays the player watches: movement and other commands wait
-until it ends, and the clock follows the **pause in modals** setting.
+Fields you haven't saved stay as typed when you switch tabs or undo something
+elsewhere; choosing another entry asks whether to save them first, and they
+are saved before another project opens or the editor closes. A number
+outside its range is reported by name instead of being changed for you.
 
-- **say**: a line, by an NPC, the player or a narrator; the player advances it.
-- **choice**: a question with answers, each going to a step **label**.
-- **jump**: goes to a label, when its conditions hold (flags, items,
-  friendship, the same conditions events use).
-- **move**: walks the player or an NPC to a tile (waiting for them to arrive,
-  unless told not to); **face** turns them; **emote** shows a bubble over them
-  (`exclaim`, `question`, `heart`, `music`, `anger`, `sweat`, `sleep`,
-  `idea`).
-- **wait**: pauses for some seconds.
-- **camera**: pans to a tile or follows a character; a camera step with
-  neither returns to the player. **fade**: fades the screen out to a colour,
-  or back in.
-- **music** changes the music; **sound** plays a sound.
-- **outcomes** runs outcomes (give items, set flags, start quests).
-- **end** stops the cutscene.
+### Your game's world
 
-A skippable cutscene skips ahead when the player presses Escape: the
-outcomes steps it passes still run, music and face steps apply, and moved
-characters arrive where they were going. Skipping stops at a choice, so the
-player still picks the branch. In play, Interact, Enter or Space advances a
-line, the number keys pick an answer, and a click works too.
+A game doesn't have to be a farm on Earth. The ground, the tools, the kinds of
+item, the crop quality tiers and the sky are all content, so a game on an
+alien planet can have regolith instead of grass, a plasma cutter instead of an
+axe, and twin suns instead of one. A new project starts with the classic
+vocabulary; change any of it in the Content tab.
 
-### Event logic
+- **Terrains** are what a tile can be. Each one is painted on a layer (ground,
+  path or object) and has its rules: whether the player can **walk** on it,
+  whether crops can be **planted** on it (soil), whether it counts as water
+  for crops that need water nearby, whether the fishing rod works on it,
+  whether it **blocks light**, the energy a player loses stepping onto it
+  (lava, acid), and whether it keeps the weather off like a greenhouse floor.
+  Its transforms say which tool action turns it into what: the built-in
+  grass and floor become soil when tilled. A transform can name one tool, or
+  apply to every tool with that action. The map's palette lists your
+  terrains with their colour (or their art, when you give them some).
+- **Tools** have an action: water, till, harvest, fish, break, transform
+  (apply a terrain's transform: a plasma cutter turning rock walls into
+  floor), place (put down a terrain: a terraformer laying water), plant (a
+  seed drone sowing the seeds you hold) or attack (a weapon, see [Combat and
+  adventure](#combat-and-adventure)). Every tool still strikes the gathering
+  node it faces. A tool has its key in play, its energy cost (15% less per
+  tier above the first), the area it covers at each tier (a row across the
+  player's facing, and rows ahead) and the skill its node breaks train. An
+  item is a tool when its kind is equippable and its **tool type** names the
+  tool.
+- **Item kinds** (the item's type) say what items of the kind do: planted
+  (seeds), fertilize, equipped as a tool, **eaten** for energy (the item's own
+  energy, or the kind's), placed, given as gifts, sold to shops.
+- **Crop qualities** are the tiers a harvest comes out at, ranked in list
+  order: each has its price, yield and mutation-chance multipliers, its stars
+  and colour. Fertilized soil plants at the second tier, and every three
+  farming levels raise a harvest one tier. **Crop mutations** are rare
+  harvests that yield more; each takes its share of a crop's mutation
+  chance, checked in list order (shares above a total of 1 never happen).
+- **Growth requirements** (a crop's **Requirements**): the terrains it can be
+  planted on, the scene tags it needs (`greenhouse`, `cave`), fertilizers it
+  must be planted with, light or dark, a temperature range, and neighbours (a
+  number of crops of a type, of a terrain, or of water within a radius). A
+  crop whose light, temperature or neighbours aren't right on a night doesn't
+  grow that night. Scenes have dark, temperature and tags; seasons have a
+  temperature too (a scene's own wins). A place with no temperature suits
+  every crop.
+- **The sky**: in **Settings**, the day/night tint is a list of keyframes
+  (a minute of the day and a colour the scene is multiplied by), with a
+  foliage tint, for the whole game and per season; a scene can have its own.
+  The length of a day (1440 minutes is 24 hours) sets the clock, and
+  time-of-day conditions, machines and the tint follow it. Weather types pick
+  an overlay: the built-in rain and snow, or your own (rain streaks, snow
+  flakes, drifting dust, or just a tint) with its colour, density, speed and
+  screen tint. Acid rain is a green rain overlay with a tint.
+- **Words**: in **Settings**, how money is written (`{0} credits`), what
+  energy is called (`Oxygen`) and the skills' names, with translations per
+  language. The game's HUD, shops, inventory and quest log use them.
 
-An event runs its outcomes when its **trigger** happens and all its
-conditions hold. An event with a scene only fires while the player is in that
-scene.
-
-The triggers: entering a tile, interacting with one, time passing (`tick`),
-the start of a day, a time of day (`time`, at the event's **Minute**), and
-harvesting, selling, crafting, catching a fish, picking up an item, a
-friendship change, a quest changing, a building finished (`build`), a bundle
-completed, an achievement unlocked and a monster slain (`slay`). All but the
-first five can name a **subject** (the crop or item, the NPC, the quest, the
-building kind, the bundle, the achievement or the monster); without one the
-event fires for any.
-
-**Conditions** check tiles, items, flags, the day, the season, the year, the
-time, quests, friendship and the weather, and also:
-
-- **variable**: compares a variable (`eq`, `ne`, `lt`, `le`, `gt`, `ge`)
-  with a number, or with a text for `eq` and `ne`.
-- **all**, **any** and **not**: groups of conditions, nested as deep as you
-  like.
-- **chance**: holds with a probability (0 to 1). The roll comes from the
-  game's seed and the moment, so a replay rolls the same.
-- **scene**, **hearts** (at least and at most), `dayOfSeason` and
-  **relationship** (single, dating, engaged, married).
-- **money** (at least), **skillLevel**, **mineFloor** (the deepest floor
-  reached), **building** (standing buildings of a kind, its upgrades
-  counting), **collection** (items it holds, or all of them), **bundle**
-  (complete), **achievement** (unlocked), **shipped** (units shipped of an
-  item, or of everything), **slain** (monsters of a kind, or of any) and
-  **birthday** (today is an NPC's birthday, or anyone's).
-
-Variables are flags that hold a number or a text as well as true or false:
-**setVariable** sets one, **addVariable** adds to a number (a missing one
-counts as 0), and `{var:NAME}` shows one in any text.
-
-**Outcomes** give and take items and money, set flags, change friendship and
-energy, start quests, dialogues, cutscenes, minigames and actions, play
-sounds and music, change tiles and warp the player, and also: **moveNpc**
-(to a scene and tile), **setWeather**, **giveExperience** (in a skill),
-**addShopStock** and **removeShopStock** (a shop keeps the change for the
-rest of the game), **placeNode** and **removeNode**, **placeMachine** and
-**removeMachine**, **setRelationship**, **sendMail** (a letter that arrives
-the next morning) and **modifyHealth** (with combat on). An outcome that
-triggers events of its own (a harvest, a sale) runs them too, four levels
-deep at most.
+Problems lists a tile, item, node type or event that names a terrain, tool,
+kind or tier the game doesn't have, a tool whose key moves the player or
+opens a menu, and requirements that name what doesn't exist.
 
 ### People and relationships
+
+An NPC has a place to stand, a daily **Schedule** (a row per stop: the time
+of day, the scene and the tile), patrol waypoints, gift tastes, a birthday
+and dialogue. In the game the dialogue box shows the NPC's art.
 
 #### Daily lines
 
 An NPC's **Lines** are what it says when the player talks to it, without a
 dialogue tree for each day. A line has the events' conditions (the day, the
-season, the weather, the scene, hearts, flags; an empty NPC in **hearts** or
-**relationship** means the NPC itself) and a **weight**. Each day the NPC
-picks one of the lines whose conditions hold, by weight, and says it in place
-of its first dialogue's text, with that dialogue's options. An NPC with lines
-and no dialogue just says the line.
+season, the weather, the scene, hearts, flags; an empty NPC in hearts or
+relationship means the NPC itself) and a weight. Each day the NPC picks one
+of the lines whose conditions hold, by weight, and says it in place of its
+first dialogue's text, with that dialogue's options. An NPC with lines and no
+dialogue just says the line.
 
 #### Text substitution
 
 Any dialogue, cutscene line, event or action message, quest and game panel
 can name things that change: `{player}`, `{farm}`, `{spouse}`, `{npc:ID}`,
-`{item:ID}`, `{var:NAME}`, `{season}`, `{day}`, `{year}`, `{date}`, `{time}`
-and `{money}`. Anything else in braces stays as written.
+`{item:ID}`, `{var:NAME}`, `{season}`, `{day}`, `{weekday}`, `{year}`,
+`{date}`, `{time}` and `{money}`. Anything else in braces stays as written.
 
 #### Portraits
 
@@ -433,7 +332,7 @@ People** and save their rules:
 
 - Friendship decay: points an NPC loses on a day the player neither
   talked to it nor gave it a gift.
-- **Dating**: a **romanceable** NPC at the dating hearts accepts the dating
+- **Dating**: a romanceable NPC at the dating hearts accepts the dating
   gift (or, without one, starts dating by itself the next morning).
 - **Marriage**: a dated NPC at the proposal hearts accepts the proposal
   gift; the wedding is some days later, with its own cutscene if you pick
@@ -444,8 +343,8 @@ People** and save their rules:
 - **Children** arrive every so many days of marriage, up to a number, with
   the names you list.
 
-The **setRelationship** outcome sets a stage directly, and the
-**relationship** condition checks one.
+The setRelationship outcome sets a stage directly, and the relationship
+condition checks one.
 
 #### The player character
 
@@ -455,6 +354,130 @@ a name, a farm name and the colours of skin, hair, shirt, trousers and an
 accent, or **Random**. Items with a **Wear** slot (hat, shirt, trousers) are
 clothes: the inventory's **Wear** button puts one on, and the player is drawn
 with its colour or, for a hat, its art.
+
+### Event logic
+
+![An event: WHEN its trigger happens, IF all its conditions hold, THEN its outcomes run in order.](media/guide/event-logic.png)
+
+An event runs its outcomes when its trigger happens and all its conditions
+hold. An event with a scene only fires while the player is in that scene.
+
+The triggers: entering a tile, interacting with one, time passing (`tick`),
+the start of a day, a time of day (`time`, at the event's **Minute**), and
+harvesting, selling, crafting, catching a fish, picking up an item, a
+friendship change, a quest changing, a building finished (`build`), a bundle
+completed, an achievement unlocked and a monster slain (`slay`). All but the
+first five can name a subject (the crop or item, the NPC, the quest, the
+building kind, the bundle, the achievement or the monster); without one the
+event fires for any.
+
+**Conditions** check tiles, items, flags, the day, the season, the year, the
+time, quests, friendship and the weather, and also:
+
+- **variable**: compares a variable (`eq`, `ne`, `lt`, `le`, `gt`, `ge`)
+  with a number, or with a text for `eq` and `ne`.
+- **all**, **any** and **not**: groups of conditions, nested as deep as you
+  like.
+- **chance**: holds with a probability (0 to 1). The roll comes from the
+  game's seed and the moment, so a replay rolls the same.
+- **scene**, **hearts** (at least and at most), `dayOfSeason`, **weekday**
+  and **relationship** (single, dating, engaged, married).
+- **money** (at least), **skillLevel**, **mineFloor** (the deepest floor
+  reached), **building** (standing buildings of a kind, its upgrades
+  counting), **collection** (items it holds, or all of them), **bundle**
+  (complete), **achievement** (unlocked), **shipped** (units shipped of an
+  item, or of everything), **slain** (monsters of a kind, or of any),
+  **birthday** (today is an NPC's birthday, or anyone's), **perk** and
+  **buff** (see [Player progression](#player-progression-skills-and-food-buffs)).
+
+Variables are flags that hold a number or a text as well as true or false:
+**setVariable** sets one, **addVariable** adds to a number (a missing one
+counts as 0), and `{var:NAME}` shows one in any text.
+
+**Outcomes** give and take items and money, set flags, change friendship and
+energy, start quests, dialogues, cutscenes, minigames and actions, play
+sounds and music, change tiles and warp the player, and also: **moveNpc**
+(to a scene and tile), **setWeather**, **giveExperience** (in a skill),
+**addShopStock** and **removeShopStock** (a shop keeps the change for the
+rest of the game), **placeNode** and **removeNode**, **placeMachine** and
+**removeMachine**, **setRelationship**, **sendMail** (a letter that arrives
+the next morning), **modifyHealth** (with combat on), the player upgrades and
+**applyBuff** ([Player progression](#player-progression-skills-and-food-buffs)).
+An outcome that triggers events of its own (a harvest, a sale) runs them
+too, four levels deep at most.
+
+#### Actions and minigames
+
+An **action** is a named bundle of effects (give an item, set a flag, show a
+message, start a minigame) that an item's **Use** button, a dialogue option,
+an event or a hotkey can run.
+
+A **minigame** is a short challenge whose score picks the reward. Its
+**Kind** is one of the games built into the player: **Timing bar**, **Hold
+to catch**, **Simple battle**, **Rhythm tap**, **Moving target** and
+**Memory sequence**, or a kind an enabled content pack defines (listed as
+`pack:name (from Pack Name)`; its plugin runs and draws the game, see
+[Pack plugins](PLUGINS.md#minigames)). Each built-in kind's settings show as
+fields with their defaults (clear one to play the default); a pack kind's
+settings are passed to its plugin as written. A kind the game doesn't have
+plays as a single "Go!" button that scores 0.5. Problems warns about that
+(also when the pack of a pack kind is missing, turned off or lacks the
+permission), about settings a built-in kind doesn't read, and about numbers
+outside their range.
+
+### Cutscenes
+
+A cutscene is a list of steps that run one after another, over time. Start
+one from an event, an action or a dialogue option with the `startCutscene`
+outcome. While it plays the player watches: movement and other commands wait
+until it ends, and the clock follows the pause in modals setting.
+
+- **say**: a line, by an NPC, the player or a narrator; the player advances it.
+- **choice**: a question with answers, each going to a step label.
+- **jump**: goes to a label, when its conditions hold (flags, items,
+  friendship, the same conditions events use).
+- **move**: walks the player or an NPC to a tile (waiting for them to arrive,
+  unless told not to); **face** turns them; **emote** shows a bubble over them
+  (`exclaim`, `question`, `heart`, `music`, `anger`, `sweat`, `sleep`,
+  `idea`).
+- **wait**: pauses for some seconds.
+- **camera**: pans to a tile or follows a character; a camera step with
+  neither returns to the player. **fade**: fades the screen out to a colour,
+  or back in.
+- **music** changes the music; **sound** plays a sound.
+- **outcomes** runs outcomes (give items, set flags, start quests).
+- **end** stops the cutscene.
+
+A skippable cutscene skips ahead when the player presses Escape: the
+outcomes steps it passes still run, music and face steps apply, and moved
+characters arrive where they were going. Skipping stops at a choice, so the
+player still picks the branch. In play, Interact, Enter or Space advances a
+line, the number keys pick an answer, and a click works too.
+
+### Quests, request boards and mines
+
+- **Quests** have objectives (harvest, collect, talk, visit, craft, gift,
+  ship, slay, catch, hearts, bundle and mineFloor), rewards, prerequisites
+  and availability. A deadline can be relative or absolute: `deadlineDays`
+  counts playable days including the day the quest is accepted, and
+  `deadlineDay` is an inclusive date. When both are set, the earlier date
+  wins. A quest that runs out of time is **failed**: it runs `onFail` once
+  and shows in the quest log as failed, and the quest-status condition can
+  check for it. Only repeatable quests can be started again after failing.
+- **Request boards** are notice boards of rotating requests. Place a board
+  at a scene tile, paint an object there so players can see it, and add
+  weighted quest templates. `intervalDays` is 1 for daily requests or 7 for
+  weekly ones, and interacting with the board accepts the current request
+  once. Optional item lists, quantity ranges and money ranges vary each
+  request's objectives and rewards, rolled from the game's seed, and an
+  accepted request keeps its values through rotation and saving. Give board
+  templates auto-start off: their requests are repeatable.
+- **Mines**: besides the original mine in **Settings** (id `mine`), add
+  mines of your own, each with a name, an entrance, floor dimensions, depth
+  bands, an elevator interval and optional music. Their entrances appear on
+  the map and work like the original's, and each mine keeps its own progress
+  and elevator checkpoints. The `mineFloor` condition and quest objective
+  take a mine id; empty means the original mine.
 
 ### Building the farm
 
@@ -476,6 +499,8 @@ that process recipes it can be:
   (a scarecrow) keeps storms and pests off the crops there overnight. Pests
   are off until the pest chance in **Settings → Farm** is above 0: each night an
   outdoor crop no object protects is eaten with that chance.
+- **Fish production**: a trap or a pond, see [Gathering, forage and
+  fishing](#gathering-forage-and-fishing).
 - Furniture and decoration: a machine type with none of these.
 
 Placeable objects appear in the game's crafting menu with **Place** (an item
@@ -524,6 +549,186 @@ new game picks from. With two or more, a new game asks the player to choose
 scene takes the farm scene's place; doors and events that lead to the farm
 lead to the chosen map.
 
+### Gathering, forage and fishing
+
+#### Seasonal nodes and morning forage
+
+In **Node types**, set **Seasons** to hide a node outside those seasons;
+leave it empty for year-round gathering. Each drop can have its own seasons
+too: only the current season's drops take part in the weighted roll. A
+seasonal node keeps its remaining health while it is out of season.
+
+In the map's surroundings, **Morning forage** edits a list of spawn tables.
+Give each a unique id, a maximum number of new nodes per morning, weighted
+node types and the background terrains they may grow on. Scene tags,
+seasons and rectangular regions can narrow where a table applies, and
+**Preview eligible tiles** lists the coordinates before you save. Forage
+never grows on paths, doors and their arrival tiles, blocked tiles, crops,
+items, machines, existing nodes, or where the player or an NPC stands. The
+first tick of a game and each morning roll from the game's seed, so the same
+game always grows the same forage. **Lifetime days** removes forage nobody
+collected after that many days, and all spawned forage clears when the
+season changes. The Workshop's **Forage** pattern creates a spawn table and
+its resource node together. Problems warns when no tile qualifies.
+
+#### Fish tables
+
+A fish table's **Filter** limits it to a range of minutes (inclusive), a
+weather, a season and an event condition, and each entry's **Rules →
+Filter** can narrow that entry further. The first table that fits the place
+and moment is used; tick **Layered** on that table to combine the entries of
+every fitting table into one weighted roll (the first table still decides
+the chance of junk). An entry's **Rules** also set the experience it gives
+(8 by default), whether the catch has a quality, and an optional size range.
+Quality uses the game's crop-quality tiers, the fishing skill and the
+minigame score. The **Catch log** remembers the biggest of each species.
+
+An item's **Fishing gear** makes it `bait` or `tackle`. The first stack of
+each in the inventory is used automatically: bait adds weight to the fish it
+names (empty means all), and tackle lowers the chance a fish escapes by a
+percentage and can raise the quality. One of each is used up only when a fish
+lands in the inventory, never for junk, an escaped fish or a full bag.
+
+A machine type's **Fish production** makes a trap or a pond. Give it exactly
+one **Table id** (a trap) or **Species item id** (a pond), an interval in
+days and a quantity. On those days an empty trap or pond fills with fish the
+player collects like any machine output. A trap's table follows its season,
+time, weather, scene and entry filters, and output waiting to be collected is
+never replaced.
+
+### Player progression, skills and food buffs
+
+#### Upgrades
+
+In **Settings → Player progression**, set limits for permanent backpack,
+energy and health upgrades. The `setInventorySize`, `addInventorySize`,
+`addMaxEnergy` and `addMaxHealth` outcomes take an `amount` in slots or
+whole points, stay within those limits, and never take away an occupied
+backpack slot. Health upgrades need combat on. An upgrade raises the maximum;
+it does not heal the player.
+
+A shop stock line can sell an **Upgrade** instead of its item: give it a
+stable id, one of those outcome kinds and its amount. The line's item gives
+it a name, art and base price, and buying it applies the upgrade once. Keep
+the upgrade id the same after you ship a game: saves remember it.
+
+A shop's **Tool upgrades** list turns a tool into the next tier of the same
+kind for a price in gold, materials and a number of nights. Players hand the
+tool in on the shop's Repair tab and collect it there when it is ready; with
+a full backpack it waits safely at the shop, and it goes back to its old slot
+when it can. A closed shop takes and returns nothing.
+
+#### Skills
+
+The progression form also holds **Skills**. Without any, the built-in skills
+and their bonuses apply. **Classic skills** writes them out as definitions
+you can edit: the farming yield and quality and combat bonuses of the current
+curve, the classic experience, and training rows for the project's nodes and
+monsters.
+
+A skill's training rows say which actions earn its experience: `harvest`,
+`gather`, `catch`, `gift`, `talk`, `craft`, `slay` or `ship`, each with an
+amount. A row's **Subject** limits it to one crop, fish, gift or shipped
+item, node type, NPC, monster type or recipe; collecting a machine's output
+counts as crafting its first output item. Without a subject the row counts
+every successful action of its kind. Levels follow the game's level curve.
+
+Level rewards give stat bonuses, and can run outcomes once when the level is
+reached. Perks offer a named choice at a level; choosing is permanent and
+saved, and the `perk` condition checks a skill, perk and choice. The
+inventory's skills section shows the experience, the next reward and the
+choices waiting.
+
+Rewards can raise `yield`, `quality` (in quality tiers), `attack`,
+`defense`, `maxEnergy`, `maxHealth`, `moveSpeed`, `toolEnergyCost`,
+`fishingEscape`, `craftingSpeed` and `sellPrice`. Speed, cost, escape,
+crafting speed and sale bonuses are percentages, the rest whole points;
+positive tool cost, escape and crafting-speed bonuses lower the cost, the
+escape chance and the time. `sellPrice:crop` limits a sale bonus to one item
+category (`crop`).
+
+#### Food buffs
+
+Edible items can carry **Buffs**: an id, a stat, an amount and a duration in
+game minutes, and optionally an icon (an asset id, an item id or a symbol).
+The `applyBuff` outcome gives the same kind of buff. Eating the same buff
+again restarts its time; buffs with different ids on the same stat don't add
+up (the strongest counts) unless they are marked additive. Buffs are saved,
+run on the game clock, show on the HUD with the minutes left, and end when
+the player sleeps unless marked **Persists after sleep**. The `buff`
+condition checks for one. A temporary `skillLevel` bonus counts for skill
+checks and harvest quality, and `luck` improves weighted fishing, forage,
+node and monster rewards.
+
+Skills travel with **Export selection as pack** (on the Mods tab): their ids
+and the events that name them get the pack's prefix when installed, and
+importing the pack adds them to the progression settings.
+
+### Weekdays, routines and shop calendars
+
+New projects have a seven-day week, Monday to Sunday. **Settings →
+Weekdays** edits it: add, remove or reorder the rows to make your own week,
+or choose **Classic week**. Each row has an id, a name and a name per
+language. The zero-based **Weekday offset** picks which weekday day 1 of the
+game falls on, and the week runs on across seasons and years. Remove every
+row to have no week at all.
+
+The **weekday** condition takes one or more weekday ids and works wherever
+conditions do, and `{weekday}` shows today's name in game text. The HUD's
+date, the Sky preview and the playtest debug drawer show it too.
+
+An NPC's **Schedules** list holds named variants of its route, each with
+conditions and stops (with **Pick on map**, like the main schedule). Each
+morning the first variant whose conditions hold is chosen, and saved; when
+none does, the NPC follows its **Schedule**. A change of weather picks again
+at the next in-game minute, while flags and hearts that change during the day
+count from the next morning. A chosen variant with no stops keeps the NPC
+where it is all day. Problems reports missing scenes, blocked or off-map
+stops, two routes with one id, unknown weekdays and variants that can never
+be chosen because an unconditional one comes first.
+
+Shops can have opening **Hours**, be **Closed on** weekdays, seasons or
+festivals, and have a **Keeper NPC id**: the keeper must be in the same scene
+as the player for the shop to open. Hours include the opening minute and
+exclude the closing one; opening later than closing makes a night shop, and
+equal times mean always closed. Every purchase, sale and service checks
+again, so a shop that closes mid-visit stops trading.
+
+**Price modifiers** multiply buying and selling prices, in list order, when
+their seasons, weekdays, item and conditions match. With **Saturation**, each
+**Quantity per step** a player sells lowers the next sale's price, down to
+the **Minimum multiplier**, and sales stop counting after **Recovery days**.
+One sale gets one price for its whole quantity; the next sale sees the new
+demand. Demand is saved, and **Keep changes** carries it out of a playtest.
+
+### Festivals
+
+Festivals are days on the calendar (**Settings → Festivals**) with their own
+music. A festival's **Festival program** turns it into a place to go: a
+grounds scene, an entrance tile on the map and an arrival tile inside, the
+opening and closing minutes, and conditions for getting in. On the festival
+day, while it is open, interacting with the entrance takes the player in;
+interacting with the arrival tile leaves, and leaving moves the clock to
+closing time (**End day** then sleeps). Closing time ends a visit too.
+
+- **Attendance** brings NPCs to the grounds and holds their schedules until
+  the visit ends. A guest can have a festival dialogue; otherwise its usual
+  lines and conversation apply. Everyone goes back to their places and routes
+  when the player leaves, sleeps or is moved elsewhere by an event. A visit
+  survives saving and loading.
+- A **Shop id** and **Shop tile** open a shop only during the visit.
+- An **Activity** is a tile with an action, a cutscene or a minigame (whose
+  result tiers give the prizes). An optional **Contest** checks the player
+  has an item of at least a quality, takes the best one (and can use it up),
+  then gives its rewards. A successful activity can be done once per festival
+  day, even after leaving and coming back; a failed item check leaves it
+  open.
+- **On miss** outcomes run overnight when the player did not go.
+
+The Workshop's **Town festival** pattern creates the grounds, an entrance on
+the tile you choose and a once-a-day prize activity in one step. Problems
+checks a program's places, hours, guests, dialogues, shop and activity.
+
 ### Long-term goals
 
 - Shipping log: the game counts every unit its shipping bins sold, and
@@ -541,8 +746,8 @@ lead to the chosen map.
   **Group** (a room or a board).
 - **Achievements** unlock the moment their conditions hold (the same
   conditions as events; an achievement without any never unlocks). A
-  **hidden** one shows as ??? until then. `steamId` is kept for exports
-  with Steamworks (see [Later](../ROADMAP.md#later)).
+  **hidden** one shows as ??? until then. `steamId` is reserved for a future
+  Steamworks export.
 - **Mail**: a letter has a subject, a sender (an NPC), a text (with
   [text substitution](#text-substitution)), attachments, money and outcomes
   that run when it is first read. It arrives in the morning: after a
@@ -557,7 +762,7 @@ lead to the chosen map.
 
 Combat is off until you tick **Combat** in **Settings → Combat**. Then:
 
-- The player has **health** beside energy (`maxHealth`). Monsters that
+- The player has health beside energy (`maxHealth`). Monsters that
   touch them and terrain with **Damage** take it (a hit leaves the player
   unharmed for `hurtTicks`); food with **Health** and a night's sleep
   restore it. At 0 the player faints and comes to at the faint scene and
@@ -570,101 +775,62 @@ Combat is off until you tick **Combat** in **Settings → Combat**. Then:
   `slime 3 in 2,2-10,8`) spawns them each morning; a mine depth band's
   **Monsters** and `monsterCount` (Settings → Mine, a form per band) put
   them on its floors.
-- A weapon is a tool whose action is **attack** (Content → Tools): it
-  hits the monsters on the tiles it covers for its item's `toolPower`,
-  plus the player's combat level, less the monster's defense.
+- A weapon is a tool whose action is attack (Content → Tools): it hits the
+  monsters on the tiles it covers for its item's `toolPower`, plus the
+  player's combat level, less the monster's defense.
 - Mine depth bands also scatter **Hazards** (a terrain with damage or
   hazard energy, on the overlay layer, by density) and leave **Treasure**
   (weighted items, `treasureCount` of them) on their floors.
 
-### Problems
+### Sound and music
 
-The Problems tab checks the whole project: missing references, unreachable
-content and settings that would break the game. **Errors block export**;
-warnings and tips help you improve the game. **Go to** jumps to the entry or
-scene that needs a fix.
+Import sound effects and music as **OGG** or **WAV** files in the Art tab
+(as **Sound** or **Music** assets); they ship inside the exported game. The
+`playSound` outcome plays a sound asset (or a built-in sound by name), and a
+sound asset named like a built-in sound (`coin`, `harvest`) replaces it
+everywhere. Music can be set per scene, season, weather (outdoors) and
+festival, and the `playMusic` outcome (or a cutscene's music step) plays a
+music asset until the player changes scene, however they get there (a door, a
+warp, a mine ladder, a debug teleport).
 
-### Settings
+![Which music plays: event or cutscene music first, then today's festival, the weather, the scene, the season, and finally the built-in music.](media/guide/music-priority.png)
 
-Project settings: name, version and the game-text **locale**; gameplay
-(energy, skills and the XP each skill level needs, player speed, collapse
-penalties); the clock (day start and
-end, game minutes per real second, and whether it **pauses** while a dialogue,
-shop, minigame or menu is open, on by default); the calendar's **seasons**
-(add, rename, reorder, change their length) and **festivals**. The day must
-end at least an hour after it starts and by minute 4294; the clock can run at
-most 1440 game minutes per real second. The **Export** section holds
-what the exported game shows: its title, executable name, version, author,
-company, game id (set it once: it keeps players' save folders stable), icon,
-window size, pixel scale, fullscreen and credits.
-
-The locale also picks the language of the game's own interface when the
-player hasn't chosen one: English and Spanish are built in. Players can
-change it in the game's **Settings → Accessibility → Language**. The engine's
-own messages follow it too ("Not enough money!", the built-in minigames'
-prompts and buttons, save-load notices); what you write (names, dialogue,
-event messages, a minigame's own **prompt**) shows as you wrote it.
-
-### Mods
-
-Install **content packs** from their JSON file: the editor shows what a pack
-adds, overrides and needs, which hooks its plugins hear and what they may do,
-before **Install reviewed pack**. Installed packs can be turned on and off,
-reordered, removed, or imported into the project as ordinary content. A pack's
-scenes join the game world the first time a door or a warp leads there; pack
-ids are namespaced (`my-pack:cave`) but scene references inside a pack are not,
-so a pack names its own scenes in full.
-
-Packs can also bring vocabulary and story: terrains, tools, item kinds, crop
-qualities, crop mutations, cutscenes and heart events. Vocabulary keeps the
-ids it was written with (a pack's `lava` is painted as `lava`), and a pack
-replaces a built-in or an earlier pack's definition only when its manifest
-lists that id in `overrides`; otherwise Problems warns and the earlier one
-stays. Cutscenes and heart events are namespaced like other content, and so
-are the farm-building, goal and combat content packs can add: building
-types, collections, bundles, achievements, letters and monsters, with the
-references between them (a building's upgrade and materials, a builder
-shop's buildings, a collection's items, a letter's attachments, a monster's
-drops, a condition's or outcome's building, bundle, achievement, letter or
-monster, and the subject of an event's trigger).
-
-A pack with the UI panels permission (`permissions.uiPanels`) adds its
-own **game panels** (`content.gamePanels`, the same panels as the Interface
-tab's) to the game screen, after your game's own. Without the permission
-they are not shown, and Problems says so.
-
-A pack's plugins only change your game in the ways its manifest declares
-(`permissions.mutations`): by default they can show messages, play sounds
-and touch the pack's own flags and items, nothing else. Plugin answers apply
-right before the next game tick, and an `onWeatherRoll` answer comes too late
-to change the night's watering and storm damage. [PLUGINS.md](PLUGINS.md)
-has the permissions, timing and limits.
+In the Art tab's sound list, **Play** plays the selected sound or music once
+(press it again to stop), through the same decoder the game uses. **Rename**
+changes the name the editor shows; the asset's id stays, so everything that
+plays it still does. Problems lists a file the game can't play (cut short,
+damaged, Ogg Opus instead of Ogg Vorbis, a compressed WAV, longer than 10
+minutes) as an error: the game would leave it out and play the built-in sound
+or music in its place.
 
 ### Art
 
-**Import images** takes PNG, JPEG, WebP, GIF, BMP and SVG files; the list shows
-a thumbnail of each. Make **animation clips** by slicing a whole sheet, by
+**Import images** takes PNG, JPEG, WebP, GIF, BMP and SVG files, up to 8192
+pixels a side and 16 megapixels; the list shows a thumbnail of each. Make **animation clips** by slicing a whole sheet, by
 clicking cells of the sheet (each click adds that cell as the next frame), or
 from separate images (**Add image frame** adds another picture as a frame, so
 one animation can use several files). The preview plays the clip; **Pause
 preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
-machine. Mark pixel art as **Crisp pixel art** so it stays sharp. Art for the
-player or an NPC turns and walks when its clips are named by direction
-(`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle` and `walk`
-for any direction): walking, a schedule and a cutscene's **face** and
-**move** steps pick the clip.
+machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
+
+Art for the player or an NPC turns and walks when its clips are named by
+direction (`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle`
+and `walk` for any direction): walking, a schedule and a cutscene's **face**
+and **move** steps pick the clip. A game without art of its own still looks
+like a game: Tractr's built-in pixel-art pack draws tiles, crops, trees,
+machines, animals and walking characters, and any art you assign wins.
 
 ### Workshop
 
 The Workshop creates working interactions in one step (and one undo):
 a branching story, a romance milestone, a letter and mailbox, a building with
 an interior, a watering spell, a combat encounter, a fishing challenge, a
-catchable insect, forageables, trees, rocks, weeds and a crafting discipline.
-Fill in the name and text, **Create pattern**, then **Open its editor** to
-fine-tune what it made. **Build your game** links jump straight to each part
-of the editor: art, scenes, crops, animals, items, recipes, characters,
-quests, events, actions and the Problems check.
+catchable insect, forageables, trees, rocks, weeds, a town festival and a
+crafting discipline. Fill in the name and text, **Create pattern**, then
+**Open its editor** to fine-tune what it made. **Build your game** links jump
+straight to each part of the editor: art, scenes, crops, animals, items,
+recipes, characters, quests, events, actions and the Problems check.
 
 ### Interface
 
@@ -675,6 +841,64 @@ item count, a flag or an action button), and for items and actions a pick
 from your game's list. Installed packs with the UI panels permission add
 theirs after yours (see [Mods](#mods)).
 
+### Mods
+
+Content packs add content (and sometimes small programs, *plugins*) made by
+you or someone else. **Choose pack JSON** opens a pack file; the editor shows
+what it adds, overrides and needs, which hooks its plugins hear and what they
+may do, before **Install reviewed pack**. The **Registry** lists the packs
+that ship with the editor, including a starter template. Installed packs can
+be turned on and off (**Enabled**), reordered with the arrows, removed, or
+copied into the project as ordinary content (**Import into project**).
+**Export selection as pack** saves content you made as a pack of your own.
+
+A pack's ids are namespaced (`my-pack:cave`), and a pack's scenes join the
+game world the first time a door or a warp leads there. A pack's plugins
+only change your game in the ways its manifest declares: by default they can
+show messages, play sounds and touch the pack's own flags and items, nothing
+else.
+
+[Content packs](PACKS.md) explains the pack format, namespacing and
+overrides, and [Pack plugins](PLUGINS.md) explains how to write plugins.
+
+### Settings
+
+The Settings tab holds what applies to the whole game, in sections:
+
+- **Project**: the name, version and the game-text locale.
+- **Gameplay**: energy, skills and the experience each skill level needs,
+  player speed, collapse penalties.
+- **Words**: what the game calls money, energy and the skills.
+- **Time**: day start and end, game minutes per real second, and whether the
+  clock **pauses** while a dialogue, shop, minigame or menu is open (on by
+  default). The day must end at least an hour after it starts and by minute
+  4294; the clock can run at most 1440 game minutes per real second.
+- **Seasons**, **Weekdays** and **Festivals**: the calendar (add, rename,
+  reorder and change the length of seasons; their temperature and music).
+- **Weather odds per season**, weather looks and the sky.
+- **Mine**: the original mine and its depth bands.
+- **People**, **Farm** and **Combat**: relationships and the character
+  creator, the farm scene and layouts, and combat.
+- **Player progression**: upgrade limits and skills.
+- **Export**: what the exported game shows: its title, executable name,
+  version, author, company, game id (made once and read-only: it keeps
+  players' save folders stable), icon, window size, pixel scale, fullscreen and credits
+  ([Export Game](EXPORT.md#export-settings)).
+
+The locale also picks the language of the game's own interface when the
+player hasn't chosen one: English and Spanish are built in. Players can
+change it in the game's **Settings → Accessibility → Language**. The engine's
+own messages follow it too ("Not enough money!", the built-in minigames'
+prompts and buttons, save-load notices); what you write (names, dialogue,
+event messages, a minigame's own prompt) shows as you wrote it.
+
+### Problems
+
+The Problems tab checks the whole project: missing references, unreachable
+content and settings that would break the game. **Errors block export**;
+warnings and tips help you improve the game. **Go to** jumps to the entry or
+scene that needs a fix.
+
 ### If something goes wrong
 
 If the editor hits an unexpected error, it shows what happened instead of
@@ -683,7 +907,7 @@ change and try again** helps when the error came right after an edit. Your
 project is saved up to the error. If the project can't be saved (a full disk,
 a folder you can't write to), a red banner above the editor says why and keeps
 your changes open; **Retry save** tries again, and File → Export Project JSON…
-keeps a copy anywhere.
+keeps a copy anywhere. [Troubleshooting](TROUBLESHOOTING.md) has more.
 
 ## 3. Playtest in Play Mode
 
@@ -691,6 +915,8 @@ Press **F5** (or the mode button) to play the project with the same player an
 exported game uses; it starts straight in the game, without the title screen.
 Click the game to give it the keyboard. **Esc** opens the game's own pause menu and settings; **F6**
 returns to the editor.
+
+![Playtests are safe: F5 starts the game, and F6 returns to the world as it was, unless Keep changes is on.](media/guide/playtest.png)
 
 Playtests are safe: returning to Edit Mode restores the world to the moment
 you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
@@ -703,27 +929,36 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
 
+Plugins that fail show their errors in the debug drawer and as toasts.
+
 ## 4. Share your game
 
-**File → Export Game** (Ctrl+Shift+E, or Cmd+Shift+E on macOS) builds real desktop games: a Windows x64
-folder with the game's `.exe`, and a Linux x64 folder that also runs on the
-Steam Deck, each with an optional zip or tar.gz archive. Players unzip and
-play; no editor, browser or install is needed. The exported game has a title
-screen, three save slots with autosave each morning, a pause menu, settings
-(display, audio, rebindable controls, language, text size, a readable font and
-reduced motion) and gamepad support.
+**File → Export Game** (Ctrl+Shift+E, or Cmd+Shift+E on macOS) builds real
+games: a Windows x64 folder with the game's `.exe`, a Linux x64 folder that
+also runs on the Steam Deck, and a **Web (browser demo)** page for itch.io,
+each with an optional zip or tar.gz archive. Players unzip and play; no
+editor or install is needed.
 
-The Problems tab warns about names and dialogue containing characters the game's
-font cannot draw, with a link to the affected content. The bundled font covers
-Latin, Greek and Cyrillic; unsupported characters appear as boxes. Right-to-left
-shaping is not supported. Check these warnings before sharing a translated game.
+![What Export Game builds: your project goes through Problems and the compiler into game.cart, which is put beside a player for Windows, Linux and the web.](media/guide/export-targets.png)
 
-The **Web (browser demo)** target makes a page for itch.io; on phones and
-tablets it shows touch controls (a D-pad, Interact, Sleep, Inventory and
-Menu).
+The exported game has a title screen, three save slots with autosave each
+morning, a pause menu, settings (display, audio, rebindable controls,
+language, text size, a readable font and reduced motion) and gamepad support.
+On phones and tablets the web demo shows touch controls (a D-pad, Interact,
+Sleep, Inventory and Menu).
 
-Export stops when the Problems tab has errors. Bump the version in Settings
-when you ship an update: saves from the older version keep loading.
+Before you share:
+
+- Fix everything the Problems tab lists as an error: export stops on errors.
+- Check the warnings about text the game's font can't draw. The bundled font
+  covers Latin, Greek and Cyrillic; other characters show as boxes, and
+  right-to-left text is not supported.
+- Bump the version in Settings when you ship an update: saves from the older
+  version keep loading.
+
+[Export Game](EXPORT.md) covers the settings, what goes in each folder,
+putting a game on Steam or itch.io, and exporting from the command line.
+[The game player](PLAYER.md) describes what your players get.
 
 ## Player controls (default)
 
@@ -736,167 +971,10 @@ Shortcuts** lists the editor's shortcuts too.
 
 ## More
 
-- [Exporting games](EXPORT.md): what an exported game contains and how to
-  ship it on Steam or itch.io.
+- [Export Game](EXPORT.md): settings, what an exported game contains and how
+  to ship it on Steam or itch.io.
 - [The game player](PLAYER.md): the player's screens, settings, saves and
   command-line options.
-
-### Seasonal forage and deeper fishing
-
-In **Node types**, set **Seasons** to hide a node outside those seasons. Leave
-it empty for year-round gathering. Each drop may also have its own seasons;
-only the current season's entries participate in the weighted drop roll.
-An authored seasonal node keeps its remaining health while dormant.
-
-In the map's surroundings, **Morning forage** edits a list of spawn tables.
-Give each a unique id, a maximum number of new nodes per morning, weighted
-node types and allowed background terrains. Optional scene tags, seasons and
-rectangular regions restrict where it applies. **Preview eligible tiles** lists
-the coordinates before you save. Paths, doors and their arrival tiles, blocked
-tiles, crops, items, machines and existing nodes are excluded; the live player
-and NPC positions are also excluded at runtime. The first game tick and each
-morning use the game's seed, so identical games spawn identical forage. Set
-**Lifetime days** to remove uncollected forage after that many days; all spawned
-forage clears when the season changes. Workshop **Forage** creates a spawn
-table and its resource node together. Problems warns when no tiles qualify.
-
-In **Fish tables**, **Filter** restricts the minute range (inclusive), weather,
-season and an event condition. Each entry's **Rules → Filter** can narrow it
-further. By default the first eligible table wins, preserving existing games.
-Set **Layered** on that first table to combine entries from every eligible
-table into one weighted roll; the first table still determines the junk roll.
-Entry **Rules** also chooses XP (default 8), enables quality, and sets an
-optional integer size range. Quality uses the game's crop-quality tiers,
-fishing skill and minigame score. The **Catch log** records the best size of
-each species and survives saving and keeping playtest changes.
-
-An item's **Fishing gear** selects `bait` or `tackle`. The first inventory
-stack of each kind is used automatically: bait adds weight to its chosen fish
-ids (empty means all), and tackle reduces escape chance by a percentage and
-can improve quality. One unit of each is consumed only when a fish lands in
-the inventory. No bait is consumed by junk, an escaped fish or a full bag.
-
-A machine's **Fish production** makes a passive trap or pond. Select exactly
-one **Table id** for a trap or **Species item id** for a pond, plus a production
-interval and quantity. On matching absolute game days, an empty machine fills
-with output that the player collects normally. Trap tables respect season,
-time, weather, scene and entry filters; pending output is never overwritten.
-
-### Player progression, skills and food buffs
-
-In **Settings → Player progression**, enable limits for permanent backpack,
-energy and health upgrades. The `setInventorySize`, `addInventorySize`,
-`addMaxEnergy` and `addMaxHealth` event outcomes use `amount` in slots or whole
-points. They clamp to the configured limits and never remove occupied slots.
-The matching plugin capabilities use an integer `amount`. Health upgrades
-require combat. An upgrade changes the maximum; it does not heal the player.
-
-A shop stock line can include an **Upgrade** with a stable id, one of those
-outcome kinds and its amount. The line's item supplies its name, artwork and
-base price; purchasing it applies the upgrade once instead of giving that item.
-Keep the upgrade id stable after shipping a game, since saves remember it.
-A shop's **Tool upgrades** list connects a source item to the next-tier tool
-of the same kind, with a gold cost, materials and a number of nights. Players
-hand in the tool on the shop's Repair tab and collect it there after the
-specified nights. A full backpack leaves the finished tool safely at the shop;
-it returns to its old slot when possible. Closed shops refuse both operations.
-
-The progression form also holds **Skills**. With no definitions the built-in
-XP and bonuses remain unchanged. **Classic skills** creates editable definitions
-with the current curve's farming yield/quality and combat bonuses, classic XP,
-and node/monster training rows from the current project. Definitions replace automatic action training:
-list `harvest`, `gather`, `catch`, `gift`, `talk`, `craft`, `slay` or `ship` and
-its XP for each skill. An optional training **Subject** limits a row to one
-crop/fish/gift/shipped item id, node type id, NPC id, monster type id, or crafted
-recipe id. Machine-output collection uses its first output item id as the craft
-subject. Omit the subject to train on every successful action of that kind.
-Use the existing level curve to set thresholds. Level
-rewards grant stat bonuses and may run event outcomes once on reaching that
-level. Perks offer named choices at a level; the inventory's skills section
-shows XP, the next reward and unlocked choices. Choosing a perk is permanent
-and saved. The `perk` condition checks the skill, perk id and optional choice.
-
-Supported reward stats are `yield`, `quality` (quality tiers), `attack`,
-`defense`, `maxEnergy`, `maxHealth`, `moveSpeed`, `toolEnergyCost`, `fishingEscape`,
-`craftingSpeed` and `sellPrice`. Speed, cost, escape, crafting speed and sale
-bonuses are percentages; other amounts are whole points. Positive tool cost,
-fishing escape and crafting-speed bonuses reduce cost, escape and duration.
-`sellPrice:crop`, for example, limits a sale bonus to the `crop` item category.
-
-Edible items can carry **Buffs**: an id, stat, amount and duration in game
-minutes, plus an optional icon (an asset id, item id, or literal symbol). `applyBuff` outcomes carry the same nested
-`buff` record; plugins need the `applyBuff` capability. A repeat of the same id
-refreshes its duration. Different ids affecting the same stat take the
-strongest magnitude unless marked additive. Buffs are saved, expire by the
-game clock, appear on the HUD with minutes remaining, and clear on sleep
-unless marked **Persists after sleep**. The `buff` condition checks an active
-id. Temporary `skillLevel` bonuses affect skill checks and harvest quality;
-`luck` changes weighted fishing, forage, node and monster rewards. Projects without these optional records
-keep their previous replay behavior.
-
-Skills can also be selected in **Mods → Export selection as pack**. Their
-ids and event `skill` references gain the pack prefix on installation;
-importing the pack adds its definitions to the progression settings.
-
-### Weekdays, changing routines and shop calendars
-
-New projects start with a seven-day week, Monday through Sunday. Settings →
-Calendar also has a **Classic week** preset. Add, remove or reorder its
-weekday rows to make your own week, and set a zero-based **Weekday offset** to
-choose the day on which absolute day 1 falls. The week continues across seasons
-and years. Missing or empty weekdays disable the week, preserving older projects. Each
-row has an id, a name and a translated name for the project's selected language;
-translations already entered for other languages are retained.
-
-The **Weekday** condition accepts one or more ids and works everywhere event
-conditions do. `{weekday}` in game text uses the current language's name, with
-the main name as fallback. The HUD date, Sky preview and Playtest Debug show it.
-
-An NPC's **Schedules** list contains named variants with conditions and stops.
-The first matching variant wins; otherwise the original **Schedule** applies.
-The choice is made each morning and saved. Changing weather reselects the route
-at the next in-game minute; flags and hearts changed during the day apply the
-next morning. An empty matching route means no scheduled destinations that day.
-The stop rows include **Pick on map**, just like the original schedule.
-Problems reports missing scenes, blocked or out-of-bounds stops, duplicate route
-ids, unknown weekday references and variants hidden by an unconditional route.
-
-Shops can set opening **Hours**, **Closed on** weekdays, seasons or festivals,
-and a **Keeper NPC id**. The keeper must be in the player's scene. Hours include
-the opening minute and exclude the closing minute; an opening time later than
-closing represents an overnight shop. Equal times mean always closed. Opening
-through dialogue and every purchase, sale and service recheck these rules.
-
-**Price modifiers** multiply prices in list order when their seasons, weekdays,
-item and conditions match. Buy and sell multipliers are independent. Optional
-**Saturation** lowers the next transaction's sell price after each
-**Quantity per step** sold, stopping at **Minimum multiplier**. Sales stop
-counting after **Recovery days**. A transaction's entire quantity receives the
-quoted price; the next transaction sees the new demand. Demand is saved and
-also retained by **Keep changes**.
-
-### Festival places and activities
-
-The Workshop's **Town festival** pattern creates a festival map, an entrance
-on the chosen tile and a once-per-day prize activity. Its calendar date and
-**Festival program** are editable in Settings → Festivals. The program chooses
-the grounds scene, entrance and arrival tiles, opening/closing minutes and any
-entry conditions. Interact with the entrance on the festival date while it is
-open. Interact with the arrival tile inside to leave; leaving advances the clock
-to closing. **End day** sleeps after leaving. Closing time also ends a visit.
-
-**Attendance** places named NPCs on the grounds and holds their schedules until
-the visit ends. A guest can have a festival dialogue; otherwise its usual daily
-lines and conversation apply. Original positions and routes return on leaving,
-sleeping or an event that moves the player elsewhere. Active visits survive a
-save and load.
-
-A program can provide a **Shop id** and **Shop tile**. That shop is available
-only during a visit. **Activity** supplies a tile and an action, cutscene or
-minigame. Minigame result tiers and actions define their own rewards. An optional
-**Contest** checks for a specified item at or above a minimum quality, chooses
-the best qualifying item, optionally consumes one, then runs its rewards.
-A successful activity can run once per festival day, including after leaving
-and reloading. A failed item check leaves the activity available. **On miss**
-outcomes run overnight when the player did not visit. Problems checks the
-program's locations, hours, guests, dialogues, shop and activity references.
+- [Content packs](PACKS.md) and [Pack plugins](PLUGINS.md): extend a game
+  with packs and small JavaScript programs.
+- [Troubleshooting](TROUBLESHOOTING.md): when something doesn't work.

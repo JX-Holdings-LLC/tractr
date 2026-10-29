@@ -46,7 +46,7 @@ internal static partial class ArtImport
     private static (byte[] Png, int Width, int Height) Reencode(byte[] bytes)
     {
         // The header is read in managed code first, so Skia's codecs only see the five accepted
-        // formats at a size within the limits (docs/SKIA-MIGRATION.md).
+        // formats at a size within the limits (docs/dev/IMAGE-SAFETY.md).
         if (ImageHeaders.Read(bytes) is not { } header)
             throw new ArgumentException("The image could not be decoded: use PNG, JPEG, WebP, GIF or BMP artwork.", nameof(bytes));
         if (!ArtBitmaps.WithinLimits(header.Width, header.Height))

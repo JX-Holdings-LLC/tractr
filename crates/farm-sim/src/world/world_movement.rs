@@ -6,7 +6,7 @@
 //! targeting — the occupied tile is `Math.floor(x/y)`.
 //!
 //! Positions are integers in 1/8192 tile ([`units::TILE`]); speed is 1/8192 tile per tick
-//! (docs/NUMERICS.md).
+//! (docs/dev/NUMERICS.md).
 
 use crate::content_index::ContentIndex;
 use crate::effects::{message_levels, Effect};

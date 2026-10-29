@@ -26,7 +26,7 @@ Actions → Release → Run workflow (main, channel, dry run)
 installed app ◄── Update Center ◄──┘  (Velopack GithubSource + GitHub releases API)
 ```
 
-![Update Center](media/update-center.png)
+![Update Center](../media/update-center.png)
 
 ## Cutting a release
 
@@ -91,7 +91,7 @@ Assets attached to the GitHub Release (Velopack's default `win` channel):
 | `Tractr-X.Y.Z-delta.nupkg`    | Delta from the previous release (small download). Only when a previous release exists. |
 | `releases.win.json`, `assets.win.json` | Update feed read by the app.                                         |
 | `RELEASES`                             | Legacy (Squirrel-compatible) feed.                                   |
-| `player-windows-x64.zip`, `player-linux-x64.tar.gz`, `player-web.tar.gz` | Export Game player templates for this version (docs/EXPORT.md). The installer already ships them in `players/`. |
+| `player-windows-x64.zip`, `player-linux-x64.tar.gz`, `player-web.tar.gz` | Export Game player templates for this version ([Export internals](EXPORT-INTERNALS.md#player-templates)). The installer already ships them in `players/`. |
 | `SHA256SUMS`                           | SHA-256 of this version's installer, packages, feeds and templates. |
 | `build-info.txt`                       | Commit, .NET SDK, rustc and vpk versions and the runner image the release was built with. |
 
@@ -279,12 +279,12 @@ the first downloads.
 
 ## Testing an update end to end
 
-1. Tag and publish `v0.1.0` (see above).
+1. Release `v0.1.0` with the Release workflow (see [Cutting a release](#cutting-a-release)).
 2. On a Windows machine, download `Tractr-win-Setup.exe` from the
    release and run it (SmartScreen: **More info → Run anyway**). The app installs
    and starts. Help → About shows **Version 0.1.0**.
 3. Help → Update Center → **Check for updates** → *"You're up to date"*.
-4. Merge any change, then tag and publish `v0.1.1` with some release notes.
+4. Merge any change, then release `v0.1.1` with some release notes.
    This release also contains `Tractr-0.1.1-delta.nupkg`.
 5. In the running 0.1.0 app, click **Check for updates** (or restart the app;
    the background check runs if the last check is older than 6 hours). The header
@@ -293,7 +293,7 @@ the first downloads.
 6. Click **Download 0.1.1** and watch the progress bar, then
    **Restart & install**. The app closes, updates and relaunches; About now
    shows **Version 0.1.1**.
-7. Pre-release channel: publish `v0.2.0-beta.1`. On Stable the app still says
+7. Pre-release channel: release `v0.2.0-beta.1` on the `preview` channel. On Stable the app still says
    it's up to date; switch the channel to **Pre-release** and it offers
    0.2.0-beta.1.
 
@@ -393,6 +393,6 @@ Before publishing the first release on either platform:
    confirmation that settings/projects remain intact. Test offline launch and
    offline exports as well.
 
-Do not mark issue #203 complete based only on CI configuration. Apple credential
-provisioning, signed native validation and real install/update smoke tests are
-release gates; this Linux development environment cannot perform the Mac checks.
+CI configuration alone does not complete these gates: Apple credential
+provisioning, signed native validation and real install and update tests on
+each platform do.

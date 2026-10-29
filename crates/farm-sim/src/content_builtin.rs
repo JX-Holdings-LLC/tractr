@@ -2,7 +2,7 @@
 //! project pipeline (`state::create_content_from_project`), which the hosts that get project
 //! JSON use (editor previews and sessions, `Player::from_project`, farm-wasm). Cartridges get the
 //! F# copy (`FarmEngine.Authoring/Builtin.fs`); the two are kept identical by
-//! `tests/fsharp_parity.rs` and the F# `ParityTests` (docs/LANGUAGES.md "Two project pipelines").
+//! `tests/fsharp_parity.rs` and the F# `ParityTests` (docs/dev/ARCHITECTURE.md "Two project pipelines").
 
 use crate::schema::{
     crop_mutations, crop_qualities, item_types, tile_layers, tile_types, tool_actions, tool_types,

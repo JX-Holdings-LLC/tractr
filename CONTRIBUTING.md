@@ -4,11 +4,11 @@ Thanks for helping with Tractr. This page collects what you need
 to build, test and change the repository: the prerequisites, the checks CI
 runs, and how to regenerate every checked-in file that a tool produces.
 
-The architecture is in [docs/LANGUAGES.md](docs/LANGUAGES.md) (Rust / F# / C#
-split), [docs/NUMERICS.md](docs/NUMERICS.md) (integer numerics and
-goldens) and [docs/EDITOR-ARCHITECTURE.md](docs/EDITOR-ARCHITECTURE.md) (the
-editor's views and shared helpers); [ROADMAP.md](ROADMAP.md) has what is
-planned. The editor's look (warm paper, flat inks, a red tractor) is the
+The [contributor handbook](docs/dev/README.md) explains how Tractr is built:
+start with [Architecture](docs/dev/ARCHITECTURE.md) (the Rust / F# / C#
+split), then [Native numerics](docs/dev/NUMERICS.md) and the
+[editor architecture](docs/dev/EDITOR-ARCHITECTURE.md);
+[ROADMAP.md](ROADMAP.md) has what is planned. The editor's look (warm paper, flat inks, a red tractor) is the
 Seed Catalog brand: read [docs/brand/APP-UI.md](docs/brand/APP-UI.md) before
 you add or restyle a view. It applies to the editor only, never to the games
 it makes.
@@ -64,7 +64,61 @@ cargo test --workspace             # Rust engine tests, including the golden rep
 dotnet run --project src/Tractr.App
 ```
 
-Before you push, run what CI runs on your change:
+### Running the pieces
+
+The F# command-line compiler turns a project into a cartridge for the Rust
+player, or exports it like the editor does ([Export Game](docs/EXPORT.md#export-from-the-command-line)):
+
+```sh
+dotnet run --project src/FarmEngine.Cli -- compile my-project --out game.cart
+dotnet run --project src/FarmEngine.Cli -- export my-project --target windows-x64 --target linux-x64 --out dist
+```
+
+The Rust `farm-player` plays a cartridge in a window, runs a headless replay
+or renders screenshots ([The game player](docs/PLAYER.md#command-line-options)):
+
+```sh
+cargo run -p farm-player -- --cart game.cart
+```
+
+The build puts a player template for your platform (Windows or Linux x64) in
+`players/` next to the app and `farmc`, so Export Game works from a source
+build; the web template is built separately ([Export internals](docs/dev/EXPORT-INTERNALS.md#player-templates)).
+Export tests need no extra tools; rebuilding the PE test fixture needs
+mingw-w64 (`tests/FarmEngine.Export.Tests/Fixtures/pe/build.sh`). Without
+`xvfb`, the player's window test is skipped.
+
+CI builds and tests on Windows, Linux, Intel macOS and Apple Silicon macOS,
+and publishes a self-contained `win-x64` build on every push.
+
+## The projects in the solution
+
+| Project | What it is |
+|---|---|
+| `Tractr.Updates` | Update Center backend (Velopack + GitHub Releases) |
+| `Tractr.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog |
+| `FarmEngine.Interop` | P/Invoke bindings to the Rust library (`RustPlayer`, `RustPreview`, `RustSession`) |
+| `FarmEngine.Authoring` (F#) | The schema records and their JSON, project edits, undo/redo, loading, validation, Problems, content compiler, packs, sample templates, cartridge compiler and reader |
+| `FarmEngine.Authoring.Net` (F#) | The .NET edge of the F# core: `System.Text.Json` conversion, `RecordJson` and the generated `RecordWith` extensions the C# app builds records with |
+| `FarmEngine.Export` (F#) | Export Game: player templates, Windows icon/version patching, folders and archives |
+| `FarmEngine.Cli` (F#) | `farmc compile` and `farmc export` |
+| `crates/farm-sim` (Rust) | Deterministic simulation, golden-verified |
+| `crates/farm-host` (Rust) | The host protocol of `farm-ffi` (player, sessions, previews), whose player `farm-wasm` shares |
+| `crates/farm-ffi` (Rust) | C ABI the app loads: the embedded player, map previews, headless sessions |
+| `crates/farm-wasm` (Rust) | The same for web pages (wasm-bindgen): the `Player`, for the web demo export |
+| `crates/farm-bench` (Rust) | Benchmarks and the CI time-budget check |
+| `crates/farm-cart` (Rust) | Cartridge reader, save files and save loading |
+| `crates/farm-cart-schema` (Rust) | Generated FlatBuffers accessors, isolated from hand-written safe Rust |
+| `crates/farm-player` (Rust) | The game player: game shell, saves, settings, audio, gamepads, window; headless replays and screenshots; embedded in Play Mode and the Export Game template |
+| `crates/farm-ui` (Rust) | In-game UI on draw lists: HUD, dialogue, shop, crafting, inventory, quests, panels, minigames, the game shell's screens |
+| `crates/farm-runtime` (Rust) | Fixed timestep, input bindings, minigames, creator panels, audio model |
+| `crates/farm-render` (Rust) | World and Edit Mode snapshots, art decoration, built-in art, draw lists, a CPU rasterizer and fonts |
+| `crates/farm-gpu` (Rust) | The desktop player's GPU renderer: farm-render's draw lists through wgpu (Vulkan, DirectX 12, Metal), with the CPU rasterizer as fallback and reference |
+| `crates/farm-plugins` (Rust) | Plugin sandbox: QuickJS in WebAssembly, one wasmi instance per plugin, fuel budgets |
+
+## Before you push
+
+Run what CI runs on your change:
 
 ```sh
 cargo fmt --all --check
@@ -183,6 +237,7 @@ needs that tool. CI checks that each matches its generator.
 | App icon, header logo, paper grain (`src/Tractr.App/Assets/`) | `python3 scripts/generate-app-icon.py` (Pillow; cuts them from `docs/brand/logo`) | the logo changes | — |
 | Default icon of exported games (`default-game-icon-256.png`) | `python3 scripts/generate-game-icon.py` | the games' icon changes | — |
 | Brand pictures (`docs/media/tractr-*.png`, `plate-*.png`, `Assets/about-banner.png`) | the Vixl scripts in `docs/brand/vixl/kit` ([docs/brand/README.md](docs/brand/README.md#rebuilding-the-pictures)) | the brand or the screenshots change | — |
+| Doc figures (`docs/media/guide`, `plugins`, `dev`) | `python build_diagrams.py && python build_diagrams.py --install` in `docs/brand/vixl/kit` | what a figure shows changes | — |
 
 Not checked in, built on demand: the
 `farm-wasm` package (`tools/wasm/build.sh`, checked by
@@ -194,12 +249,18 @@ the release).
 
 - Keep commits focused, with a short imperative subject and a body that says
   why.
+- Update the docs with the change: the user docs in `docs/` for anything
+  creators, players or pack authors see (the [Creator guide](docs/CREATOR-GUIDE.md)
+  is also the in-app help: its bold text must be labels the editor shows,
+  which `CreatorGuideNamesTests` checks), and `docs/dev/` for how it works.
+  Docs describe how things are, not how they changed; that goes in the
+  changelog.
 - Bump the version in every pull request (`node .toolkit/src/release.mjs
   bump --app tractr`) and describe the change in the new
   `## X.Y.Z` section of [CHANGELOG.md](CHANGELOG.md); it becomes the release
   notes.
 - Versions, tags and the release workflow are in
-  [docs/RELEASING.md](docs/RELEASING.md).
+  [docs/dev/RELEASING.md](docs/dev/RELEASING.md).
 - Report security problems privately ([SECURITY.md](SECURITY.md)).
 
 ## License of contributions

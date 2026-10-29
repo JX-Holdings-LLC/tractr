@@ -1,4 +1,4 @@
-//! The game shell of a standalone game (docs/EXPORT.md "What the player must include"): title
+//! The game shell of a standalone game (docs/PLAYER.md "What players get"): title
 //! screen, save slots, pause menu, settings, credits and confirmations. Each screen draws on its
 //! own layer and returns a [`ShellAction`]; `farm-player` owns the state machine, the saves and
 //! the settings file.

@@ -1,5 +1,5 @@
 # Rust workspace: the part of Tractr that runs while a game is
-# being played (see docs/LANGUAGES.md). `farm-sim` is the deterministic core,
+# being played (see docs/dev/ARCHITECTURE.md). `farm-sim` is the deterministic core,
 # `farm-cart` the cartridge and save formats, `farm-runtime` the timestep, input
 # and minigame logic, `farm-host` the JSON protocol hosts speak, `farm-ffi` the C ABI
 # that .NET loads through `FarmEngine.Interop`, and `farm-wasm` the same API for the web.
@@ -27,7 +27,7 @@ members = [
 exclude = ["crates/farm-plugin-guest", "fuzz"]
 
 [workspace.package]
-version = "0.11.0"
+version = "0.11.1"
 edition = "2021"
 rust-version = "1.88"
 license = "BUSL-1.1"
@@ -47,7 +47,7 @@ missing_debug_implementations = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
-# Determinism rules (docs/LANGUAGES.md "Determinism rules for Rust"). The
+# Determinism rules (docs/dev/ARCHITECTURE.md "Determinism rules"). The
 # disallowed lists live in clippy.toml at the workspace root.
 disallowed_types = "deny"
 disallowed_methods = "deny"

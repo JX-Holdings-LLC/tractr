@@ -30,7 +30,7 @@ public sealed class ProjectChangedEventArgs(ProjectChangeKind kind) : EventArgs
 /// File-menu project commands. UI-thread only.
 /// </summary>
 /// <remarks>
-/// The project and its history live in an F# <see cref="Document"/> (docs/LANGUAGES.md: "F#
+/// The project and its history live in an F# <see cref="Document"/> (docs/dev/ARCHITECTURE.md: "F#
 /// understands the project"). Every change is an <see cref="Edit"/> applied through
 /// <see cref="Documents"/>; this class only holds the current document, fires events and saves.
 /// </remarks>

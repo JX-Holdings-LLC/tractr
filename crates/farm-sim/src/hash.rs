@@ -1,4 +1,4 @@
-//! State hashing (docs/NUMERICS.md "State hash").
+//! State hashing (docs/dev/NUMERICS.md "State hash").
 //!
 //! The state hash is xxh3-64 over the **canonical binary encoding** of a value: a small serde
 //! [`Serializer`](serde::Serializer) that writes

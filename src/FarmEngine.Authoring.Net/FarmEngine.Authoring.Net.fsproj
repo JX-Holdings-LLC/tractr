@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>FarmEngine.Authoring.Net</RootNamespace>
-    <Description>.NET-only edge of the F# authoring core: System.Text.Json conversion and the typed schema parse (docs/LANGUAGES.md "F# conventions").</Description>
+    <Description>.NET-only edge of the F# authoring core: System.Text.Json conversion and the typed schema parse (docs/dev/ARCHITECTURE.md "F# conventions").</Description>
     <WarnOn>3390;$(WarnOn)</WarnOn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);FS3370</NoWarn>

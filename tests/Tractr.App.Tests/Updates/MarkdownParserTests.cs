@@ -87,4 +87,41 @@ public sealed class MarkdownParserTests
         var paragraph = Assert.IsType<MarkdownParagraph>(MarkdownParser.Parse("<!-- x -->Hello <b>there</b>").Single());
         Assert.Equal("Hello there", string.Concat(paragraph.Inlines.Select(i => i.Text)));
     }
+
+    [Fact]
+    public void ParsesImagesOnTheirOwnLine()
+    {
+        var blocks = MarkdownParser.Parse("""
+            Before.
+            ![The workflow](media/guide/workflow.png "Title")
+            Inline ![not an image block](x.png) stays text.
+            """);
+
+        Assert.Collection(
+            blocks,
+            b => Assert.IsType<MarkdownParagraph>(b),
+            b => Assert.Equal(new MarkdownImage("The workflow", "media/guide/workflow.png"), b),
+            b => Assert.IsType<MarkdownParagraph>(b));
+    }
+
+    [Fact]
+    public void ParsesPipeTables()
+    {
+        var blocks = MarkdownParser.Parse("""
+            | Key | What |
+            |---|:--:|
+            | `a|b` | **bold** and a \| pipe |
+            | E | Interact |
+            After.
+            """);
+
+        var table = Assert.IsType<MarkdownTable>(blocks[0]);
+        Assert.True(table.HasHeader);
+        Assert.Equal(3, table.Rows.Count);
+        Assert.Equal(["Key", "What"], table.Rows[0].Select(cell => string.Concat(cell.Select(i => i.Text))));
+        Assert.Equal("a|b", Assert.Single(table.Rows[1][0]).Text);
+        Assert.True(table.Rows[1][1][0].Bold);
+        Assert.Equal("bold and a | pipe", string.Concat(table.Rows[1][1].Select(i => i.Text)));
+        Assert.IsType<MarkdownParagraph>(blocks[1]);
+    }
 }

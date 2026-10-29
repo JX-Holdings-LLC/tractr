@@ -1,7 +1,7 @@
 # Editor architecture (C# app)
 
 The Avalonia editor lives in `src/Tractr.App`.
-[LANGUAGES.md](LANGUAGES.md) defines the language boundary: **F# understands
+[ARCHITECTURE.md](ARCHITECTURE.md) defines the language boundary: **F# understands
 the project, Rust runs the game, C# is the desktop app**. Within C#, views
 collect input and draw controls; view models own editable state, validation,
 commands and navigation. They can be tested without constructing Avalonia.
@@ -73,7 +73,7 @@ serialization contract.
 | Keep draft rows and controls together | `DraftRows` |
 | Accessible controls and shared layout | `Ui` and `ContentFormLayout` |
 | Editor labels | `EditorStrings`; tab headers and Play Mode toolbar follow language changes |
-| Colours, fonts and surfaces | `App.axaml`, `GameStyles.axaml` and [brand/APP-UI.md](brand/APP-UI.md) |
+| Colours, fonts and surfaces | `App.axaml`, `GameStyles.axaml` and [brand/APP-UI.md](../brand/APP-UI.md) |
 
 Error messages use the visible field label, never a control's internal name.
 Test doubles live in the test project: shell placeholders in `Ui/Placeholders`
