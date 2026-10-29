@@ -343,7 +343,7 @@ managed editor with the real native library, and exports the fixture for all
 three game targets. Before allowing release publication, it launches the Linux
 AppImage and extracts and launches each Mac ZIP using the same startup script
 as PR CI. The Mac gate rechecks all offline templates inside the extracted app;
-live releases additionally require strict code-signature verification, a valid
+signed releases additionally require strict code-signature verification, a valid
 stapled notarization ticket and Gatekeeper assessment. A failure blocks artifact
 collection and publication. Unsigned dry runs skip only the signature checks.
 The final inventory requires every editor package and feed;
@@ -355,8 +355,8 @@ Stable/Pre-release selector still controls GitHub prerelease discovery; it must
 not replace the platform channel. Each architecture has distinct package and
 feed filenames, preventing an Intel Mac from downloading an ARM update.
 
-For a live macOS release, provision these secrets in the protected `release`
-environment (the repository cannot establish whether they are configured):
+To sign and notarize the macOS editor, provision these secrets in the protected
+`release` environment (the repository cannot establish whether they are configured):
 
 - `MACOS_CERTIFICATE_BASE64`: base64 PKCS#12 Developer ID Application certificate
   including its private key.
@@ -368,15 +368,19 @@ environment (the repository cannot establish whether they are configured):
 The job imports them into a temporary keychain, lets Velopack sign with hardened
 runtime entitlements, notarize, staple and assess the app, then deletes the
 keychain and temporary credential files even on failure. No credentials are
-needed for unsigned dry runs. A live Mac job fails if credentials are missing;
-never publish its unsigned dry-run ZIP as a release. Only the signed `.app` ZIP
-is distributed, so no Developer ID Installer certificate is needed.
+needed for unsigned dry runs. Like Windows without `WINDOWS_SIGN_PARAMS`, a live
+release with none of these secrets warns and publishes the Mac editor unsigned:
+it still passes the template and startup checks, but Gatekeeper blocks the first
+launch until the user allows it in System Settings > Privacy & Security. A live
+release with only some of them fails. Only the `.app` ZIP is distributed, so no
+Developer ID Installer certificate is needed.
 
 Before publishing the first release on either platform:
 
 1. Run the complete release workflow with `dry_run=true` and inspect all required
    assets, checksums and test results. The Mac dry-run ZIP is unsigned.
-2. On both Mac architectures, validate the signed/notarized app with Gatekeeper,
+2. On both Mac architectures, validate the app with Gatekeeper (signed and
+   notarized once Apple credentials are provisioned),
    launch from Applications, open/save a project, test Command shortcuts and
    native file dialogs, Play Mode audio and gamepad, and all three exports.
 3. On clean Linux, launch the AppImage, open/save/play/export, and verify audio

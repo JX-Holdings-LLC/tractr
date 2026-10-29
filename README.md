@@ -95,8 +95,9 @@ release requires the native install/update checks in [RELEASING](docs/RELEASING.
   24.04, use `libasound2t64` and `libfuse2t64`). A graphical desktop is required.
 - **macOS:** `Tractr-osx-arm64-Portable.zip` for Apple Silicon or
   `Tractr-osx-x64-Portable.zip` for Intel. Extract and move `Tractr.app` to
-  Applications. Live releases require Developer ID signing and notarization;
-  unsigned dry-run artifacts are for testing only.
+  Applications. Until the Mac editor is signed and notarized, macOS blocks
+  the first launch: open System Settings > Privacy & Security and choose
+  **Open Anyway** for Tractr.
 
 Every release editor includes Windows, Linux and web game export templates.
 The Mac editor uses Command in place of Ctrl for editor shortcuts. Game export

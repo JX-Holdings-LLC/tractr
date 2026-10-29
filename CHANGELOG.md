@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.3
+
+- Fix the release workflow, which stopped at the Mac editor because Apple
+  signing credentials are not provisioned, so no Windows, Linux or macOS
+  release was published. Without any Apple credentials, a release now warns
+  and ships the Mac editor unsigned, as Windows does without its certificate.
+  With all of them it signs and notarizes as before. A partial set fails.
+
 ## 0.10.2
 
 - Gate Mac release publication on launching the packaged
