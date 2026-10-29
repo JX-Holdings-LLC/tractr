@@ -18,3 +18,9 @@ public sealed record MarkdownCodeBlock(string Code) : MarkdownBlock;
 public sealed record MarkdownQuote(IReadOnlyList<MarkdownInline> Inlines) : MarkdownBlock;
 
 public sealed record MarkdownRule : MarkdownBlock;
+
+/// <summary>A pipe table; the first row is the header when <paramref name="HasHeader"/>.</summary>
+public sealed record MarkdownTable(IReadOnlyList<IReadOnlyList<IReadOnlyList<MarkdownInline>>> Rows, bool HasHeader) : MarkdownBlock;
+
+/// <summary>An image on a line of its own (<c>![alt](url)</c>).</summary>
+public sealed record MarkdownImage(string Alt, string Url) : MarkdownBlock;

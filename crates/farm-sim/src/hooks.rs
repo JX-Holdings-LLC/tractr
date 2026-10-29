@@ -4,7 +4,7 @@
 //!
 //! Unlike the C# bus, which calls listeners in place, the Rust core is a reducer: emitted hook
 //! events are collected on the bus and leave the step together with the effects (the FFI design
-//! in docs/LANGUAGES.md sends "effects plus hook events out"). Plugin reactions come back as
+//! in docs/dev/ARCHITECTURE.md sends "effects plus hook events out"). Plugin reactions come back as
 //! `pluginMutation` commands. The one synchronous hook, `onWeatherRoll`, is answered through the
 //! [`WeatherRollListener`] slot that the plugin host fills.
 

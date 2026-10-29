@@ -1,4 +1,4 @@
-/// FsCheck properties over the edit layer (docs/LANGUAGES.md "Property tests").
+/// FsCheck properties over the edit layer (docs/dev/ARCHITECTURE.md "Tests").
 module FarmEngine.Authoring.Tests.PropertyTests
 
 open System.Collections.Generic

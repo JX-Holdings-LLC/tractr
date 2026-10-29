@@ -1,4 +1,4 @@
-//! Property tests of the determinism contract (docs/LANGUAGES.md "Property tests"): the same
+//! Property tests of the determinism contract (docs/dev/ARCHITECTURE.md "Tests"): the same
 //! seed and the same command log give the same state, whatever the commands.
 
 mod strategies;

@@ -125,7 +125,7 @@ await test("a player renders fixture-project.json and takes input", () => {
   assert.equal(b.pixels, a.pixels);
   assert.notEqual(frame(player, [], [64, 40], true, a.pixels).pixels, a.pixels);
 
-  // The state hash is xxh3-64 over the binary state since v9 (docs/NUMERICS.md).
+  // The state hash is xxh3-64 over the binary state since v9 (docs/dev/NUMERICS.md).
   assert.match(player.hash(), /^[0-9a-f]{16}$/);
   player.debug({ type: "addMoney", amount: 500 });
   const summary = JSON.parse(player.queryJson({ type: "summary" }));

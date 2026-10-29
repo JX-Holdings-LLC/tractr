@@ -21,7 +21,7 @@ type VisualTarget =
     | AnimalSpeciesVisual of speciesId: string
     | MachineTypeVisual of machineTypeId: string
 
-/// Every change a creator makes to a project (docs/LANGUAGES.md "F# conventions"). The editor
+/// Every change a creator makes to a project (docs/dev/ARCHITECTURE.md "F# conventions"). The editor
 /// never touches a `GameProject` directly: it builds an `Edit` and hands it to `Document.apply`,
 /// which gives undo/redo and autosave to every editor for free. `Batch` groups edits into one
 /// undo step. Each case names what the creator does; the web component it ports is in the doc

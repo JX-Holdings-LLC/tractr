@@ -5,7 +5,7 @@ name: CI
 # token is read-only.
 
 # Pull requests only, not every push: branch protection on main requires these checks before a
-# merge (docs/RELEASING.md "How a release is protected"), and the release workflow builds and
+# merge (docs/dev/RELEASING.md "How a release is protected"), and the release workflow builds and
 # tests what it ships itself. The weekly run on main keeps the caches pull requests restore warm
 # (GitHub drops caches unused for 7 days) and catches toolchain or runner image drift.
 on:
@@ -39,7 +39,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # CI checks goldens; it never re-records them (docs/NUMERICS.md "Goldens").
+      # CI checks goldens; it never re-records them (docs/dev/NUMERICS.md "Goldens").
       - name: No record or bless switches
         shell: bash
         run: tools/ci/golden-guard.sh switches
@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: tools/ci/golden-guard.sh fixtures
 
-      # The benchmark budgets (docs/LANGUAGES.md "Tests"), checked on medians with a 3× margin
+      # The benchmark budgets (docs/dev/ARCHITECTURE.md "Tests"), checked on medians with a 3× margin
       # for shared runners. `cargo bench -p farm-bench` has the full criterion statistics.
       - name: Time budgets (release)
         if: runner.os == 'Linux'
@@ -130,7 +130,7 @@ jobs:
         with:
           tool: cargo-about@0.9.2
 
-      # Player templates ship tools/player-licenses/THIRD-PARTY.txt (docs/EXPORT.md).
+      # Player templates ship tools/player-licenses/THIRD-PARTY.txt (docs/dev/EXPORT-INTERNALS.md).
       - name: Player license notices are current
         if: runner.os == 'Linux'
         run: tools/player-licenses/generate.sh --check
@@ -282,7 +282,7 @@ jobs:
         run: python3 tools/coverage/check.py dotnet TestResults
 
       # Committed generated code matches its generators (flatc accessors, SchemaJson.fs,
-      # RecordJson.fs, RecordWith.fs), and the version numbers agree (docs/RELEASING.md "Versions").
+      # RecordJson.fs, RecordWith.fs), and the version numbers agree (docs/dev/RELEASING.md "Versions").
       - name: Generated code and versions are current
         run: |
           tools/codegen/check.sh
@@ -466,7 +466,7 @@ jobs:
   player-linux:
     name: Player template (linux-x64, Steam Runtime sniper)
     runs-on: ubuntu-latest
-    # The release builds the Linux template here (docs/EXPORT.md): Steam Runtime 3
+    # The release builds the Linux template here (docs/dev/EXPORT-INTERNALS.md): Steam Runtime 3
     # "sniper", Debian 11 with glibc 2.31, so games run on older distributions and Steam Deck.
     # Pinned by digest (the 3.0.20260805 SDK); keep in step with release.yml. To move it:
     # docker buildx imagetools inspect registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest

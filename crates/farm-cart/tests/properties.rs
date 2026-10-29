@@ -1,4 +1,4 @@
-//! Property tests of the save formats (docs/LANGUAGES.md "Property tests"): saving any state a
+//! Property tests of the save formats (docs/dev/ARCHITECTURE.md "Tests"): saving any state a
 //! game can reach and loading it again gives the same state, in both envelopes.
 
 // The random-play strategies of farm-sim's property tests.

@@ -23,7 +23,7 @@ Areas where a report matters most:
 - **Export Game and exported games.** Player templates, archives, and the web
   demo page's Content-Security-Policy ([docs/EXPORT.md](docs/EXPORT.md)).
 - **Updates.** The Update Center downloads releases from GitHub through
-  Velopack ([docs/RELEASING.md](docs/RELEASING.md)).
+  Velopack ([docs/dev/RELEASING.md](docs/dev/RELEASING.md)).
 
 Fixes ship as a normal release and are named in the
 [changelog](CHANGELOG.md).

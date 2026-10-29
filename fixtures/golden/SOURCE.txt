@@ -1,6 +1,6 @@
 Golden fixtures.
 
-The Rust engine is the reference implementation (docs/NUMERICS.md "Goldens").
+The Rust engine is the reference implementation (docs/dev/NUMERICS.md "Goldens").
 Do not hand-edit; re-record and review the diff instead.
 
 Recorded from Rust (FARM_RECORD_GOLDENS=1; the recording run fails on purpose, then rerun

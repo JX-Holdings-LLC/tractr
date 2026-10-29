@@ -1,6 +1,6 @@
 //! Windows builds of the player carry placeholder icon and version resources. Export Game
 //! overwrites them in place from .NET, without a resource compiler on the creator's machine
-//! (docs/EXPORT.md "Windows icon and version info"). Other targets need nothing.
+//! (docs/dev/EXPORT-INTERNALS.md "Windows icon and version info"). Other targets need nothing.
 //!
 //! The placeholders reserve room: each icon slot holds a 1×1 PNG followed by zeros, sized so
 //! that any PNG of that size fits, and every version string is padded. Export writes the new

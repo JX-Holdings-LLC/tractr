@@ -1,4 +1,4 @@
-# Determinism rules for the Rust workspace (docs/LANGUAGES.md). These replace
+# Determinism rules for the Rust workspace (docs/dev/ARCHITECTURE.md). These replace
 # BannedSymbols.txt from the C# engine.
 disallowed-types = [
     { path = "std::collections::HashMap", reason = "iteration order is random; use Vec, IndexMap or BTreeMap" },

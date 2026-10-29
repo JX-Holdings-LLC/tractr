@@ -6,7 +6,7 @@ open FarmEngine.Schemas
 /// Editor-level checks on the world: player start, scenes and doors, NPC placement and
 /// schedules, the dialogue graph, the mine and the calendar. These are the checks the web
 /// components make inline (TransitionEditor bounds, ProjectSettingsEditor season rules) or that
-/// the LANGUAGES.md editor list asks for (unreachable dialogue nodes, dead ends).
+/// the architecture plan asks for (unreachable dialogue nodes, dead ends).
 module internal ChecksWorld =
     let private sceneTarget (context: Context) (sceneId: string) (x: float) (y: float) =
         if context.Scenes.ContainsKey sceneId then

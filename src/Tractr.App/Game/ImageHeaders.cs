@@ -16,7 +16,7 @@ internal enum RasterFormat
 /// Reads the format and pixel size from the first bytes of an image, in managed code. Every
 /// decode of image data the editor did not make itself (imported art, project and pack art,
 /// images embedded in SVGs) checks this first, so SkiaSharp's native codecs only ever see one of
-/// the five accepted formats with a size inside the import limits (docs/SKIA-MIGRATION.md).
+/// the five accepted formats with a size inside the import limits (docs/dev/IMAGE-SAFETY.md).
 /// </summary>
 internal static class ImageHeaders
 {

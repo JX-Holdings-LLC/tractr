@@ -2357,7 +2357,7 @@ module internal ChecksContent =
         packWarps context sink
 
     /// Whole-number fields (money, counts) with a fraction: the engine keeps them as integers and
-    /// rounds them when it loads the game (docs/NUMERICS.md), so say so.
+    /// rounds them when it loads the game (docs/dev/NUMERICS.md), so say so.
     let private offGridNumbers (context: Context) (sink: Sink) =
         let p = context.Project
 

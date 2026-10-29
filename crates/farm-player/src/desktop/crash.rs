@@ -1,4 +1,4 @@
-//! Crash logs (docs/EXPORT.md "Crash reports"): a panic hook writes `crash-<time>-<pid>.log` next
+//! Crash logs (docs/dev/PLAYER-INTERNALS.md "Crash logs"): a panic hook writes `crash-<time>-<pid>.log` next
 //! to the saves with the game version, the cartridge hash and the recent command log, and prints
 //! its path. The simulation is deterministic, so the last save plus the command log replays a
 //! crash.

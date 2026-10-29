@@ -47,7 +47,7 @@ type PeIcon =
         Data: byte[]
     }
 
-/// Reads and patches the resources of a Windows executable in place, from .NET (docs/EXPORT.md
+/// Reads and patches the resources of a Windows executable in place, from .NET (docs/dev/EXPORT-INTERNALS.md
 /// "Windows icon and version info"). The player template is built with placeholder
 /// RT_GROUP_ICON/RT_ICON and RT_VERSION resources that reserve space (crates/farm-player/build.rs);
 /// patching writes new data into those bytes, shrinks each data entry to the new size, updates the

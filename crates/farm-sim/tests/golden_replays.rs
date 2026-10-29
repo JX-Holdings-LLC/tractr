@@ -3,7 +3,7 @@
 //! `fixtures/golden/replays` holds replays (project, seed and input log) with the hashes,
 //! effects and states this engine produces, recorded with
 //! `FARM_RECORD_GOLDENS=1 cargo test -p farm-sim --test golden_replays` and reviewed as a diff
-//! (docs/NUMERICS.md "Goldens"). Every replay must reproduce its recorded hash after every step,
+//! (docs/dev/NUMERICS.md "Goldens"). Every replay must reproduce its recorded hash after every step,
 //! byte for byte.
 //!
 //! All replays run in one test so a change shows every divergence at once: a replay that
@@ -102,7 +102,7 @@ fn play(source: &Value) -> Result<Value, String> {
     fixture.insert("finalHash".to_owned(), Value::String(hash::hash_state(&game)));
     fixture.insert("finalState".to_owned(), stable_value(&game));
     // Keep changes as the hosts do it: the state written into the project JSON as given, so
-    // content keeps what the creator typed (docs/NUMERICS.md).
+    // content keeps what the creator typed (docs/dev/NUMERICS.md).
     let final_project = state::apply_state_to_project_json(&source["project"], &game)?;
     fixture.insert("finalProject".to_owned(), stable_value(&final_project));
     Ok(Value::Object(fixture))

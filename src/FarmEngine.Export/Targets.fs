@@ -1,6 +1,6 @@
 namespace FarmEngine.Export
 
-/// A platform Export Game builds for (docs/EXPORT.md "The goal"): the two desktop targets, and
+/// A platform Export Game builds for (docs/EXPORT.md): the two desktop targets, and
 /// the web demo (farm-wasm in a page, for itch.io and the like).
 [<RequireQualifiedAccess>]
 type ExportTarget =

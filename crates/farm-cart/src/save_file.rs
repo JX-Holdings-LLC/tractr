@@ -1,5 +1,5 @@
-//! Save files: a header plus the [`GameState`] (docs/EXPORT.md "What earlier phases must get
-//! right").
+//! Save files: a header plus the [`GameState`] (docs/dev/EXPORT-INTERNALS.md "Compatibility
+//! rules").
 //!
 //! Saves outlive the cartridge that wrote them: a player's save from version 1.0 of a game has
 //! to load in 1.1. So the header says which game wrote the save (`gameId`), which version of it,

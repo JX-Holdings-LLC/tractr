@@ -1,7 +1,7 @@
 //! Port of `EngineTypes.cs`: the context a step runs in and what a step returns.
 //!
 //! **Reducer convention (Rust port).** The C# engine is immutable: every handler returns a new
-//! `GameState` (`state with { … }`). The Rust core follows docs/LANGUAGES.md instead: *state is
+//! `GameState` (`state with { … }`). The Rust core follows docs/dev/ARCHITECTURE.md instead: *state is
 //! mutable inside a step, immutable across steps*. Handlers take `&mut GameState`, change it in
 //! place and return only the effects:
 //!
@@ -31,7 +31,7 @@ use std::cell::{Cell, RefCell};
 pub type Effects = Vec<Effect>;
 
 /// Which commands apply in which situations. Rust decides what a player may do
-/// (docs/LANGUAGES.md): replays, the FFI and web sessions and any future lockstep play feed
+/// (docs/dev/ARCHITECTURE.md): replays, the FFI and web sessions and any future lockstep play feed
 /// commands straight to the engine, so the player UI's own restraint is not enough.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CommandRules {

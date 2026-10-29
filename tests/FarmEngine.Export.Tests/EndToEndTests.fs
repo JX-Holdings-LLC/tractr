@@ -1,5 +1,5 @@
 /// Export with the real player template the build put next to this assembly, then run the
-/// exported game headless (docs/EXPORT.md "Tests").
+/// exported game headless (docs/dev/EXPORT-INTERNALS.md "Tests").
 module FarmEngine.Export.Tests.EndToEndTests
 
 open System

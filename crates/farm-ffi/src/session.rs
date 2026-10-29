@@ -1,4 +1,4 @@
-//! Engine sessions over the C ABI (docs/LANGUAGES.md "FFI: .NET → Rust").
+//! Engine sessions over the C ABI (docs/dev/ARCHITECTURE.md "FFI: .NET → Rust").
 //!
 //! A headless game for tools (the editor's Play Mode uses the graphical player in
 //! [`crate::player`] instead): sessions accept project JSON or the F# FlatBuffers

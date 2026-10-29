@@ -29,11 +29,11 @@ vixl/
   swatches.json      the extra named colours (@field-green, @mustard, ...)
   ops/               the Vixl operation lists that built each image
   kit/               Python build kit: art.py (tractor, wheat, rivets), ui.py (the editor study), vx.py (CLI
-                     driver) and the build_*.py scripts
+                     driver) and the build_*.py scripts (build_diagrams.py draws the docs' figures)
 ```
 
 The pictures that sell Tractr are in [docs/media](../media): the hero, the four seed packets and the catalog plates
-around the editor screenshots. They were made with [Vixl](https://github.com/jxburros/vixl), and the scripts that make
+around the editor screenshots, and the figures that explain the docs. They were made with [Vixl](https://github.com/jxburros/vixl), and the scripts that make
 them are in `vixl/kit/`.
 
 ## Rebuilding the pictures
@@ -48,7 +48,13 @@ python build_style_board.py      # style-board.png
 python build_poster.py           # exploration/tractr-poster.png
 python build_marketing.py        # the README hero, the About banner and the four seed packets
 python build_plates.py SHOT.png "FIG. 1" "EDIT MODE" "A caption." plate-edit-mode   # one catalog plate
+python build_diagrams.py         # the figures in the docs (workflows, the event model, autotiles, …)
+python build_diagrams.py --install   # shrink them and copy them into docs/media/guide, plugins and dev
 ```
+
+The figures in `docs/media/guide` are also embedded in the editor's in-app Creator Guide, so keep them small:
+`--install` quantizes each to 64 colours (30–50 KB). Add a new figure as a function in `build_diagrams.py`, list it
+in `FIGURES` and `ALL`, and reference it from the page that explains it.
 
 The editor's own images (`app-icon-256.png`, `app.ico`, the header logo and the paper grain) are cut from `logo/`
 with `python3 scripts/generate-app-icon.py` (needs Pillow). The About banner is

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI guardrails for the golden fixtures (docs/NUMERICS.md "Goldens").
+# CI guardrails for the golden fixtures (docs/dev/NUMERICS.md "Goldens").
 #
 #   tools/ci/golden-guard.sh switches   fails when a record or bless switch is set
 #                                       (FARM_RECORD_*, *_BLESS): CI checks goldens, it never
@@ -15,7 +15,7 @@ case "${1:-}" in
     set_switches="$(env | cut -d= -f1 | grep -E '^FARM_RECORD_|_BLESS$' || true)"
     if [[ -n "$set_switches" ]]; then
       echo "Record/bless switches are set in CI: $(echo "$set_switches" | tr '\n' ' ')" >&2
-      echo "Re-record goldens locally, review the diff and commit it (docs/NUMERICS.md \"Goldens\")." >&2
+      echo "Re-record goldens locally, review the diff and commit it (docs/dev/NUMERICS.md \"Goldens\")." >&2
       exit 1
     fi
     echo "No record or bless switch is set."

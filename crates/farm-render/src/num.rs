@@ -1,4 +1,4 @@
-//! .NET number semantics the C# renderer relied on. Rendering may use floats (docs/LANGUAGES.md,
+//! .NET number semantics the C# renderer relied on. Rendering may use floats (docs/dev/ARCHITECTURE.md,
 //! "Determinism rules for Rust"), but the draw list must pick the same pixels and frames as the
 //! Skia reference, so the few places where C# and Rust disagree are spelled out here.
 

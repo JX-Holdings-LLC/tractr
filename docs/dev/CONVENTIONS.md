@@ -2,7 +2,7 @@
 
 How the schema, the simulation and their tests are laid out. The numbers
 follow [NUMERICS.md](NUMERICS.md): integers in fixed units in `farm-sim`,
-authoring units in JSON. [LANGUAGES.md](LANGUAGES.md) describes the Rust / F#
+authoring units in JSON. [ARCHITECTURE.md](ARCHITECTURE.md) describes the Rust / F#
 / C# split.
 
 ## Types (schemas)
@@ -77,5 +77,5 @@ records:
 Rust tests live in the crate (`crates/<crate>/tests/<name>.rs`); schema-only
 tests go to `tests/FarmEngine.Authoring.Tests` (`SchemaRecordTests.fs`).
 Goldens live in `fixtures/golden/` (recorded, never hand-edited; see
-[CONTRIBUTING.md](../CONTRIBUTING.md)) and the shared project fixtures in
+[CONTRIBUTING.md](../../CONTRIBUTING.md)) and the shared project fixtures in
 `fixtures/projects/`; the Rust and F# tests both read them.

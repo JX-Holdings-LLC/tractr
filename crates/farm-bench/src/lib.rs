@@ -1,4 +1,4 @@
-//! `farm-bench`: the benchmark scenarios of docs/LANGUAGES.md ("Tests") and their time budgets.
+//! `farm-bench`: the benchmark scenarios of docs/dev/ARCHITECTURE.md ("Tests") and their time budgets.
 //!
 //! The scenarios are built programmatically from the shared fixtures, so they need no files of
 //! their own:
@@ -40,7 +40,7 @@ use std::time::Instant;
 /// Seed of every new game the scenarios start.
 pub const SEED: &str = "farm-bench";
 
-/// The time budgets of docs/LANGUAGES.md ("Benchmarks"), in milliseconds.
+/// The time budgets of docs/dev/ARCHITECTURE.md ("Tests"), in milliseconds.
 pub mod budgets {
     /// Overnight pass, 64×64 farm, full crops.
     pub const OVERNIGHT_64: f64 = 2.0;
@@ -604,7 +604,7 @@ pub fn scenarios(scale: f64) -> Vec<Scenario> {
         }));
     }
     // High resolutions are reported only: the CPU path recomposes the whole frame (see
-    // docs/PLAYER.md "How a frame is drawn").
+    // docs/dev/PLAYER-INTERNALS.md "How a frame is drawn").
     let frames: [(&str, u32, u32, Option<f64>, NewPlayer); 7] = [
         ("", 1280, 800, Some(budgets::CPU_FRAME), gameplay_player),
         ("", 1920, 1080, Some(budgets::CPU_FRAME), gameplay_player),

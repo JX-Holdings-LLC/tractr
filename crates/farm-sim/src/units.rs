@@ -1,5 +1,5 @@
 //! Units: the integer and fixed-point types of every simulation quantity, and the conversions
-//! at the JSON boundary (docs/NUMERICS.md).
+//! at the JSON boundary (docs/dev/NUMERICS.md).
 //!
 //! The simulation keeps each quantity as an integer in a fixed unit (tiles as 1/8192, energy as
 //! 1/1000 point, time of day as micro-minutes, probabilities as thresholds out of 2³², …). JSON

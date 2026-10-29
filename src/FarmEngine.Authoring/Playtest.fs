@@ -5,7 +5,7 @@ open FarmEngine.Schemas
 /// Keep changes: a playtest's final game state written back into the project (TS
 /// `applyStateToProject`, which the Rust player also implements for project-started players).
 /// The editor's Play Mode runs a compiled cartridge, so the state comes back as the engine's
-/// `GameState` JSON and F# applies it (docs/LANGUAGES.md, `State.cs ApplyStateToProject`).
+/// `GameState` JSON and F# applies it (docs/dev/ARCHITECTURE.md, `State.cs ApplyStateToProject`).
 module Playtest =
     let private objectKey (key: string) (value: Json) : Json option =
         match Json.tryGet key value with

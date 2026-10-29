@@ -2,17 +2,12 @@
 
 # Tractr: the farm game engine
 
-*Grow your own worlds!* Tractr is a free-to-start maker for 2D farming
-games, with public source. Lay out the fields, plant the crops, write the neighbours and their
-quests, then ship it to Windows, Linux and the web, all without writing code.
-It is a native desktop app: the game engine, renderer, in-game UI and player
-are Rust; project edits, validation, the content compiler and Export Game are
-F#; the editor's desktop UI is C# on .NET 10 with
-[Avalonia](https://avaloniaui.net). There is no browser or web view inside.
-The app updates itself from GitHub Releases through the built-in **Update
-Center**.
-
-Tractr was called *Farming RPG Maker* until version 0.4.0.
+*Grow your own worlds!* Tractr is a desktop app for making 2D farming games
+without writing code. Lay out the fields, plant the crops, write the
+neighbours and their quests, playtest as you go, then ship your game to
+Windows, Linux, the Steam Deck and the web. It is free to use until a game
+you make with it earns US$1,000,000 ([licensing](LICENSING.md)), and its
+source is public.
 
 ![Four seed packets: Edit, Play, Mod and Ship.](docs/media/tractr-packets.png)
 
@@ -27,294 +22,63 @@ Tractr was called *Farming RPG Maker* until version 0.4.0.
 | ![The welcome screen: four steps from playtesting to sharing](docs/media/welcome.png) | ![The Old Farmer's dialogue box in Play Mode](docs/media/play-dialogue.png) | ![Update Center with release notes and download](docs/media/update-center.png) |
 
 The farm in these pictures is the Starter Farm that ships with Tractr. The
-games you make look like games, not like the editor: the editor wears the
-Tractr look (see [docs/brand](docs/brand/README.md)), and the player draws
-your game its own way.
+games you make look like games, not like the editor: they keep their own art
+and interface.
 
-## Status
+## What you can make
 
-The simulation, runtime, renderer, in-game UI, plugin sandbox and game player
-run in Rust; the editor keeps its Avalonia UI and does its project work in F#.
-Edit Mode includes map painting and scene tools (by mouse or keyboard, with
-screen-reader support), content forms with nested editors, reference pickers,
-profit readouts and thumbnails, project and export settings, Problems, mods,
-an art and animation studio (raster and SVG), creator patterns and interface
-panels. Tractr reads its own project JSON (schema versions 2 and 3) and does not
-import other formats. Tractr began as a port of a web version, which is now a
-separate project. See [ROADMAP.md](ROADMAP.md).
+- **Farms and worlds.** Paint maps up to 512×512 tiles with layers,
+  autotiling terrain, tall objects and lights; link scenes with doors. The
+  ground, tools, item kinds, crop qualities and sky are yours to define, so
+  a game can just as well be set on an alien planet.
+- **A full farming life.** Crops with seasons, quality and growth needs;
+  machines, recipes and crafting; animals and their barns; fishing, forage
+  and mines; buildings a builder puts up; shipping bins, collections,
+  bundles, achievements and mail.
+- **People and stories.** NPCs with daily routines and lines, gifts,
+  friendship, dating and marriage; quests, request boards, festivals and
+  cutscenes; events with triggers, conditions and outcomes, no code needed.
+- **Your own touches.** Import pictures and sounds, use the Workshop's
+  ready-made patterns, add game panels, combat, skills and perks.
+- **Mods.** Content packs add content, and their sandboxed JavaScript
+  plugins add systems of their own.
+- **Real games.** Export standalone Windows and Linux games (Steam Deck
+  ready) and a web demo for itch.io, with a title screen, save slots,
+  settings, gamepad support and accessibility options. Players need nothing
+  else.
 
-**One player, in the editor and in exported games.** Play Mode embeds the Rust
-game player (`crates/farm-player` with `crates/farm-ui`) through the C ABI:
-the world, HUD, dialogue, shops, crafting, inventory, quests, minigames and
-toasts look and behave exactly as they do in an exported game. Frames run on a
-worker thread, so plugins never stall the editor. The editor adds Restart,
-Keep changes and a debug drawer. Content-pack plugins run in `farm-plugins`, a
-QuickJS-in-WebAssembly sandbox with deterministic fuel budgets; a pack's
-manifest declares what its plugins may change, and a plugin can define its own
-minigame kinds ([docs/PLUGINS.md](docs/PLUGINS.md)).
+The same seed and the same inputs always give the same game, on the
+desktop, in exported games and in the browser, and Play Mode runs exactly
+the player your exported game ships.
 
-**F# authoring.** Project loading, validation, the Problems pipeline,
-content compilation, pack composition, localization, the starter pack and the
-New Project templates are F#, and so are the schema records every editor view
-binds to. `farmc` compiles a project into a deterministic cartridge and exports
-standalone games.
+## Get started
 
-Building from source needs a Rust toolchain as well as .NET: `dotnet build`
-builds the Rust library and the player templates too.
+1. **Install** Tractr from the
+   [latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest):
+   `Tractr-win-Setup.exe` on Windows, the AppImage on Linux, or the zip for
+   your Mac ([install guide](docs/INSTALL.md)). It updates itself through
+   **Help → Update Center**.
+2. **Create a project** with **File → New Project** and the Starter Farm
+   template.
+3. **Play it**: press **F5**, walk with WASD, till with T, water with Q,
+   interact with E and sleep with Z. **F6** goes back to the editor, and the
+   world is as it was.
+4. **Make it yours** in Edit Mode: paint the map, add crops, people and
+   quests in the Content tab, import art in the Art tab.
+5. **Share it** with **File → Export Game**.
 
-**Looks like a game out of the box.** Sample games ship with a built-in
-pixel-art pack (tiles, crops, trees, machines, animals, walking characters)
-plus day/night, seasons and weather, with zero project changes; any art a
-creator binds still wins. The pack is generated by
-[`tools/art`](tools/art) (Blender + Pillow, checked in as PNG sheets and a
-JSON manifest).
+The [Creator guide](docs/CREATOR-GUIDE.md) (also **Help → Creator Guide**,
+F1, in the app) walks through all of it.
 
-**Same engine, proven.** Golden replays of recorded play sessions (farming,
-weather, NPC schedules, events, shops, crafting, mines, fishing, content packs
-and plugins) pin the engine: every test run requires each step's state hash to
-match ([docs/NUMERICS.md](docs/NUMERICS.md)). The same seed and the same inputs
-give the same game, on the desktop, in exported games and in the browser.
+## Documentation
 
-## Install
-
-Download `Tractr-win-Setup.exe` from the
-[latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest)
-and run it. It installs per-user and needs no admin rights. A portable zip is
-attached to the release too.
-
-Builds are not code-signed yet, so Windows SmartScreen may say *"Windows
-protected your PC"*. Choose **More info → Run anyway**.
-
-The release workflow also builds these editor packages. Their first public
-release requires the native install/update checks in [RELEASING](docs/RELEASING.md):
-
-- **Linux x64:** `Tractr-linux-x64.AppImage`. Make it executable with
-  `chmod +x Tractr-linux-x64.AppImage`, then run it from a writable folder.
-  Ubuntu 22.04 or newer is the build baseline. Install the runtime packages
-  `libasound2`, `libudev1`, `libxkbcommon-x11-0` and `libfuse2` (on Ubuntu
-  24.04, use `libasound2t64` and `libfuse2t64`). A graphical desktop is required.
-- **macOS:** `Tractr-osx-arm64-Portable.zip` for Apple Silicon or
-  `Tractr-osx-x64-Portable.zip` for Intel. Extract and move `Tractr.app` to
-  Applications. Until the Mac editor is signed and notarized, macOS blocks
-  the first launch: open System Settings > Privacy & Security and choose
-  **Open Anyway** for Tractr.
-
-Every release editor includes Windows, Linux and web game export templates.
-The Mac editor uses Command in place of Ctrl for editor shortcuts. Game export
-for macOS is a separate feature and is not included.
-
-### Updates
-
-**Help → Update Center** checks GitHub Releases for newer versions. It shows
-the release notes, downloads the update in the background, and applies it
-with **Restart & install**. Other options:
-
-- **Stable** or **Pre-release** channel
-- **Check for updates on startup** (on by default)
-- **Download updates automatically** (off by default)
-- **Skip this version**
-
-## Controls (Play Mode)
-
-| Keys | Action |
+| For | Start here |
 |---|---|
-| WASD / arrows | Move (diagonals included) |
-| E / Space / Enter | Interact (talk, harvest, plant, use) |
-| Q · T · R · F · C | Watering can · Hoe · Axe · Pickaxe · Scythe |
-| Z | Sleep |
-| I · J · X | Inventory · Quests · Crafting |
-| 1–9 | Pick a dialogue option |
-| Esc | Close panel / dialogue / shop, else the pause menu |
-| F5 / F6 | Play / Edit mode |
-| Ctrl+Z / Ctrl+Y | Undo / redo (Edit Mode) |
+| Making games | [Creator guide](docs/CREATOR-GUIDE.md), [Export Game](docs/EXPORT.md), [The game player](docs/PLAYER.md), [Troubleshooting](docs/TROUBLESHOOTING.md) |
+| Making packs and plugins | [Content packs](docs/PACKS.md), [Pack plugins](docs/PLUGINS.md) |
+| Working on Tractr | [CONTRIBUTING.md](CONTRIBUTING.md), [the contributor handbook](docs/dev/README.md) |
 
-In Edit Mode, choose a tile type and map tool in the side panel. Drag with
-Brush, Erase, Block or Unblock; drag with Rectangle or Select to define an
-area. Copy a selection, then choose **Paste on map** and click its destination.
-The scene controls create, rename, resize and duplicate maps, and can fill a
-whole scene or clear its crops and items. To make a door,
-choose **Door**, click its departure tile, choose a destination and save it;
-**Return door** creates the reverse link in the same undo step.
-
-Projects are saved in `%APPDATA%\Tractr\projects\`.
-
-## Export Game
-
-**File → Export Game…** turns the open project into standalone games for
-Windows x64 and Linux x64 (including Steam Deck), and into a **Web (browser
-demo)** page for itch.io. Pick the targets and an output folder, and export
-writes one folder per target and, if you like, a `.zip` or `.tar.gz`:
-
-```text
-WillowCreek-windows-x64.zip   WillowCreek/WillowCreek.exe, game.cart, licenses/
-WillowCreek-linux-x64.tar.gz  WillowCreek/WillowCreek, game.cart, .png, .desktop, licenses/
-WillowCreek-web.zip           index.html, game.js, farm_wasm_bg.wasm, game.cart, licenses/
-```
-
-The web demo runs the same Rust player compiled to WebAssembly, with touch
-controls on phones and tablets; test it from a web server (for example
-`python3 -m http.server` in its folder).
-
-The Windows `.exe` gets the game's icon and version info. Problems errors
-stop the export; warnings are listed in the report. Export needs no compiler:
-it uses the player templates that ship with the app. The same export runs
-from the command line, for example in CI:
-
-```sh
-dotnet run --project src/FarmEngine.Cli -- export my-game.json --target windows-x64 --target linux-x64 --out dist
-```
-
-Exported games open a window with a title screen, save slots, a pause menu,
-settings and gamepad support. See [docs/EXPORT.md](docs/EXPORT.md) and
-[docs/PLAYER.md](docs/PLAYER.md).
-
-## Troubleshooting
-
-**Windows says "Windows protected your PC" when installing.** The installer
-is not code-signed yet. Choose **More info → Run anyway** (see
-[Install](#install)).
-
-**The Update Center says "Updates are available only in the installed app".**
-You are running a development or source build, which Velopack cannot
-update. Install with `Tractr-win-Setup.exe`
-from the [latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest)
-to get updates; your projects stay where they are.
-
-![The Update Center in a development build](docs/media/update-center-not-installed.png)
-
-**Where are my projects?** In `%APPDATA%\Tractr\projects\`, one folder
-per project: `project.json`, a file per scene, NPC, dialogue and item, and the
-art and sounds as image and sound files (a project from before 0.10 is one
-`.json` file until its next save). **File → Export Project JSON** writes the
-whole project as one file anywhere, and **File → Import Project JSON** reads
-one back, or the `project.json` of a project folder.
-
-**A project doesn't open.** The editor says why. A project saved by a newer
-version of the editor (its schema version is newer than this engine supports)
-needs that version: update first. Tractr reads schema versions 2 and 3; files in other
-formats are refused, not upgraded. When a
-current project fails to open, keep a copy of the file and open an issue with
-it attached.
-Classic projects keep version 2. Saving or exporting a project with the new
-gameplay features writes version 3, so older editors refuse it instead of losing
-those settings.
-
-**Export Game says "The player template has no … slot. Use the templates that
-came with this editor." or "The … player template has no …".** The player
-templates in `players/` next to the app don't match this editor (a different
-version, or a partial copy). Reinstall the app, or for a source build run
-`dotnet build` again: it puts fresh templates in `players/` next to the app
-and `farmc`. `FARM_PLAYER_TEMPLATES` points the editor and `farmc` at
-another folder.
-
-**A Linux source build fails in `alsa-sys` or `libudev-sys`.** Install the
-[Linux prerequisites](#build-from-source):
-`sudo apt-get install libasound2-dev libudev-dev pkg-config`.
-
-## Build from source
-
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download) and a
-[Rust toolchain](https://rustup.rs) (the version is pinned in
-`rust-toolchain.toml`). `dotnet build` also builds the Rust library.
-`scripts/dev-setup.sh` (Linux, macOS) or `scripts\dev-setup.ps1` (Windows)
-installs whatever is missing at the pinned versions, and the
-[dev container](.devcontainer) comes with all of it
-([CONTRIBUTING.md](CONTRIBUTING.md#prerequisites)).
-
-**Linux prerequisites.** The player links ALSA and libudev, so
-`cargo test --workspace` and `dotnet build` (which builds the Export Game
-template) also need:
-
-```sh
-sudo apt-get install libasound2-dev libudev-dev pkg-config
-sudo apt-get install libxkbcommon-x11-0 xvfb   # to run the window; xvfb for the window test
-```
-
-Without `xvfb`, the player's window test is skipped.
-
-```sh
-dotnet build Tractr.sln
-dotnet test Tractr.sln
-dotnet run --project src/Tractr.App
-cargo test --workspace   # Rust engine tests, including the golden replays
-```
-
-The F# command-line compiler turns a validated project into a cartridge for
-the Rust player:
-
-```sh
-dotnet run --project src/FarmEngine.Cli -- compile my-project.json --out game.cart
-```
-
-The Rust `farm-player` plays a cartridge in a window, runs a headless replay
-for validation, or renders screenshots; see [docs/PLAYER.md](docs/PLAYER.md).
-
-```sh
-cargo run -p farm-player -- --cart game.cart
-```
-
-The build also puts a player template for your platform (Windows or Linux
-x64) in `players/` next to the app and `farmc`, so Export Game works from a
-source build. Export tests need no extra tools; rebuilding the PE test
-fixture needs mingw-w64 (see `tests/FarmEngine.Export.Tests/Fixtures/pe/build.sh`).
-
-CI builds and tests on Windows, Linux, Intel macOS and Apple Silicon macOS.
-Export Game has no macOS game target yet. The
-[CI workflow](.github/workflows/ci.yml) also publishes a self-contained
-`win-x64` build on every push. [CONTRIBUTING.md](CONTRIBUTING.md) lists the
-checks CI runs and how to re-record test fixtures (the `FARM_RECORD_*` and
-`*_BLESS` switches) and regenerate checked-in files.
-
-### Projects
-
-| Project | What it is |
-|---|---|
-| `Tractr.Updates` | Update Center backend (Velopack + GitHub Releases) |
-| `Tractr.App` | Avalonia desktop app: Edit Mode, Play Mode host, Export Game dialog |
-| `FarmEngine.Interop` | P/Invoke bindings to the Rust library (`RustPlayer`, `RustPreview`, `RustSession`) |
-| `FarmEngine.Authoring` (F#) | The schema records and their JSON, project edits, undo/redo, loading, validation, Problems, content compiler, packs, sample templates, cartridge compiler and reader |
-| `FarmEngine.Authoring.Net` (F#) | The .NET edge of the F# core: `System.Text.Json` conversion, `RecordJson` and the generated `RecordWith` extensions the C# app builds records with |
-| `FarmEngine.Export` (F#) | Export Game: player templates, Windows icon/version patching, folders and archives |
-| `FarmEngine.Cli` (F#) | `farmc compile` and `farmc export` |
-| `crates/farm-sim` (Rust) | Deterministic simulation, golden-verified |
-| `crates/farm-host` (Rust) | The host protocol of `farm-ffi` (player, sessions, previews), whose player `farm-wasm` shares |
-| `crates/farm-ffi` (Rust) | C ABI the app loads: the embedded player, map previews, headless sessions |
-| `crates/farm-wasm` (Rust) | The same for web pages (wasm-bindgen): the `Player`, for the web demo export |
-| `crates/farm-bench` (Rust) | Benchmarks and the CI time-budget check |
-| `crates/farm-cart` (Rust) | Cartridge reader, save files and save loading |
-| `crates/farm-cart-schema` (Rust) | Generated FlatBuffers accessors, isolated from hand-written safe Rust |
-| `crates/farm-player` (Rust) | The game player: game shell, saves, settings, audio, gamepads, window; headless replays and screenshots; embedded in Play Mode and the Export Game template |
-| `crates/farm-ui` (Rust) | In-game UI on draw lists: HUD, dialogue, shop, crafting, inventory, quests, panels, minigames, the game shell's screens |
-| `crates/farm-runtime` (Rust) | Fixed timestep, input bindings, minigames, creator panels, audio model |
-| `crates/farm-render` (Rust) | World and Edit Mode snapshots, art decoration, built-in art, draw lists, a CPU rasterizer and fonts |
-| `crates/farm-gpu` (Rust) | The desktop player's GPU renderer: farm-render's draw lists through wgpu (Vulkan, DirectX 12, Metal), with the CPU rasterizer as fallback and reference |
-| `crates/farm-plugins` (Rust) | Plugin sandbox: QuickJS in WebAssembly, one wasmi instance per plugin, fuel budgets |
-
-[docs/CONVENTIONS.md](docs/CONVENTIONS.md) has the code conventions.
-[docs/LANGUAGES.md](docs/LANGUAGES.md) describes the Rust / F# / C# split and
-how the integer numerics work ([docs/NUMERICS.md](docs/NUMERICS.md)).
-[docs/EXPORT.md](docs/EXPORT.md) covers Export Game: standalone Windows and
-Linux games built on the native player.
-
-## Releasing
-
-Commit the version bump on `main`, wait for CI, then push a version tag
-(`v0.3.0`, or `v0.4.0-beta.1` for a pre-release). The
-[release workflow](.github/workflows/release.yml) then:
-
-1. checks that the commit is on `main`, passed CI and has the tag's version,
-   and that the version is not released yet;
-2. builds the Export Game player templates for Windows, Linux and the web,
-   and exports and replays a sample game on the Windows and Linux templates;
-3. builds, tests and packages the app with Velopack, with the templates in
-   its `players/` folder;
-4. after a reviewer approves the `release` environment, publishes the
-   installer, portable zip, delta-update packages, the templates
-   (`player-windows-x64.zip`, `player-linux-x64.tar.gz`, `player-web.tar.gz`)
-   and `SHA256SUMS` as a GitHub Release, with a build provenance attestation.
-
-Installed apps find the release in their Update Center. See
-[docs/RELEASING.md](docs/RELEASING.md).
+The [handbook](docs/README.md) lists every page.
 
 ## License
 
@@ -322,25 +86,15 @@ Tractr is source-available under the
 [Business Source License 1.1](LICENSE) from JX Holdings, LLC. It is free to
 use, and free to ship in games you sell, until a game you make with it earns
 US$1,000,000; that game then needs a commercial license, and your other games
-do not. Each version becomes MIT four years after it is published. See
-[LICENSING.md](LICENSING.md) for plain-words answers about plugins, forks and
-older releases. The app ships the notices of the software it includes in its `licenses` folder
-(`THIRD-PARTY-dotnet.txt` for the .NET packages, the runtime, icons and
-fonts; `THIRD-PARTY-rust.txt` for the engine library), and **Help → About
-Tractr**
-links to the license. Every exported game carries
-`licenses/THIRD-PARTY.txt`, which ends with the engine's license: the
-player ships in your games, whoever plays them, and your project's content
-stays yours (see [docs/EXPORT.md](docs/EXPORT.md)).
+do not. Your games' content, and the packs and plugins you write, are yours.
+Each version becomes MIT four years after it is published.
+[LICENSING.md](LICENSING.md) answers the common questions in plain words.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build, test and regenerate
-the checked-in files, and [SECURITY.md](SECURITY.md) for reporting
-vulnerabilities.
+## Contributing
 
-## Unified release procedure
-
-`release.json` is the authoritative release manifest. Keep configured embedded versions synchronized and advance affected apps (patch by default) before merging changes into main. The first adoption establishes a baseline; later PRs must pass **Release version validation**.
-
-Use **Actions → Release → Run workflow** from **main**, choose stable or preview, and leave **dry_run** enabled first. Only apps ahead of their published version in their own namespace are selected. Build/test/sign all required packages before publishing. Tag pushes and merges no longer publish migrated apps automatically. After inspecting the dry run, dispatch with dry_run disabled and satisfy configured approvals. Published versions are never overwritten; use a new version for a correction.
-
-See [.release/README.md](.release/README.md) for this repository's inventory, credentials, compatibility, and validation limits. Shared implementation: [JX Holdings release infrastructure](https://github.com/JX-Holdings-LLC/release-infrastructure).
+Tractr's engine and player are Rust, its project logic and Export Game F#,
+and the editor C# on .NET 10 with [Avalonia](https://avaloniaui.net).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers building from source, testing and
+the checks CI runs; [ROADMAP.md](ROADMAP.md) has what is planned; and
+[SECURITY.md](SECURITY.md) how to report a vulnerability. Tractr was called
+*Farming RPG Maker* until version 0.4.0.

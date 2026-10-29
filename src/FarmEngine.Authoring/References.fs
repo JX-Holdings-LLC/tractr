@@ -163,7 +163,7 @@ type PickerOption =
         Missing: bool
     }
 
-/// What a schema property holds (docs/LANGUAGES.md: the editor asks F# what a field means).
+/// What a schema property holds (docs/dev/ARCHITECTURE.md: the editor asks F# what a field means).
 [<RequireQualifiedAccess>]
 type FieldRole =
     /// The id of one thing. `empty` labels the "nothing chosen" entry when empty is allowed.

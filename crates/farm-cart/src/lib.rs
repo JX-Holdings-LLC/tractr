@@ -1,4 +1,4 @@
-//! `farm-cart`: cartridge and save formats (docs/LANGUAGES.md "Contracts between languages").
+//! `farm-cart`: cartridge and save formats (docs/dev/ARCHITECTURE.md "Contracts between languages").
 //!
 //! Cartridges (format 3) are FlatBuffers with JSON sections (content, new-game start state,
 //! presentation) and an embedded asset table. Saves are binary (`FGSV`: header, slot

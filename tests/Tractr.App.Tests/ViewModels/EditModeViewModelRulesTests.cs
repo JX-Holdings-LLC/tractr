@@ -3,7 +3,7 @@ using Tractr.App.ViewModels.EditMode;
 
 namespace Tractr.App.Tests.ViewModels;
 
-/// <summary>The rule of docs/EDITOR-ARCHITECTURE.md: the Edit Mode view models have no Avalonia types.</summary>
+/// <summary>The rule of docs/dev/EDITOR-ARCHITECTURE.md: the Edit Mode view models have no Avalonia types.</summary>
 public sealed class EditModeViewModelRulesTests
 {
     private const BindingFlags Everything = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;

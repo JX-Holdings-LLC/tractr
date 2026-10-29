@@ -14,7 +14,7 @@ type ProjectContent =
     static member Dialogues(project: GameProject) : IReadOnlyList<Dialogue> =
         DialogueCopies.shown project |> Array.ofList :> IReadOnlyList<Dialogue>
 
-/// The C# boundary (docs/LANGUAGES.md "C# friendliness at the boundary"): static factories for
+/// The C# boundary (docs/dev/ARCHITECTURE.md "C# friendliness at the boundary"): static factories for
 /// every `Edit` case so view models never spell out F# union syntax, with .NET collections and
 /// nullable references instead of F# lists and options.
 [<AbstractClass; Sealed>]
@@ -580,7 +580,7 @@ type MapPlacement =
         Option.toObj edit
 
 /// A form field for C#: what a property or vocabulary field holds, as strings and read-only
-/// lists instead of F# unions (docs/LANGUAGES.md "C# friendliness at the boundary").
+/// lists instead of F# unions (docs/dev/ARCHITECTURE.md "C# friendliness at the boundary").
 [<Sealed>]
 type FormField
     internal

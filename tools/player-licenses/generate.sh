@@ -2,7 +2,7 @@
 # Regenerates THIRD-PARTY.txt and THIRD-PARTY-web.txt: the license notices for the Rust crates in farm-player, the fonts
 # and the plugin sandbox guest it embeds, and farm-player's own licenses.
 # Every player template ships the matching notice file, and Export Game copies it to
-# licenses/THIRD-PARTY.txt in each exported game (docs/EXPORT.md). The editor ships it too, as
+# licenses/THIRD-PARTY.txt in each exported game (docs/dev/EXPORT-INTERNALS.md). The editor ships it too, as
 # licenses/THIRD-PARTY-rust.txt: farm-ffi is built from crates inside farm-player's graph.
 #
 # Needs cargo-about (cargo install cargo-about --locked --features cli).

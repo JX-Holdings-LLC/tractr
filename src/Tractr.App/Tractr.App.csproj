@@ -30,6 +30,7 @@
   <ItemGroup>
     <!-- Help → Creator Guide renders the guide from the repository's docs (Views/HelpWindows.cs). -->
     <EmbeddedResource Include="../../docs/CREATOR-GUIDE.md" LogicalName="Tractr.App.CreatorGuide.md" />
+    <EmbeddedResource Include="../../docs/media/guide/*.png" LogicalName="Tractr.App.Guide.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />

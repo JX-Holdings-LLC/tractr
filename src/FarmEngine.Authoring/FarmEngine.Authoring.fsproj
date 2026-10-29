@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>FarmEngine.Authoring</RootNamespace>
-    <Description>Project logic: edits, undo/redo, validation (docs/LANGUAGES.md "F#").</Description>
+    <Description>Project logic: edits, undo/redo, validation (docs/dev/ARCHITECTURE.md "F#").</Description>
     <WarnOn>3390;$(WarnOn)</WarnOn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- FS3370: the message that suggests `xs[i]` over `xs.[i]`. Every other warning fails the

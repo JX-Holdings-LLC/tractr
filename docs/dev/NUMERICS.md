@@ -1,16 +1,12 @@
 # Native numerics
 
-**Status:** implemented (project schema versions 2–3, save version
-5; phase 7's last step, [LANGUAGES.md](LANGUAGES.md#phases)).
-This file is the reference for the unit and integer type of every quantity the
-simulation keeps. Read it before you add a field to `farm-sim`.
+The reference for the unit and integer type of every quantity the simulation
+keeps (project schema versions 2 and 3, save version 5). Read it before you add
+a field to `farm-sim`.
 
 ## Why
 
-Until v8 the Rust core ran with JavaScript number semantics (`f64` everywhere,
-the `js` helpers, FNV-1a over stable JSON) so that it reproduced the
-TypeScript engine's goldens bit for bit. Now that the Rust engine is the
-reference, the constraints change:
+The simulation keeps integers in fixed units instead of floating point:
 
 - **Determinism across machines** (replays, saves, future lockstep play) is
   easier to guarantee with integer arithmetic than with floats, whose results
@@ -70,7 +66,7 @@ write it.
 | Skill XP, skill levels, curve thresholds | `u32` | whole | whole |
 | Tool power, tier, durability; node health | `i32` | whole | whole |
 | Density of mine rocks and hazards | `u32` | 1/1000 | fraction |
-| Health, damage, defense, monster health (M7) | `i32` | whole points | points |
+| Health, damage, defense, monster health | `i32` | whole points | points |
 | Area effect radius, storage slots, building size, capacity, build days, sight, hurt ticks | `u32` | whole | whole |
 
 Screen-facing fields (sprite frame sizes, asset sizes, panel layout) are not
@@ -113,12 +109,12 @@ the canonical form, from `is_human_readable`). The hash text is 16 lowercase
 hex digits. The cartridge hash in save files (`cart_hash`) uses the same
 function.
 
-Version-3 additions to existing records have an explicit extension list in
-`hash.rs`. An absent extension contributes no bytes, preserving classic game
-hashes. A present extension writes presence tag 2, its field name and value;
-the name distinguishes equal values in different optional fields. Original
-fields retain their existing presence tags and order. New enum cases must be
-appended so earlier variant indices stay stable.
+Fields added to an existing record after it was first hashed are listed as
+extensions in `hash.rs`. An absent extension contributes no bytes, so a game
+that doesn't use it keeps its hashes. A present extension writes presence tag
+2, its field name and its value; the name tells equal values in different
+optional fields apart. The original fields keep their presence tags and order.
+Append new enum cases at the end, so earlier variant indices stay stable.
 
 ## Saves
 
@@ -131,9 +127,14 @@ numbers.
 ## Projects (F#)
 
 `ProjectSchema.CurrentProjectSchemaVersion` is 3. Version 2 and 3 projects load
-(`ProjectLoad`); other versions are refused. Classic projects retain version 2;
-`ProjectVersion` promotes saved projects and cartridge headers to version 3
-when the new gameplay features are present. The values a
+(`ProjectLoad`); other versions are refused. A project that uses none of the
+version-3 features (weekdays and conditional schedules, shop hours and price
+modifiers, festival programs, forage, the fishing, progression and quest
+additions, request boards, extra mines; `ProjectVersion.fs` has the list)
+stays at version 2;
+`ProjectVersion` writes version 3 into saved projects and cartridge headers
+when one is present, so an older editor refuses the file instead of dropping
+the feature. The values a
 project carries into play (player and NPC positions, energy, the current
 time of day, animal positions and mood) are on the engine's grid, so the
 editor shows what the game will run. Content definitions (prices, chances) keep what the creator typed; the Rust

@@ -455,7 +455,7 @@ const SYNCED_PLAYER_KEYS: [&str; 18] = [
 /// [`apply_state_to_project`] on the project's JSON: the keys the state writes back come from
 /// the state, every other value stays exactly as the project JSON has it. Reading a project into
 /// [`GameProject`] quantizes its content (a chance of 0.01 becomes the nearest 2⁻³² step), and
-/// "keep changes" must not rewrite what the creator typed (docs/NUMERICS.md "Project
+/// "keep changes" must not rewrite what the creator typed (docs/dev/NUMERICS.md "Project
 /// migration").
 pub fn apply_state_to_project_json(project: &Value, state: &GameState) -> Result<Value, String> {
     let typed: GameProject = serde_json::from_value(project.clone()).map_err(|e| format!("project JSON: {e}"))?;

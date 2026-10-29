@@ -90,7 +90,7 @@ fn fnv_utf16(units: &[u16]) -> u32 {
 
 /// The fixed RNG vectors hold: the generator is unchanged, and the integer draws (`(u × n) >> 32`
 /// ranges, integer weighted picks) give the same results as the old `nextFloat` arithmetic
-/// (docs/NUMERICS.md "Randomness").
+/// (docs/dev/NUMERICS.md "Randomness").
 #[test]
 fn rng_streams_match_the_fixed_vectors() {
     let fixture = golden("vectors/rng.json");

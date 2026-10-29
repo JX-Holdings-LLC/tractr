@@ -1,4 +1,4 @@
-//! `farm-wasm`: the game for web pages, through `wasm-bindgen` (docs/LANGUAGES.md
+//! `farm-wasm`: the game for web pages, through `wasm-bindgen` (docs/dev/ARCHITECTURE.md
 //! "WebAssembly (farm-wasm)").
 //!
 //! It mirrors farm-ffi, the C ABI the desktop editor uses, and runs the same code: both are thin

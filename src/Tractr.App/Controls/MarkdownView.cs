@@ -1,8 +1,11 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 using Tractr.App.Markdown;
 
 namespace Tractr.App.Controls;
@@ -11,11 +14,14 @@ namespace Tractr.App.Controls;
 /// Renders Markdown (see <see cref="MarkdownParser"/>) as selectable, wrapped text blocks.
 /// Text blocks get the style classes <c>md-h1</c>…<c>md-h3</c>, <c>md-p</c>, <c>md-li</c>,
 /// <c>md-quote</c> and <c>md-code</c> so the look is controlled from <c>App.axaml</c>.
+/// Images come from <see cref="ImageSource"/>; one it has no bytes for is shown as a link.
 /// </summary>
 public sealed class MarkdownView : Border
 {
     public static readonly StyledProperty<string?> MarkdownProperty =
         AvaloniaProperty.Register<MarkdownView, string?>(nameof(Markdown));
+
+    private Func<string, Stream?>? imageSource;
 
     private static readonly FontFamily MonoFont = new("avares://Tractr/Assets/Fonts#Courier Prime, fonts:Inter#Inter");
 
@@ -35,15 +41,75 @@ public sealed class MarkdownView : Border
         set => SetValue(MarkdownProperty, value);
     }
 
+    /// <summary>Opens the bytes of an image the Markdown names by its URL, or returns null when there are none.</summary>
+    public Func<string, Stream?>? ImageSource
+    {
+        get => imageSource;
+        set
+        {
+            imageSource = value;
+            Rebuild();
+        }
+    }
+
     /// <summary>The rendered blocks (for tests).</summary>
     public StackPanel Document { get; private set; } = new();
 
     /// <summary>A link in the text was clicked; the host decides how to open it.</summary>
     public event EventHandler<string>? LinkClicked;
 
+    private readonly Dictionary<string, Control> anchors = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Scrolls the heading a <c>#fragment</c> link names into view (GitHub's anchors: lower case, punctuation
+    /// dropped, spaces as dashes). False when no heading has that anchor.
+    /// </summary>
+    public bool ScrollToAnchor(string fragment)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+        if (!anchors.TryGetValue(fragment.TrimStart('#'), out var heading))
+        {
+            return false;
+        }
+
+        // Put the heading at the top of the scroller holding the document, as a browser does.
+        if (this.FindAncestorOfType<ScrollViewer>() is { Content: Visual content } scroller
+            && heading.TranslatePoint(default, content) is { } top)
+        {
+            scroller.Offset = new Vector(scroller.Offset.X, Math.Max(0, top.Y - 8));
+        }
+        else
+        {
+            heading.BringIntoView();
+        }
+
+        return true;
+    }
+
+    /// <summary>The anchor GitHub gives a heading with this text.</summary>
+    public static string Anchor(string heading)
+    {
+        ArgumentNullException.ThrowIfNull(heading);
+        var slug = new System.Text.StringBuilder(heading.Length);
+        foreach (var c in heading.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(c) || c is '-' or '_')
+            {
+                slug.Append(c);
+            }
+            else if (c == ' ')
+            {
+                slug.Append('-');
+            }
+        }
+
+        return slug.ToString();
+    }
+
     private void Rebuild()
     {
         var panel = new StackPanel { Spacing = 6 };
+        anchors.Clear();
         var blocks = MarkdownParser.Parse(Markdown);
         for (var index = 0; index < blocks.Count; index++)
         {
@@ -56,11 +122,18 @@ public sealed class MarkdownView : Border
                 MarkdownQuote q => Quote(q),
                 MarkdownCodeBlock code => CodeBlock(code),
                 MarkdownRule => new Separator { Margin = new Thickness(0, 6) },
+                MarkdownImage image => Image(image),
+                MarkdownTable table => Table(table),
                 _ => null,
             };
             if (control is not null)
             {
                 panel.Children.Add(control);
+            }
+
+            if (block is MarkdownHeading heading && control is not null)
+            {
+                anchors.TryAdd(Anchor(string.Concat(heading.Inlines.Select(i => i.Text))), control);
             }
         }
 
@@ -148,6 +221,76 @@ public sealed class MarkdownView : Border
         grid.Children.Add(marker);
         grid.Children.Add(text);
         return grid;
+    }
+
+    private Control Table(MarkdownTable table)
+    {
+        var columns = table.Rows.Count == 0 ? 0 : table.Rows.Max(row => row.Count);
+        var grid = new Grid { Classes = { "md-table" }, Margin = new Thickness(0, 2) };
+        // Columns share the width by how much text they hold, so short label columns stay narrow.
+        for (var c = 0; c < columns; c++)
+        {
+            var longest = table.Rows.Max(row => c < row.Count ? row[c].Sum(i => i.Text.Length) : 0);
+            grid.ColumnDefinitions.Add(new ColumnDefinition(Math.Clamp(longest, 8, 60), GridUnitType.Star));
+        }
+
+        for (var r = 0; r < table.Rows.Count; r++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            var header = r == 0 && table.HasHeader;
+            for (var c = 0; c < table.Rows[r].Count; c++)
+            {
+                IReadOnlyList<MarkdownInline> inlines = header ? [.. table.Rows[r][c].Select(i => i with { Bold = true })] : table.Rows[r][c];
+                var cell = new Border
+                {
+                    Classes = { header ? "md-table-header" : "md-table-cell" },
+                    Padding = new Thickness(0, 3, 12, 3),
+                    BorderBrush = Brush("FarmBorderBrush", Color.FromRgb(0xC9, 0xB4, 0x8A)),
+                    BorderThickness = new Thickness(0, 0, 0, header ? 1 : 0),
+                    Child = Text(inlines, "md-li"),
+                };
+                Grid.SetRow(cell, r);
+                Grid.SetColumn(cell, c);
+                grid.Children.Add(cell);
+            }
+        }
+
+        return grid;
+    }
+
+    private Control Image(MarkdownImage image)
+    {
+        if (LoadImage(image.Url) is { } bitmap)
+        {
+            var control = new Image
+            {
+                Source = bitmap,
+                Stretch = Stretch.Uniform,
+                StretchDirection = StretchDirection.DownOnly,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4),
+                Classes = { "md-image" },
+            };
+            AutomationProperties.SetName(control, image.Alt);
+            ToolTip.SetTip(control, image.Alt);
+            return control;
+        }
+
+        var alt = image.Alt.Length > 0 ? image.Alt : image.Url;
+        return Text([new MarkdownInline(alt, LinkUrl: image.Url)], "md-p");
+    }
+
+    private Bitmap? LoadImage(string url)
+    {
+        try
+        {
+            using var stream = imageSource?.Invoke(url);
+            return stream is null ? null : new Bitmap(stream);
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private Control Quote(MarkdownQuote quote) => new Border

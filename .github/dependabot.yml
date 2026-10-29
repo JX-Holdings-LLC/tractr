@@ -1,4 +1,4 @@
-# Dependency updates (docs/RELEASING.md "Dependencies"). Minor and patch updates come grouped,
+# Dependency updates (docs/dev/RELEASING.md "Dependencies"). Minor and patch updates come grouped,
 # one pull request per group and week; majors come one by one. CI decides whether a bump is
 # safe: the pinned actions, the lock files and the generated code all have checks.
 version: 2
@@ -34,7 +34,7 @@ updates:
         exclude-patterns: ["Avalonia*", "SkiaSharp*", "Svg.Skia", "Velopack"]
     ignore:
       # Avalonia 12 renders on SkiaSharp 3.119; Svg.Skia 5.2 and later need SkiaSharp 4. Both rules
-      # go once an Avalonia release renders on SkiaSharp 4 (docs/SKIA-MIGRATION.md).
+      # go once an Avalonia release renders on SkiaSharp 4 (docs/dev/IMAGE-SAFETY.md).
       - dependency-name: Svg.Skia
         versions: [">= 5.2"]
       - dependency-name: "SkiaSharp*"

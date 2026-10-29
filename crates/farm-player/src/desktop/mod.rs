@@ -14,7 +14,7 @@
 //!   the crash log is (exported Windows games have no console), until it is closed or Esc /
 //!   Enter is pressed.
 // Wall-clock time paces frames and stamps saves and crash logs here; it never reaches the
-// simulation (docs/LANGUAGES.md "Determinism rules").
+// simulation (docs/dev/ARCHITECTURE.md "Determinism rules").
 #![allow(clippy::disallowed_types, clippy::disallowed_methods)]
 
 pub mod crash;

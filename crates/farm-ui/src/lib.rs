@@ -1,5 +1,5 @@
 //! `farm-ui`: the in-game interface of Tractr games, drawn onto `farm-render` draw
-//! lists (phase 6 of docs/LANGUAGES.md).
+//! lists (docs/dev/ARCHITECTURE.md).
 //!
 //! - [`Ui`] is a small immediate-mode toolkit: stable [`WidgetId`]s, hit testing, focus
 //!   navigation that works with keyboard, gamepad and mouse, layers for modals, clipping and

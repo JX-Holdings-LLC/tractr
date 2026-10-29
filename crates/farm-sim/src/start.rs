@@ -1,4 +1,4 @@
-//! What a cartridge carries instead of the editable project (docs/EXPORT.md: the player never
+//! What a cartridge carries instead of the editable project (docs/dev/EXPORT-INTERNALS.md: the player never
 //! reads project JSON).
 //!
 //! A project mixes three things: the authored content (compiled into `GameContent`), the state a

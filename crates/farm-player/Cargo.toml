@@ -46,7 +46,7 @@ directories = { version = "6", optional = true }
 sys-locale = { version = "0.3", optional = true }
 
 # build.rs embeds placeholder icon and version resources when the target is Windows;
-# Export Game patches them (docs/EXPORT.md).
+# Export Game patches them (docs/dev/EXPORT-INTERNALS.md).
 [build-dependencies]
 embed-resource = "3"
 

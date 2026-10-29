@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.11.1
+
+- Reorganize the documentation by reader. Creators get an install guide, a
+  restructured Creator Guide (the gameplay features of 0.11 now sit with
+  the topics they belong to), a user-facing Export Game page, a page about
+  what players get, and troubleshooting. Pack authors get a new content pack
+  guide and a plugin guide with a first-plugin tutorial and the full
+  mutation reference. Contributor docs move to `docs/dev/`: the language
+  plan becomes an architecture reference, the Skia migration notes an image
+  safety reference, and export, player and plugin sandbox internals get
+  pages of their own. The README and roadmap now describe Tractr as it is
+  and what comes next.
+- Add figures drawn with Vixl in the Seed Catalog style
+  (`docs/brand/vixl/kit/build_diagrams.py`): the creator workflow, Edit
+  Mode's tabs, event logic, autotile frames, music priority, playtests,
+  export targets, pack anatomy, the plugin flow, the minigame canvas and the
+  architecture.
+- The in-app Creator Guide shows pictures and tables, and its links to its
+  own headings scroll there instead of opening the browser.
+
 ## 0.11.0
 
 - Add optional weekday calendars, conditional NPC schedules, shop hours and
@@ -529,7 +549,7 @@ cutscenes). See the [Creator Guide](docs/CREATOR-GUIDE.md#your-games-world).
   settings file pick one, and the game logs which it uses. Screenshots,
   headless runs, the editor's Play Mode and the web demo keep the CPU
   renderer, and tests check the two against each other
-  ([docs/PLAYER.md](docs/PLAYER.md#renderers)).
+  ([docs/PLAYER.md](docs/dev/PLAYER-INTERNALS.md#renderers)).
 
 - **Music, more minigames, and the game in one language.**
   - **Music and ambience.** Games have a soundtrack out of the box: day and
@@ -766,7 +786,7 @@ cutscenes). See the [Creator Guide](docs/CREATOR-GUIDE.md#your-games-world).
     fixes for its image decoders, fonts and text shaping), and SVG import to
     Svg.Skia 5 with its scripting and SVG fonts switched off. The editor
     looks and works as before, and so do Export Game's icons
-    ([docs/SKIA-MIGRATION.md](docs/SKIA-MIGRATION.md)).
+    ([docs/SKIA-MIGRATION.md](docs/dev/IMAGE-SAFETY.md)).
 - **License, notices and contributor docs.** The repository has an MIT
   `LICENSE`. The app ships it in its `licenses` folder with notices for its
   .NET packages, the runtime, icons and fonts (`THIRD-PARTY-dotnet.txt`), and
@@ -872,7 +892,7 @@ cutscenes). See the [Creator Guide](docs/CREATOR-GUIDE.md#your-games-world).
     says "5 minutes ago" and "1.5 KB" like the Update Center and Export Game),
     art studio errors name the field instead of the control, and test-only
     placeholders no longer ship in the app.
-    [docs/EDITOR-ARCHITECTURE.md](docs/EDITOR-ARCHITECTURE.md) describes the
+    [docs/EDITOR-ARCHITECTURE.md](docs/dev/EDITOR-ARCHITECTURE.md) describes the
     editor's views and the steps towards view models. The Content, Problems,
     Settings, Mods, Workshop and Interface tabs now keep their state and
     unsaved fields in view models that are tested without building the
