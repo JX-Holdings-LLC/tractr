@@ -8,15 +8,21 @@ open FarmEngine.Schemas
 /// `ChecksWorld` and `ChecksContent`.
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Problems =
-    let private isIndex (segment: string) = segment.Length > 0 && segment |> Seq.forall Char.IsDigit
+    let private isIndex (segment: string) =
+        segment.Length > 0 && segment |> Seq.forall Char.IsDigit
 
     /// zod's dotted issue path (`scenes.0.tiles.1.2.background`) as a JSON path (`scenes[0].tiles[1][2].background`).
     let jsonPath (zodPath: string) : string =
         let builder = System.Text.StringBuilder()
+
         for segment in zodPath.Split('.') do
-            if isIndex segment then builder.Append('[').Append(segment).Append(']') |> ignore
-            elif builder.Length = 0 then builder.Append segment |> ignore
-            else builder.Append('.').Append(segment) |> ignore
+            if isIndex segment then
+                builder.Append('[').Append(segment).Append(']') |> ignore
+            elif builder.Length = 0 then
+                builder.Append segment |> ignore
+            else
+                builder.Append('.').Append(segment) |> ignore
+
         builder.ToString()
 
     let private idAt (list: 'T list) (idOf: 'T -> string) (index: int) : string option =
@@ -31,11 +37,13 @@ module Problems =
     let private schemaTarget (project: GameProject) (segments: string list) : NavigationTarget option =
         let item (list: 'T list) (idOf: 'T -> string) (make: string -> NavigationTarget) =
             tryIndex segments 1 |> Option.bind (idAt list idOf) |> Option.map make
+
         match segments with
         | "scenes" :: _ ->
             match tryIndex segments 1 with
             | Some s when s < project.Scenes.Length ->
                 let scene = project.Scenes.[s]
+
                 match List.tryItem 2 segments, tryIndex segments 3, tryIndex segments 4 with
                 | Some "tiles", Some y, Some x -> Some(NavigationTarget.Scene(scene.Id, x, y))
                 | Some "transitions", Some t, _ when t < scene.Transitions.Length ->
@@ -68,9 +76,22 @@ module Problems =
             match project.CustomCrops with
             | None -> None
             | Some crops -> item crops (fun c -> c.Id) NavigationTarget.Crop
-        | "player" :: _ -> if project.Scenes |> List.exists (fun s -> s.Id = project.Player.SceneId) then Some(NavigationTarget.Scene(project.Player.SceneId, int project.Player.X, int project.Player.Y)) else None
-        | "settings" :: _ | "mine" :: _ | "weather" :: _ | "startSceneId" :: _ | "currentYear" :: _ | "mode" :: _ | "selectedTileType" :: _
-        | "schemaVersion" :: _ | "id" :: _ | "rngState" :: _ | "mineDeepestFloor" :: _ -> Some NavigationTarget.Settings
+        | "player" :: _ ->
+            if project.Scenes |> List.exists (fun s -> s.Id = project.Player.SceneId) then
+                Some(NavigationTarget.Scene(project.Player.SceneId, int project.Player.X, int project.Player.Y))
+            else
+                None
+        | "settings" :: _
+        | "mine" :: _
+        | "weather" :: _
+        | "startSceneId" :: _
+        | "currentYear" :: _
+        | "mode" :: _
+        | "selectedTileType" :: _
+        | "schemaVersion" :: _
+        | "id" :: _
+        | "rngState" :: _
+        | "mineDeepestFloor" :: _ -> Some NavigationTarget.Settings
         | _ -> None
 
     /// The JSON path of a schema issue. zod joins record keys into the dotted path as they are,
@@ -78,22 +99,33 @@ module Problems =
     /// members: the project's own keys say where the key ends.
     let private schemaJsonPath (project: GameProject) (zodPath: string) : string =
         let table = "weather.table."
+
         let key =
             if zodPath.StartsWith(table, StringComparison.Ordinal) then
                 project.Weather.Table
                 |> List.map fst
-                |> List.filter (fun key -> zodPath = table + key || zodPath.StartsWith(table + key + ".", StringComparison.Ordinal))
+                |> List.filter (fun key ->
+                    zodPath = table + key
+                    || zodPath.StartsWith(table + key + ".", StringComparison.Ordinal))
                 |> List.sortByDescending (fun key -> key.Length)
                 |> List.tryHead
-            else None
+            else
+                None
+
         match key with
         | Some key ->
             let rest = zodPath.Substring(min zodPath.Length (table.Length + key.Length + 1))
             let parent = ProblemPath.memberPath "weather.table" key
-            if rest.Length = 0 then parent
+
+            if rest.Length = 0 then
+                parent
             else
                 let tail = jsonPath rest
-                if tail.StartsWith "[" then parent + tail else parent + "." + tail
+
+                if tail.StartsWith "[" then
+                    parent + tail
+                else
+                    parent + "." + tail
         | None -> jsonPath zodPath
 
     /// Lints the editor checks already report with their own codes: scene grids and duplicate
@@ -102,6 +134,7 @@ module Problems =
     /// (`player.sceneMissing`).
     let private reportedElsewhere (issue: SchemaIssue) =
         let segments = issue.Path.Split('.')
+
         match List.ofArray segments with
         | [ "startSceneId" ]
         | [ "player"; "sceneId" ]
@@ -116,9 +149,11 @@ module Problems =
     /// names; warnings, `lint.*` codes) that no editor check reports already.
     let private fromSchema (project: GameProject) (sink: Sink) =
         let issues, lints = SchemaChecks.projectChecks project
+
         for issue in issues do
             let segments = issue.Path.Split('.') |> List.ofArray
             sink.Error("schema." + (List.head segments), schemaJsonPath project issue.Path, issue.Message, schemaTarget project segments)
+
         for lint in lints do
             if not (reportedElsewhere lint) then
                 let segments = lint.Path.Split('.') |> List.ofArray
@@ -135,24 +170,33 @@ module Problems =
         for problem in ContentLints.validateProjectContent project do
             let severity = problem.Severity
             let subject = problem.Subject
+
             let entry (name: string) (list: 'T list) (idOf: 'T -> string) (make: string -> NavigationTarget) =
                 match indexOf list idOf subject with
                 | Some i -> sprintf "%s[%d]" name i, Some(make (idOf list.[i]))
                 | None -> name, None
+
             let sceneEntry (suffix: string) =
                 match indexOf project.Scenes (fun s -> s.Id) subject with
                 | Some i -> sprintf "scenes[%d]%s" i suffix, Some(NavigationTarget.Scene(project.Scenes.[i].Id, 0, 0))
                 | None -> "scenes", None
+
             let path, target =
                 match problem.Category with
-                | "scenes" -> if problem.Message.StartsWith("Start scene", StringComparison.Ordinal) then "startSceneId", Some NavigationTarget.Settings else sceneEntry ""
+                | "scenes" ->
+                    if problem.Message.StartsWith("Start scene", StringComparison.Ordinal) then
+                        "startSceneId", Some NavigationTarget.Settings
+                    else
+                        sceneEntry ""
                 | "transitions" -> sceneEntry ".transitions"
                 | "crops" -> sceneEntry ".tiles"
                 | "nodes" ->
                     match indexOf project.NodeTypes (fun n -> n.Id) subject with
                     | Some i -> sprintf "nodeTypes[%d].drops" i, Some(NavigationTarget.NodeType project.NodeTypes.[i].Id)
                     | None -> sceneEntry ".tiles"
-                | "dialogue" -> entry "npcs" project.Npcs (fun n -> n.Id) NavigationTarget.Npc |> fun (p, t) -> p + ".dialogue", t
+                | "dialogue" ->
+                    entry "npcs" project.Npcs (fun n -> n.Id) NavigationTarget.Npc
+                    |> fun (p, t) -> p + ".dialogue", t
                 | "npcs" -> entry "npcs" project.Npcs (fun n -> n.Id) NavigationTarget.Npc
                 | "quests" -> entry "quests" project.Quests (fun q -> q.Id) NavigationTarget.Quest
                 | "events" -> entry "events" project.Events (fun e -> e.Id) NavigationTarget.Event
@@ -160,7 +204,91 @@ module Problems =
                 | "items" -> entry "items" project.Items (fun i -> i.Id) NavigationTarget.Item
                 | "packs" -> entry "contentPacks" project.ContentPacks (fun p -> p.Pack.Manifest.Id) NavigationTarget.Pack
                 | other -> other, None
+
             sink.Add(severity, "content." + problem.Category, path, problem.Message, target)
+
+    // Inspect authored text, not tile grids or embedded assets. Each warning points at the
+    // original record, so a creator can fix unsupported text before exporting a game.
+    let private fontCoverage (project: GameProject) (sink: Sink) =
+        let shownKeys =
+            set
+                [
+                    "name"
+                    "text"
+                    "title"
+                    "description"
+                    "label"
+                    "message"
+                    "failMessage"
+                    "prompt"
+                    "subject"
+                    "body"
+                ]
+
+        let rec walk path segments shown value =
+            match value with
+            | JString text when shown ->
+                match FontCoverage.firstMissing text with
+                | Some rune ->
+                    sink.Add(
+                        Severity.Warning,
+                        "text.fontCoverage",
+                        path,
+                        sprintf
+                            "The game font cannot draw U+%04X (%s); it will appear as a box. Use characters covered by the game font."
+                            rune.Value
+                            (rune.ToString()),
+                        schemaTarget project segments
+                    )
+                | None -> ()
+            | JArray values ->
+                values
+                |> List.iteri (fun index value -> walk (sprintf "%s[%d]" path index) (segments @ [ string index ]) shown value)
+            | JObject fields ->
+                fields
+                |> List.iter (fun (key, value) ->
+                    walk
+                        (path + "." + key)
+                        (segments @ [ key ])
+                        (shownKeys.Contains key
+                         || key = "words"
+                         || (shown && List.contains "words" segments))
+                        value)
+            | _ -> ()
+
+        let section name encode values =
+            values
+            |> List.iteri (fun index value -> walk (sprintf "%s[%d]" name index) [ name; string index ] false (encode value))
+
+        walk "name" [ "name" ] true (JString project.Name)
+
+        project.Scenes
+        |> List.iteri (fun index scene -> walk (sprintf "scenes[%d].name" index) [ "scenes"; string index; "name" ] true (JString scene.Name))
+
+        section "npcs" SchemaJson.encodeNpc project.Npcs
+        section "dialogues" SchemaJson.encodeDialogue project.Dialogues
+        section "items" SchemaJson.encodeItem project.Items
+        section "quests" SchemaJson.encodeQuest project.Quests
+        section "shops" SchemaJson.encodeShopDefinition project.Shops
+        section "recipes" SchemaJson.encodeRecipeDefinition project.Recipes
+        section "nodeTypes" SchemaJson.encodeNodeTypeDefinition project.NodeTypes
+        section "machineTypes" SchemaJson.encodeMachineTypeDefinition project.MachineTypes
+        section "animalSpecies" SchemaJson.encodeAnimalSpeciesDefinition project.AnimalSpecies
+        section "minigames" SchemaJson.encodeMinigameDef project.Minigames
+        section "gamePanels" SchemaJson.encodeGamePanel (defaultArg project.GamePanels [])
+        section "events" SchemaJson.encodeGameEvent project.Events
+        section "actions" SchemaJson.encodeActionDef project.Actions
+        section "cutscenes" SchemaJson.encodeCutscene (defaultArg project.Cutscenes [])
+        section "mail" SchemaJson.encodeMailDefinition (defaultArg project.Mail [])
+        section "achievements" SchemaJson.encodeAchievementDefinition (defaultArg project.Achievements [])
+        section "collections" SchemaJson.encodeCollectionDefinition (defaultArg project.Collections [])
+        section "bundles" SchemaJson.encodeBundleDefinition (defaultArg project.Bundles [])
+        section "buildingTypes" SchemaJson.encodeBuildingDefinition (defaultArg project.BuildingTypes [])
+        section "monsters" SchemaJson.encodeMonsterDefinition (defaultArg project.Monsters [])
+        section "customCrops" SchemaJson.encodeCustomCropDefinition (defaultArg project.CustomCrops [])
+        section "mines" SchemaJson.encodeMineDefinition (defaultArg project.Mines [])
+        section "requestBoards" SchemaJson.encodeRequestBoard (defaultArg project.RequestBoards [])
+        walk "settings" [ "settings" ] false (SchemaJson.encodeProjectSettings project.Settings)
 
     /// Everything the Problems panel shows for a project, in a stable order: schema errors,
     /// content lints, then the editor checks.
@@ -173,10 +301,15 @@ module Problems =
         ChecksContent.run context sink
         ChecksVocabulary.run context sink
         ChecksExport.run project sink
+        fontCoverage project sink
         sink.ToList()
 
-    let errors (problems: Problem list) = problems |> List.filter (fun p -> p.Severity = Severity.Error)
-    let warnings (problems: Problem list) = problems |> List.filter (fun p -> p.Severity = Severity.Warning)
+    let errors (problems: Problem list) =
+        problems |> List.filter (fun p -> p.Severity = Severity.Error)
+
+    let warnings (problems: Problem list) =
+        problems |> List.filter (fun p -> p.Severity = Severity.Warning)
 
     /// Export is refused while any error remains (warnings and infos are advice).
-    let blocksExport (problems: Problem list) = problems |> List.exists (fun p -> p.Severity = Severity.Error)
+    let blocksExport (problems: Problem list) =
+        problems |> List.exists (fun p -> p.Severity = Severity.Error)

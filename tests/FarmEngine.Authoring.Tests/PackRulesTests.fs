@@ -7,25 +7,31 @@ open FarmEngine.Authoring.Tests.TestProjects
 
 [<Fact>]
 let ``the engine range language handles zero majors and suffixes`` () =
-    let versions = ["0.5.0"; "0.9.0"; "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 "]
+    let versions =
+        [ "0.5.0"; "0.9.0"; "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 " ]
+
     let everything = versions
     // Each range, and the versions it accepts (an unparseable version is always accepted; an
     // unparseable or unsupported range accepts only that).
     let expected =
-        [ None, everything
-          Some "", everything
-          Some "*", everything
-          Some "^0.5.0", ["0.5.0"; "0.9.0"; "broken"]
-          Some ">=0.5.1", ["0.9.0"; "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 "]
-          Some "0.5.0", ["0.5.0"; "broken"]
-          Some "1.2.3-beta", ["1.2.3-beta"; "broken"; " 1.2.3 "]
-          Some "^1.2.0", ["1.2.3-beta"; "broken"; " 1.2.3 "]
-          Some "~1.0.0", ["broken"]
-          Some ">=garbage", ["broken"]
-          Some "^garbage", ["broken"]
-          Some "  >=1.0.0  ", ["1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 "] ]
+        [
+            None, everything
+            Some "", everything
+            Some "*", everything
+            Some "^0.5.0", [ "0.5.0"; "0.9.0"; "broken" ]
+            Some ">=0.5.1", [ "0.9.0"; "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 " ]
+            Some "0.5.0", [ "0.5.0"; "broken" ]
+            Some "1.2.3-beta", [ "1.2.3-beta"; "broken"; " 1.2.3 " ]
+            Some "^1.2.0", [ "1.2.3-beta"; "broken"; " 1.2.3 " ]
+            Some "~1.0.0", [ "broken" ]
+            Some ">=garbage", [ "broken" ]
+            Some "^garbage", [ "broken" ]
+            Some "  >=1.0.0  ", [ "1.0.0"; "1.2.3-beta"; "2.3.4"; "broken"; " 1.2.3 " ]
+        ]
+
     for range, accepted in expected do
         Assert.Equal<string list>(accepted, versions |> List.filter (PackRules.isEngineCompatible range))
+
     Assert.True(PackRules.isEngineCompatible (Some "^0.5.0") "0.9.0")
     Assert.False(PackRules.isEngineCompatible (Some "^0.5.0") "1.0.0")
 
@@ -35,7 +41,8 @@ let private packOf (text: string) : ContentPack =
     | Error message -> failwith message
 
 let private pack () =
-    packOf ("""{
+    packOf (
+        """{
       "manifest":{"id":"orchard","name":"Orchard","version":"1.0.0"},
       "content":{
         "items":[{"id":"fruit","name":"Fruit","cropType":"tree","useActionId":"eat"}],
@@ -50,7 +57,8 @@ let private pack () =
         "strings":{"fr":{"item:fruit:name":"Pomme","item:orchard:fruit:description":"Description","dialogue:hello:text":"Bonjour","npc:farmer:name":"Fermier"}}
       },
       "plugins":[{"id":"script","source":"fruit and hello are source text"}]
-    }""")
+    }"""
+    )
 
 [<Fact>]
 let ``namespace rewrites nested references while retaining absolute and base references`` () =
@@ -71,28 +79,61 @@ let ``namespace rewrites nested references while retaining absolute and base ref
 [<Fact>]
 let ``base packs are identity transforms`` () =
     let original = pack ()
-    let basePack = { original with Manifest = { original.Manifest with Base = true } }
+
+    let basePack =
+        { original with
+            Manifest = { original.Manifest with Base = true }
+        }
+
     Assert.Same(basePack, PackRules.namespacePack basePack)
 
 [<Fact>]
 let ``localization respects load order disabled packs missing locales and empty strings`` () =
     let first = pack ()
-    let second = packOf ("""{
+
+    let second =
+        packOf (
+            """{
       "manifest":{"id":"translation","name":"Translation","version":"1.0.0","dependencies":[{"packId":"orchard"}]},
       "content":{"strings":{"fr":{"item:orchard:fruit:name":"","npc:orchard:farmer:name":"Alice","dialogue:hello:text":"Salut"}}}
-    }""")
-    let installs = [{ PackInstallation.Default with Pack = second }; { PackInstallation.Default with Pack = first }]
-    let content, _ = PackMerge.mergeIntoContent (ContentCompiler.baseContent(blank ())) installs
+    }"""
+        )
+
+    let installs =
+        [
+            { PackInstallation.Default with
+                Pack = second
+            }
+            { PackInstallation.Default with
+                Pack = first
+            }
+        ]
+
+    let content, _ =
+        PackMerge.mergeIntoContent (ContentCompiler.baseContent (blank ())) installs
+
     let before = stableOf SchemaJson.encodeGameContent content
     // No locale, or one no enabled pack translates: the content itself.
-    for locale in [""; "en"; "missing"] do
+    for locale in [ ""; "en"; "missing" ] do
         Assert.Same(content, PackMerge.applyLocaleStrings content installs locale)
+
     let translated = PackMerge.applyLocaleStrings content installs "fr"
     Assert.Equal("", (translated.Items |> Seq.find (fun i -> i.Id = "orchard:fruit")).Name)
     Assert.Equal("Alice", translated.Npcs[0].Name)
     Assert.Equal("Salut", translated.Npcs[0].Dialogue[0].Text)
     Assert.Equal(before, stableOf SchemaJson.encodeGameContent content)
-    let disabled = [{ PackInstallation.Default with Pack = first }; { PackInstallation.Default with Pack = second; Enabled = false }]
+
+    let disabled =
+        [
+            { PackInstallation.Default with
+                Pack = first
+            }
+            { PackInstallation.Default with
+                Pack = second
+                Enabled = false
+            }
+        ]
+
     let translated = PackMerge.applyLocaleStrings content disabled "fr"
     Assert.Equal("Pomme", (translated.Items |> Seq.find (fun i -> i.Id = "orchard:fruit")).Name)
 
@@ -108,10 +149,15 @@ let ``the registry ships the demo mod and the starter template, validated`` () =
     Assert.NotEmpty demo.Pack.Plugins
     Assert.Equal("you", entries.[1].Author)
     // The embedded packs are the fixture files, value for value.
-    for text, file in [ ModRegistry.demoModJson, "demo-mod.json"; ModRegistry.templateModJson, "my-first-mod.json" ] do
+    for text, file in
+        [
+            ModRegistry.demoModJson, "demo-mod.json"
+            ModRegistry.templateModJson, "my-first-mod.json"
+        ] do
         match Json.parse text with
         | Ok parsed -> Assert.Equal(Json.stableStringify (readJson [ "Fixtures"; file ]), Json.stableStringify parsed)
         | Error message -> failwith message
+
     Assert.True((ModRegistry.entry "{ not json").IsNone)
     Assert.True((ModRegistry.entry """{ "manifest": { "id": "Bad Id", "name": "x", "version": "1" } }""").IsNone)
     let project = starter ()
@@ -125,15 +171,36 @@ let ``the registry ships the demo mod and the starter template, validated`` () =
 let ``export builds a valid pack from the chosen entries`` () =
     let project = starter ()
     let categories = PackExport.categories project
+
     Assert.Equal<string list>(
-        [ "crops"; "items"; "recipes"; "machineTypes"; "nodeTypes"; "animalSpecies"; "fishTables"; "weatherTypes"
-          "npcs"; "dialogues"; "scenes"; "events"; "quests"; "shops"; "actions"; "minigames" ],
-        categories |> List.map (fun c -> c.Key))
+        [
+            "crops"
+            "skills"
+            "items"
+            "recipes"
+            "machineTypes"
+            "nodeTypes"
+            "animalSpecies"
+            "fishTables"
+            "weatherTypes"
+            "npcs"
+            "dialogues"
+            "scenes"
+            "events"
+            "quests"
+            "shops"
+            "actions"
+            "minigames"
+        ],
+        categories |> List.map (fun c -> c.Key)
+    )
+
     let items = categories |> List.find (fun c -> c.Key = "items")
     Assert.Equal(project.Items.Length, items.Entries.Length)
     let wood = project.Items |> List.find (fun i -> i.Id = "material-wood")
     let chosen = [ project.Items.[2].Id; "material-wood"; "no-such-item" ]
     let recipeIds = project.Recipes |> List.map (fun r -> r.Id)
+
     match PackExport.build project "  My Cool Pack! " [ "items", chosen; "recipes", recipeIds; "unknown", [ "x" ]; "npcs", [] ] with
     | Error errors -> failwithf "%A" errors
     | Ok pack ->
@@ -145,7 +212,11 @@ let ``export builds a valid pack from the chosen entries`` () =
         Assert.Empty pack.Plugins
         Assert.Empty pack.Manifest.Permissions.Hooks
         // Project order, not selection order; unknown ids and empty types are skipped.
-        let expected = project.Items |> List.filter (fun i -> List.contains i.Id chosen) |> List.map (fun i -> i.Id)
+        let expected =
+            project.Items
+            |> List.filter (fun i -> List.contains i.Id chosen)
+            |> List.map (fun i -> i.Id)
+
         Assert.Equal<string list>(expected, pack.Content.Items |> List.map (fun i -> i.Id))
         Assert.Equal(wood, pack.Content.Items |> List.find (fun i -> i.Id = "material-wood"))
         Assert.Equal<string list>(recipeIds, pack.Content.Recipes |> List.map (fun r -> r.Id))
@@ -158,6 +229,7 @@ let ``export builds a valid pack from the chosen entries`` () =
             | Ok back -> Assert.Equal(pack, back)
             | Error errors -> failwithf "%A" errors
         | Error message -> failwith message
+
     Assert.Equal("my-pack", PackExport.packId "!!!")
     Assert.True(Result.isError (PackExport.build project "x" []))
     Assert.True(Result.isError (PackExport.build project "x" [ "items", [] ]))
@@ -165,12 +237,28 @@ let ``export builds a valid pack from the chosen entries`` () =
 [<Fact>]
 let ``export leaves generated mine floors out and carries crops and actions`` () =
     let project = starter ()
-    let floor = { (project.Scenes.Head) with Id = "mine-1"; Name = "Mine Floor 1"; Extra = [ "generated", JBool true ] }
+
+    let floor =
+        { (project.Scenes.Head) with
+            Id = "mine-1"
+            Name = "Mine Floor 1"
+            Extra = [ "generated", JBool true ]
+        }
+
     let crop = Defaults.newCrop project
-    let project = project |> apply (Batch("setup", [ AddScene floor; UpsertCrop crop; UpsertAction(Defaults.newAction project) ]))
+
+    let project =
+        project
+        |> apply (Batch("setup", [ AddScene floor; UpsertCrop crop; UpsertAction(Defaults.newAction project) ]))
+
     let scenes = PackExport.categories project |> List.find (fun c -> c.Key = "scenes")
     Assert.DoesNotContain("mine-1", scenes.Entries |> List.map (fun e -> e.Id))
-    let all key = key, (PackExport.categories project |> List.find (fun c -> c.Key = key)).Entries |> List.map (fun e -> e.Id)
+
+    let all key =
+        key,
+        (PackExport.categories project |> List.find (fun c -> c.Key = key)).Entries
+        |> List.map (fun e -> e.Id)
+
     match PackExport.build project "farm" [ all "scenes"; all "crops"; all "actions"; "scenes", [ "mine-1" ] ] with
     | Error errors -> failwithf "%A" errors
     | Ok pack ->
@@ -186,21 +274,51 @@ let private art (id: string) (pixel: string) : CustomAsset =
         Type = CustomAssetTypes.Art
         Width = Some 16.0
         Height = Some 16.0
-        DataUrl = "data:image/png;base64," + pixel }
+        DataUrl = "data:image/png;base64," + pixel
+    }
 
 [<Fact>]
 let ``exported packs carry the art their entries use, and installing adds it to the project`` () =
     let source = starter ()
     let frame = art "art-frame" "AAAA"
+
     let sheet =
         { art "art-sheet" "BBBB" with
-            Animations = Some [ { AnimationClip.Default with Name = "idle"; Frames = [ { ArtFrame.Default with AssetId = Some "art-frame"; Width = 16.0; Height = 16.0; Ticks = 6.0 } ] } ] }
+            Animations =
+                Some
+                    [
+                        { AnimationClip.Default with
+                            Name = "idle"
+                            Frames =
+                                [
+                                    { ArtFrame.Default with
+                                        AssetId = Some "art-frame"
+                                        Width = 16.0
+                                        Height = 16.0
+                                        Ticks = 6.0
+                                    }
+                                ]
+                        }
+                    ]
+        }
+
     let unrelated = art "art-other" "CCCC"
-    let item = { source.Items.[0] with Visual = Some { VisualRef.Default with AssetId = "art-sheet" } }
+
+    let item =
+        { source.Items.[0] with
+            Visual =
+                Some
+                    { VisualRef.Default with
+                        AssetId = "art-sheet"
+                    }
+        }
+
     let source =
         { source with
             CustomAssets = [ unrelated; sheet; frame ]
-            Items = item :: List.tail source.Items }
+            Items = item :: List.tail source.Items
+        }
+
     let pack =
         match PackExport.build source "Art Pack" [ "items", [ item.Id ] ] with
         | Ok pack -> pack
@@ -209,7 +327,11 @@ let ``exported packs carry the art their entries use, and installing adds it to 
     let carried = PackRules.packAssets pack |> Result.defaultWith (failwithf "%A")
     Assert.Equal<string list>([ "art-sheet"; "art-frame" ], carried |> List.map (fun a -> a.Id))
     // The file round-trips with its art.
-    match Json.parse (PackExport.toText pack) |> Result.mapError List.singleton |> Result.bind PackRules.validateContentPack with
+    match
+        Json.parse (PackExport.toText pack)
+        |> Result.mapError List.singleton
+        |> Result.bind PackRules.validateContentPack
+    with
     | Ok back -> Assert.Equal(pack, back)
     | Error errors -> failwithf "%A" errors
     // A pack without art entries carries no `assets` key.
@@ -219,11 +341,20 @@ let ``exported packs carry the art their entries use, and installing adds it to 
 
     // Installing elsewhere adds the art (not a second copy in the stored pack); the project's
     // own art under a pack id wins.
-    let target = { starter () with CustomAssets = [ art "art-frame" "ZZZZ" ] }
+    let target =
+        { starter () with
+            CustomAssets = [ art "art-frame" "ZZZZ" ]
+        }
+
     let installed = Document.run target (InstallPack pack)
     Assert.Equal<string list>([ "art-frame"; "art-sheet" ], installed.CustomAssets |> List.map (fun a -> a.Id))
     Assert.Equal("data:image/png;base64,ZZZZ", (installed.CustomAssets |> List.find (fun a -> a.Id = "art-frame")).DataUrl)
-    Assert.Empty(installed.ContentPacks.Head.Pack.Extra |> List.filter (fun (key, _) -> key = PackRules.AssetsKey))
+
+    Assert.Empty(
+        installed.ContentPacks.Head.Pack.Extra
+        |> List.filter (fun (key, _) -> key = PackRules.AssetsKey)
+    )
+
     Assert.Equal<string list>([ "art-frame" ], snd (PackMerge.mergeAssets target pack))
     // Importing the pack's content into a project brings the art too, with a warning for the clash.
     let imported, problems = PackMerge.applyToProject target pack
@@ -234,14 +365,24 @@ let ``exported packs carry the art their entries use, and installing adds it to 
 let ``malformed pack art is refused`` () =
     let raw (assets: Json) =
         JObject
-            [ "manifest", JObject [ "id", JString "p"; "name", JString "P"; "version", JString "1.0.0" ]
-              "content", JObject []
-              PackRules.AssetsKey, assets ]
+            [
+                "manifest", JObject [ "id", JString "p"; "name", JString "P"; "version", JString "1.0.0" ]
+                "content", JObject []
+                PackRules.AssetsKey, assets
+            ]
+
     Assert.True(Result.isOk (PackRules.validateContentPack (raw (JArray []))))
     Assert.True(Result.isError (PackRules.validateContentPack (raw (JString "nope"))))
-    let bad = SchemaJson.encodeCustomAsset { art "a" "AAAA" with DataUrl = "https://example.invalid/a.png" }
+
+    let bad =
+        SchemaJson.encodeCustomAsset
+            { art "a" "AAAA" with
+                DataUrl = "https://example.invalid/a.png"
+            }
+
     match PackRules.validateContentPack (raw (JArray [ bad ])) with
     | Ok _ -> failwith "a remote image URL must be refused"
     | Error errors -> Assert.Contains("assets.0.dataUrl", String.concat " " errors)
+
     let noId = SchemaJson.encodeCustomAsset { art "" "AAAA" with Id = "" }
     Assert.True(Result.isError (PackRules.validateContentPack (raw (JArray [ noId ]))))

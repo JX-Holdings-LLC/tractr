@@ -28,9 +28,11 @@ public sealed record PreviewFrame(int Width, int Height, byte[] Pixels);
 /// </summary>
 public sealed unsafe class RustPreview : IDisposable
 {
+    // Brush selection is editor state; it does not affect compiled content or any rendered scene.
     private static readonly PropertyInfo[] ProjectFields = typeof(GameProject)
         .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-        .Where(property => property.GetIndexParameters().Length == 0 && property.Name != nameof(GameProject.Scenes))
+        .Where(property => property.GetIndexParameters().Length == 0 && property.Name is not
+            (nameof(GameProject.Scenes) or nameof(GameProject.SelectedTileType) or nameof(GameProject.SelectedTileVisual)))
         .ToArray();
 
     private readonly NativeHandle<NativeMethods.PreviewHandle> _native;

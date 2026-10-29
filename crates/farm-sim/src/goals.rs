@@ -70,6 +70,10 @@ pub fn ship_overnight(ctx: &EngineContext, state: &mut GameState) -> Effects {
         let money = economy::quality_value(&ctx.content, item, slot.quality.as_deref())
             .max(0)
             .saturating_mul(i64::from(slot.quantity));
+        let bonus = crate::skills::stat_bonus(ctx, state, "sellPrice")
+            .saturating_add(crate::skills::stat_bonus(ctx, state, &format!("sellPrice:{}", item.r#type)))
+            .clamp(-100, 1000);
+        let money = money.saturating_mul(i64::from(100 + bonus)) / 100;
         total = total.saturating_add(money);
         units = units.saturating_add(slot.quantity);
         let count = state.shipped.entry(slot.item.id.clone()).or_insert(0);
@@ -91,6 +95,8 @@ pub fn ship_overnight(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let mut effects = vec![Effect::say(message_levels::SUCCESS, messages::SHIPPED.with(&[&units, &total]))];
     let item_ids: Vec<String> = lines.iter().map(|line| line.item_id.clone()).collect();
     for line in &lines {
+        effects.extend(crate::quests::progress_quests(ctx, state, "ship", &line.item_id, line.quantity));
+        effects.extend(crate::skills::grant_action_xp_subject(ctx, state, "ship", &line.item_id, "shipping", 0));
         ctx.emit(HookEvent::ItemSell(ItemSellHookPayload {
             item_id: line.item_id.clone(),
             quantity: line.quantity,

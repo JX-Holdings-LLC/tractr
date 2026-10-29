@@ -10,7 +10,11 @@ module ProjectJson =
     /// A node `Json` cannot hold (a number beyond the double range, a duplicate key), as a
     /// failed result.
     let private unreadable (what: string) (message: string) : LoadResult<'T> =
-        { Ok = false; Data = None; Errors = [ what + " is not valid JSON: " + message ] }
+        {
+            Ok = false
+            Data = None
+            Errors = [ what + " is not valid JSON: " + message ]
+        }
 
     /// Parse and validate a raw project (from storage or import; null for JSON null). The node
     /// is not modified.

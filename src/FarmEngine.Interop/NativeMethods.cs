@@ -55,9 +55,30 @@ internal static unsafe partial class NativeMethods
             return 0;
         }
 
-        // Throws DllNotFoundException with the loader's own message (a missing dependency such
-        // as libasound.so.2, a wrong architecture), which FarmFfi keeps for the status it shows.
-        return NativeLibrary.Load(LibraryPath(assembly));
+        var path = LibraryPath(assembly);
+        var silentPath = OperatingSystem.IsLinux() ? Path.Combine(Path.GetDirectoryName(path)!, "libfarm_ffi_silent.so") : null;
+        return LoadWithSilentFallback(path, silentPath, NativeLibrary.Load);
+    }
+
+    /// <summary>Load the Linux engine without audio if its sound dependency is unavailable.
+    /// Both paths are absolute and application-local; keep both loader errors if neither works.</summary>
+    internal static nint LoadWithSilentFallback(string path, string? silentPath, Func<string, nint> load)
+    {
+        try
+        {
+            return load(path);
+        }
+        catch (DllNotFoundException primary) when (silentPath is not null)
+        {
+            try
+            {
+                return load(silentPath);
+            }
+            catch (DllNotFoundException fallback)
+            {
+                throw new DllNotFoundException($"{primary.Message} Silent engine fallback: {fallback.Message}", primary);
+            }
+        }
     }
 
     /// <summary>Where farm_ffi must be: next to this assembly.</summary>

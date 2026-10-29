@@ -74,8 +74,12 @@ pub fn handle_use_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
             let energy = slot.item.energy.unwrap_or(category.energy);
             let health = slot.item.health.unwrap_or(0);
             let name = slot.item.name.clone();
+            let buffs = slot.item.buffs.clone();
             state.player.inventory = inventory::remove_item(&state.player.inventory, item_id, 1);
-            let max = state.player.max_energy;
+            for buff in buffs.into_iter().flatten() {
+                crate::buffs::apply(ctx, state, &buff, item_id);
+            }
+            let max = crate::buffs::max_energy(ctx, state);
             state.player.energy = state.player.energy.saturating_add(energy.max(0)).min(max.max(state.player.energy));
             // Food heals too, with combat on (M7).
             let mut effects = if health > 0 { crate::combat::modify_health(ctx, state, health) } else { Vec::new() };

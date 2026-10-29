@@ -10,14 +10,22 @@ let private ingredients (pairs: (string * float) list) : RecipeIngredient list =
 
 let private recipe (inputs: (string * float) list) (outputs: (string * float) list) (minutes: float) : RecipeDefinition =
     { RecipeDefinition.Default with
-        Id = "recipe-test"; Name = "Test"; Inputs = ingredients inputs; Outputs = ingredients outputs; ProcessingMinutes = minutes }
+        Id = "recipe-test"
+        Name = "Test"
+        Inputs = ingredients inputs
+        Outputs = ingredients outputs
+        ProcessingMinutes = minutes
+    }
 
-let private builtinCrop (id: string) : CropDefinition = Builtin.crops () |> List.find (fun (cropId, _) -> cropId = id) |> snd
+let private builtinCrop (id: string) : CropDefinition =
+    Builtin.crops () |> List.find (fun (cropId, _) -> cropId = id) |> snd
 
 let private builtinNode (id: string) : NodeTypeDefinition =
-    Builtin.nodeTypes () @ Builtin.mineNodeTypes () |> List.find (fun node -> node.Id = id)
+    Builtin.nodeTypes () @ Builtin.mineNodeTypes ()
+    |> List.find (fun node -> node.Id = id)
 
-let private lines (readout: ReadoutLine list) = readout |> List.map (fun line -> line.Label, line.Value)
+let private lines (readout: ReadoutLine list) =
+    readout |> List.map (fun line -> line.Label, line.Value)
 
 let private value (label: string) (readout: ReadoutLine list) =
     readout |> List.find (fun line -> line.Label = label) |> fun line -> line.Value
@@ -36,7 +44,19 @@ let ``recipe profit uses the built-in item values when the project has no items`
     Assert.Equal(None, Readouts.recipeProfitPerHour project instant)
     Assert.Equal("Profit per craft: 25 · time-adjusted: instant", Readouts.recipeSummary project instant)
     // The project's own items win over the catalog.
-    let cheap = { project with Items = [ { item "crop-wheat" "Wheat" with Value = 1.0 }; { item "food-preserves" "Preserves" with Value = 4.0 } ] }
+    let cheap =
+        { project with
+            Items =
+                [
+                    { item "crop-wheat" "Wheat" with
+                        Value = 1.0
+                    }
+                    { item "food-preserves" "Preserves" with
+                        Value = 4.0
+                    }
+                ]
+        }
+
     Assert.Equal(2.0, Readouts.recipeProfit cheap preserves)
 
 [<Fact>]
@@ -56,30 +76,76 @@ let ``profit per hour rounds half away from zero like toFixed`` () =
 let ``the recipe list line says where it is made and signs the profit`` () =
     let project = starter ()
     let preserves = recipe [ "crop-wheat", 2.0 ] [ "food-preserves", 1.0 ] 90.0
-    Assert.Equal("hand craft · profit +70", Readouts.recipeNote project { preserves with ProcessingMinutes = 0.0 })
-    Assert.Equal("Preserves Jar · 90min · profit +70", Readouts.recipeNote project { preserves with MachineTypeId = Some "machine-preserves" })
-    Assert.Equal("machine · 90min · profit +70", Readouts.recipeNote project { preserves with MachineTypeId = Some "machine-gone" })
+
+    Assert.Equal(
+        "hand craft · profit +70",
+        Readouts.recipeNote
+            project
+            { preserves with
+                ProcessingMinutes = 0.0
+            }
+    )
+
+    Assert.Equal(
+        "Preserves Jar · 90min · profit +70",
+        Readouts.recipeNote
+            project
+            { preserves with
+                MachineTypeId = Some "machine-preserves"
+            }
+    )
+
+    Assert.Equal(
+        "machine · 90min · profit +70",
+        Readouts.recipeNote
+            project
+            { preserves with
+                MachineTypeId = Some "machine-gone"
+            }
+    )
+
     Assert.Equal("hand craft · profit +0", Readouts.recipeNote project (recipe [ "material-wood", 1.0 ] [ "material-wood", 1.0 ] 0.0))
     Assert.Equal("hand craft · profit -1", Readouts.recipeNote project (recipe [ "material-wood", 1.0 ] [ "material-stone", 1.0 ] 0.0))
-    Assert.Equal("hand craft · profit +70", ContentReadouts.RecipeNote(project, { preserves with ProcessingMinutes = 0.0 }))
+
+    Assert.Equal(
+        "hand craft · profit +70",
+        ContentReadouts.RecipeNote(
+            project,
+            { preserves with
+                ProcessingMinutes = 0.0
+            }
+        )
+    )
 
 [<Fact>]
 let ``the crop summary lists what the web card shows`` () =
     let project = starter ()
     let wheat = Readouts.cropSummary project (builtinCrop "wheat")
+
     Assert.Equal<(string * string) list>(
-        [ "Seed cost", "$10"
-          "Harvest value", "$25"
-          "Profit per harvest", "$15"
-          "Growth days", "3"
-          "Stages", "4"
-          "Seasons", "Spring, Fall"
-          "Yield range", "1 – 2"
-          "Mutation chance", "1.0%"
-          "Can regrow", "No" ],
-        lines wheat)
+        [
+            "Seed cost", "$10"
+            "Harvest value", "$25"
+            "Profit per harvest", "$15"
+            "Growth days", "3"
+            "Stages", "4"
+            "Seasons", "Spring, Fall"
+            "Yield range", "1 – 2"
+            "Mutation chance", "1.0%"
+            "Can regrow", "No"
+        ],
+        lines wheat
+    )
+
     Assert.Equal("Profit per harvest: $15", Readouts.cropProfitText (builtinCrop "wheat"))
-    Assert.Equal("Profit per harvest: -$10", Readouts.cropProfitText { builtinCrop "wheat" with SeedCost = 35.0 })
+
+    Assert.Equal(
+        "Profit per harvest: -$10",
+        Readouts.cropProfitText
+            { builtinCrop "wheat" with
+                SeedCost = 35.0
+            }
+    )
 
 [<Fact>]
 let ``the crop summary adds regrowth and multi-tile rows`` () =
@@ -90,7 +156,11 @@ let ``the crop summary adds regrowth and multi-tile rows`` () =
     Assert.Equal("2.0%", value "Mutation chance" tomato)
     Assert.DoesNotContain(tomato, fun line -> line.Label = "Multi-tile size")
     // Absent or 0 regrows in a day, as the engine counts it.
-    let zero = { builtinCrop "tomato" with RegrowthDays = Some 0.0 }
+    let zero =
+        { builtinCrop "tomato" with
+            RegrowthDays = Some 0.0
+        }
+
     Assert.Equal("1 day(s)", value "Regrowth time" (Readouts.cropSummary project zero))
     Assert.Equal("1 day(s)", value "Regrowth time" (Readouts.cropSummary project { zero with RegrowthDays = None }))
     let pumpkin = Readouts.cropSummary project (builtinCrop "pumpkin")
@@ -98,7 +168,12 @@ let ``the crop summary adds regrowth and multi-tile rows`` () =
     Assert.DoesNotContain(pumpkin, fun line -> line.Label = "Regrowth time")
     Assert.Equal("Multi-tile size", (List.last pumpkin).Label)
     // Absent growth days count as one, and unknown seasons are capitalized.
-    let old = { builtinCrop "wheat" with GrowthDays = None; Seasons = [ "monsoon" ] }
+    let old =
+        { builtinCrop "wheat" with
+            GrowthDays = None
+            Seasons = [ "monsoon" ]
+        }
+
     let summary = Readouts.cropSummary project old
     Assert.Equal("1", value "Growth days" summary)
     Assert.Equal("Monsoon", value "Seasons" summary)
@@ -108,7 +183,10 @@ let ``the crop summary adds regrowth and multi-tile rows`` () =
 let ``built-in lists leave out the ids the project replaces`` () =
     let project = blank ()
     Assert.Equal<string list>(Readouts.builtinCropIds (), Readouts.builtinCrops project |> List.map (fun crop -> crop.Id))
-    let customized = project |> apply (UpsertCrop(Readouts.customOfCrop (builtinCrop "wheat")))
+
+    let customized =
+        project |> apply (UpsertCrop(Readouts.customOfCrop (builtinCrop "wheat")))
+
     let remaining = Readouts.builtinCrops customized |> List.map (fun crop -> crop.Id)
     Assert.Equal(8, remaining.Length)
     Assert.DoesNotContain("wheat", remaining)
@@ -116,7 +194,16 @@ let ``built-in lists leave out the ids the project replaces`` () =
     Assert.Empty(Readouts.builtinCrops (starter ()))
     Assert.Empty(Readouts.builtinNodeTypes (starter ()))
     Assert.Equal(9, (Readouts.builtinNodeTypes project).Length)
-    let withTree = project |> apply (UpsertNodeType { builtinNode "node-tree" with Health = 9.0 })
+
+    let withTree =
+        project
+        |> apply (
+            UpsertNodeType
+                { builtinNode "node-tree" with
+                    Health = 9.0
+                }
+        )
+
     Assert.DoesNotContain(Readouts.builtinNodeTypes withTree, fun node -> node.Id = "node-tree")
     Assert.Contains(Readouts.builtinNodeTypes withTree, fun node -> node.Id = "node-quartz")
     Assert.True(ContentReadouts.IsBuiltinCrop "pumpkin")
@@ -127,24 +214,61 @@ let ``built-in lists leave out the ids the project replaces`` () =
 let ``list notes say where an entry comes from`` () =
     Assert.Equal("Built-in · 4 stages", Readouts.builtinCropNote (builtinCrop "wheat"))
     Assert.Equal("Replaces built-in · 4 stages", Readouts.cropNote (Readouts.customOfCrop (builtinCrop "wheat")))
-    Assert.Equal("Custom · 5 stages", Readouts.cropNote { CustomCropDefinition.Default with Id = "custom-1"; Stages = 5.0 })
+
+    Assert.Equal(
+        "Custom · 5 stages",
+        Readouts.cropNote
+            { CustomCropDefinition.Default with
+                Id = "custom-1"
+                Stages = 5.0
+            }
+    )
+
     Assert.Equal("4 hp · axe · no respawn", Readouts.nodeTypeNote (builtinNode "node-tree"))
     Assert.Equal("6 hp · pickaxe t2 · no respawn", Readouts.nodeTypeNote (builtinNode "node-boulder"))
     Assert.Equal("2 hp · axe · respawns 3d", Readouts.nodeTypeNote (builtinNode "node-stump"))
     Assert.Equal("Built-in · 1 hp · scythe · respawns 2d", Readouts.nodeTypeListNote (builtinNode "node-weeds") true)
     Assert.Equal("Replaces built-in · 1 hp · scythe · respawns 2d", Readouts.nodeTypeListNote (builtinNode "node-weeds") false)
-    Assert.Equal("Custom · 3 hp · axe · no respawn", Readouts.nodeTypeListNote { builtinNode "node-tree" with Id = "node-oak"; Health = 3.0 } false)
+
+    Assert.Equal(
+        "Custom · 3 hp · axe · no respawn",
+        Readouts.nodeTypeListNote
+            { builtinNode "node-tree" with
+                Id = "node-oak"
+                Health = 3.0
+            }
+            false
+    )
 
 [<Fact>]
 let ``the node type summary names drops and respawn`` () =
     let summary = Readouts.nodeTypeSummary (starter ()) (builtinNode "node-boulder")
+
     Assert.Equal<(string * string) list>(
-        [ "Health", "6 hits"; "Tool", "pickaxe (tier 2)"; "Drops", "Stone ×4–8"; "Respawn", "Never"; "Blocks movement", "Yes" ],
-        lines summary)
+        [
+            "Health", "6 hits"
+            "Tool", "pickaxe (tier 2)"
+            "Drops", "Stone ×4–8"
+            "Respawn", "Never"
+            "Blocks movement", "Yes"
+        ],
+        lines summary
+    )
+
     let weeds = Readouts.nodeTypeSummary (starter ()) (builtinNode "node-weeds")
     Assert.Equal("2 day(s)", value "Respawn" weeds)
     Assert.Equal("No", value "Blocks movement" weeds)
-    Assert.Equal("Nothing", value "Drops" (Readouts.nodeTypeSummary (starter ()) { builtinNode "node-weeds" with Drops = [] }))
+
+    Assert.Equal(
+        "Nothing",
+        value
+            "Drops"
+            (Readouts.nodeTypeSummary
+                (starter ())
+                { builtinNode "node-weeds" with
+                    Drops = []
+                })
+    )
 
 [<Fact>]
 let ``customizing a built-in crop keeps its id and values`` () =
@@ -160,8 +284,17 @@ let ``customizing a built-in crop keeps its id and values`` () =
         Assert.Equal<string list>(crop.Seasons, custom.Seasons)
         Assert.Equal(crop, Readouts.cropOfCustom custom)
     // Saved, it replaces the built-in with the same definition, and its readouts match.
-    let project = blank () |> apply (UpsertCrop(ContentReadouts.CustomizeCrop(builtinCrop "tomato")))
-    Assert.Equal(builtinCrop "tomato", ContentCompiler.mergeCrops project.CustomCrops |> List.find (fun (id, _) -> id = "tomato") |> snd)
+    let project =
+        blank ()
+        |> apply (UpsertCrop(ContentReadouts.CustomizeCrop(builtinCrop "tomato")))
+
+    Assert.Equal(
+        builtinCrop "tomato",
+        ContentCompiler.mergeCrops project.CustomCrops
+        |> List.find (fun (id, _) -> id = "tomato")
+        |> snd
+    )
+
     let saved = project.CustomCrops.Value |> List.find (fun crop -> crop.Id = "tomato")
     Assert.Equal<ReadoutLine seq>(ContentReadouts.CropSummary(project, builtinCrop "tomato"), ContentReadouts.CropSummary(project, saved))
     Assert.Equal("Profit per harvest: $30", ContentReadouts.CropProfitText saved)
@@ -178,7 +311,17 @@ let ``deleting a replacement brings the built-in crop back without clearing its 
     Assert.Equal(Builtin.items () |> List.find (fun item -> item.Id = "seed-wheat"), seed)
     Assert.Contains(restored.Items, fun item -> item.Id = "crop-wheat")
     // A crop of the creator's own still takes its items along.
-    let custom = project |> apply (UpsertCrop { CustomCropDefinition.Default with Id = "custom-1"; Name = "Moonmelon"; Stages = 4.0 })
+    let custom =
+        project
+        |> apply (
+            UpsertCrop
+                { CustomCropDefinition.Default with
+                    Id = "custom-1"
+                    Name = "Moonmelon"
+                    Stages = 4.0
+                }
+        )
+
     Assert.Contains(custom.Items, fun item -> item.Id = "seed-custom-1")
     Assert.DoesNotContain((custom |> apply (RemoveCrop "custom-1")).Items, fun item -> item.Id = "seed-custom-1")
     // One undo step.
@@ -188,7 +331,14 @@ let ``deleting a replacement brings the built-in crop back without clearing its 
 [<Fact>]
 let ``deleting a replacement node type keeps the placed nodes`` () =
     let project = starter ()
-    let trees (p: GameProject) = (farm p).Tiles |> List.sumBy (fun row -> row |> List.filter (fun t -> t.Node |> Option.exists (fun n -> n.TypeId = "node-tree")) |> List.length)
+
+    let trees (p: GameProject) =
+        (farm p).Tiles
+        |> List.sumBy (fun row ->
+            row
+            |> List.filter (fun t -> t.Node |> Option.exists (fun n -> n.TypeId = "node-tree"))
+            |> List.length)
+
     Assert.True(trees project > 0)
     let restored = project |> apply (RemoveNodeType "node-tree")
     Assert.DoesNotContain(restored.NodeTypes, fun node -> node.Id = "node-tree")

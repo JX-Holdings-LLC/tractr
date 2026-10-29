@@ -23,9 +23,11 @@ module Decode =
         | JArray _ -> "array"
         | JObject _ -> "object"
 
-    let fail (path: Path) (message: string) : 'T = raise (DecodeError(pathText path, message))
+    let fail (path: Path) (message: string) : 'T =
+        raise (DecodeError(pathText path, message))
 
-    let expected (what: string) (path: Path) (json: Json) : 'T = fail path ("Expected " + what + ", received " + kind json)
+    let expected (what: string) (path: Path) (json: Json) : 'T =
+        fail path ("Expected " + what + ", received " + kind json)
 
     let object (path: Path) (json: Json) : (string * Json) list =
         match json with
@@ -41,7 +43,10 @@ module Decode =
     /// longer load, so it is refused here (zod `.finite()`). `Json.parse` refuses `1e400` already;
     /// this covers `Json` built in code.
     let private finite (path: Path) (n: float) : float =
-        if System.Double.IsInfinity n then fail path "Number must be finite" else n
+        if System.Double.IsInfinity n then
+            fail path "Number must be finite"
+        else
+            n
 
     let number (path: Path) (json: Json) : float =
         match json with
@@ -109,7 +114,8 @@ module Decode =
         | Some(JString tag) -> tag
         | _ -> fail ("type" :: path) "Invalid discriminator value"
 
-    let unknownDiscriminator (path: Path) (_tag: string) : 'T = fail ("type" :: path) "Invalid discriminator value"
+    let unknownDiscriminator (path: Path) (_tag: string) : 'T =
+        fail ("type" :: path) "Invalid discriminator value"
 
     /// Runs a decoder on a whole document: the value, or `path: message` for the first issue.
     let run (decode: Path -> Json -> 'T) (json: Json) : Result<'T, string> =

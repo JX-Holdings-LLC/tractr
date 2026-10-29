@@ -30,7 +30,7 @@ module TileTypes =
     [<Literal>]
     let Floor = "floor"
 
-    let All : string list = [ Grass; Soil; Water; Path; Wall; Door; Floor ]
+    let All: string list = [ Grass; Soil; Water; Path; Wall; Door; Floor ]
 
 /// The tile layers a terrain is painted on (`TerrainDefinition.Layer`).
 [<RequireQualifiedAccess>]
@@ -44,7 +44,7 @@ module TileLayers =
     [<Literal>]
     let Object = "object"
 
-    let All : string list = [ Background; Overlay; Object ]
+    let All: string list = [ Background; Overlay; Object ]
 
 /// What a tool does (`ToolDefinition.Action`).
 [<RequireQualifiedAccess>]
@@ -77,10 +77,11 @@ module ToolActions =
     [<Literal>]
     let Attack = "attack"
 
-    let All : string list = [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant; Attack ]
+    let All: string list =
+        [ Water; Till; Harvest; Fish; Break; Transform; Place; Plant; Attack ]
 
     /// The actions a terrain transform can name.
-    let Transforming : string list = [ Till; Transform; Break ]
+    let Transforming: string list = [ Till; Transform; Break ]
 
 /// The light a crop needs (`GrowthRequirements.Light`).
 [<RequireQualifiedAccess>]
@@ -91,7 +92,7 @@ module LightNeeds =
     [<Literal>]
     let Dark = "dark"
 
-    let All : string list = [ Light; Dark ]
+    let All: string list = [ Light; Dark ]
 
 /// What a neighbour requirement counts (`NeighborRequirement.Kind`).
 [<RequireQualifiedAccess>]
@@ -105,7 +106,7 @@ module NeighborKinds =
     [<Literal>]
     let Water = "water"
 
-    let All : string list = [ Crop; Terrain; Water ]
+    let All: string list = [ Crop; Terrain; Water ]
 
 /// How a weather overlay draws (`WeatherOverlayDefinition.Style`).
 [<RequireQualifiedAccess>]
@@ -122,7 +123,7 @@ module OverlayStyles =
     [<Literal>]
     let None = "none"
 
-    let All : string list = [ Rain; Snow; Dust; None ]
+    let All: string list = [ Rain; Snow; Dust; None ]
 
 /// What a cutscene step does (`CutsceneStep.Type`, M2).
 [<RequireQualifiedAccess>]
@@ -166,12 +167,28 @@ module CutsceneStepTypes =
     [<Literal>]
     let End = "end"
 
-    let All : string list = [ Say; Choice; Jump; Move; Face; Emote; Wait; Camera; Fade; Music; Sound; Outcomes; End ]
+    let All: string list =
+        [
+            Say
+            Choice
+            Jump
+            Move
+            Face
+            Emote
+            Wait
+            Camera
+            Fade
+            Music
+            Sound
+            Outcomes
+            End
+        ]
 
 /// The emotes a cutscene can show over a character (`CutsceneStep.Emote`).
 [<RequireQualifiedAccess>]
 module Emotes =
-    let All : string list = [ "exclaim"; "question"; "heart"; "music"; "anger"; "sweat"; "sleep"; "idea" ]
+    let All: string list =
+        [ "exclaim"; "question"; "heart"; "music"; "anger"; "sweat"; "sleep"; "idea" ]
 
 /// TS `DirectionSchema`.
 [<RequireQualifiedAccess>]
@@ -188,7 +205,7 @@ module Directions =
     [<Literal>]
     let Right = "right"
 
-    let All : string list = [ Up; Down; Left; Right ]
+    let All: string list = [ Up; Down; Left; Right ]
 
 /// TS `ItemTypeSchema`.
 [<RequireQualifiedAccess>]
@@ -217,7 +234,7 @@ module ItemTypes =
     [<Literal>]
     let Fish = "fish"
 
-    let All : string list = [ Seed; Tool; Crop; Gift; Quest; Fertilizer; Material; Fish ]
+    let All: string list = [ Seed; Tool; Crop; Gift; Quest; Fertilizer; Material; Fish ]
 
 /// TS `ToolTypeSchema`.
 [<RequireQualifiedAccess>]
@@ -240,7 +257,7 @@ module ToolTypes =
     [<Literal>]
     let FishingRod = "fishing-rod"
 
-    let All : string list = [ WateringCan; Hoe; Axe; Pickaxe; Scythe; FishingRod ]
+    let All: string list = [ WateringCan; Hoe; Axe; Pickaxe; Scythe; FishingRod ]
 
 /// TS `EditorModeSchema`.
 [<RequireQualifiedAccess>]
@@ -263,7 +280,7 @@ module EditorModes =
     [<Literal>]
     let Quests = "quests"
 
-    let All : string list = [ Tiles; Npcs; Items; Events; Play; Quests ]
+    let All: string list = [ Tiles; Npcs; Items; Events; Play; Quests ]
 
 /// TS `QuestStatusSchema`.
 [<RequireQualifiedAccess>]
@@ -280,7 +297,7 @@ module QuestStatuses =
     [<Literal>]
     let Failed = "failed"
 
-    let All : string list = [ NotStarted; Active; Completed; Failed ]
+    let All: string list = [ NotStarted; Active; Completed; Failed ]
 
 /// TS `QuestObjectiveTypeSchema`.
 [<RequireQualifiedAccess>]
@@ -303,7 +320,39 @@ module QuestObjectiveTypes =
     [<Literal>]
     let Gift = "gift"
 
-    let All : string list = [ Collect; Harvest; Talk; Visit; Craft; Gift ]
+    [<Literal>]
+    let Ship = "ship"
+
+    [<Literal>]
+    let Slay = "slay"
+
+    [<Literal>]
+    let Catch = "catch"
+
+    [<Literal>]
+    let Hearts = "hearts"
+
+    [<Literal>]
+    let Bundle = "bundle"
+
+    [<Literal>]
+    let MineFloor = "mineFloor"
+
+    let All: string list =
+        [
+            Collect
+            Harvest
+            Talk
+            Visit
+            Craft
+            Gift
+            Ship
+            Slay
+            Catch
+            Hearts
+            Bundle
+            MineFloor
+        ]
 
 /// TS `SoilStateSchema`.
 [<RequireQualifiedAccess>]
@@ -320,7 +369,7 @@ module SoilStates =
     [<Literal>]
     let Tilled = "tilled"
 
-    let All : string list = [ Dry; Watered; Fertilized; Tilled ]
+    let All: string list = [ Dry; Watered; Fertilized; Tilled ]
 
 /// TS `CropQualitySchema`.
 [<RequireQualifiedAccess>]
@@ -337,7 +386,7 @@ module CropQualities =
     [<Literal>]
     let Iridium = "iridium"
 
-    let All : string list = [ Normal; Silver; Gold; Iridium ]
+    let All: string list = [ Normal; Silver; Gold; Iridium ]
 
 /// TS `CropMutationSchema`: one of these or `null` (so C# fields holding it are `string?` written as `null`).
 [<RequireQualifiedAccess>]
@@ -351,7 +400,7 @@ module CropMutations =
     [<Literal>]
     let Ancient = "ancient"
 
-    let All : string list = [ Giant; Golden; Ancient ]
+    let All: string list = [ Giant; Golden; Ancient ]
 
 /// TS `NPCSchema.movePattern` enum.
 [<RequireQualifiedAccess>]
@@ -365,7 +414,7 @@ module NpcMovePatterns =
     [<Literal>]
     let Patrol = "patrol"
 
-    let All : string list = [ Stationary; Wander; Patrol ]
+    let All: string list = [ Stationary; Wander; Patrol ]
 
 /// TS `CustomAssetSchema.type` enum.
 [<RequireQualifiedAccess>]
@@ -393,7 +442,7 @@ module CustomAssetTypes =
     [<Literal>]
     let Music = "music"
 
-    let All : string list = [ Tile; Npc; Item; Player; Art; Sound; Music ]
+    let All: string list = [ Tile; Npc; Item; Player; Art; Sound; Music ]
 
 /// TS `EventOutcomeSchema.type` enum.
 [<RequireQualifiedAccess>]
@@ -528,9 +577,69 @@ module EventOutcomeTypes =
 
     /// Restore (or, negative, take) `amount` health (M7).
     [<Literal>]
+    let SetInventorySize = "setInventorySize"
+
+    [<Literal>]
+    let AddInventorySize = "addInventorySize"
+
+    [<Literal>]
+    let AddMaxEnergy = "addMaxEnergy"
+
+    [<Literal>]
+    let AddMaxHealth = "addMaxHealth"
+
+    [<Literal>]
+    let ApplyBuff = "applyBuff"
+
+    [<Literal>]
     let ModifyHealth = "modifyHealth"
 
-    let All : string list = [ Message; ModifyFriendship; ModifyEnergy; WaterArea; GiveItem; TakeItem; GiveMoney; TakeMoney; SetFlag; ClearFlag; StartQuest; CompleteQuest; SpawnNpc; RemoveNpc; ChangeTile; WarpPlayer; StartDialogue; LockTransition; UnlockTransition; PlaySound; PerformAction; StartMinigame; PlayMusic; StartCutscene; SetVariable; AddVariable; MoveNpc; SetWeather; GiveExperience; AddShopStock; RemoveShopStock; PlaceNode; RemoveNode; PlaceMachine; RemoveMachine; SetRelationship; SendMail; ModifyHealth ]
+    let All: string list =
+        [
+            Message
+            ModifyFriendship
+            ModifyEnergy
+            WaterArea
+            GiveItem
+            TakeItem
+            GiveMoney
+            TakeMoney
+            SetFlag
+            ClearFlag
+            StartQuest
+            CompleteQuest
+            SpawnNpc
+            RemoveNpc
+            ChangeTile
+            WarpPlayer
+            StartDialogue
+            LockTransition
+            UnlockTransition
+            PlaySound
+            PerformAction
+            StartMinigame
+            PlayMusic
+            StartCutscene
+            SetVariable
+            AddVariable
+            MoveNpc
+            SetWeather
+            GiveExperience
+            AddShopStock
+            RemoveShopStock
+            PlaceNode
+            RemoveNode
+            PlaceMachine
+            RemoveMachine
+            SetRelationship
+            SendMail
+            SetInventorySize
+            AddInventorySize
+            AddMaxEnergy
+            AddMaxHealth
+            ApplyBuff
+            ModifyHealth
+        ]
 
 /// TS `EventTriggerSchema`.
 [<RequireQualifiedAccess>]
@@ -596,10 +705,41 @@ module EventTriggers =
     [<Literal>]
     let Slay = "slay"
 
-    let All : string list = [ Enter; Interact; Tick; DayStart; Time; Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest; Build; Bundle; Achievement; Slay ]
+    let All: string list =
+        [
+            Enter
+            Interact
+            Tick
+            DayStart
+            Time
+            Harvest
+            Sell
+            Craft
+            Catch
+            PickUp
+            Friendship
+            Quest
+            Build
+            Bundle
+            Achievement
+            Slay
+        ]
 
     /// The triggers whose events may name a `Subject` (M3, M5–M7).
-    let WithSubject : string list = [ Harvest; Sell; Craft; Catch; PickUp; Friendship; Quest; Build; Bundle; Achievement; Slay ]
+    let WithSubject: string list =
+        [
+            Harvest
+            Sell
+            Craft
+            Catch
+            PickUp
+            Friendship
+            Quest
+            Build
+            Bundle
+            Achievement
+            Slay
+        ]
 
 /// How a `variable` condition compares (M3).
 [<RequireQualifiedAccess>]
@@ -622,7 +762,7 @@ module VariableComparisons =
     [<Literal>]
     let Ge = "ge"
 
-    let All : string list = [ Eq; Ne; Lt; Le; Gt; Ge ]
+    let All: string list = [ Eq; Ne; Lt; Le; Gt; Ge ]
 
 /// A relationship's stage (M4).
 [<RequireQualifiedAccess>]
@@ -639,7 +779,7 @@ module RelationshipStatuses =
     [<Literal>]
     let Married = "married"
 
-    let All : string list = [ Single; Dating; Engaged; Married ]
+    let All: string list = [ Single; Dating; Engaged; Married ]
 
 /// What a placed object does to the tiles around it (M5).
 [<RequireQualifiedAccess>]
@@ -652,7 +792,7 @@ module AreaEffects =
     [<Literal>]
     let Protect = "protect"
 
-    let All : string list = [ Water; Protect ]
+    let All: string list = [ Water; Protect ]
 
 /// How an item joins a collection (M6).
 [<RequireQualifiedAccess>]
@@ -669,7 +809,7 @@ module CollectionKinds =
     [<Literal>]
     let Donated = "donated"
 
-    let All : string list = [ Found; Shipped; Donated ]
+    let All: string list = [ Found; Shipped; Donated ]
 
 /// How a monster moves (M7).
 [<RequireQualifiedAccess>]
@@ -686,7 +826,7 @@ module MonsterMovements =
     [<Literal>]
     let Still = "still"
 
-    let All : string list = [ Wander; Chase; Still ]
+    let All: string list = [ Wander; Chase; Still ]
 
 /// The places clothing is worn (M4).
 [<RequireQualifiedAccess>]
@@ -700,7 +840,7 @@ module WearSlots =
     [<Literal>]
     let Pants = "pants"
 
-    let All : string list = [ Hat; Shirt; Pants ]
+    let All: string list = [ Hat; Shirt; Pants ]
 
 /// TS `GiftReaction` (`keyof typeof GIFT_FRIENDSHIP_DELTAS`).
 [<RequireQualifiedAccess>]
@@ -720,7 +860,7 @@ module GiftReactions =
     [<Literal>]
     let Hated = "hated"
 
-    let All : string list = [ Loved; Liked; Neutral; Disliked; Hated ]
+    let All: string list = [ Loved; Liked; Neutral; Disliked; Hated ]
 
 /// TS `GamePanelSchema.entries[].kind` enum.
 [<RequireQualifiedAccess>]
@@ -746,7 +886,7 @@ module GamePanelEntryKinds =
     [<Literal>]
     let Action = "action"
 
-    let All : string list = [ Text; Money; Energy; Day; Item; Flag; Action ]
+    let All: string list = [ Text; Money; Energy; Day; Item; Flag; Action ]
 
 
 /// `primitives.ts` lists.
@@ -755,20 +895,69 @@ module PrimitivesSchema =
     /// Seasons are open strings (creator-defined calendars, M9) so custom season ids validate the
     /// same way custom crops do. `CLASSIC_SEASONS` enumerates the four seasons the built-in
     /// calendar ships with, for defaults/editors.
-    let ClassicSeasons : string list = [ "spring"; "summer"; "fall"; "winter" ]
+    let ClassicSeasons: string list = [ "spring"; "summer"; "fall"; "winter" ]
 
     /// Crop identifiers are open strings so that custom/modded crops share the same pipeline as
     /// built-in ones. `BUILTIN_CROP_IDS` enumerates the crops shipped with the default content pack.
-    let BuiltinCropIds : string list =
-        [ "wheat"; "corn"; "tomato"; "carrot"; "potato"; "strawberry"; "pumpkin"; "cauliflower"; "blueberry" ]
+    let BuiltinCropIds: string list =
+        [
+            "wheat"
+            "corn"
+            "tomato"
+            "carrot"
+            "potato"
+            "strawberry"
+            "pumpkin"
+            "cauliflower"
+            "blueberry"
+        ]
 
 [<RequireQualifiedAccess>]
 module SettingsSchema =
     let ClassicCalendarSeasons () : CalendarSeason list =
         PrimitivesSchema.ClassicSeasons
-        |> List.map (fun id -> { Id = id; Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1; Days = 28.0; Temperature = None; Music = None })
+        |> List.map (fun id ->
+            {
+                Id = id
+                Name = id.Substring(0, 1).ToUpperInvariant() + id.Substring 1
+                Days = 28.0
+                Temperature = None
+                Music = None
+            })
 
-    let DefaultProjectSettings : ProjectSettings = ProjectSettings.Default
+    let ClassicCalendarWeekdays () : CalendarWeekday list =
+        [
+            "monday", "Monday"
+            "tuesday", "Tuesday"
+            "wednesday", "Wednesday"
+            "thursday", "Thursday"
+            "friday", "Friday"
+            "saturday", "Saturday"
+            "sunday", "Sunday"
+        ]
+        |> List.map (fun (id, name) ->
+            { CalendarWeekday.Default with
+                Id = id
+                Name = name
+            })
+
+    let weekdayName (calendar: CalendarConfig) (day: float) (locale: string) : string option =
+        match calendar.Weekdays |> Option.defaultValue [] with
+        | [] -> None
+        | days ->
+            let offset = calendar.WeekdayOffset |> Option.defaultValue 0.0
+            let index = int ((max 0.0 (day - 1.0) + max 0.0 offset) % float days.Length)
+            let weekday = days[index]
+
+            Some(
+                weekday.Words
+                |> Option.defaultValue []
+                |> List.tryFind (fun (language, _) -> language = locale)
+                |> Option.map snd
+                |> Option.defaultValue weekday.Name
+            )
+
+    let DefaultProjectSettings: ProjectSettings = ProjectSettings.Default
 
     /// The shortest day a project may configure (`dayEndMinute - dayStartMinute`).
     let MinDayWindowMinutes = 60.0
@@ -777,21 +966,30 @@ module SettingsSchema =
     /// The fastest clock a project may configure (a whole day per real second).
     let MaxMinutesPerRealSecond = 1440.0
 
-    let private isWhole (value: float) = not (Double.IsNaN value || Double.IsInfinity value) && Math.Truncate value = value
+    let private isWhole (value: float) =
+        not (Double.IsNaN value || Double.IsInfinity value)
+        && Math.Truncate value = value
 
     /// Rust `game_time::is_valid_time_config`: a day the clock can run through. A start at or
     /// after the end collapsed the player on every tick; an end past 71:34 never came.
     let validTime (time: TimeConfig) : bool =
-        isWhole time.DayStartMinute && isWhole time.DayEndMinute && time.DayStartMinute >= 0.0
+        isWhole time.DayStartMinute
+        && isWhole time.DayEndMinute
+        && time.DayStartMinute >= 0.0
         && time.DayEndMinute - time.DayStartMinute >= MinDayWindowMinutes
         && time.DayEndMinute <= MaxDayEndMinute
-        && time.MinutesPerRealSecond > 0.0 && time.MinutesPerRealSecond <= MaxMinutesPerRealSecond
+        && time.MinutesPerRealSecond > 0.0
+        && time.MinutesPerRealSecond <= MaxMinutesPerRealSecond
 
     /// Rust `game_time::calendar_seasons`: the positive-length seasons, a repeated id once (at
     /// its first place), or the classic calendar when none is left.
     let calendarSeasons (calendar: CalendarConfig) : CalendarSeason list =
-        match calendar.Seasons |> List.filter (fun season -> season.Days > 0.0) |> List.distinctBy (fun season -> season.Id) with
-        | [] -> ClassicCalendarSeasons ()
+        match
+            calendar.Seasons
+            |> List.filter (fun season -> season.Days > 0.0)
+            |> List.distinctBy (fun season -> season.Id)
+        with
+        | [] -> ClassicCalendarSeasons()
         | seasons -> seasons
 
     /// Rust `game_time::natural_date`: the season and day of season an absolute (1-based) day
@@ -800,12 +998,14 @@ module SettingsSchema =
         let seasons = calendarSeasons calendar
         let yearLength = seasons |> List.sumBy (fun season -> season.Days)
         let dayInYear = ((absoluteDay - 1.0) % yearLength + yearLength) % yearLength
+
         let rec find (remaining: float) (rest: CalendarSeason list) =
             match rest with
             | [ last ] when remaining >= last.Days -> last, last.Days
             | season :: tail when remaining >= season.Days -> find (remaining - season.Days) tail
             | season :: _ -> season, remaining + 1.0
             | [] -> List.last seasons, (List.last seasons).Days
+
         find dayInYear seasons
 
     /// Rust `game_time::clock_date`'s day: `dayOfSeason` (or, when absent, where the absolute day
@@ -813,11 +1013,17 @@ module SettingsSchema =
     /// first).
     let clockDayOfSeason (calendar: CalendarConfig) (season: string) (absoluteDay: float) (dayOfSeason: float option) : float =
         let seasons = calendarSeasons calendar
-        let current = seasons |> List.tryFind (fun s -> s.Id = season) |> Option.defaultValue seasons.Head
+
+        let current =
+            seasons
+            |> List.tryFind (fun s -> s.Id = season)
+            |> Option.defaultValue seasons.Head
+
         let day =
             match dayOfSeason with
             | Some day when day <> 0.0 -> day
             | _ -> snd (naturalDate calendar absoluteDay)
+
         max 1.0 (min current.Days day)
 
 /// Limits of M5's placed objects and buildings (Rust `schema::farm`).
@@ -841,10 +1047,13 @@ module FarmSchema =
 
 [<RequireQualifiedAccess>]
 module ProjectSchema =
-    /// The project schema version. Only this version loads (there are no migrations): bump it
-    /// when the persisted shape changes, so files of another shape are refused with a message.
+    /// Highest supported project version. Additive version-3 features load alongside classic v2.
     [<Literal>]
-    let CurrentProjectSchemaVersion = 2.0
+    let CurrentProjectSchemaVersion = 3.0
+
+    /// Classic projects retain their version until version-3 features are authored.
+    [<Literal>]
+    let ClassicProjectSchemaVersion = 2.0
 
 [<RequireQualifiedAccess>]
 module GameContentSchema =
@@ -854,10 +1063,15 @@ module GameContentSchema =
 [<RequireQualifiedAccess>]
 module SaveSchema =
     /// TS `SKILL_NAMES`.
-    let SkillNames : string list = [ "farming"; "foraging"; "fishing"; "mining"; "social"; "combat" ]
+    let SkillNames: string list =
+        [ "farming"; "foraging"; "fishing"; "mining"; "social"; "combat" ]
 
     /// Tile index → tile center; already-fractional coordinates pass through.
-    let CenterCoordinate (value: float) : float = if value = System.Math.Floor value then value + 0.5 else value
+    let CenterCoordinate (value: float) : float =
+        if value = System.Math.Floor value then
+            value + 0.5
+        else
+            value
 
 [<RequireQualifiedAccess>]
 module SocialSchema =
@@ -867,12 +1081,14 @@ module SocialSchema =
     [<Literal>]
     let MaxFriendship = 1250.0
 
-    let GiftFriendshipDeltas : (string * float) list =
-        [ GiftReactions.Loved, 80.0
-          GiftReactions.Liked, 45.0
-          GiftReactions.Neutral, 20.0
-          GiftReactions.Disliked, -20.0
-          GiftReactions.Hated, -40.0 ]
+    let GiftFriendshipDeltas: (string * float) list =
+        [
+            GiftReactions.Loved, 80.0
+            GiftReactions.Liked, 45.0
+            GiftReactions.Neutral, 20.0
+            GiftReactions.Disliked, -20.0
+            GiftReactions.Hated, -40.0
+        ]
 
 [<RequireQualifiedAccess>]
 module EventsSchema =
@@ -886,22 +1102,41 @@ module ExtensibilitySchema =
 
 [<RequireQualifiedAccess>]
 module MigrationsSchema =
-    let private entry (weatherId: string) (weight: float) : WeatherTableEntry = { WeatherId = weatherId; Weight = weight }
+    let private entry (weatherId: string) (weight: float) : WeatherTableEntry =
+        {
+            WeatherId = weatherId
+            Weight = weight
+        }
 
     let private weather (id: string) (name: string) (waters: bool) (damage: float) (inside: bool) (overlay: string option) : WeatherTypeDefinition =
-        { Id = id; Name = name; WatersOutdoorSoil = waters; CropDamageChance = damage; NpcsStayInside = inside; Overlay = overlay; Music = None; Extra = [] }
+        {
+            Id = id
+            Name = name
+            WatersOutdoorSoil = waters
+            CropDamageChance = damage
+            NpcsStayInside = inside
+            Overlay = overlay
+            Music = None
+            Extra = []
+        }
 
     /// Default weather set every pre-v6 project receives (tunable afterwards).
     let DefaultWeatherConfig () : WeatherConfig =
-        { Types =
-            [ weather "sun" "Sunny" false 0.0 false None
-              weather "rain" "Rain" true 0.0 false (Some "rain")
-              weather "storm" "Storm" true 0.03 true (Some "rain")
-              weather "snow" "Snow" false 0.0 false (Some "snow") ]
-          Table =
-            [ "spring", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
-              "summer", [ entry "sun" 7.0; entry "rain" 1.0; entry "storm" 2.0 ]
-              "fall", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
-              "winter", [ entry "sun" 5.0; entry "snow" 5.0 ] ]
-          Overlays = None
-          Extra = [] }
+        {
+            Types =
+                [
+                    weather "sun" "Sunny" false 0.0 false None
+                    weather "rain" "Rain" true 0.0 false (Some "rain")
+                    weather "storm" "Storm" true 0.03 true (Some "rain")
+                    weather "snow" "Snow" false 0.0 false (Some "snow")
+                ]
+            Table =
+                [
+                    "spring", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
+                    "summer", [ entry "sun" 7.0; entry "rain" 1.0; entry "storm" 2.0 ]
+                    "fall", [ entry "sun" 6.0; entry "rain" 3.0; entry "storm" 1.0 ]
+                    "winter", [ entry "sun" 5.0; entry "snow" 5.0 ]
+                ]
+            Overlays = None
+            Extra = []
+        }

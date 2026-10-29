@@ -14,6 +14,7 @@
     <Compile Include="Schema.fs" />
     <Compile Include="SchemaJson.fs" />
     <Compile Include="SchemaConstants.fs" />
+    <Compile Include="ProjectVersion.fs" />
     <Compile Include="AuthoringTiles.fs" />
     <Compile Include="PackRules.fs" />
     <Compile Include="Builtin.fs" />
@@ -42,6 +43,7 @@
     <Compile Include="ChecksContent.fs" />
     <Compile Include="ChecksVocabulary.fs" />
     <Compile Include="ChecksExport.fs" />
+    <Compile Include="FontCoverage.fs" />
     <Compile Include="Problems.fs" />
     <Compile Include="ProjectLoad.fs" />
     <Compile Include="ProjectFolder.fs" />

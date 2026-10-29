@@ -16,7 +16,10 @@ let private parse (text: string) : Json =
     | Ok json -> json
     | Error message -> failwith message
 
-let private length (json: Json) = match json with JArray items -> items.Length | _ -> -1
+let private length (json: Json) =
+    match json with
+    | JArray items -> items.Length
+    | _ -> -1
 
 let private png = "data:image/png;base64,iVBORw0KGgo="
 
@@ -24,7 +27,7 @@ let private png = "data:image/png;base64,iVBORw0KGgo="
 let ``a cartridge carries start presentation and content without the project`` () =
     let cart = read (CartridgeCompiler.Compile(starter ()))
     Assert.Equal(3u, cart.CartFormat)
-    Assert.Equal(uint32 ProjectSchema.CurrentProjectSchemaVersion, cart.ProjectSchemaVersion)
+    Assert.Equal(uint32 (starter ()).SchemaVersion, cart.ProjectSchemaVersion)
     Assert.True(CartridgeReader.hasIdentifier (CartridgeCompiler.Compile(starter ())))
     let start = parse cart.StartJson
     Assert.Equal(Some (starter ()).Id, Json.asString (Json.get "id" start))
@@ -36,13 +39,54 @@ let ``a cartridge carries start presentation and content without the project`` (
 
 [<Fact>]
 let ``data urls move to the asset table once and are referenced by content hash`` () =
-    let art = { CustomAsset.Default with Id = "art-cow"; Name = "cow.png"; Type = "art"; DataUrl = png; Width = Some(16.0); Height = Some(16.0) }
-    let copy = { CustomAsset.Default with Id = "art-cow-2"; Name = "cow copy.png"; Type = "art"; DataUrl = png; Width = Some(16.0); Height = Some(16.0) }
+    let art =
+        { CustomAsset.Default with
+            Id = "art-cow"
+            Name = "cow.png"
+            Type = "art"
+            DataUrl = png
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
+    let copy =
+        { CustomAsset.Default with
+            Id = "art-cow-2"
+            Name = "cow copy.png"
+            Type = "art"
+            DataUrl = png
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
     let project =
         starter ()
-        |> apply (Batch("art", [ UpsertAsset art; UpsertAsset copy
-                                 BindVisual(PlayerVisual, Some({ VisualRef.Default with AssetId = "art-cow" }))
-                                 BindVisual(NpcVisual "npc-farmer", Some({ VisualRef.Default with AssetId = "art-cow-2" })) ]))
+        |> apply (
+            Batch(
+                "art",
+                [
+                    UpsertAsset art
+                    UpsertAsset copy
+                    BindVisual(
+                        PlayerVisual,
+                        Some(
+                            { VisualRef.Default with
+                                AssetId = "art-cow"
+                            }
+                        )
+                    )
+                    BindVisual(
+                        NpcVisual "npc-farmer",
+                        Some(
+                            { VisualRef.Default with
+                                AssetId = "art-cow-2"
+                            }
+                        )
+                    )
+                ]
+            )
+        )
+
     let bytes = CartridgeCompiler.Compile project
     Assert.Equal<byte>(bytes, CartridgeCompiler.Compile project)
     let cart = read bytes
@@ -53,20 +97,66 @@ let ``data urls move to the asset table once and are referenced by content hash`
     let reference = Some("asset:" + asset.Id)
     let json = cart.PresentationJson
     Assert.DoesNotContain("data:", json)
-    let assets = match Json.get "customAssets" (parse json) with JArray items -> items | _ -> []
+
+    let assets =
+        match Json.get "customAssets" (parse json) with
+        | JArray items -> items
+        | _ -> []
+
     Assert.Equal(reference, Json.asString (Json.get "dataUrl" assets.[0]))
     Assert.Equal(reference, Json.asString (Json.get "dataUrl" assets.[1]))
     Assert.DoesNotContain("data:image", cart.StartJson)
 
 [<Fact>]
 let ``malformed data urls stay inline`` () =
-    let broken = { CustomAsset.Default with Id = "art-broken"; Name = "broken.png"; Type = "art"; DataUrl = "data:image/png;base64,***"; Width = Some(16.0); Height = Some(16.0) }
-    let plain = { CustomAsset.Default with Id = "art-plain"; Name = "plain.svg"; Type = "art"; DataUrl = "data:image/svg+xml,%3Csvg%3E"; Width = Some(16.0); Height = Some(16.0) }
+    let broken =
+        { CustomAsset.Default with
+            Id = "art-broken"
+            Name = "broken.png"
+            Type = "art"
+            DataUrl = "data:image/png;base64,***"
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
+    let plain =
+        { CustomAsset.Default with
+            Id = "art-plain"
+            Name = "plain.svg"
+            Type = "art"
+            DataUrl = "data:image/svg+xml,%3Csvg%3E"
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
     let project =
         starter ()
-        |> apply (Batch("art", [ UpsertAsset broken; UpsertAsset plain
-                                 BindVisual(PlayerVisual, Some({ VisualRef.Default with AssetId = "art-broken" }))
-                                 BindVisual(NpcVisual "npc-farmer", Some({ VisualRef.Default with AssetId = "art-plain" })) ]))
+        |> apply (
+            Batch(
+                "art",
+                [
+                    UpsertAsset broken
+                    UpsertAsset plain
+                    BindVisual(
+                        PlayerVisual,
+                        Some(
+                            { VisualRef.Default with
+                                AssetId = "art-broken"
+                            }
+                        )
+                    )
+                    BindVisual(
+                        NpcVisual "npc-farmer",
+                        Some(
+                            { VisualRef.Default with
+                                AssetId = "art-plain"
+                            }
+                        )
+                    )
+                ]
+            )
+        )
+
     let cart = read (CartridgeCompiler.Compile project)
     Assert.Empty cart.Assets
     let json = cart.PresentationJson
@@ -76,14 +166,55 @@ let ``malformed data urls stay inline`` () =
 [<Fact>]
 let ``plugins of enabled packs ship with the hooks their manifest grants`` () =
     let pack (id: string) =
-        { ContentPack.Default with Manifest = { PackManifest.Default with Id = id; Name = id; Version = "1.0.0"; Permissions = { PackPermissions.Default with Hooks = [ "onDayStart"; "onEffect" ] } }; Plugins = [ { PackPlugin.Default with Id = "greeter"; Hooks = [ "onEffect"; "onCommand"; "onDayStart" ]; Source = "api.on('onDayStart', () => [])" } ] }
+        { ContentPack.Default with
+            Manifest =
+                { PackManifest.Default with
+                    Id = id
+                    Name = id
+                    Version = "1.0.0"
+                    Permissions =
+                        { PackPermissions.Default with
+                            Hooks = [ "onDayStart"; "onEffect" ]
+                        }
+                }
+            Plugins =
+                [
+                    { PackPlugin.Default with
+                        Id = "greeter"
+                        Hooks = [ "onEffect"; "onCommand"; "onDayStart" ]
+                        Source = "api.on('onDayStart', () => [])"
+                    }
+                ]
+        }
+
     let project =
         { starter () with
             ContentPacks =
-                [ { PackInstallation.Default with Pack = pack "alpha" }
-                  { PackInstallation.Default with Pack = pack "off"; Enabled = false }
-                  { PackInstallation.Default with
-                      Pack = (let beta = pack "beta" in { beta with Manifest = { beta.Manifest with Permissions = { beta.Manifest.Permissions with Mutations = Some [ "message"; "giveItem:any" ] } } }) } ] }
+                [
+                    { PackInstallation.Default with
+                        Pack = pack "alpha"
+                    }
+                    { PackInstallation.Default with
+                        Pack = pack "off"
+                        Enabled = false
+                    }
+                    { PackInstallation.Default with
+                        Pack =
+                            (let beta = pack "beta" in
+
+                             { beta with
+                                 Manifest =
+                                     { beta.Manifest with
+                                         Permissions =
+                                             { beta.Manifest.Permissions with
+                                                 Mutations = Some [ "message"; "giveItem:any" ]
+                                             }
+                                     }
+                             })
+                    }
+                ]
+        }
+
     let cart = read (CartridgeCompiler.Compile project)
     Assert.Equal(2, cart.Plugins.Length)
     let first = cart.Plugins.[0]
@@ -102,87 +233,220 @@ let ``plugins of enabled packs ship with the hooks their manifest grants`` () =
 [<Fact>]
 let ``plugins carry the minigame kinds their manifest allows`` () =
     let pack = validPack (readJson [ "Fixtures"; "lantern-night-mod.json" ])
-    let project = { starter () with ContentPacks = [ { PackInstallation.Default with Pack = pack } ] }
+
+    let project =
+        { starter () with
+            ContentPacks =
+                [
+                    { PackInstallation.Default with
+                        Pack = pack
+                    }
+                ]
+        }
+
     let cart = read (CartridgeCompiler.Compile project)
     Assert.Equal<string list>([ "lantern-night:lantern-catch" ], cart.Plugins.[0].GrantedMinigames)
     Assert.Equal<string list>([], cart.Plugins.[0].GrantedHooks)
     Assert.Equal(Some [], cart.Plugins.[0].GrantedMutations)
     // Without the manifest's permission the plugin defines nothing.
-    let denied = { pack with Manifest = { pack.Manifest with Permissions = { pack.Manifest.Permissions with Minigames = Some [] } } }
-    let cart = read (CartridgeCompiler.Compile { project with ContentPacks = [ { PackInstallation.Default with Pack = denied } ] })
+    let denied =
+        { pack with
+            Manifest =
+                { pack.Manifest with
+                    Permissions =
+                        { pack.Manifest.Permissions with
+                            Minigames = Some []
+                        }
+                }
+        }
+
+    let cart =
+        read (
+            CartridgeCompiler.Compile
+                { project with
+                    ContentPacks =
+                        [
+                            { PackInstallation.Default with
+                                Pack = denied
+                            }
+                        ]
+                }
+        )
+
     Assert.Empty(cart.Plugins.[0].GrantedMinigames)
     Assert.Empty (read (CartridgeCompiler.Compile(starter ()))).Plugins
 
 [<Fact>]
 let ``unused art stays out of the cartridge`` () =
-    let used = { CustomAsset.Default with Id = "art-used"; Name = "used.png"; Type = "art"; DataUrl = png; Width = Some(16.0); Height = Some(16.0) }
-    let scratch = { CustomAsset.Default with Id = "art-scratch"; Name = "scratch.png"; Type = "art"; DataUrl = "data:image/png;base64,AAAA"; Width = Some(16.0); Height = Some(16.0) }
-    let project = starter () |> apply (Batch("art", [ UpsertAsset used; UpsertAsset scratch; BindVisual(PlayerVisual, Some({ VisualRef.Default with AssetId = "art-used" })) ]))
+    let used =
+        { CustomAsset.Default with
+            Id = "art-used"
+            Name = "used.png"
+            Type = "art"
+            DataUrl = png
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
+    let scratch =
+        { CustomAsset.Default with
+            Id = "art-scratch"
+            Name = "scratch.png"
+            Type = "art"
+            DataUrl = "data:image/png;base64,AAAA"
+            Width = Some(16.0)
+            Height = Some(16.0)
+        }
+
+    let project =
+        starter ()
+        |> apply (
+            Batch(
+                "art",
+                [
+                    UpsertAsset used
+                    UpsertAsset scratch
+                    BindVisual(
+                        PlayerVisual,
+                        Some(
+                            { VisualRef.Default with
+                                AssetId = "art-used"
+                            }
+                        )
+                    )
+                ]
+            )
+        )
+
     let cart = read (CartridgeCompiler.Compile project)
     Assert.Equal(1, cart.Assets.Length)
+
     let ids =
         match Json.get "customAssets" (parse cart.PresentationJson) with
         | JArray assets -> assets |> List.choose (Json.get "id" >> Json.asString)
         | _ -> []
+
     Assert.Equal<string list>([ "art-used" ], ids)
 
 [<Fact>]
 let ``the reader refuses what is not a cartridge`` () =
     Assert.Equal(Error "Not a cartridge (missing the FGCT identifier)", CartridgeReader.read [| 1uy; 2uy |])
     let bytes = CartridgeCompiler.Compile(starter ())
+
     match CartridgeReader.read (Array.sub bytes 0 64) with
     | Error message -> Assert.StartsWith("Malformed cartridge: ", message)
     | Ok _ -> failwith "a truncated cartridge read"
 
-/// The sample-game cartridges farm-bench and the Rust tests load
-/// (`fixtures/golden/cartridges/<sample>.cart`) are what the compiler makes of the samples today.
-/// After an intended format or content change, rerun with FARM_RECORD_CARTRIDGES=1 to rewrite them.
+/// The classic sample cartridges used by farm-bench and Rust retain their exact bytes.
+/// New templates are covered separately by the F#/Rust parity fixtures.
 [<Theory>]
 [<InlineData("starter-farm", "starter"); InlineData("cozy-garden", "cozy"); InlineData("quest-rpg", "quest")>]
-let ``the sample cartridges are current`` (file: string, sampleId: string) =
-    let path = IO.Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", file + ".cart")
-    let bytes = CartridgeCompiler.Compile(ProjectCatalog.CreateSampleProject(sampleId, 1.7e12))
-    if Environment.GetEnvironmentVariable "FARM_RECORD_CARTRIDGES" = "1" then IO.File.WriteAllBytes(path, bytes)
-    else
-        Assert.True((IO.File.ReadAllBytes path = bytes), file + ".cart is stale; rerun with FARM_RECORD_CARTRIDGES=1")
-        Assert.Equal(ProjectCatalog.CreateSampleProject(sampleId, 1.7e12).Name, (read bytes).Info.Title)
+let ``the classic sample cartridges retain their bytes`` (file: string, sampleId: string) =
+    let path =
+        IO.Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "fixtures", "golden", "cartridges", file + ".cart")
+
+    let project =
+        readJson [ "Golden"; "content"; file + ".json" ]
+        |> Json.get "project"
+        |> decodeJson SchemaJson.decodeGameProject
+
+    let bytes = CartridgeCompiler.Compile(project)
+    Assert.True((IO.File.ReadAllBytes path = bytes), file + ".cart changed for the pinned classic project")
+    Assert.Equal(ProjectCatalog.CreateSampleProject(sampleId, 1.7e12).Name, (read bytes).Info.Title)
 
 /// A game state as the engine writes it (only the parts Keep changes reads).
 let private engineState (project: GameProject) (clock: (string * Json) list) (rest: (string * Json) list) : Json =
     let encoded = SchemaJson.encodeGameProject project
+
     JObject(
-        [ "player", Json.get "player" encoded
-          "world", JObject [ "scenes", Json.get "scenes" encoded ]
-          "npcs", JObject []
-          "quests", JObject []
-          "clock", JObject([ "tick", JNumber 0.0; "timeMinutes", JNumber 360.0; "day", JNumber 1.0; "season", JString "spring"; "dayOfSeason", JNumber 1.0; "year", JNumber 1.0; "weatherId", JString "sun" ] |> List.map (fun (key, value) -> key, (clock |> List.tryFind (fst >> (=) key) |> Option.map snd |> Option.defaultValue value)))
-          "flags", JObject []
-          "animals", JArray []
-          "social", JObject []
-          "quarantinedItems", JArray []
-          "mine", JObject [ "deepestFloor", JNumber 0.0; "currentFloor", JNumber 0.0 ]
-          "dialogue", JNull
-          "shop", JNull
-          "minigame", JNull
-          "cutscene", JNull
-          "shopPurchasesToday", JObject []
-          "rng", JObject [ "algorithm", JString "xoshiro128ss"; "s", JArray [ JNumber 1.0; JNumber 2.0; JNumber 3.0; JNumber 4.0 ] ] ]
-        |> List.map (fun (key, value) -> key, (rest |> List.tryFind (fst >> (=) key) |> Option.map snd |> Option.defaultValue value))
+        [
+            "player", Json.get "player" encoded
+            "world", JObject [ "scenes", Json.get "scenes" encoded ]
+            "npcs", JObject []
+            "quests", JObject []
+            "clock",
+            JObject(
+                [
+                    "tick", JNumber 0.0
+                    "timeMinutes", JNumber 360.0
+                    "day", JNumber 1.0
+                    "season", JString "spring"
+                    "dayOfSeason", JNumber 1.0
+                    "year", JNumber 1.0
+                    "weatherId", JString "sun"
+                ]
+                |> List.map (fun (key, value) ->
+                    key,
+                    (clock
+                     |> List.tryFind (fst >> (=) key)
+                     |> Option.map snd
+                     |> Option.defaultValue value))
+            )
+            "flags", JObject []
+            "animals", JArray []
+            "social", JObject []
+            "quarantinedItems", JArray []
+            "mine", JObject [ "deepestFloor", JNumber 0.0; "currentFloor", JNumber 0.0 ]
+            "dialogue", JNull
+            "shop", JNull
+            "minigame", JNull
+            "cutscene", JNull
+            "shopPurchasesToday", JObject []
+            "rng",
+            JObject
+                [
+                    "algorithm", JString "xoshiro128ss"
+                    "s", JArray [ JNumber 1.0; JNumber 2.0; JNumber 3.0; JNumber 4.0 ]
+                ]
+        ]
+        |> List.map (fun (key, value) ->
+            key,
+            (rest
+             |> List.tryFind (fst >> (=) key)
+             |> Option.map snd
+             |> Option.defaultValue value))
     )
 
 [<Fact>]
 let ``keep changes writes flag values and the live state back as they are`` () =
     let project = starter ()
-    let cutscene = JObject [ "cutsceneId", JString "intro"; "step", JNumber 2.0; "started", JBool true; "facing", JObject [ "npc-farmer", JString "left" ] ]
-    let flags = JObject [ "count", JNumber 3.0; "name", JString "Ada"; "met", JBool true ]
+
+    let cutscene =
+        JObject
+            [
+                "cutsceneId", JString "intro"
+                "step", JNumber 2.0
+                "started", JBool true
+                "facing", JObject [ "npc-farmer", JString "left" ]
+            ]
+
+    let flags =
+        JObject [ "count", JNumber 3.0; "name", JString "Ada"; "met", JBool true ]
+
     let state =
-        engineState project [ "tick", JNumber 1234.0 ] [
-            "flags", flags
-            "shop", JObject [ "shopId", JString "shop-general" ]
-            "cutscene", cutscene
-            "shopPurchasesToday", JObject [ "shop-general", JObject [ "seed-wheat", JNumber 4.0 ] ]
-            "mine", JObject [ "deepestFloor", JNumber 3.0; "currentFloor", JNumber 2.0 ]
-            "npcs", JObject [ "npc-farmer", JObject [ "x", JNumber 1.0; "y", JNumber 1.0; "sceneId", JString "scene-farm"; "patrolIndex", JNumber 1.0 ] ] ]
+        engineState
+            project
+            [ "tick", JNumber 1234.0 ]
+            [
+                "flags", flags
+                "shop", JObject [ "shopId", JString "shop-general" ]
+                "cutscene", cutscene
+                "shopPurchasesToday", JObject [ "shop-general", JObject [ "seed-wheat", JNumber 4.0 ] ]
+                "mine", JObject [ "deepestFloor", JNumber 3.0; "currentFloor", JNumber 2.0 ]
+                "npcs",
+                JObject
+                    [
+                        "npc-farmer",
+                        JObject
+                            [
+                                "x", JNumber 1.0
+                                "y", JNumber 1.0
+                                "sceneId", JString "scene-farm"
+                                "patrolIndex", JNumber 1.0
+                            ]
+                    ]
+            ]
+
     match Playtest.applyState project state with
     | Error message -> failwith message
     | Ok kept ->
@@ -195,6 +459,7 @@ let ``keep changes writes flag values and the live state back as they are`` () =
         match keptState with
         | JObject members -> Assert.Equal<string list>([ "tick"; "shopPurchasesToday"; "shop"; "cutscene"; "npcs"; "mineCurrentFloor" ], List.map fst members)
         | other -> failwithf "kept state %A" other
+
         Assert.Equal(JNumber 2.0, Json.get "mineCurrentFloor" keptState)
         Assert.Equal(JObject [ "npc-farmer", JObject [ "patrolIndex", JNumber 1.0 ] ], Json.get "npcs" keptState)
         Assert.True(Json.isNullish (Json.get "dialogue" keptState))
@@ -210,9 +475,47 @@ let ``keep changes writes flag values and the live state back as they are`` () =
     | Error message -> failwith message
 
 [<Fact>]
+let ``keep changes carries plugin data through saving and the next cartridge`` () =
+    let project = starter ()
+
+    let payload =
+        JObject
+            [
+                "pack:plugin",
+                JObject
+                    [
+                        "visits", JNumber 3.0
+                        "seen", JArray [ JString "fair"; JBool true ]
+                        "note", JNull
+                    ]
+            ]
+
+    let state = engineState project [] [] |> Json.set "pluginData" payload
+
+    match Playtest.applyState project state with
+    | Error message -> failwith message
+    | Ok kept ->
+        Assert.Equal(payload, Json.get "pluginData" kept.KeptState.Value)
+        let saved = ProjectLoad.toText kept |> ProjectLoad.loadProjectText
+        Assert.True(saved.Ok, String.concat "; " saved.Errors)
+
+        let start =
+            parse (read (CartridgeCompiler.CompileForPlaytest saved.Data.Value)).StartJson
+
+        Assert.Equal(payload, Json.get "keptState" start |> Json.get "pluginData")
+
+        let cleared =
+            Playtest.applyStateJson (SchemaJson.encodeGameProject kept) (Json.set "pluginData" (JObject []) state)
+
+        Assert.Equal(None, Json.tryGet "pluginData" (Json.get "keptState" cleared))
+
+[<Fact>]
 let ``keep changes records the day of season when the absolute day does not give it`` () =
     let project = starter ()
-    let state = engineState project [ "day", JNumber 11.0; "season", JString "summer"; "dayOfSeason", JNumber 11.0 ] []
+
+    let state =
+        engineState project [ "day", JNumber 11.0; "season", JString "summer"; "dayOfSeason", JNumber 11.0 ] []
+
     match Playtest.applyState project state with
     | Ok kept ->
         Assert.Equal(Some 11.0, kept.CurrentDayOfSeason)
@@ -223,12 +526,26 @@ let ``keep changes records the day of season when the absolute day does not give
 [<Fact>]
 let ``keep changes keeps the project key order`` () =
     let project = starter ()
-    let tool = { project with Player = { project.Player with EquippedTool = Some "tool-hoe" } }
+
+    let tool =
+        { project with
+            Player =
+                { project.Player with
+                    EquippedTool = Some "tool-hoe"
+                }
+        }
+
     let keys (json: Json) = Json.spread json |> List.map fst
     let before = SchemaJson.encodeGameProject tool
     // The playtest ends with no tool equipped: the key goes, the others stay in place.
     let after = Playtest.applyStateJson before (engineState project [] [])
-    Assert.Equal<string list>(keys (Json.get "player" before) |> List.filter ((<>) "equippedTool"), keys (Json.get "player" after) |> List.filter (fun key -> Json.has key (Json.get "player" before)))
+
+    Assert.Equal<string list>(
+        keys (Json.get "player" before) |> List.filter ((<>) "equippedTool"),
+        keys (Json.get "player" after)
+        |> List.filter (fun key -> Json.has key (Json.get "player" before))
+    )
+
     Assert.Equal<string list>(keys before, keys after |> List.filter (fun key -> Json.has key before))
 
 // ── Hostile cartridges and byte parity (#135, #136) ─────────────────────────
@@ -245,14 +562,16 @@ let private vectorLengthAt (b: byte[]) (index: int) : int =
 [<Fact>]
 let ``a vector length near Int32.MaxValue is malformed, not an exception`` () =
     let bytes = CartridgeCompiler.Compile(starter ())
+
     for length in [ Int32.MaxValue; Int32.MaxValue - 3; Int32.MinValue; bytes.Length ] do
         let broken = Array.copy bytes
         BitConverter.GetBytes(length).CopyTo(broken, vectorLengthAt bytes 4)
+
         match CartridgeReader.read broken with
         | Error message -> Assert.StartsWith("Malformed cartridge:", message)
         | Ok _ -> failwithf "length %d read" length
     // No other 32-bit word of the header makes `read` throw either.
-    for at in 8 .. 4 .. 400 do
+    for at in 8..4..400 do
         for value in [ Int32.MaxValue; -1; 1 <<< 30 ] do
             let broken = Array.copy bytes
             BitConverter.GetBytes(value).CopyTo(broken, at)
@@ -262,9 +581,26 @@ let ``a vector length near Int32.MaxValue is malformed, not an exception`` () =
 let ``out-of-range window sizes are clamped the same way in every runtime`` () =
     let project = starter ()
     let export = Defaults.newExportSettings project
+
     let sized (width: int) (height: int) =
-        let cart = read (CartridgeCompiler.CompileForPlaytest { project with Export = Some { export with Window = { export.Window with Width = width; Height = height } } })
+        let cart =
+            read (
+                CartridgeCompiler.CompileForPlaytest
+                    { project with
+                        Export =
+                            Some
+                                { export with
+                                    Window =
+                                        { export.Window with
+                                            Width = width
+                                            Height = height
+                                        }
+                                }
+                    }
+            )
+
         cart.Info.WindowWidth, cart.Info.WindowHeight
+
     Assert.Equal((320u, 240u), sized -1 0)
     Assert.Equal((8192u, 8192u), sized Int32.MaxValue 100000)
     Assert.Equal((1024u, 768u), sized 1024 768)
@@ -278,11 +614,21 @@ let ``utf8Text replaces each maximal malformed subpart once, like dotnet and Tex
     let decode (bytes: byte list) =
         let b = Array.ofList bytes
         Bytes.utf8Text b 0 b.Length
+
     Assert.Equal("a�", decode [ 0x61uy; 0xE2uy; 0x82uy ])
     Assert.Equal("��", decode [ 0xE0uy; 0x80uy ])
     Assert.Equal("�a", decode [ 0xF0uy; 0x9Fuy; 0x98uy; 0x61uy ])
     Assert.Equal("€😀", decode [ 0xE2uy; 0x82uy; 0xACuy; 0xF0uy; 0x9Fuy; 0x98uy; 0x80uy ])
     let random = Random(1234)
-    for _ in 1 .. 5000 do
-        let bytes = Array.init (random.Next(0, 12)) (fun _ -> byte (if random.Next 3 = 0 then random.Next 0x80 else 0x80 + random.Next 0x80))
+
+    for _ in 1..5000 do
+        let bytes =
+            Array.init (random.Next(0, 12)) (fun _ ->
+                byte (
+                    if random.Next 3 = 0 then
+                        random.Next 0x80
+                    else
+                        0x80 + random.Next 0x80
+                ))
+
         Assert.Equal(Text.Encoding.UTF8.GetString bytes, Bytes.utf8Text bytes 0 bytes.Length)

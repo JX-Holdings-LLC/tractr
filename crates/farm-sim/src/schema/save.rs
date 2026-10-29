@@ -146,6 +146,25 @@ pub struct PlayerState {
     /// Ticks left during which a hit does no harm (M7).
     #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
     pub hurt: u32,
+    /// Permanent maximum health override; absent uses the combat setting.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub max_health: Option<i32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buffs: Vec<super::ActiveBuff>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub purchased_upgrades: Vec<String>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub perks: IndexMap<String, String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tool_upgrades: Vec<super::PendingToolUpgrade>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NpcScheduleSelection {
+    pub day: u32,
+    pub weather: String,
+    pub variant: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -164,6 +183,8 @@ pub struct NpcState {
     /// Index of the patrol waypoint the NPC is heading to. int.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub patrol_index: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedule_selection: Option<NpcScheduleSelection>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -185,6 +206,11 @@ pub struct QuestProgress {
     /// created entry has `Some(map)`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub objectives: Option<IndexMap<String, QuestObjectiveProgress>>,
+    /// A rolled board request remains stable across saves and future board rotations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request: Option<Box<super::Quest>>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub deadline_day: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -247,6 +273,23 @@ pub struct MineProgress {
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
+pub struct FestivalSession {
+    pub festival_id: String,
+    pub return_scene_id: String,
+    pub return_x: i32,
+    pub return_y: i32,
+    pub npcs: IndexMap<String, NpcState>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct FestivalVisit {
+    pub day: u32,
+    pub activity_done: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
 pub struct GameState {
     pub meta: GameStateMeta,
     pub clock: ClockState,
@@ -254,6 +297,8 @@ pub struct GameState {
     pub player: PlayerState,
     pub npcs: IndexMap<String, NpcState>,
     pub quests: IndexMap<String, QuestProgress>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub request_boards: IndexMap<String, u32>,
     /// Present-as-null when closed.
     pub dialogue: Option<DialogueState>,
     /// Present-as-null when closed.
@@ -263,12 +308,24 @@ pub struct GameState {
     /// Per-shop, per-item units bought today (daily stock limits); reset nightly.
     #[serde(with = "crate::units::count::nested_map")]
     pub shop_purchases_today: IndexMap<String, IndexMap<String, u32>>,
+    /// Per shop/item/day quantities for optional price saturation.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_sales: IndexMap<String, IndexMap<String, IndexMap<u32, u32>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub festival: Option<FestivalSession>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub festival_visits: IndexMap<String, FestivalVisit>,
     /// Friendship & gifting state per NPC (M4d).
     pub social: IndexMap<String, NpcSocialState>,
     /// Live animals (M4c).
     pub animals: Vec<AnimalState>,
     /// Mining progress (M4f): deepest floor reached + current floor.
     pub mine: MineProgress,
+    /// Named mine progress; absent for legacy single-mine games.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub mines: IndexMap<String, MineProgress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_mine_id: Option<String>,
     /// Values are `boolean | number | string` (see [`crate::units::value`], [`crate::text::truthy`]).
     pub flags: IndexMap<String, Value>,
     /// Inventory items whose owning pack is missing/disabled — quarantined, not dropped; they
@@ -330,6 +387,8 @@ pub struct GameState {
     /// What each plugin saved (`saveData`), by plugin id (`packId:pluginId`, M9).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub plugin_data: IndexMap<String, Value>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fish_catches: Vec<super::FishCatchRecord>,
 }
 
 /// What events changed in a shop's stock (M3).
@@ -357,6 +416,12 @@ pub struct KeptState {
     /// [`GameState::shop_purchases_today`].
     #[serde(with = "crate::units::count::nested_map")]
     pub shop_purchases_today: IndexMap<String, IndexMap<String, u32>>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub shop_sales: IndexMap<String, IndexMap<String, IndexMap<u32, u32>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub festival: Option<FestivalSession>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub festival_visits: IndexMap<String, FestivalVisit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dialogue: Option<DialogueState>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -375,6 +440,16 @@ pub struct KeptState {
     /// [`MineProgress::current_floor`].
     #[serde(with = "crate::units::count")]
     pub mine_current_floor: u32,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub mines: IndexMap<String, MineProgress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_mine_id: Option<String>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub quest_deadlines: IndexMap<String, u32>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty", with = "crate::units::count::map")]
+    pub request_boards: IndexMap<String, u32>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub requests: IndexMap<String, Box<super::Quest>>,
     /// [`GameState::children`] (M4).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub children: Vec<ChildState>,
@@ -387,6 +462,8 @@ pub struct KeptState {
     /// [`GameState::plugin_data`] (M9): what the plugins saved.
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub plugin_data: IndexMap<String, Value>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fish_catches: Vec<super::FishCatchRecord>,
 }
 
 /// What [`KeptState`] carries of M5–M7 (the buildings themselves go to the project's
@@ -421,6 +498,16 @@ pub struct KeptGoals {
     /// [`PlayerState::health`].
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
     pub health: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+    pub max_health: Option<i32>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub buffs: Vec<super::ActiveBuff>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub purchased_upgrades: Vec<String>,
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub perks: IndexMap<String, String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tool_upgrades: Vec<super::PendingToolUpgrade>,
 }
 
 impl KeptGoals {
@@ -440,6 +527,11 @@ impl KeptGoals {
             next_monster: state.next_monster,
             slain: state.slain.clone(),
             health: state.player.health,
+            max_health: state.player.max_health,
+            buffs: state.player.buffs.clone(),
+            purchased_upgrades: state.player.purchased_upgrades.clone(),
+            perks: state.player.perks.clone(),
+            tool_upgrades: state.player.tool_upgrades.clone(),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -458,6 +550,11 @@ impl KeptGoals {
         state.monsters.clone_from(&self.monsters);
         state.next_monster = self.next_monster;
         state.slain.clone_from(&self.slain);
+        state.player.max_health = self.max_health;
+        state.player.buffs.clone_from(&self.buffs);
+        state.player.purchased_upgrades.clone_from(&self.purchased_upgrades);
+        state.player.perks.clone_from(&self.perks);
+        state.player.tool_upgrades.clone_from(&self.tool_upgrades);
         if self.health.is_some() {
             state.player.health = self.health;
         }
@@ -472,6 +569,8 @@ pub struct KeptNpc {
     pub path: Option<Vec<GridPoint>>,
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub patrol_index: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedule_selection: Option<NpcScheduleSelection>,
 }
 
 impl KeptState {
@@ -480,12 +579,24 @@ impl KeptState {
         let npcs: IndexMap<String, KeptNpc> = state
             .npcs
             .iter()
-            .filter(|(_, npc)| npc.path.is_some() || npc.patrol_index.is_some())
-            .map(|(id, npc)| (id.clone(), KeptNpc { path: npc.path.clone(), patrol_index: npc.patrol_index }))
+            .filter(|(_, npc)| npc.path.is_some() || npc.patrol_index.is_some() || npc.schedule_selection.is_some())
+            .map(|(id, npc)| {
+                (
+                    id.clone(),
+                    KeptNpc {
+                        path: npc.path.clone(),
+                        patrol_index: npc.patrol_index,
+                        schedule_selection: npc.schedule_selection.clone(),
+                    },
+                )
+            })
             .collect();
         let kept = Self {
             tick: state.clock.tick,
             shop_purchases_today: state.shop_purchases_today.clone(),
+            shop_sales: state.shop_sales.clone(),
+            festival: state.festival.clone(),
+            festival_visits: state.festival_visits.clone(),
             dialogue: state.dialogue.clone(),
             shop: state.shop.clone(),
             minigame: state.minigame.clone(),
@@ -493,10 +604,24 @@ impl KeptState {
             music: state.music.clone(),
             npcs,
             mine_current_floor: state.mine.current_floor,
+            mines: state.mines.clone(),
+            current_mine_id: state.current_mine_id.clone(),
+            request_boards: state.request_boards.clone(),
+            requests: state
+                .quests
+                .iter()
+                .filter_map(|(id, q)| q.request.clone().map(|request| (id.clone(), request)))
+                .collect(),
+            quest_deadlines: state
+                .quests
+                .iter()
+                .filter_map(|(id, q)| q.deadline_day.map(|day| (id.clone(), day)))
+                .collect(),
             children: state.children.clone(),
             shop_changes: state.shop_changes.clone(),
             goals: KeptGoals::of_state(state),
             plugin_data: state.plugin_data.clone(),
+            fish_catches: state.fish_catches.clone(),
         };
         (kept != Self::default()).then_some(kept)
     }
@@ -505,6 +630,9 @@ impl KeptState {
     pub fn apply_to(&self, state: &mut GameState) {
         state.clock.tick = self.tick;
         state.shop_purchases_today.clone_from(&self.shop_purchases_today);
+        state.shop_sales.clone_from(&self.shop_sales);
+        state.festival.clone_from(&self.festival);
+        state.festival_visits.clone_from(&self.festival_visits);
         state.dialogue.clone_from(&self.dialogue);
         state.shop.clone_from(&self.shop);
         state.minigame.clone_from(&self.minigame);
@@ -513,6 +641,7 @@ impl KeptState {
         state.children.clone_from(&self.children);
         state.shop_changes.clone_from(&self.shop_changes);
         state.plugin_data.clone_from(&self.plugin_data);
+        state.fish_catches.clone_from(&self.fish_catches);
         if let Some(goals) = &self.goals {
             goals.apply_to(state);
         }
@@ -520,9 +649,23 @@ impl KeptState {
             if let Some(npc) = state.npcs.get_mut(id) {
                 npc.path.clone_from(&kept.path);
                 npc.patrol_index = kept.patrol_index;
+                npc.schedule_selection.clone_from(&kept.schedule_selection);
             }
         }
         state.mine.current_floor = self.mine_current_floor;
+        state.mines.clone_from(&self.mines);
+        state.current_mine_id.clone_from(&self.current_mine_id);
+        state.request_boards.clone_from(&self.request_boards);
+        for (id, request) in &self.requests {
+            if let Some(quest) = state.quests.get_mut(id) {
+                quest.request = Some(request.clone());
+            }
+        }
+        for (id, day) in &self.quest_deadlines {
+            if let Some(quest) = state.quests.get_mut(id) {
+                quest.deadline_day = Some(*day);
+            }
+        }
     }
 }
 

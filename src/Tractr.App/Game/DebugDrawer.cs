@@ -42,6 +42,7 @@ internal static class DebugDrawer
         Grid.SetColumn(close, 1);
         header.Children.Add(close);
         stack.Children.Add(header);
+        if (!string.IsNullOrEmpty(summary.WeekdayName)) stack.Children.Add(Ui.Text(summary.WeekdayName, "muted"));
 
         var quick = new UniformGrid { Columns = 2 };
         void Quick(string name, string label, object action, string message)

@@ -149,6 +149,8 @@ pub struct Item {
     /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::energy::opt")]
     pub energy: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buffs: Option<Vec<super::BuffDefinition>>,
     /// The item is clothing the player can wear (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wear: Option<WearDefinition>,
@@ -157,6 +159,8 @@ pub struct Item {
     pub health: Option<i32>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fishing_gear: Option<super::FishingGear>,
 }
 
 /// Where and how a piece of clothing is worn (M4).

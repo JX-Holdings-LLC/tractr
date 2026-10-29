@@ -23,6 +23,7 @@ pub const TICKS_PER_SECOND: u32 = units::TICKS_PER_SECOND;
 /// Apply one command to the state. Under [`CommandRules::Player`] a command that does not apply
 /// now is refused first (see `refusal`); otherwise it emits `onCommand` and runs its handler.
 pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Command) -> Effects {
+    npc_movement::select_schedules(ctx, state);
     if ctx.rules == CommandRules::Player {
         if let Some(refused) = refusal(ctx, state, command) {
             return refused;
@@ -31,9 +32,11 @@ pub fn apply_command(ctx: &EngineContext, state: &mut GameState, command: &Comma
     ctx.emit(HookEvent::Command(CommandHookPayload { command_type: command.type_name().to_owned() }));
     let scene_before = state.player.scene_id.clone();
     let mut effects = run_command(ctx, state, command);
+    effects.extend(crate::festivals::advance(ctx, state));
     objects::forget_gone(ctx, state);
     // Items found and achievements reached (M6).
     effects.extend(goals::after_step(ctx, state));
+    effects.extend(crate::quests::after_step(ctx, state));
     emit_scene_enter(ctx, state, scene_before);
     effects
 }
@@ -82,6 +85,9 @@ fn run_command(ctx: &EngineContext, state: &mut GameState, command: &Command) ->
         Command::SellItem { item_id, quantity, quality } => {
             economy::handle_sell_item(ctx, state, item_id, *quantity, quality.as_deref())
         }
+        Command::ChoosePerk { skill, perk_id, choice_id } => skills::choose_perk(ctx, state, skill, perk_id, choice_id),
+        Command::UpgradeTool { item_id } => crate::progression::order_tool(ctx, state, item_id),
+        Command::CollectToolUpgrade { item_id } => crate::progression::collect_tool(ctx, state, item_id),
         Command::RepairTool { item_id } => economy::handle_repair_tool(ctx, state, item_id),
         Command::Craft { recipe_id } => crafting::handle_craft(ctx, state, recipe_id),
         Command::PlaceMachine { machine_type_id } => crafting::handle_place_machine(ctx, state, machine_type_id),
@@ -139,6 +145,8 @@ fn refusal(ctx: &EngineContext, state: &GameState, command: &Command) -> Option<
             Command::ChooseDialogueOption { .. } | Command::CloseDialogue => dialogue,
             Command::BuyItem { .. }
             | Command::SellItem { .. }
+            | Command::UpgradeTool { .. }
+            | Command::CollectToolUpgrade { .. }
             | Command::RepairTool { .. }
             | Command::CloseShop
             | Command::OrderBuilding { .. }
@@ -376,6 +384,26 @@ fn apply_plugin_mutation(
             state,
             EventOutcome { mail_id: Some(mail_id.clone()), ..EventOutcome::of(OutcomeKind::SendMail) },
         ),
+        PluginMutation::SetInventorySize { amount } => {
+            crate::progression::apply(ctx, state, "setInventorySize", i64::from(*amount));
+            vec![]
+        }
+        PluginMutation::AddInventorySize { amount } => {
+            crate::progression::apply(ctx, state, "addInventorySize", i64::from(*amount));
+            vec![]
+        }
+        PluginMutation::AddMaxEnergy { amount } => {
+            crate::progression::apply(ctx, state, "addMaxEnergy", i64::from(*amount));
+            vec![]
+        }
+        PluginMutation::AddMaxHealth { amount } => {
+            crate::progression::apply(ctx, state, "addMaxHealth", i64::from(*amount));
+            vec![]
+        }
+        PluginMutation::ApplyBuff { buff } => {
+            crate::buffs::apply(ctx, state, buff, "plugin");
+            vec![]
+        }
         PluginMutation::ModifyHealth { delta } => run_outcome(
             state,
             EventOutcome {
@@ -410,13 +438,16 @@ fn plugin_modify_energy(ctx: &EngineContext, state: &mut GameState, delta: i32) 
     if delta < 0 {
         return energy::spend_energy(ctx, state, delta.saturating_neg()).effects;
     }
-    state.player.energy = state.player.max_energy.min(state.player.energy.saturating_add(delta));
+    state.player.energy = crate::buffs::max_energy(ctx, state).min(state.player.energy.saturating_add(delta));
     vec![]
 }
 
 /// Advance simulation time by whole ticks. The game clock accrues in-game minutes; passing the
 /// configured day end forces a collapse (the world moves on without you).
 pub fn advance_tick(ctx: &EngineContext, state: &mut GameState, ticks: u64) -> Effects {
+    if ticks > 0 {
+        npc_movement::select_schedules(ctx, state);
+    }
     // Ticks are processed one at a time so that advanceTick(N) is exactly equivalent to
     // N × advanceTick(1). The batched fast-path used to evaluate minute-boundary systems once per
     // *call*, which made live simulation frame-rate dependent (a slow frame delivering 3 ticks
@@ -440,7 +471,16 @@ pub fn modal_open(state: &GameState) -> bool {
 
 fn advance_single_tick(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let scene_before = state.player.scene_id.clone();
+    let had_buffs = !state.player.buffs.is_empty();
     let effects = advance_single_tick_inner(ctx, state);
+    if had_buffs || !state.player.buffs.is_empty() {
+        let now = crate::buffs::now(ctx, state);
+        state.player.buffs.retain(|buff| buff.expires_at_minute > now);
+        state.player.energy = state.player.energy.min(crate::buffs::max_energy(ctx, state));
+        if let Some(max) = crate::combat::player_max_health(ctx, state) {
+            state.player.health = state.player.health.map(|health| health.min(max));
+        }
+    }
     emit_scene_enter(ctx, state, scene_before);
     effects
 }
@@ -465,6 +505,7 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
     // The first tick of a game brings its scenes' monsters (M7; later mornings bring new ones).
     if state.clock.tick == 1 {
         combat::spawn_scenes(ctx, state);
+        crate::foraging::morning(ctx, state);
     }
     // Free movement integrates every tick from the held intent. Frozen while a dialogue, shop or
     // minigame is open (modal interactions pause the body), and so are the monsters.
@@ -496,9 +537,11 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
     if u64::from(state.clock.time_minutes) >= u64::from(time.day_end_minute) * u64::from(units::MINUTE) {
         effects.extend(game_time::perform_sleep(ctx, state, SleepOptions { collapsed: true }));
     }
+    effects.extend(crate::festivals::advance(ctx, state));
     objects::forget_gone(ctx, state);
     // Items found and achievements reached this tick (M6).
     effects.extend(goals::after_step(ctx, state));
+    effects.extend(crate::quests::after_step(ctx, state));
     effects
 }
 

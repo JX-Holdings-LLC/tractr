@@ -20,6 +20,7 @@ namespace Tractr.App.Game;
 public sealed class SettingsEditorView : UserControl, IRetirable
 {
     private readonly StackPanel _seasons = new() { Spacing = 5 };
+    private readonly StackPanel _weekdays = new() { Name = "Weekdays", Spacing = 5 };
     private readonly StackPanel _festivals = new() { Spacing = 5 };
     private readonly StackPanel _skillLevels = new() { Name = "SkillLevels", Spacing = 5 };
     private readonly StackPanel _weather = new() { Name = "WeatherOdds", Spacing = 6 };
@@ -45,6 +46,8 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private readonly CheckBox _combatOn = new() { Name = "Setting_Combat" };
     private readonly StackPanel _combat = new() { Name = "CombatSettings", Spacing = 6 };
     private ContentForm? _combatForm;
+    private ContentForm? _progressionForm;
+    private readonly StackPanel _progression = new() { Name = "ProgressionSettings", Spacing = 6 };
     private readonly StackPanel _mineBands = new() { Name = "MineBands", Spacing = 8 };
     private readonly List<ContentForm> _mineBandForms = [];
     private readonly DraftRows<SeasonDraft> _seasonRows;
@@ -97,6 +100,11 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         var addSeason = Ui.CommandButton("Add season", ViewModel.AddSeasonCommand, "tool");
         addSeason.Name = "AddSeasonButton";
         form.Children.Add(addSeason);
+        form.Children.Add(Ui.Text("WEEKDAYS", "section"));
+        form.Children.Add(Ui.Wrapped("Days repeat across seasons. An empty list disables weekdays. The translated name uses the project language above.", "muted", "small"));
+        form.Children.Add(_weekdays);
+        form.Children.Add(Ui.HStack(6, Ui.Button("Add weekday", ViewModel.AddWeekday, "tool"), Ui.Button("Classic week", ViewModel.ResetWeekdays, "tool")));
+        Field(form, "Weekday offset (0 starts on the first day)", "WeekdayOffset", nameof(SettingsViewModel.WeekdayOffset));
         form.Children.Add(Ui.Text("FESTIVALS", "section"));
         form.Children.Add(_festivals);
         var addFestival = Ui.CommandButton("Add festival", ViewModel.AddFestivalCommand, "tool");
@@ -195,6 +203,9 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         form.Children.Add(_combatOn);
         form.Children.Add(_combat);
         form.Children.Add(Shown("CombatMessage", nameof(SettingsViewModel.CombatMessage)));
+        form.Children.Add(Ui.Text("PLAYER PROGRESSION", "section"));
+        form.Children.Add(Ui.Wrapped("Set permanent upgrade limits and skills, action XP, level rewards and perk choices. Empty skills retain the built-in rules.", "muted", "small"));
+        form.Children.Add(_progression);
         form.Children.Add(Ui.Text("EXPORT", "section"));
         form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
         Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
@@ -235,6 +246,7 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         };
         _seasonRows = new DraftRows<SeasonDraft>(_seasons, ViewModel.Seasons, SeasonRow, UpdateSeasonArrows);
         UpdateSeasonArrows();
+        _ = new DraftRows<WeekdayDraft>(_weekdays, ViewModel.Weekdays, WeekdayRow);
         _ = new DraftRows<FestivalDraft>(_festivals, ViewModel.Festivals, FestivalRow);
         _ = new DraftRows<SkillNameDraft>(_skillNames, ViewModel.SkillNames, SkillNameRow);
         _ = new DraftRows<OverlayDraft>(_overlays, ViewModel.Overlays, OverlayRow);
@@ -255,6 +267,8 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         ViewModel.FarmChanged += ShowFarm;
         ShowCombat();
         ViewModel.CombatChanged += ShowCombat;
+        ShowProgression();
+        ViewModel.CombatChanged += ShowProgression;
         ViewModel.PropertyChanged += OnViewModelChanged;
     }
 
@@ -308,6 +322,22 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     /// The Combat section (M7): its switch and, when on, the health and fainting rules as a form
     /// with Save; and the mine's depth bands, whose monsters come with combat.
     /// </summary>
+    private void ShowProgression()
+    {
+        _progression.Children.Clear();
+        _progressionForm = null;
+        if (ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _progressionForm = new ContentForm(project, SettingsForm.ProgressionDraft(project), typeof(ProgressionSettings), fields, ViewModel.ReportCombat);
+        _progression.Children.Add(fields);
+        var classic = Ui.Button("Classic skills", () => ViewModel.UseClassicSkills());
+        classic.Name = "ClassicSkillsButton";
+        _progression.Children.Add(classic);
+        var save = Ui.Button("Save progression", () => SaveRules<ProgressionSettings>(_progressionForm, ViewModel.SaveProgression, ViewModel.ReportCombat), "accent");
+        save.Name = "SaveProgressionButton";
+        _progression.Children.Add(save);
+    }
+
     private void ShowCombat()
     {
         var combat = ViewModel.Combat;
@@ -509,6 +539,21 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         }
     }
 
+    private Control WeekdayRow(WeekdayDraft day)
+    {
+        var id = Box("Weekday_Id", nameof(WeekdayDraft.Id), 110, day);
+        var name = Box("Weekday_Name", nameof(WeekdayDraft.Name), 145, day);
+        var local = Box("Weekday_LocalName", nameof(WeekdayDraft.LocalName), 145, day);
+        AutomationProperties.SetName(id, "Weekday id");
+        AutomationProperties.SetName(name, "Weekday name");
+        AutomationProperties.SetName(local, "Translated weekday name");
+        local.PlaceholderText = "Translated name";
+        return Ui.HStack(6, id, name, local,
+            Ui.Button("Up", () => ViewModel.MoveWeekday(day, -1), "tool", "small"),
+            Ui.Button("Down", () => ViewModel.MoveWeekday(day, 1), "tool", "small"),
+            Ui.Button("Remove", () => ViewModel.Weekdays.Remove(day), "tool", "small"));
+    }
+
     private Control FestivalRow(FestivalDraft festival)
     {
         var id = Box("Festival_Id", nameof(FestivalDraft.Id), 110, festival);
@@ -519,7 +564,21 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         Ui.Label((id, festival.IdLabel), (name, festival.NameLabel), (season, festival.SeasonIdLabel), (day, festival.DayLabel), (music, festival.MusicLabel));
         var remove = Ui.Button("Remove", () => ViewModel.RemoveFestival(festival), "tool", "small");
         Ui.Label((remove, $"Remove {festival.What}"));
-        return new WrapPanel { Children = { Spaced(id), Spaced(name), Spaced(season), Spaced(day), Spaced(music), Spaced(remove) } };
+        var row = new StackPanel { Spacing = 6 };
+        row.Children.Add(new WrapPanel { Children = { Spaced(id), Spaced(name), Spaced(season), Spaced(day), Spaced(music), Spaced(remove) } });
+        if (ViewModel.Workspace.Current is { } project)
+        {
+            var enabled = new CheckBox { Content = "Festival place and activity", IsChecked = festival.Program is not null };
+            var fields = new StackPanel { Spacing = 6 };
+            var program = new ContentForm(project, festival.Program ?? FestivalProgram.Default, typeof(FestivalProgram), fields, ViewModel.ReportPeople);
+            var expand = new Expander { Header = "Festival program", Content = fields, IsVisible = enabled.IsChecked == true };
+            enabled.IsCheckedChanged += (_, _) => expand.IsVisible = enabled.IsChecked == true;
+            festival.ReadProgram = () => enabled.IsChecked == true ? (FestivalProgram)program.Commit() : null;
+            festival.ProgramDirty = () => (enabled.IsChecked == true) != (festival.Program is not null) || (enabled.IsChecked == true && program.IsDirty);
+            row.Children.Add(enabled);
+            row.Children.Add(expand);
+        }
+        return row;
     }
 
     /// <summary>A row's control with the gap a wrapping row keeps after it.</summary>

@@ -19,6 +19,7 @@
     <FarmFfiLibraryName Condition="$([MSBuild]::IsOSPlatform('Windows'))">farm_ffi.dll</FarmFfiLibraryName>
     <FarmFfiLibraryName Condition="$([MSBuild]::IsOSPlatform('OSX'))">libfarm_ffi.dylib</FarmFfiLibraryName>
     <FarmFfiLibraryName Condition="'$(FarmFfiLibraryName)' == ''">libfarm_ffi.so</FarmFfiLibraryName>
+    <FarmFfiSilentPath>$(CargoTargetDir)$(CargoProfileDir)/libfarm_ffi_silent.so</FarmFfiSilentPath>
     <FarmFfiLibraryPath>$(CargoTargetDir)$(CargoProfileDir)/$(FarmFfiLibraryName)</FarmFfiLibraryPath>
   </PropertyGroup>
 
@@ -46,13 +47,19 @@
       <Output TaskParameter="ExitCode" PropertyName="CargoProbeExitCode" />
     </Exec>
     <Message Importance="high" Text="FarmEngine.Interop: cargo not found; building without the Rust farm-ffi library (set FarmFfiSkipCargo=true to silence this)." Condition="'$(CargoProbeExitCode)' != '0'" />
-    <Exec Command="cargo build --profile $(CargoProfile) -p farm-ffi$(FarmFfiCargoFeatures)" WorkingDirectory="$(MSBuildThisFileDirectory)../.." Condition="'$(CargoProbeExitCode)' == '0'" />
+    <!-- Keep an engine without audio beside the audio-enabled Linux build. A missing
+         ALSA library then disables sound only, never editing or Play Mode. Build it first
+         and preserve it under its own name before Cargo restores the normal feature set. -->
+    <Exec Command="cargo build --locked --profile $(CargoProfile) -p farm-ffi --no-default-features" WorkingDirectory="$(MSBuildThisFileDirectory)../.." Condition="'$(CargoProbeExitCode)' == '0' And $([MSBuild]::IsOSPlatform('Linux')) And '$(FarmFfiAudio)' == 'true'" />
+    <Copy SourceFiles="$(FarmFfiLibraryPath)" DestinationFiles="$(FarmFfiSilentPath)" Condition="'$(CargoProbeExitCode)' == '0' And $([MSBuild]::IsOSPlatform('Linux')) And '$(FarmFfiAudio)' == 'true'" />
+    <Exec Command="cargo build --locked --profile $(CargoProfile) -p farm-ffi$(FarmFfiCargoFeatures)" WorkingDirectory="$(MSBuildThisFileDirectory)../.." Condition="'$(CargoProbeExitCode)' == '0'" />
     <Error Condition="'$(CargoProbeExitCode)' == '0' And !Exists('$(FarmFfiLibraryPath)')" Text="FarmEngine.Interop: cargo built farm-ffi, but $(FarmFfiLibraryPath) does not exist (CargoProfile '$(CargoProfile)' → target/$(CargoProfileDir))." />
     <PropertyGroup>
       <FarmFfiStatus Condition="'$(CargoProbeExitCode)' == '0'">built</FarmFfiStatus>
       <FarmFfiStatus Condition="'$(FarmFfiStatus)' == ''">skipped</FarmFfiStatus>
     </PropertyGroup>
     <ItemGroup Condition="'$(FarmFfiStatus)' == 'built'">
+      <None Include="$(FarmFfiSilentPath)" Link="libfarm_ffi_silent.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Visible="false" Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$(FarmFfiAudio)' == 'true'" />
       <None Include="$(FarmFfiLibraryPath)" Link="$(FarmFfiLibraryName)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     </ItemGroup>
   </Target>

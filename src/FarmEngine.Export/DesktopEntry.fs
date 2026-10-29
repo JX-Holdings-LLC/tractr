@@ -15,9 +15,17 @@ module DesktopEntry =
         // Exec argument quoting (spec "The Exec key"): inside double quotes, `"`, `$` and `\`
         // are backslash-escaped, then the value's own escaping doubles each backslash.
         let command = sprintf "exec \"$(dirname \"$0\")/%s\"" executable
-        let quoted = "\"" + command.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "\\$") + "\""
+
+        let quoted =
+            "\""
+            + command.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("$", "\\$")
+            + "\""
+
         let builder = StringBuilder()
-        let line (key: string) (value: string) = builder.Append(key).Append('=').Append(value).Append('\n') |> ignore
+
+        let line (key: string) (value: string) =
+            builder.Append(key).Append('=').Append(value).Append('\n') |> ignore
+
         builder.Append("[Desktop Entry]\n") |> ignore
         line "Type" "Application"
         line "Version" "1.5"

@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using FarmEngine.Authoring;
 using FarmEngine.Authoring.Net;
 using FarmEngine.Schemas;
@@ -41,6 +42,12 @@ public sealed class ProjectWorkspace
     private Document? _document;
     private bool _dirty;
     private ProjectLock? _lock;
+    private sealed record SaveResult(FileStamp? Stamp, string? Error, bool Conflict);
+    private sealed record PendingSave(GameProject Project, Task<SaveResult> Write);
+    private PendingSave? _saving;
+
+    /// <summary>True while the immutable autosave snapshot is being written on a worker.</summary>
+    public bool IsSaving => _saving is not null;
 
     /// <summary>The open project file as this editor last read or wrote it (<see cref="SaveConflict"/>).</summary>
     private FileStamp? _diskStamp;
@@ -364,6 +371,7 @@ public sealed class ProjectWorkspace
     public void FlushPendingSave()
     {
         _autosaveTimer?.Stop();
+        FinishAutosave();
         if (_dirty && _document is { } document)
         {
             _dirty = !TrySave(document.Project);
@@ -411,6 +419,7 @@ public sealed class ProjectWorkspace
         }
 
         _autosaveTimer?.Stop();
+        FinishAutosave();
         _dirty = false;
         return OpenById(project.Id);
     }
@@ -421,6 +430,7 @@ public sealed class ProjectWorkspace
     /// </summary>
     public void AcceptStoreChange()
     {
+        FinishAutosave();
         if (Current is { } project)
         {
             _diskStamp = Store.Stamp(project.Id);
@@ -458,33 +468,76 @@ public sealed class ProjectWorkspace
 
     private bool TrySave(GameProject project, bool overwriteChanges = false)
     {
-        string? error = null;
-        var conflict = false;
+        FinishAutosave();
+        var result = WriteProject(project, _diskStamp, overwriteChanges);
+        PublishSave(result);
+        return result.Error is null;
+    }
+
+    /// <summary>Disk-only work: never touches the document, view state or UI events.</summary>
+    private SaveResult WriteProject(GameProject project, FileStamp? expected, bool overwriteChanges = false)
+    {
         try
         {
-            // Never silently overwrite a change made outside this editor.
-            if (!overwriteChanges && _diskStamp is { } expected && Store.Stamp(project.Id) is { } actual && actual != expected)
+            if (!overwriteChanges && expected is { } previous && Store.Stamp(project.Id) is { } actual && actual != previous)
             {
-                conflict = true;
-                error = "The project file was changed outside this editor (by another program or window).";
-                System.Diagnostics.Trace.TraceWarning($"Not saving project {project.Id}: {Store.PathFor(project.Id)} changed on disk ({expected} → {actual}).");
+                System.Diagnostics.Trace.TraceWarning($"Not saving project {project.Id}: {Store.PathFor(project.Id)} changed on disk ({previous} → {actual}).");
+                return new SaveResult(null, "The project file was changed outside this editor (by another program or window).", true);
             }
-            else
-            {
-                Store.Save(project);
-                _diskStamp = Store.Stamp(project.Id);
-            }
+            Store.Save(project);
+            return new SaveResult(Store.Stamp(project.Id), null, false);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+#pragma warning disable CA1031 // Autosave failures must preserve the draft and report SaveError, including worker serialization failures.
+        catch (Exception error)
+#pragma warning restore CA1031
         {
-            error = ex.Message;
-            System.Diagnostics.Trace.TraceError($"Saving project {project.Id} failed: {ex}");
+            System.Diagnostics.Trace.TraceError($"Saving project {project.Id} failed: {error}");
+            return new SaveResult(null, error.Message, false);
         }
+    }
 
-        var conflictChanged = conflict != SaveConflict;
-        SaveConflict = conflict;
-        SetSaveError(error, conflictChanged);
-        return error is null;
+    private void PublishSave(SaveResult result)
+    {
+        if (result.Error is null) _diskStamp = result.Stamp;
+        var conflictChanged = result.Conflict != SaveConflict;
+        SaveConflict = result.Conflict;
+        SetSaveError(result.Error, conflictChanged);
+    }
+
+    private void StartAutosave()
+    {
+        if (_saving is { } previous)
+        {
+            if (!previous.Write.IsCompleted) return;
+            CompleteAutosave(previous, reschedule: false);
+        }
+        if (!_dirty || Current is not { } project) return;
+        var expected = _diskStamp;
+        var pending = new PendingSave(project, Task.Run(() => WriteProject(project, expected)));
+        _saving = pending;
+        _ = ObserveAutosave(pending);
+    }
+
+    private async Task ObserveAutosave(PendingSave pending)
+    {
+        await pending.Write.ConfigureAwait(false);
+        Dispatcher.UIThread.Post(() => CompleteAutosave(pending, reschedule: true));
+    }
+
+    private void CompleteAutosave(PendingSave pending, bool reschedule)
+    {
+        // An explicit flush may already have consumed this completion before its UI callback.
+        if (!ReferenceEquals(_saving, pending)) return;
+        var result = pending.Write.GetAwaiter().GetResult();
+        _saving = null;
+        _dirty = result.Error is not null || !ReferenceEquals(Current, pending.Project);
+        PublishSave(result);
+        if (reschedule && _dirty && result.Error is null) ScheduleSave();
+    }
+
+    private void FinishAutosave()
+    {
+        if (_saving is { } pending) CompleteAutosave(pending, reschedule: false);
     }
 
     private void SetSaveError(string? error, bool forceNotify = false)
@@ -552,7 +605,7 @@ public sealed class ProjectWorkspace
         }
 
         // Debounced: every edit restarts the delay, so a burst of edits is written once.
-        _autosaveTimer ??= new DebounceTimer(_time, _autosaveDelay, FlushPendingSave);
+        _autosaveTimer ??= new DebounceTimer(_time, _autosaveDelay, StartAutosave);
         _autosaveTimer.Start();
     }
 }

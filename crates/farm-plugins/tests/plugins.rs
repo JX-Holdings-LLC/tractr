@@ -703,13 +703,18 @@ fn hosts_cap_plugin_count_and_startup_budget() {
 
 #[test]
 fn huge_thrown_messages_and_results_stay_small_on_the_host() {
-    // The guest copies a thrown message once (that costs fuel), the host only its start.
-    let generous =
-        PluginHostOptions { fuel_per_call: 500_000_000, fuel_per_window: u64::MAX, ..PluginHostOptions::default() };
+    // The guest copies only a bounded prefix; the host independently caps every error.
+    let generous = PluginHostOptions {
+        fuel_per_call: 500_000_000,
+        fuel_per_window: u64::MAX,
+        heap_limit_bytes: 64_000_000,
+        memory_limit_bytes: 128 << 20,
+        ..PluginHostOptions::default()
+    };
     let mut host = host_with(generous, vec![
         plugin(
             "loud",
-            "var s = 'x'; for (var i = 0; i < 22; i++) s += s; api.on('onDayStart', () => { throw new Error(s); });",
+            "var s = 'x'.repeat(500000); var t = s; for (var i = 1; i < 20; i++) t += s; s = t; api.on('onDayStart', () => { throw new Error(s); });",
             &[],
         ),
         plugin(
@@ -721,7 +726,7 @@ fn huge_thrown_messages_and_results_stay_small_on_the_host() {
     let results = host.dispatch("onDayStart", DAY3);
     let messages: Vec<&str> = results.iter().flat_map(|r| &r.errors).map(|e| e.message.as_str()).collect();
     assert_eq!(messages.len(), 2);
-    // A 4 MB message: the host keeps 1 KB of it.
+    // A 10 MB message: neither the guest output nor the host keeps more than 1 KB.
     assert!(messages[0].starts_with("threw in onDayStart: xxxx") && messages[0].ends_with('…'), "{}", messages[0]);
     assert!(messages[0].len() < farm_plugins::MAX_ERROR_MESSAGE_BYTES + 64);
     assert_eq!(messages[1], "handler result is larger than 1048576 bytes");

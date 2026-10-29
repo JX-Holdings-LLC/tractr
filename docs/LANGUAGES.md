@@ -6,7 +6,7 @@ cartridges and Export Game are F#; the editor's Play Mode runs the Rust
 `farm-player` on F#-compiled cartridges; Edit Mode draws with `farm-render`;
 plugins run in `farm-plugins`; `farm-wasm` runs the same player in the
 browser for web demo exports. Tractr reads only the current project and save
-formats (project schema version 2, save v5). The C# engine and the C# schema records
+formats (project schema versions 2–3, save v5). The C# engine and the C# schema records
 are gone, and the simulation keeps every quantity as an integer
 ([NUMERICS.md](NUMERICS.md)). See [ROADMAP.md](../ROADMAP.md). This is the
 reference for where code goes as the app grows; read it before you add a new
@@ -216,8 +216,10 @@ what an exported game contains.
   signature, layout or convention change. `FarmFfi.LoadError` says why the
   library didn't load. On Linux the default `audio-out` feature links ALSA
   (`libasound.so.2`) when the library loads, because cpal has no backend that
-  opens it at run time; `-p:FarmFfiAudio=false` builds a library without
-  sound that loads without it.
+  opens it at run time. Linux editor builds also ship `libfarm_ffi_silent.so`:
+  the resolver loads this application-local fallback if the sound-enabled engine
+  cannot load. Editing and Play Mode still work without ALSA; sound is disabled.
+  `-p:FarmFfiAudio=false` builds only the silent engine.
 - **Play Mode.** The editor forwards raw input events (keys by the engine's
   names, pointer positions in frame pixels) and draws the returned pixels; the
   player owns the game, its UI and its sounds (`audio` option). Details in

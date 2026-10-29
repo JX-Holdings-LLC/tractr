@@ -366,6 +366,7 @@ impl HostPlayer {
                     "season": state.clock.season,
                     "year": state.clock.year,
                     "timeText": calendar.time_text,
+                    "weekdayName": calendar.weekday_name,
                     "sceneId": state.player.scene_id,
                     "x": state.player.x,
                     "y": state.player.y,

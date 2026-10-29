@@ -13,11 +13,43 @@ module PackRules =
 
     /// Every plugin mutation type (Rust `farm_plugins::MUTATION_TYPES`).
     let MutationTypes =
-        [ "giveItem"; "takeItem"; "giveMoney"; "takeMoney"; "setFlag"; "message"; "setWeather"; "modifyFriendship"
-          "grantXp"; "modifyEnergy"; "startQuest"; "warpPlayer"; "startDialogue"; "playSound"; "performAction"; "startMinigame"
-          // The M3–M7 outcomes (M9).
-          "moveNpc"; "startCutscene"; "setVariable"; "addVariable"; "addShopStock"; "removeShopStock"; "placeNode"
-          "removeNode"; "placeMachine"; "removeMachine"; "setRelationship"; "sendMail"; "modifyHealth" ]
+        [
+            "giveItem"
+            "takeItem"
+            "giveMoney"
+            "takeMoney"
+            "setFlag"
+            "message"
+            "setWeather"
+            "modifyFriendship"
+            "grantXp"
+            "modifyEnergy"
+            "startQuest"
+            "warpPlayer"
+            "startDialogue"
+            "playSound"
+            "performAction"
+            "startMinigame"
+            // The M3–M7 outcomes (M9).
+            "moveNpc"
+            "startCutscene"
+            "setVariable"
+            "addVariable"
+            "addShopStock"
+            "removeShopStock"
+            "placeNode"
+            "removeNode"
+            "placeMachine"
+            "removeMachine"
+            "setRelationship"
+            "sendMail"
+            "setInventorySize"
+            "addInventorySize"
+            "addMaxEnergy"
+            "addMaxHealth"
+            "applyBuff"
+            "modifyHealth"
+        ]
 
     /// What a pack's plugins may answer when its manifest declares no `permissions.mutations`
     /// (Rust `farm_plugins::DEFAULT_MUTATION_CAPABILITIES`).
@@ -27,24 +59,29 @@ module PackRules =
     /// type with `:own` or `:any` (Rust `farm_plugins::MutationGrants`).
     let isMutationCapability (entry: string) =
         let entry = entry.Trim()
+
         let name, scope =
             match entry.IndexOf ':' with
             | -1 -> entry, "own"
             | at -> entry.Substring(0, at), entry.Substring(at + 1)
-        entry = "*" || (List.contains name MutationTypes && (scope = "own" || scope = "any"))
+
+        entry = "*"
+        || (List.contains name MutationTypes && (scope = "own" || scope = "any"))
 
     /// What a pack's plugins may do, in one line for the install review.
     let describeMutations (permissions: PackPermissions) : string =
         match permissions.Mutations with
-        | None ->
-            "default: messages, sounds, and the pack's own flags and items (answers to onEffect and onCommand are ignored)"
+        | None -> "default: messages, sounds, and the pack's own flags and items (answers to onEffect and onCommand are ignored)"
         | Some [] -> "none: the plugins can only watch"
-        | Some entries when entries |> List.exists (fun entry -> entry.Trim() = "*") ->
-            "everything, including your game's and other packs' content"
+        | Some entries when entries |> List.exists (fun entry -> entry.Trim() = "*") -> "everything, including your game's and other packs' content"
         | Some entries ->
             let broad = entries |> List.exists (fun entry -> entry.Trim().EndsWith ":any")
+
             String.Join(", ", entries)
-            + (if broad then " (\":any\" reaches your game's and other packs' content)" else " (the pack's own content only)")
+            + (if broad then
+                   " (\":any\" reaches your game's and other packs' content)"
+               else
+                   " (the pack's own content only)")
 
     let private isDigit (c: char) = c >= '0' && c <= '9'
 
@@ -52,17 +89,25 @@ module PackRules =
     let private parseVersion (value: string) : (float * float * float) option =
         let text = JsNumber.trim value
         let mutable i = 0
+
         let digits () =
             let start = i
+
             while i < text.Length && isDigit text.[i] do
                 i <- i + 1
-            if i > start then Some(JsNumber.parse (text.Substring(start, i - start))) else None
+
+            if i > start then
+                Some(JsNumber.parse (text.Substring(start, i - start)))
+            else
+                None
+
         let dot () =
             if i < text.Length && text.[i] = '.' then
                 i <- i + 1
                 true
             else
                 false
+
         match digits () with
         | Some a when dot () ->
             match digits () with
@@ -76,23 +121,37 @@ module PackRules =
     /// A small range language (`*`, exact, `^x.y.z`, `>=x.y.z`), with a major-only caret check
     /// for 0.x versions and prerelease suffixes ignored, as the engine checks packs.
     let isEngineCompatible (range: string option) (version: string) =
-        let range = match range with None -> "*" | Some s -> JsNumber.trim s
-        if range = "" || range = "*" then true
+        let range =
+            match range with
+            | None -> "*"
+            | Some s -> JsNumber.trim s
+
+        if range = "" || range = "*" then
+            true
         else
             match parseVersion version with
             | None -> true
             | Some(a, b, c) ->
-                let atLeast (x, y, z) = if a <> x then a > x elif b <> y then b > y else c >= z
+                let atLeast (x, y, z) =
+                    if a <> x then a > x
+                    elif b <> y then b > y
+                    else c >= z
+
                 if range.StartsWith(">=", StringComparison.Ordinal) then
                     parseVersion (range.Substring 2) |> Option.exists atLeast
                 elif range.StartsWith("^", StringComparison.Ordinal) then
-                    parseVersion (range.Substring 1) |> Option.exists (fun (x, y, z) -> a = x && (if b <> y then b > y else c >= z))
-                else parseVersion range |> Option.exists (fun v -> v = (a, b, c))
+                    parseVersion (range.Substring 1)
+                    |> Option.exists (fun (x, y, z) -> a = x && (if b <> y then b > y else c >= z))
+                else
+                    parseVersion range |> Option.exists (fun v -> v = (a, b, c))
 
     /// TS `PackManifestSchema.id`: `^[a-z0-9][a-z0-9-]*$`.
     let isValidPackId (id: string) : bool =
         let lowerOrDigit (c: char) = (c >= 'a' && c <= 'z') || isDigit c
-        id.Length > 0 && lowerOrDigit id.[0] && id |> Seq.forall (fun c -> lowerOrDigit c || c = '-')
+
+        id.Length > 0
+        && lowerOrDigit id.[0]
+        && id |> Seq.forall (fun c -> lowerOrDigit c || c = '-')
 
     /// Whether `name` can name a pack minigame kind: like a pack id, at most 64 characters (Rust
     /// `farm_plugins::is_valid_minigame_name`).
@@ -101,7 +160,12 @@ module PackRules =
     /// A `minigames` entry of pack `packId` as a local name: `packId:name` and `name` both mean
     /// `name`; `None` when it is not a valid name (or names another pack).
     let minigameLocalName (packId: string) (entry: string) : string option =
-        let name = if entry.StartsWith(packId + ":", StringComparison.Ordinal) then entry.Substring(packId.Length + 1) else entry
+        let name =
+            if entry.StartsWith(packId + ":", StringComparison.Ordinal) then
+                entry.Substring(packId.Length + 1)
+            else
+                entry
+
         if isValidMinigameName name then Some name else None
 
     /// The full minigame kinds (`packId:name`) `plugin` of `pack` may define: the names in its own
@@ -109,7 +173,12 @@ module PackRules =
     /// without duplicates (Rust `farm_plugins::granted_minigame_kinds`).
     let grantedMinigameKinds (pack: ContentPack) (plugin: PackPlugin) : string list =
         let packId = pack.Manifest.Id
-        let permitted = pack.Manifest.Permissions.Minigames |> Option.defaultValue [] |> List.choose (minigameLocalName packId)
+
+        let permitted =
+            pack.Manifest.Permissions.Minigames
+            |> Option.defaultValue []
+            |> List.choose (minigameLocalName packId)
+
         plugin.Minigames
         |> Option.defaultValue []
         |> List.choose (minigameLocalName packId)
@@ -120,11 +189,20 @@ module PackRules =
     /// The minigame kinds a pack's manifest allows, in one line for the install review (`None`
     /// when it allows none).
     let describeMinigames (manifest: PackManifest) : string option =
-        match manifest.Permissions.Minigames |> Option.defaultValue [] |> List.choose (minigameLocalName manifest.Id) with
+        match
+            manifest.Permissions.Minigames
+            |> Option.defaultValue []
+            |> List.choose (minigameLocalName manifest.Id)
+        with
         | [] -> None
         | names ->
-            let kinds = names |> List.distinct |> List.map (fun name -> manifest.Id + ":" + name)
-            Some(String.Join(", ", kinds) + " (the pack's plugins run and draw these minigames, and read the player's keys while one is open)")
+            let kinds =
+                names |> List.distinct |> List.map (fun name -> manifest.Id + ":" + name)
+
+            Some(
+                String.Join(", ", kinds)
+                + " (the pack's plugins run and draw these minigames, and read the player's keys while one is open)"
+            )
 
     /// The pack key that carries art: `assets`, a list of custom assets (as in a project's
     /// `customAssets`) with their images as `data:image/…` URLs, next to `manifest`, `content`
@@ -144,17 +222,24 @@ module PackRules =
                 let errors =
                     assets
                     |> List.mapi (fun i (asset: CustomAsset) ->
-                        if String.IsNullOrWhiteSpace asset.Id then Some(sprintf "%s.%d.id: Required" AssetsKey i)
-                        elif not (asset.DataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
-                             || not (asset.DataUrl.Contains ";base64,") then
+                        if String.IsNullOrWhiteSpace asset.Id then
+                            Some(sprintf "%s.%d.id: Required" AssetsKey i)
+                        elif
+                            not (asset.DataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+                            || not (asset.DataUrl.Contains ";base64,")
+                        then
                             Some(sprintf "%s.%d.dataUrl: Expected a base64 data:image/ URL" AssetsKey i)
-                        else None)
+                        else
+                            None)
                     |> List.choose id
+
                 if errors.IsEmpty then Ok assets else Error errors
 
     /// `pack` without its art (what a project keeps once the art has been merged into its own).
     let withoutAssets (pack: ContentPack) : ContentPack =
-        { pack with Extra = pack.Extra |> List.filter (fun (key, _) -> key <> AssetsKey) }
+        { pack with
+            Extra = pack.Extra |> List.filter (fun (key, _) -> key <> AssetsKey)
+        }
 
     /// Validate raw pack JSON (zod `safeParse` of `ContentPackSchema`). Never throws; errors are
     /// actionable paths. The manifest's required keys and id rule are checked first, then the
@@ -165,15 +250,19 @@ module PackRules =
             let errors =
                 match Json.get "manifest" raw with
                 | JObject _ as manifest ->
-                    [ for key in [ "id"; "name"; "version" ] do
-                          match Json.get key manifest with
-                          | JString _ -> ()
-                          | _ -> yield "manifest." + key + ": Required"
-                      match Json.get "id" manifest with
-                      | JString id when not (isValidPackId id) -> yield "manifest.id: pack ids must be lowercase letters, digits and dashes"
-                      | _ -> () ]
+                    [
+                        for key in [ "id"; "name"; "version" ] do
+                            match Json.get key manifest with
+                            | JString _ -> ()
+                            | _ -> yield "manifest." + key + ": Required"
+                        match Json.get "id" manifest with
+                        | JString id when not (isValidPackId id) -> yield "manifest.id: pack ids must be lowercase letters, digits and dashes"
+                        | _ -> ()
+                    ]
                 | _ -> [ "manifest: Required" ]
-            if not (List.isEmpty errors) then Error errors
+
+            if not (List.isEmpty errors) then
+                Error errors
             else
                 match Decode.run SchemaJson.decodeContentPack raw with
                 | Ok pack -> packAssets pack |> Result.map (fun _ -> pack)
@@ -181,24 +270,97 @@ module PackRules =
         | _ -> Error [ "Pack data is not an object — expected { manifest, content }" ]
 
     let private collections =
-        [ "crops"; "items"; "recipes"; "machineTypes"; "nodeTypes"; "animalSpecies"
-          "fishTables"; "weatherTypes"; "npcs"; "dialogues"; "scenes"; "events"
-          "quests"; "shops"; "actions"; "minigames"; "cutscenes"; "heartEvents"
-          "buildingTypes"; "collections"; "bundles"; "achievements"; "mail"; "monsters" ]
+        [
+            "crops"
+            "items"
+            "recipes"
+            "machineTypes"
+            "nodeTypes"
+            "animalSpecies"
+            "fishTables"
+            "weatherTypes"
+            "npcs"
+            "dialogues"
+            "scenes"
+            "events"
+            "quests"
+            "shops"
+            "actions"
+            "minigames"
+            "cutscenes"
+            "heartEvents"
+            "buildingTypes"
+            "collections"
+            "bundles"
+            "achievements"
+            "mail"
+            "monsters"
+            "skills"
+        ]
 
     let private referenceKeys =
         Set.ofList
-            [ "itemId"; "cropType"; "machineTypeId"; "feedItemId"; "productItemId"
-              "npcId"; "dialogueId"; "nextDialogueId"; "openShopId"; "offerQuestId"
-              "questId"; "targetNPCId"; "targetCropType"; "shopId"; "giver"; "typeId"
-              "speciesId"; "recipeId"; "nodeTypeId"; "weatherId"; "targetItemId"
-              "requiredItemId"; "giftItemId"; "actionId"; "minigameId"; "useActionId"; "cutsceneId"
-              // M5–M7 content (M9).
-              "buildingId"; "upgradeOf"; "collectionId"; "bundleId"; "achievementId"; "mailId"; "monsterId" ]
+            [
+                "icon"
+                "itemId"
+                "cropType"
+                "machineTypeId"
+                "feedItemId"
+                "productItemId"
+                "npcId"
+                "dialogueId"
+                "nextDialogueId"
+                "openShopId"
+                "offerQuestId"
+                "questId"
+                "targetMonsterId"
+                "targetBundleId"
+                "targetMineId"
+                "mineId"
+                "targetNPCId"
+                "targetCropType"
+                "shopId"
+                "giver"
+                "typeId"
+                "speciesId"
+                "recipeId"
+                "nodeTypeId"
+                "weatherId"
+                "targetItemId"
+                "speciesItemId"
+                "tableId"
+                "requiredItemId"
+                "giftItemId"
+                "actionId"
+                "minigameId"
+                "useActionId"
+                "cutsceneId"
+                // M5–M7 content (M9).
+                "buildingId"
+                "upgradeOf"
+                "collectionId"
+                "bundleId"
+                "achievementId"
+                "mailId"
+                "monsterId"
+                "skill"
+                "fromItemId"
+                "toItemId"
+            ]
 
     /// Keys holding lists of references (Rust `REFERENCE_LIST_KEYS`); objects in them (a bundle's
     /// lines) are rewritten like any other value.
-    let private referenceListKeys = Set.ofList [ "prerequisites"; "buildings"; "animals"; "housing"; "items" ]
+    let private referenceListKeys =
+        Set.ofList
+            [
+                "fishIds"
+                "weatherIds"
+                "prerequisites"
+                "buildings"
+                "animals"
+                "housing"
+                "items"
+            ]
 
     let private entries (json: Json) =
         match json with
@@ -209,20 +371,28 @@ module PackRules =
     /// In particular sceneId, plugin source and embedded dialogue ids are not rewritten. Vocabulary
     /// (terrains, tools, item categories, crop qualities and mutations) keeps its plain ids (M11).
     let namespacePack (pack: ContentPack) : ContentPack =
-        if pack.Manifest.Base then pack
+        if pack.Manifest.Base then
+            pack
         else
             let content = SchemaJson.encodePackContent pack.Content
             let packId = pack.Manifest.Id
+
             let ids =
-                [ for key in collections do yield! entries (Json.get key content)
-                  for npc in entries (Json.get "npcs" content) do yield! entries (Json.get "dialogue" npc) ]
+                [
+                    for key in collections do
+                        yield! entries (Json.get key content)
+                    for npc in entries (Json.get "npcs" content) do
+                        yield! entries (Json.get "dialogue" npc)
+                ]
                 |> List.choose (Json.get "id" >> Json.asString)
                 |> List.filter (fun id -> not (id.Contains ':'))
                 |> Set.ofList
+
             let reference (json: Json) : Json =
                 match json with
                 | JString id when ids.Contains id -> JString(namespacedId packId id)
                 | other -> other
+
             let rec rewrite (json: Json) : Json =
                 match json with
                 | JArray items -> JArray(List.map rewrite items)
@@ -250,6 +420,7 @@ module PackRules =
                                 rewrite value)
                     )
                 | other -> other
+
             let definition (json: Json) =
                 match rewrite json with
                 | JObject members as rewritten ->
@@ -257,6 +428,7 @@ module PackRules =
                     | JString id -> JObject(Json.setMember "id" (JString(namespacedId packId id)) members)
                     | _ -> rewritten
                 | rewritten -> rewritten
+
             let strings (json: Json) =
                 match json with
                 | JObject locales ->
@@ -270,7 +442,13 @@ module PackRules =
                                     members
                                     |> List.map (fun (key, value) ->
                                         let parts = key.Split ':'
-                                        let id = if parts.Length >= 3 then String.Join(":", parts.[1 .. parts.Length - 2]) else ""
+
+                                        let id =
+                                            if parts.Length >= 3 then
+                                                String.Join(":", parts.[1 .. parts.Length - 2])
+                                            else
+                                                ""
+
                                         if parts.Length >= 3 && ids.Contains id then
                                             parts.[0] + ":" + namespacedId packId id + ":" + parts.[parts.Length - 1], value
                                         else
@@ -279,6 +457,7 @@ module PackRules =
                             | other -> locale, other)
                     )
                 | other -> other
+
             let rewritten =
                 Json.spread content
                 |> List.map (fun (key, value) ->
@@ -294,7 +473,26 @@ module PackRules =
                                     | JString _ as value -> JObject(Json.setMember "subject" (reference value) members)
                                     | _ -> json
                                 | other -> other
+
                             key, JArray(List.map (definition >> subject) items)
+                        | JArray items when key = "skills" ->
+                            let subjects json =
+                                match json with
+                                | JObject members ->
+                                    let training =
+                                        entries (Json.get "training" json)
+                                        |> List.map (fun row ->
+                                            match row with
+                                            | JObject fields ->
+                                                match Json.get "subject" row with
+                                                | JString _ as value -> JObject(Json.setMember "subject" (reference value) fields)
+                                                | _ -> row
+                                            | _ -> row)
+
+                                    JObject(Json.setMember "training" (JArray training) members)
+                                | _ -> json
+
+                            key, JArray(List.map (definition >> subjects) items)
                         | JArray items -> key, JArray(List.map definition items)
                         | _ -> key, value
                     elif key = "gamePanels" then
@@ -308,6 +506,7 @@ module PackRules =
                                     JObject(Json.setMember "value" (reference target) members)
                                 | _ -> json
                             | other -> other
+
                         let panel (json: Json) =
                             match json with
                             | JObject members ->
@@ -315,21 +514,33 @@ module PackRules =
                                     match Json.get "id" json with
                                     | JString id -> Json.setMember "id" (JString(namespacedId packId id)) members
                                     | _ -> members
+
                                 let members =
                                     match Json.get "entries" (JObject members) with
                                     | JArray entries -> Json.setMember "entries" (JArray(List.map entry entries)) members
                                     | _ -> members
+
                                 JObject members
                             | other -> other
+
                         match value with
                         | JArray panels -> key, JArray(List.map panel panels)
                         | _ -> key, value
-                    elif key = "playerStart" && not (Json.isNullish value) then key, rewrite value
-                    elif key = "strings" then key, strings value
-                    else key, value)
+                    elif key = "playerStart" && not (Json.isNullish value) then
+                        key, rewrite value
+                    elif key = "strings" then
+                        key, strings value
+                    else
+                        key, value)
+
             match Decode.run SchemaJson.decodePackContent (JObject rewritten) with
             | Ok content -> { pack with Content = content }
             | Error message -> invalidOp ("Pack content does not fit the schema after namespacing: " + message)
 
 /// Diagnostics belong to authoring; the fallback engine retains its separate compatibility type.
-type PackProblem = { PackId: string; Severity: string; Message: string }
+type PackProblem =
+    {
+        PackId: string
+        Severity: string
+        Message: string
+    }

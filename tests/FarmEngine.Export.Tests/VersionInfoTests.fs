@@ -18,16 +18,22 @@ let ``version numbers come from the leading numeric parts`` (version: string, a:
 [<Fact>]
 let ``a built block parses back with every string and number`` () =
     let info =
-        { Numbers = (1us, 2us, 3us, 4us)
-          Strings =
-            [ "CompanyName", "Willow & Co"
-              "FileDescription", "Willow Creek Farm"
-              "ProductVersion", "1.2.3-beta"
-              "LegalCopyright", "© Jane Doe"
-              "Comments", "" ] }
+        {
+            Numbers = (1us, 2us, 3us, 4us)
+            Strings =
+                [
+                    "CompanyName", "Willow & Co"
+                    "FileDescription", "Willow Creek Farm"
+                    "ProductVersion", "1.2.3-beta"
+                    "LegalCopyright", "© Jane Doe"
+                    "Comments", ""
+                ]
+        }
+
     let bytes = VersionInfo.build info
     Assert.Equal(0, bytes.Length % 2)
     Assert.Equal(bytes.Length, int bytes[0] ||| (int bytes[1] <<< 8))
+
     match VersionInfo.parse bytes with
     | Error e -> failwith e
     | Ok parsed ->
@@ -37,7 +43,13 @@ let ``a built block parses back with every string and number`` () =
 
 [<Fact>]
 let ``damaged blocks are reported, not thrown`` () =
-    let bytes = VersionInfo.build { Numbers = (1us, 0us, 0us, 0us); Strings = [ "ProductName", "Farm" ] }
+    let bytes =
+        VersionInfo.build
+            {
+                Numbers = (1us, 0us, 0us, 0us)
+                Strings = [ "ProductName", "Farm" ]
+            }
+
     Assert.True(Result.isError (VersionInfo.parse bytes[0..20]))
     let wrongKey = Array.copy bytes
     wrongKey[6] <- byte 'X'

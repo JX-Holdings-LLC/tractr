@@ -191,6 +191,9 @@ public sealed class HelpAndWelcomeTests
             Assert.Equal("_Juego", Find<MenuItem>(window, "GameMenu").Header as string);
             Assert.Equal("Exportar _juego…", Find<MenuItem>(window, "ExportGameMenuItem").Header as string);
             Assert.Equal("es", new AppSettingsStore(Path.Combine(data, "settings.json")).Load().EditorLanguage);
+            var tabs = window.GetVisualDescendants().OfType<TabControl>().Single(tab => tab.Name == "EditorTabs");
+            Assert.Equal(["Mapa", "Contenido", "Problemas", "Configuración", "Mods", "Arte", "Taller", "Interfaz"],
+                tabs.Items.OfType<TabItem>().Select(tab => tab.Header as string));
 
             viewModel.ShortcutsCommand.Execute(null);
             PumpUntil(() => window.OpenShortcuts is not null, "shortcuts");
@@ -201,6 +204,7 @@ public sealed class HelpAndWelcomeTests
             Pump();
             Assert.Contains("Play Mode", AllVisibleText(Find<Button>(window, "ModeToggle")), StringComparison.Ordinal);
             Assert.Equal("en", new AppSettingsStore(Path.Combine(data, "settings.json")).Load().EditorLanguage);
+            Assert.Equal("Map", tabs.Items.OfType<TabItem>().First().Header);
         }
         finally
         {

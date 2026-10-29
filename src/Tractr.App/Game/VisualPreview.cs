@@ -12,7 +12,7 @@ namespace Tractr.App.Game;
 /// Frames of visual bindings drawn by the Rust renderer (<see cref="RustPreview.RenderVisual"/>):
 /// the art studio's animation preview shows exactly what the game draws.
 /// </summary>
-internal sealed class VisualPreview : IDisposable
+internal sealed class VisualPreview(EditorPreview? shared = null) : IDisposable
 {
     private RustPreview? _preview;
     private GameProject? _project;
@@ -30,7 +30,12 @@ internal sealed class VisualPreview : IDisposable
         ArgumentNullException.ThrowIfNull(project);
         try
         {
-            if (_preview is null || _preview.IsPoisoned)
+            if (shared is not null)
+            {
+                _preview = shared.For(project);
+                _project = project;
+            }
+            else if (_preview is null || _preview.IsPoisoned)
             {
                 _preview?.Dispose();
                 _preview = RustPreview.Create(project);
@@ -92,7 +97,7 @@ internal sealed class VisualPreview : IDisposable
 
     public void Dispose()
     {
-        _preview?.Dispose();
+        if (shared is null) _preview?.Dispose();
         _preview = null;
         _project = null;
     }

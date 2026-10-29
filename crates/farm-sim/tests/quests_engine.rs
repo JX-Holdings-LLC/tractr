@@ -357,3 +357,152 @@ fn a_reward_that_partly_fits_reports_only_the_lost_part() {
     assert_eq!(state.player.inventory[0].quantity, 99);
     assert!(has_message(&effects, |t| t == "Inventory full — quest reward lost: 6× Wheat Seeds"), "{effects:?}");
 }
+
+#[test]
+fn deadlines_expire_once_and_failure_is_saved() {
+    let mut quest = make_quest("deadline");
+    quest.deadline_days = Some(2);
+    quest.on_fail = Some(vec![farm_sim::schema::EventOutcome {
+        r#type: "giveMoney".to_owned(),
+        amount: Some(7_000),
+        ..Default::default()
+    }]);
+    let (ctx, mut current) = make_engine(with_quests(vec![quest]));
+    quests::start_quest_by_id(&ctx, &mut current, "deadline");
+    assert_eq!(current.quests["deadline"].deadline_day, Some(2));
+    current.clock.day = 2;
+    quests::after_step(&ctx, &mut current);
+    assert_eq!(current.quests["deadline"].status, "active");
+    let json = serde_json::to_vec(&current).unwrap();
+    let mut restored: GameState = serde_json::from_slice(&json).unwrap();
+    restored.clock.day = 3;
+    quests::after_step(&ctx, &mut restored);
+    let money = restored.player.money;
+    assert_eq!(money, 107);
+    assert_eq!(restored.quests["deadline"].status, "failed");
+    assert!(!restored.player.active_quests.contains(&"deadline".to_owned()));
+    quests::after_step(&ctx, &mut restored);
+    assert_eq!(restored.player.money, money);
+    assert!(quests::start_quest_by_id(&ctx, &mut restored, "deadline").is_empty());
+}
+
+#[test]
+fn new_event_objectives_track_only_matching_targets() {
+    for (kind, id) in [("ship", "material-wood"), ("catch", "material-wood"), ("slay", "slime")] {
+        let mut quest = make_quest(kind);
+        quest.objectives[0].r#type = kind.to_owned();
+        quest.objectives[0].target_monster_id = Some(id.to_owned());
+        let (ctx, mut current) = make_engine(with_quests(vec![quest]));
+        quests::start_quest_by_id(&ctx, &mut current, kind);
+        quests::progress_quests(&ctx, &mut current, kind, "unrelated", 10);
+        assert_eq!(current.quests[kind].status, "active");
+        quests::progress_quests(&ctx, &mut current, kind, id, 2);
+        assert_eq!(current.quests[kind].status, "completed");
+    }
+}
+
+#[test]
+fn state_objectives_do_not_accumulate_each_tick() {
+    let mut quest = make_quest("floor");
+    quest.objectives[0].r#type = "mineFloor".to_owned();
+    quest.objectives[0].target_item_quantity = Some(5);
+    let (ctx, mut current) = make_engine(with_quests(vec![quest]));
+    quests::start_quest_by_id(&ctx, &mut current, "floor");
+    current.mine.deepest_floor = 3;
+    for _ in 0..10 {
+        quests::after_step(&ctx, &mut current);
+    }
+    assert_eq!(current.quests["floor"].objectives.as_ref().unwrap()["obj-1"].progress, 3);
+    current.mine.deepest_floor = 5;
+    quests::after_step(&ctx, &mut current);
+    assert_eq!(current.quests["floor"].status, "completed");
+}
+
+#[test]
+fn request_board_rolls_are_stable_and_accepted_request_survives_rotation_and_keep() {
+    use farm_sim::schema::{KeptState, RequestBoard, RequestBoardEntry};
+    let mut quest = make_quest("request");
+    quest.deadline_days = Some(3);
+    let (ctx, mut current) = make_engine(with_quests(vec![quest]));
+    let board = RequestBoard {
+        id: "town".to_owned(),
+        interval_days: 1,
+        entries: vec![RequestBoardEntry {
+            quest_id: "request".to_owned(),
+            weight: 1,
+            item_ids: Some(vec!["material-wood".to_owned()]),
+            min_quantity: Some(4),
+            max_quantity: Some(8),
+            min_reward: Some(25),
+            max_reward: Some(50),
+        }],
+        ..Default::default()
+    };
+    let rng_before = current.rng.clone();
+    let first = quests::board_offer(&ctx, &current, &board).unwrap();
+    assert_eq!(Some(first.clone()), quests::board_offer(&ctx, &current, &board));
+    assert_eq!(current.rng, rng_before);
+    assert!((4..=8).contains(&first.objectives[0].target_item_quantity.unwrap()));
+    quests::accept_board(&ctx, &mut current, &board);
+    assert!(quests::accept_board(&ctx, &mut current, &board).is_empty());
+    current.clock.day += 1;
+    assert_eq!(current.quests["request"].request.as_deref(), Some(&first));
+    let kept = KeptState::of_state(&current).unwrap();
+    let mut restored = current.clone();
+    restored.quests.get_mut("request").unwrap().request = None;
+    restored.quests.get_mut("request").unwrap().deadline_day = None;
+    kept.apply_to(&mut restored);
+    assert_eq!(restored.quests["request"].request.as_deref(), Some(&first));
+    assert_eq!(restored.quests["request"].deadline_day, Some(3));
+    let amount = first.objectives[0].target_item_quantity.unwrap();
+    quests::progress_quests(&ctx, &mut restored, "collect", "material-wood", amount);
+    assert_eq!(restored.quests["request"].status, "completed");
+    assert_eq!(restored.player.money, 100 + first.rewards.money.unwrap());
+}
+
+#[test]
+fn hearts_and_bundle_objectives_complete_from_existing_progress() {
+    use farm_sim::schema::{BundleProgress, NpcSocialState};
+    let mut quest = make_quest("friendship");
+    quest.objectives[0].r#type = "hearts".into();
+    quest.objectives[0].target_npc_id = Some("friend".into());
+    quest.objectives.push(QuestObjective {
+        id: "bundle".into(),
+        r#type: "bundle".into(),
+        target_bundle_id: Some("pantry".into()),
+        ..Default::default()
+    });
+    let (ctx, mut current) = make_engine(with_quests(vec![quest]));
+    current.social.insert(
+        "friend".into(),
+        NpcSocialState { friendship: farm_sim::schema::FRIENDSHIP_PER_HEART * 2, ..Default::default() },
+    );
+    current.bundles.insert("pantry".into(), BundleProgress { complete: true, ..Default::default() });
+    quests::start_quest_by_id(&ctx, &mut current, "friendship");
+    quests::after_step(&ctx, &mut current);
+    assert_eq!(current.quests["friendship"].status, "completed");
+}
+
+#[test]
+fn request_board_skips_locked_templates_and_active_quests() {
+    use farm_sim::schema::{RequestBoard, RequestBoardEntry};
+    let mut locked = make_quest("locked");
+    locked.prerequisites = Some(vec!["not-finished".into()]);
+    let (ctx, mut current) = make_engine(with_quests(vec![locked, make_quest("eligible")]));
+    let minimal: RequestBoard = serde_json::from_str(r#"{"id":"minimal","entries":[{"questId":"eligible"}]}"#).unwrap();
+    assert_eq!(minimal.interval_days, 1);
+    assert_eq!(minimal.entries[0].weight, 1);
+    assert_eq!(quests::board_offer(&ctx, &current, &minimal).unwrap().id, "eligible");
+    let board = RequestBoard {
+        id: "town".into(),
+        interval_days: 7,
+        entries: vec![
+            RequestBoardEntry { quest_id: "locked".into(), weight: u32::MAX, ..Default::default() },
+            RequestBoardEntry { quest_id: "eligible".into(), weight: 1, ..Default::default() },
+        ],
+        ..Default::default()
+    };
+    assert_eq!(quests::board_offer(&ctx, &current, &board).unwrap().id, "eligible");
+    quests::start_quest_by_id(&ctx, &mut current, "eligible");
+    assert!(quests::board_offer(&ctx, &current, &board).is_none());
+}

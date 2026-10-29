@@ -109,6 +109,10 @@ public sealed class FestivalDraft : DraftRow
     private string _day;
     private string _music;
 
+    public FarmEngine.Schemas.FestivalProgram? Program { get; set; }
+    public Func<FarmEngine.Schemas.FestivalProgram?>? ReadProgram { get; set; }
+    public Func<bool>? ProgramDirty { get; set; }
+
     public FestivalDraft(string id, string name, string seasonId, string day, string music = "")
     {
         _id = id;
@@ -354,5 +358,39 @@ public sealed class LookDraft(string? seasonId, string what, string daylight, st
     {
         get => _foliageTint;
         set => SetText(ref _foliageTint, value);
+    }
+}
+
+/// <summary>An ordered weekday and its name in the currently selected language.</summary>
+public sealed class WeekdayDraft(string id, string name, string localName, FarmEngine.Schemas.CalendarWeekday source, string locale = "en") : DraftRow
+{
+    private string _id = id;
+    private string _name = name;
+    private string _localName = localName;
+    private string _locale = locale;
+    private readonly Dictionary<string, string> _translations = source.Words?.Value.GroupBy(word => word.Item1).ToDictionary(group => group.Key, group => group.Last().Item2) ?? [];
+    public string Id { get => _id; set => SetText(ref _id, value); }
+    public string Name { get => _name; set => SetText(ref _name, value); }
+    public string LocalName { get => _localName; set => SetText(ref _localName, value); }
+    public FarmEngine.Schemas.CalendarWeekday Source { get; } = source;
+    public string TranslationSnapshot => string.Join('\u001f', TranslationWords().OrderBy(word => word.Item1).Select(word => $"{word.Item1}\u001e{word.Item2}"));
+
+    public void SelectLocale(string locale)
+    {
+        RememberTranslation();
+        _locale = locale;
+        LocalName = _translations.GetValueOrDefault(locale, "");
+    }
+
+    public List<Tuple<string, string>> TranslationWords()
+    {
+        RememberTranslation();
+        return _translations.Select(word => Tuple.Create(word.Key, word.Value)).ToList();
+    }
+
+    private void RememberTranslation()
+    {
+        if (string.IsNullOrWhiteSpace(LocalName)) _translations.Remove(_locale);
+        else _translations[_locale] = LocalName.Trim();
     }
 }

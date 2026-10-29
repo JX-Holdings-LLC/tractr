@@ -301,7 +301,7 @@ fn build_tiles(
                     stages: i32::try_from(definition.stages).unwrap_or(i32::MAX),
                 })
             });
-            let node = tile.node.as_ref().map(|node| SnapshotNode {
+            let node = tile.node.as_ref().filter(|node| node.dormant_health.is_none()).map(|node| SnapshotNode {
                 sprite: None,
                 color: last_by_id(&content.node_types, &node.type_id, |d| &d.id)
                     .map_or("#7a5a3a", |d| d.color.as_str())
@@ -563,6 +563,21 @@ pub fn editor_snapshot(
     tile_size: f64,
     padding: f64,
 ) -> WorldSnapshot {
+    editor_snapshot_window(project, content, scene, tile_size, padding, None)
+}
+
+/// Editor snapshot restricted to the camera's tile window, including tall objects and nearby
+/// lights. The unrestricted entry point preserves the serialized snapshot contract.
+pub fn editor_snapshot_window(
+    project: &GameProject,
+    content: &GameContent,
+    scene: &Scene,
+    tile_size: f64,
+    padding: f64,
+    window: Option<TileWindow>,
+) -> WorldSnapshot {
+    let tallest = vocabulary::terrains(content).iter().filter_map(|terrain| terrain.tall).max().unwrap_or(0);
+    let window = window.map(|window| window.with_tall(tallest));
     let scene_npcs: Vec<_> = project.npcs.iter().filter(|npc| npc.scene_id == scene.id).collect();
     let player = &project.player;
     let occupied = |x: usize, y: usize| {
@@ -570,7 +585,7 @@ pub fn editor_snapshot(
         (player.scene_id == scene.id && units::tile_of(player.x) == x && units::tile_of(player.y) == y)
             || scene_npcs.iter().any(|npc| npc.x == units::tiles(x) && npc.y == units::tiles(y))
     };
-    let tiles = build_tiles(scene, content, occupied, None);
+    let tiles = build_tiles(scene, content, occupied, window);
 
     let mut npcs: Vec<SnapshotEntity> = scene_npcs
         .iter()
@@ -609,7 +624,7 @@ pub fn editor_snapshot(
         monsters: Vec::new(),
         buildings: Vec::new(),
         // The sky preview shows them at night (M8).
-        lights: scene_lights(content, scene, &[], None),
+        lights: scene_lights(content, scene, &[], window),
         player: SnapshotEntity {
             x: if on_scene { tiles_of(player.x) } else { -1000.0 },
             y: if on_scene { tiles_of(player.y) } else { -1000.0 },
@@ -618,7 +633,7 @@ pub fn editor_snapshot(
         },
         pops: None,
         emotes: None,
-        tile_window: None,
+        tile_window: window,
     }
 }
 

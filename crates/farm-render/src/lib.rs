@@ -52,7 +52,10 @@ pub use graphics::{apply_graphics, resolve_visual, ArtAsset, GraphicsSource};
 pub use images::{Image, ImageError, ImageId, ImageStore};
 #[cfg(feature = "raster")]
 pub use raster::{device_lights, encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
-pub use shell::{editor_snapshot, preview_atmosphere, scene_atmosphere, shell_snapshot, SkyPreview, SnapshotOptions};
+pub use shell::{
+    editor_snapshot, editor_snapshot_window, preview_atmosphere, scene_atmosphere, shell_snapshot, SkyPreview,
+    SnapshotOptions,
+};
 pub use snapshot::{
     SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotDecor, SnapshotEmote, SnapshotEntity,
     SnapshotItem, SnapshotLight, SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotPlayer, SnapshotPop,

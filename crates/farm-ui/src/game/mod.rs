@@ -222,7 +222,7 @@ impl GameUi {
             let red = theme::fade(farm_render::Color::rgb(0xd0, 0x30, 0x30), 0.35 * flash.min(1.0) as f32);
             ui.tint_world(red, red);
         }
-        let hud_bottom = hud::draw(ui, view, &mut actions);
+        let hud_bottom = hud::draw(ui, view, images, &mut actions);
         self.toasts.top = hud_bottom + 12.0;
         match self.panel {
             Some(Panel::Inventory) => inventory::draw(ui, view, images, &mut actions),

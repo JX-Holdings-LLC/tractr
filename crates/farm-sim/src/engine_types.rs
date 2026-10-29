@@ -63,13 +63,23 @@ pub struct EngineContext {
     /// How deep events fired by triggers are nested (M3): an event whose outcomes set off its
     /// own trigger stops at [`crate::events::MAX_TRIGGER_DEPTH`].
     pub(crate) trigger_depth: Cell<u32>,
+    pub(crate) skill_reward_depth: Cell<u32>,
+    pub(crate) skill_reward_runs: Cell<u32>,
 }
 
 impl EngineContext {
     /// A context over `content` under [`CommandRules::Player`], without a hook bus.
     pub fn new(content: GameContent) -> Self {
         let index = ContentIndex::build(&content);
-        Self { content, hooks: None, rules: CommandRules::Player, index, trigger_depth: Cell::new(0) }
+        Self {
+            content,
+            hooks: None,
+            rules: CommandRules::Player,
+            index,
+            trigger_depth: Cell::new(0),
+            skill_reward_depth: Cell::new(0),
+            skill_reward_runs: Cell::new(0),
+        }
     }
 
     /// A context over `content` whose handlers emit into `hooks`.
@@ -81,6 +91,8 @@ impl EngineContext {
             rules: CommandRules::Player,
             index,
             trigger_depth: Cell::new(0),
+            skill_reward_depth: Cell::new(0),
+            skill_reward_runs: Cell::new(0),
         }
     }
 

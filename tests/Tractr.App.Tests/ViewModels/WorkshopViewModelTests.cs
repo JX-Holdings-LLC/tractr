@@ -24,6 +24,8 @@ public sealed class WorkshopViewModelTests
         var viewModel = Create(test, new Calls());
         Assert.Equal(Patterns.All[0], viewModel.SelectedPattern);
         Assert.Equal(Patterns.All[0].Help, viewModel.Help);
+        var story = Patterns.All.Single(pattern => pattern.Id == "story");
+        viewModel.SelectedPattern = story;
         var before = test.Project.Npcs.Length;
 
         viewModel.Name = "Luna";
@@ -32,7 +34,7 @@ public sealed class WorkshopViewModelTests
         viewModel.CreateCommand.Execute(null);
         Assert.Equal(before + 1, test.Project.Npcs.Length);
         Assert.Contains(test.Project.Npcs, npc => npc.Name == "Luna");
-        Assert.Equal(Patterns.SuccessMessage(Patterns.All[0].Kind, "Luna"), viewModel.Message);
+        Assert.Equal(Patterns.SuccessMessage(story.Kind, "Luna"), viewModel.Message);
         Assert.Contains(viewModel.Characters, character => character.Name == "Luna");
 
         test.Workspace.Undo();

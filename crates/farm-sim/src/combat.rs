@@ -35,6 +35,13 @@ pub fn max_health(settings: &ProjectSettings) -> Option<i32> {
     settings.combat.as_ref().filter(|combat| combat.enabled).map(|combat| combat.max_health.max(1))
 }
 
+/// The player's permanent maximum, falling back to the authored combat setting.
+pub fn player_max_health(ctx: &EngineContext, state: &GameState) -> Option<i32> {
+    max_health(&ctx.content.settings).map(|base| {
+        state.player.max_health.unwrap_or(base).saturating_add(skills::stat_bonus(ctx, state, "maxHealth")).max(1)
+    })
+}
+
 /// Whether the game has combat on.
 pub fn enabled(ctx: &EngineContext) -> bool {
     max_health(&ctx.content.settings).is_some()
@@ -47,7 +54,7 @@ pub fn monster<'a>(ctx: &'a EngineContext, id: &str) -> Option<&'a MonsterDefini
 
 /// Heal `amount` health (up to the most), or with a negative `amount` take it (no hurt time).
 pub fn modify_health(ctx: &EngineContext, state: &mut GameState, amount: i32) -> Effects {
-    let (Some(max), Some(health)) = (max_health(&ctx.content.settings), state.player.health) else {
+    let (Some(max), Some(health)) = (player_max_health(ctx, state), state.player.health) else {
         return Vec::new();
     };
     if amount >= 0 {
@@ -68,6 +75,7 @@ pub fn hurt(ctx: &EngineContext, state: &mut GameState, amount: i32) -> Effects 
 
 fn take_health(ctx: &EngineContext, state: &mut GameState, amount: i32) -> Effects {
     let Some(health) = state.player.health else { return Vec::new() };
+    let amount = amount.saturating_sub(skills::stat_bonus(ctx, state, "defense")).max(0);
     let left = health.saturating_sub(amount).max(0);
     state.player.health = Some(left);
     let mut effects = vec![Effect::PlayerHurt { amount }];
@@ -80,7 +88,7 @@ fn take_health(ctx: &EngineContext, state: &mut GameState, amount: i32) -> Effec
 /// The player faints: out of the mine, to the faint spot, at half health, paying the penalty.
 pub fn faint(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let Some(combat) = ctx.content.settings.combat.as_ref() else { return Vec::new() };
-    let max = combat.max_health.max(1);
+    let max = player_max_health(ctx, state).unwrap_or(1);
     let penalty = state.player.money.min(combat.faint_money_penalty.max(0)).max(0);
     state.player.money = state.player.money.saturating_sub(penalty);
     state.player.health = Some((max / 2).max(1));
@@ -92,7 +100,7 @@ pub fn faint(ctx: &EngineContext, state: &mut GameState) -> Effects {
     if mines::is_mine_floor(state, &state.player.scene_id) {
         state.world.scenes.retain(|scene| !(scene.is_generated() && mines::is_mine_scene(&scene.id)));
         state.monsters.retain(|monster| !mines::is_mine_scene(&monster.scene_id));
-        state.mine.current_floor = 0;
+        mines::leave_progress(state);
     }
     let scene_id = combat.faint_scene_id.clone().unwrap_or_else(|| ctx.content.start_scene_id.clone());
     let mut effects = Vec::new();
@@ -110,7 +118,7 @@ pub fn faint(ctx: &EngineContext, state: &mut GameState) -> Effects {
 
 /// The night: health fills again.
 pub fn restore_overnight(ctx: &EngineContext, state: &mut GameState) {
-    if let Some(max) = max_health(&ctx.content.settings) {
+    if let Some(max) = player_max_health(ctx, state) {
         state.player.health = Some(max);
         state.player.hurt = 0;
     }
@@ -226,7 +234,7 @@ pub fn spawn_floor(ctx: &EngineContext, state: &mut GameState, scene_id: &str, f
     if !enabled(ctx) || state.monsters.iter().any(|monster| monster.scene_id == scene_id) {
         return;
     }
-    let Some(band) = mines::band_for_floor(&ctx.content.mine, floor) else { return };
+    let Some(band) = mines::band_for_floor(mines::active_config(ctx, state), floor) else { return };
     if band.monster_count == 0 || band.monsters.is_empty() {
         return;
     }
@@ -379,7 +387,12 @@ pub fn attack(ctx: &EngineContext, state: &mut GameState, tiles: &[(i32, i32)], 
     if targets.is_empty() {
         return None;
     }
-    let level = i32::try_from(skills::skill_level(state, "combat")).unwrap_or(i32::MAX);
+    let level = if ctx.content.settings.skill_definitions().is_empty() {
+        i32::try_from(skills::effective_level(ctx, state, "combat")).unwrap_or(i32::MAX)
+    } else {
+        0
+    };
+    let level = level.saturating_add(skills::stat_bonus(ctx, state, "attack"));
     let mut effects = Vec::new();
     let mut slain = Vec::new();
     let (px, py) = (state.player.x, state.player.y);
@@ -407,7 +420,7 @@ pub fn attack(ctx: &EngineContext, state: &mut GameState, tiles: &[(i32, i32)], 
         let count = state.slain.entry(dead.monster_id.clone()).or_insert(0);
         *count = count.saturating_add(1);
         let mut rng = Rng::new(state.rng.clone());
-        let drops = gathering::roll_drop_table(&definition.drops, &mut rng);
+        let drops = gathering::roll_drop_table(&definition.drops, &mut rng, skills::stat_bonus(ctx, state, "luck"));
         state.rng = rng.state;
         let mut received = Vec::new();
         for drop in drops {
@@ -434,7 +447,15 @@ pub fn attack(ctx: &EngineContext, state: &mut GameState, tiles: &[(i32, i32)], 
                 messages::MONSTER_SLAIN_GOT.with(&[&definition.name, &received.join(", ")])
             },
         ));
-        effects.extend(skills::grant_xp(ctx, state, "combat", definition.experience));
+        effects.extend(skills::grant_action_xp_subject(
+            ctx,
+            state,
+            "slay",
+            &definition.id,
+            "combat",
+            definition.experience,
+        ));
+        effects.extend(crate::quests::progress_quests(ctx, state, "slay", &definition.id, 1));
         ctx.emit(crate::hooks::HookEvent::MonsterSlay(crate::hooks::MonsterSlayHookPayload {
             monster_id: definition.id.clone(),
             scene_id: state.player.scene_id.clone(),

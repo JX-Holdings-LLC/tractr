@@ -165,6 +165,29 @@ pub fn parse_mutation(entry: &Value) -> Result<PluginMutation, String> {
             PluginMutation::SetRelationship { npc_id, status }
         }
         "sendMail" => PluginMutation::SendMail { mail_id: fields.id("mailId") },
+        "setInventorySize" => PluginMutation::SetInventorySize { amount: fields.int("amount", -1000.0, 1000.0) as i32 },
+        "addInventorySize" => PluginMutation::AddInventorySize { amount: fields.int("amount", -1000.0, 1000.0) as i32 },
+        "addMaxEnergy" => PluginMutation::AddMaxEnergy { amount: fields.int("amount", -1000.0, 1000.0) as i32 },
+        "addMaxHealth" => PluginMutation::AddMaxHealth { amount: fields.int("amount", -1000.0, 1000.0) as i32 },
+        "applyBuff" => {
+            let raw = object.get("buff").ok_or_else(|| "applyBuff: buff is required".to_owned())?;
+            if serde_json::to_vec(raw).map_or(true, |bytes| bytes.len() > 2048) {
+                return Err("applyBuff: buff exceeds 2048 bytes".to_owned());
+            }
+            let buff: farm_sim::schema::BuffDefinition =
+                serde_json::from_value(raw.clone()).map_err(|_| "applyBuff: invalid buff".to_owned())?;
+            if buff.id.is_empty()
+                || buff.id.len() > 128
+                || buff.icon.as_ref().is_some_and(|icon| icon.len() > 128)
+                || !farm_sim::buffs::STATS.contains(&buff.stat.as_str())
+                || buff.duration_minutes == 0
+                || buff.duration_minutes > 525_600
+                || buff.amount.unsigned_abs() > 1000
+            {
+                return Err("applyBuff: invalid buff bounds".to_owned());
+            }
+            PluginMutation::ApplyBuff { buff }
+        }
         "modifyHealth" => PluginMutation::ModifyHealth { delta: fields.int("delta", -1000.0, 1000.0) as i32 },
         "saveData" => PluginMutation::SaveData { data: fields.saved_data() },
         other => {

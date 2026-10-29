@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.11.0
+
+- Add optional weekday calendars, conditional NPC schedules, shop hours and
+  keeper checks, deterministic price modifiers and market saturation. New projects
+  start with seven weekdays; existing calendars retain their behavior.
+- Add festival places, attendance, shops, contests and activities, with entry
+  hours, missed-festival outcomes and saved participation.
+- Add seasonal forage spawn tables and fishing filters, layered catches,
+  quality, size, bait, tackle, traps and ponds.
+- Add configurable skill training and rewards, perk choices, timed food buffs,
+  permanent player upgrades and a delayed blacksmith service.
+- Add quest deadlines, failure outcomes, request boards, additional objectives
+  and independently saved mines.
+- Keep classic projects at schema version 2 and promote projects using the new
+  features to version 3 when saving or exporting; accept both versions.
+- Bound plugin errors before they cross the guest boundary, ship a silent
+  Linux engine fallback, improve mobile controls and warn about game text
+  outside the bundled font's coverage.
+- Localize the remaining editor tabs, enforce F# formatting, improve action-cycle
+  diagnostics, and move editor interaction state into testable view models.
+- Cull editor previews to the viewport, share preview caches and retain content
+  rows and drafts across unrelated project edits.
+
 ## 0.10.3
 
 - Fix the release workflow, which stopped at the Mac editor because Apple

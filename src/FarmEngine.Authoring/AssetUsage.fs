@@ -23,10 +23,14 @@ module AssetUsage =
         let used = HashSet<string>()
         let pending = Queue<CustomAsset>(roots)
         let byId = Dictionary<string, CustomAsset>()
+
         for asset in project.CustomAssets do
-            if not (byId.ContainsKey asset.Id) then byId.[asset.Id] <- asset
+            if not (byId.ContainsKey asset.Id) then
+                byId.[asset.Id] <- asset
+
         while pending.Count > 0 do
             let asset = pending.Dequeue()
+
             if used.Add asset.Id then
                 for clip in defaultArg asset.Animations [] do
                     for frame in clip.Frames do
@@ -36,6 +40,7 @@ module AssetUsage =
                             match byId.TryGetValue id with
                             | true, other when not (used.Contains other.Id) -> pending.Enqueue other
                             | _ -> ()
+
         used
 
     /// The project's assets that `json` (exported content) names by id, plus every asset their
@@ -43,9 +48,13 @@ module AssetUsage =
     /// definitions keep their look elsewhere (`VisualRef.assetId`, …).
     let referencedBy (project: GameProject) (json: Json list) : CustomAsset list =
         let values = HashSet<string>()
+
         for value in json do
             strings values value
-        let used = withFrameSources project (project.CustomAssets |> List.filter (fun asset -> values.Contains asset.Id))
+
+        let used =
+            withFrameSources project (project.CustomAssets |> List.filter (fun asset -> values.Contains asset.Id))
+
         project.CustomAssets |> List.filter (fun asset -> used.Contains asset.Id)
 
     /// Assets nothing in the game refers to. An asset counts as used when any value in the
@@ -59,8 +68,10 @@ module AssetUsage =
             SchemaJson.encodeGameProject project
             |> Json.remove "customAssets"
             |> Json.remove "selectedTileVisual"
+
         let values = HashSet<string>()
         strings values json
+
         let refersTo (asset: CustomAsset) =
             values.Contains asset.Id
             // Sounds and music always ship: plugins and pack minigames play them by id from
@@ -71,10 +82,13 @@ module AssetUsage =
                 && (match asset.TileType with
                     | None -> false
                     | Some tileType -> values.Contains tileType))
+
         let used = withFrameSources project (project.CustomAssets |> List.filter refersTo)
         project.CustomAssets |> List.filter (fun asset -> not (used.Contains asset.Id))
 
     /// The assets the game uses, in project order.
     let used (project: GameProject) : CustomAsset list =
         let unusedIds = HashSet<string>(unused project |> List.map (fun asset -> asset.Id))
-        project.CustomAssets |> List.filter (fun asset -> not (unusedIds.Contains asset.Id))
+
+        project.CustomAssets
+        |> List.filter (fun asset -> not (unusedIds.Contains asset.Id))

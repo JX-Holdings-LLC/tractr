@@ -241,8 +241,8 @@ await test("a stored document with bad settings changes nothing", () => {
 await test("the web demo's surfaces: a touch phone at density 3 and a 1366×768 laptop", () => {
   const project = JSON.stringify(json("golden", "content", "starter-farm.json").project);
   const shots = process.env.FARM_WASM_SCREENSHOTS;
-  // 390×844 CSS pixels at devicePixelRatio 3, 176 CSS pixels of touch controls.
-  const phone = { width: 1170, height: 2532, density: 3, touchControls: true, insetBottom: 528 };
+  // 390×844 CSS pixels at devicePixelRatio 3, 224 CSS pixels of touch controls.
+  const phone = { width: 1170, height: 2532, density: 3, touchControls: true, insetBottom: 672 };
   const laptop = { width: 1366, height: 768 };
   for (const [name, surface] of [["phone-390x844", phone], ["laptop-1366x768", laptop]]) {
     const player = new farm.Player(project, { mode: "standalone", seed: "wasm-surface" });

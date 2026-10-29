@@ -90,7 +90,10 @@ pub(crate) fn draw(
     if shop.buys_items {
         tabs.push(ShopTab::Sell);
     }
-    if shop.repairs_tools {
+    if shop.repairs_tools
+        || shop.tool_upgrades.as_ref().is_some_and(|rules| !rules.is_empty())
+        || !player.tool_upgrades.is_empty()
+    {
         tabs.push(ShopTab::Repair);
     }
     if !tabs.contains(tab) {
@@ -165,8 +168,14 @@ pub(crate) fn draw(
                 );
             }
             for (slot, held) in sellable {
-                let unit =
-                    economy::sell_unit_price_with_quality(view.content, &slot.item, slot.quality.as_deref(), shop);
+                let unit = farm_sim::commerce::price(
+                    view.ctx,
+                    state,
+                    shop,
+                    &slot.item.id,
+                    economy::sell_unit_price_with_quality(view.content, &slot.item, slot.quality.as_deref(), shop),
+                    true,
+                );
                 let sell_one = Button::new(lang.tr("shop.sellOne")).primary().size(12.5);
                 let sell_all = Button::new(lang.tr("shop.sellAll")).size(12.5);
                 let mut widths = vec![ui.button_width(&sell_one)];
@@ -204,6 +213,55 @@ pub(crate) fn draw(
             }
         }
         ShopTab::Repair => {
+            for order in player.tool_upgrades.iter().filter(|order| order.shop_id == shop.id) {
+                let ready = order.ready_day <= state.clock.day;
+                let label = if ready {
+                    lang.tr("shop.collectUpgrade").to_owned()
+                } else {
+                    lang.format("shop.upgradeReady", &[&order.ready_day])
+                };
+                let button = Button::new(&label)
+                    .primary()
+                    .size(12.5)
+                    .enabled(ready && player.inventory.len() < player.max_inventory_size as usize);
+                let (content, buttons) = row(ui, area, y, row_height, 140.0);
+                two_lines(ui, content, &order.item.name, None, lang.tr("shop.toolUpgrade"), false);
+                if ui.button(WidgetId::new("tool-collect").with(&order.item.id), buttons, button) {
+                    actions.push(GameAction::Command(Command::CollectToolUpgrade { item_id: order.item.id.clone() }));
+                }
+                y += row_height + ROW_GAP;
+            }
+            for rule in shop.tool_upgrades.iter().flatten() {
+                if !player.inventory.iter().any(|slot| slot.item.id == rule.from_item_id) {
+                    continue;
+                }
+                let Some(target) = view.content.items.iter().find(|item| item.id == rule.to_item_id) else {
+                    continue;
+                };
+                let label = lang.format("shop.upgradeFor", &[&view.money(lang, rule.cost)]);
+                let button = Button::new(&label).primary().size(12.5).enabled(player.money >= rule.cost);
+                let width = ui.button_width(&button).max(100.0);
+                let (content, buttons) = row(ui, area, y, row_height, width);
+                let materials = rule
+                    .materials
+                    .iter()
+                    .map(|ingredient| format!("{} {}", ingredient.quantity, ingredient.item_id))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                two_lines(
+                    ui,
+                    content,
+                    &target.name,
+                    None,
+                    &lang.format("shop.upgradeMaterials", &[&rule.nights, &materials]),
+                    false,
+                );
+                if ui.button(WidgetId::new("tool-upgrade").with(&rule.from_item_id), buttons, button) {
+                    actions.push(GameAction::Command(Command::UpgradeTool { item_id: rule.from_item_id.clone() }));
+                }
+                y += row_height + ROW_GAP;
+            }
+
             let damaged: Vec<_> = player
                 .inventory
                 .iter()
@@ -249,7 +307,14 @@ pub(crate) fn draw(
                 y += ui.empty_state(area, y, Icon::Store, lang.tr("shop.noStock"), lang.tr("shop.noStockDetail"));
             }
             for (entry, item) in stock {
-                let price = entry.price.unwrap_or(item.value);
+                let price = farm_sim::commerce::price(
+                    view.ctx,
+                    state,
+                    shop,
+                    &item.id,
+                    entry.price.unwrap_or(item.value),
+                    false,
+                );
                 let remaining = view.overlay.remaining(&entry.item_id);
                 let mut detail = item.description.clone();
                 if let Some(limit) = entry.daily_limit {
@@ -261,15 +326,18 @@ pub(crate) fn draw(
                 }
                 let price_text = view.money(lang, price);
                 let price_width = ui.measure(&price_text, 14.0, farm_render::FontId::Bold).ceil();
+                let already_owned = entry.upgrade.as_ref().is_some_and(|upgrade| {
+                    player.purchased_upgrades.contains(&farm_sim::progression::purchase_key(&shop.id, &upgrade.id))
+                });
                 let buy = Button::new(lang.tr("shop.buy"))
                     .primary()
                     .size(12.5)
-                    .enabled(player.money >= price && remaining.is_none_or(|left| left >= 1));
+                    .enabled(!already_owned && player.money >= price && remaining.is_none_or(|left| left >= 1));
                 let five = Button::new("\u{00d7}5")
                     .size(12.5)
                     .enabled(player.money >= price.saturating_mul(5) && remaining.is_none_or(|left| left >= 5));
                 let mut widths = vec![price_width, ui.button_width(&buy).max(52.0)];
-                if item.stackable {
+                if item.stackable && entry.upgrade.is_none() {
                     widths.push(ui.button_width(&five).max(40.0));
                 }
                 let actions_width = widths.iter().sum::<f32>() + 6.0 * (widths.len() - 1) as f32;
@@ -281,7 +349,7 @@ pub(crate) fn draw(
                 if ui.button(id, rects[1], buy) {
                     actions.push(GameAction::Command(Command::BuyItem { item_id: entry.item_id.clone(), quantity: 1 }));
                 }
-                if item.stackable && ui.button(id.with("5"), rects[2], five) {
+                if item.stackable && entry.upgrade.is_none() && ui.button(id.with("5"), rects[2], five) {
                     actions.push(GameAction::Command(Command::BuyItem { item_id: entry.item_id.clone(), quantity: 5 }));
                 }
                 y += row_height + ROW_GAP;

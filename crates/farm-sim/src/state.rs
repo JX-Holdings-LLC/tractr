@@ -51,6 +51,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         npcs: project.npcs.clone(),
         dialogues: project.dialogues.clone(),
         quests: project.quests.clone(),
+        request_boards: project.request_boards.clone().unwrap_or_default(),
         events: project.events.clone(),
         shops: project.shops.clone(),
         node_types,
@@ -67,6 +68,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         fish_tables: project.fish_tables.clone(),
         // MineConfigSchema.parse(project.mine ?? { enabled: false }); the defaults carry the zod ones.
         mine: project.mine.clone(),
+        mines: project.mines.clone().unwrap_or_default(),
         actions: project.actions.clone(),
         minigames: project.minigames.clone(),
         scenes: project.scenes.clone(),
@@ -119,7 +121,26 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
                 QuestObjectiveProgress { progress: objective.progress, completed: objective.completed },
             );
         }
-        quests.insert(quest.id.clone(), QuestProgress { status: quest.status.clone(), objectives: Some(objectives) });
+        quests.insert(
+            quest.id.clone(),
+            QuestProgress {
+                status: quest.status.clone(),
+                objectives: Some(objectives),
+                deadline_day: if quest.status == "active" {
+                    match (quest.deadline_days, quest.deadline_day) {
+                        (Some(days), fixed) => {
+                            Some(fixed.map_or(start.current_day.saturating_add(days.max(1) - 1), |day| {
+                                day.min(start.current_day.saturating_add(days.max(1) - 1))
+                            }))
+                        }
+                        (None, fixed) => fixed,
+                    }
+                } else {
+                    None
+                },
+                ..QuestProgress::default()
+            },
+        );
     }
 
     let mut npcs = IndexMap::new();
@@ -185,16 +206,27 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
             health: crate::combat::max_health(&resolved_settings)
                 .map(|max| start.player.health.unwrap_or(max).clamp(0, max)),
             hurt: 0,
+            max_health: None,
+            buffs: Vec::new(),
+            purchased_upgrades: Vec::new(),
+            perks: IndexMap::new(),
+            tool_upgrades: Vec::new(),
         },
         npcs,
         quests,
+        request_boards: IndexMap::new(),
         dialogue: None,
         shop: None,
         minigame: None,
         shop_purchases_today: IndexMap::new(),
+        shop_sales: IndexMap::new(),
+        festival: None,
+        festival_visits: IndexMap::new(),
         social: start.social_state.clone().unwrap_or_default(),
         animals: start.animals.clone(),
         mine: MineProgress { deepest_floor: start.mine_deepest_floor.unwrap_or(0), current_floor: 0 },
+        mines: IndexMap::new(),
+        current_mine_id: None,
         flags,
         quarantined_items: start.quarantined_items.clone().unwrap_or_default(),
         // An all-zero state would draw 0 forever (#140): seed it like a project without one.
@@ -212,6 +244,7 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
         farm_layout: None,
         shipped: IndexMap::new(),
         last_shipment: Vec::new(),
+        fish_catches: Vec::new(),
         collections: IndexMap::new(),
         bundles: IndexMap::new(),
         achievements: IndexMap::new(),

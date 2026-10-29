@@ -1,6 +1,6 @@
 # Native numerics
 
-**Status:** implemented (project schema version 2, save version
+**Status:** implemented (project schema versions 2–3, save version
 5; phase 7's last step, [LANGUAGES.md](LANGUAGES.md#phases)).
 This file is the reference for the unit and integer type of every quantity the
 simulation keeps. Read it before you add a field to `farm-sim`.
@@ -113,6 +113,13 @@ the canonical form, from `is_human_readable`). The hash text is 16 lowercase
 hex digits. The cartridge hash in save files (`cart_hash`) uses the same
 function.
 
+Version-3 additions to existing records have an explicit extension list in
+`hash.rs`. An absent extension contributes no bytes, preserving classic game
+hashes. A present extension writes presence tag 2, its field name and value;
+the name distinguishes equal values in different optional fields. Original
+fields retain their existing presence tags and order. New enum cases must be
+appended so earlier variant indices stay stable.
+
 ## Saves
 
 `CURRENT_SAVE_VERSION` is 5 (saves have their own numbering). The
@@ -123,8 +130,10 @@ numbers.
 
 ## Projects (F#)
 
-`ProjectSchema.CurrentProjectSchemaVersion` is 1, and only version 1 projects load
-(`ProjectLoad`); other versions are refused. The values a
+`ProjectSchema.CurrentProjectSchemaVersion` is 3. Version 2 and 3 projects load
+(`ProjectLoad`); other versions are refused. Classic projects retain version 2;
+`ProjectVersion` promotes saved projects and cartridge headers to version 3
+when the new gameplay features are present. The values a
 project carries into play (player and NPC positions, energy, the current
 time of day, animal positions and mood) are on the engine's grid, so the
 editor shows what the game will run. Content definitions (prices, chances) keep what the creator typed; the Rust

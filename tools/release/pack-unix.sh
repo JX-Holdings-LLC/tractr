@@ -23,6 +23,11 @@ args=(pack --packId Tractr --packVersion "$version" --packDir publish
   --runtime "$rid" --channel "$rid" --mainExe Tractr --packTitle Tractr
   --packAuthors 'Tractr contributors' --releaseNotes release-notes.md --outputDir Releases)
 if [[ "$rid" == linux-* ]]; then
+  test -s publish/libfarm_ffi_silent.so
+  if readelf -d publish/libfarm_ffi_silent.so | grep -q libasound; then
+    echo "The silent engine must not depend on ALSA." >&2
+    exit 1
+  fi
   ldd "publish/$library" > native-dependencies.txt
   if grep -q 'not found' native-dependencies.txt; then
     cat native-dependencies.txt >&2

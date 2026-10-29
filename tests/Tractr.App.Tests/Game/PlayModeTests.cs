@@ -7,6 +7,7 @@ using Avalonia.Input;
 using FarmEngine.Interop;
 using Tractr.App.Game;
 using Tractr.App.Hosting;
+using Tractr.App.Localization;
 using static Tractr.App.Tests.Ui.UiTestHelpers;
 
 namespace Tractr.App.Tests.Game;
@@ -44,6 +45,36 @@ public sealed class PlayModeTests
         host.Window.MouseUp(point, MouseButton.Left);
         // The UI acts on the release; the engine runs the command at the next frame.
         host.Frames(3);
+    }
+
+    [AvaloniaFact]
+    public void OpenPlayToolbarFollowsLanguageChangesWithoutRestartingTheGame()
+    {
+        var originalLanguage = EditorStrings.Language;
+        try
+        {
+            EditorStrings.SetLanguage("en");
+            using var host = new GameTestHost();
+            host.EnterPlay();
+            var play = host.Play;
+            play.KeepChanges = true;
+            EditorStrings.SetLanguage("es");
+            Pump();
+            Assert.Same(play, host.Play);
+            Assert.True(play.KeepChanges);
+            Assert.Contains("Reiniciar", AllVisibleText(FindByName<Button>(host.Window, "RestartButton")), StringComparison.Ordinal);
+            Assert.Contains("Conservar cambios", AllVisibleText(FindByName<Control>(host.Window, "KeepChangesButton")), StringComparison.Ordinal);
+            Assert.Equal("Depurar", FindByName<Button>(host.Window, "DebugButton").Content);
+            Assert.Equal(EditorStrings.Get("toolbar.playHint"), FindByName<TextBlock>(host.Window, "PlayHint").Text);
+            Assert.Contains(EditorStrings.Get("toolbar.restartTip"), Assert.IsType<string>(ToolTip.GetTip(FindByName<Button>(host.Window, "RestartButton"))), StringComparison.Ordinal);
+            EditorStrings.SetLanguage("en");
+            Pump();
+            Assert.Contains("Restart", AllVisibleText(FindByName<Button>(host.Window, "RestartButton")), StringComparison.Ordinal);
+        }
+        finally
+        {
+            EditorStrings.SetLanguage(originalLanguage);
+        }
     }
 
     [AvaloniaFact]

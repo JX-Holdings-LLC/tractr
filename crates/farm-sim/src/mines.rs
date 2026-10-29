@@ -17,6 +17,54 @@ use crate::world::{tiles, world_movement};
 
 pub const MINE_SCENE_PREFIX: &str = "mine-floor-";
 
+/// All entrances, with the original mine first.
+pub fn definitions(content: &crate::schema::GameContent) -> impl Iterator<Item = (&str, &MineConfig)> {
+    std::iter::once(("mine", &content.mine)).chain(content.mines.iter().map(|mine| (mine.id.as_str(), &mine.config)))
+}
+
+pub fn active_config<'a>(ctx: &'a EngineContext, state: &GameState) -> &'a MineConfig {
+    config(ctx, state.current_mine_id.as_deref().unwrap_or("mine")).unwrap_or(&ctx.content.mine)
+}
+
+fn config<'a>(ctx: &'a EngineContext, id: &str) -> Option<&'a MineConfig> {
+    definitions(&ctx.content).find(|(key, _)| *key == id).map(|(_, config)| config)
+}
+
+pub fn progress(state: &GameState, id: &str) -> MineProgress {
+    if state.current_mine_id.as_deref().unwrap_or("mine") == id {
+        state.mine.clone()
+    } else {
+        state.mines.get(id).cloned().unwrap_or_default()
+    }
+}
+
+fn select_mine(state: &mut GameState, id: &str) {
+    let previous = state.current_mine_id.as_deref().unwrap_or("mine");
+    if previous == id {
+        return;
+    }
+    state.mines.insert(previous.to_owned(), state.mine.clone());
+    state.mine = state.mines.get(id).cloned().unwrap_or_default();
+    state.current_mine_id = (id != "mine").then(|| id.to_owned());
+}
+
+/// Enter a specific mine from its entrance. Normal descent retains the currently selected mine.
+pub fn enter_mine(ctx: &EngineContext, state: &mut GameState, id: &str) -> Effects {
+    let Some(mine) = config(ctx, id).filter(|mine| mine.enabled) else { return Vec::new() };
+    if ctx.rules == crate::CommandRules::Player && !beside_entrance(mine, state) {
+        return Vec::new();
+    }
+    select_mine(state, id);
+    let floor = elevator_floor(mine, state);
+    descend_mine(ctx, state, floor)
+}
+
+/// Reset the active mine after leaving it (including fainting).
+pub fn leave_progress(state: &mut GameState) {
+    state.mine.current_floor = 0;
+    select_mine(state, "mine");
+}
+
 /// Where the player arrives on a floor, and the tile whose interaction climbs out.
 pub const FLOOR_ENTRY: (i32, i32) = (1, 1);
 
@@ -55,15 +103,25 @@ pub fn band_for_floor(config: &MineConfig, floor: u32) -> Option<&MineBand> {
 /// Deterministically generate a mine floor: walled border, entry ladder at the top-left corner
 /// area, rocks from the depth band's weighted table.
 pub fn generate_mine_floor(ctx: &EngineContext, engine_seed: &str, floor: u32) -> Scene {
-    let config = &ctx.content.mine;
+    generate_floor(ctx, &ctx.content.mine, engine_seed, "mine", floor)
+}
+
+fn generate_floor(ctx: &EngineContext, config: &MineConfig, engine_seed: &str, id: &str, floor: u32) -> Scene {
+    let scene_id =
+        if id == "mine" { mine_floor_scene_id(floor) } else { format!("{MINE_SCENE_PREFIX}{}:{id}:{floor}", id.len()) };
     let mut scene = tiles::create_empty_scene(
-        &mine_floor_scene_id(floor),
+        &scene_id,
         &format!("Mine — Floor {floor}"),
         floor_side(config.floor_width),
         floor_side(config.floor_height),
     );
     // TS: createRngState(hashStringToU32(...)) — the numeric-seed overload.
-    let seed = rng::hash_string_to_u32(&format!("{engine_seed}:mine:{floor}"));
+    let seed_key = if id == "mine" {
+        format!("{engine_seed}:mine:{floor}")
+    } else {
+        format!("{engine_seed}:mine:{}:{id}:{floor}", id.len())
+    };
+    let seed = rng::hash_string_to_u32(&seed_key);
     let mut rng = Rng::new(rng::create_rng_state_from_u32(seed));
 
     // Cave look: floor tiles + wall border
@@ -197,15 +255,17 @@ fn place_rock(
 
 /// Enter the mine (from the configured entrance) or descend one floor.
 pub fn descend_mine(ctx: &EngineContext, state: &mut GameState, to_floor: u32) -> Effects {
-    let config = &ctx.content.mine;
+    let config = active_config(ctx, state);
     if !config.enabled {
         return Vec::new();
     }
     let floor = config.floors.min(to_floor).max(1);
 
-    let scene_id = mine_floor_scene_id(floor);
+    let id = state.current_mine_id.as_deref().unwrap_or("mine");
+    let scene_id =
+        if id == "mine" { mine_floor_scene_id(floor) } else { format!("{MINE_SCENE_PREFIX}{}:{id}:{floor}", id.len()) };
     if !state.world.scenes.iter().any(|scene| scene.id == scene_id) {
-        let generated = generate_mine_floor(ctx, &state.meta.engine_seed, floor);
+        let generated = generate_floor(ctx, config, &state.meta.engine_seed, id, floor);
         state.world.scenes.push(generated);
     }
 
@@ -213,6 +273,9 @@ pub fn descend_mine(ctx: &EngineContext, state: &mut GameState, to_floor: u32) -
     world_movement::put_player(state, &scene_id, units::tile_center(entry_x), units::tile_center(entry_y));
     state.mine = MineProgress { current_floor: floor, deepest_floor: state.mine.deepest_floor.max(floor) };
     crate::combat::spawn_floor(ctx, state, &scene_id, floor);
+    if let Some(id) = &state.current_mine_id {
+        state.music = ctx.content.mines.iter().find(|mine| &mine.id == id).and_then(|mine| mine.music.clone());
+    }
 
     // `floor % 0` is NaN in JS: never a checkpoint.
     let checkpoint = floor.checked_rem(config.elevator_every) == Some(0);
@@ -249,7 +312,7 @@ fn beside_entrance(config: &MineConfig, state: &GameState) -> bool {
 /// (`None` when it does). It works on a mine floor or beside the entrance, down to one floor past
 /// the current floor or the elevator's deepest checkpoint.
 pub fn descend_refusal(ctx: &EngineContext, state: &GameState, to_floor: u32) -> Option<Effects> {
-    let config = &ctx.content.mine;
+    let config = active_config(ctx, state);
     if !config.enabled {
         return Some(Vec::new());
     }
@@ -276,7 +339,7 @@ pub fn exit_refusal(state: &GameState) -> Option<Effects> {
 
 /// Leave the mine back to the entrance scene.
 pub fn exit_mine(ctx: &EngineContext, state: &mut GameState) -> Effects {
-    let config = &ctx.content.mine;
+    let config = active_config(ctx, state);
     let target_scene_id = config.entrance_scene_id.clone().unwrap_or_else(|| ctx.content.start_scene_id.clone());
     let Some(target) = state.world.scenes.iter().find(|scene| scene.id == target_scene_id) else {
         return Vec::new();
@@ -289,7 +352,7 @@ pub fn exit_mine(ctx: &EngineContext, state: &mut GameState) -> Effects {
     state.world.scenes.retain(|scene| !(scene.is_generated() && is_mine_scene(&scene.id)));
     state.monsters.retain(|monster| !is_mine_scene(&monster.scene_id));
     world_movement::put_player(state, &target_scene_id, units::tile_center(x), units::tile_center(y));
-    state.mine.current_floor = 0;
+    leave_progress(state);
 
     vec![Effect::SceneChanged { scene_id: target_scene_id, x, y }, Effect::say("info", &messages::MINE_CLIMB_BACK)]
 }
@@ -300,7 +363,7 @@ pub fn maybe_reveal_ladder(ctx: &EngineContext, state: &mut GameState, scene_id:
     if !is_mine_floor(state, scene_id) {
         return Vec::new();
     }
-    let config = &ctx.content.mine;
+    let config = active_config(ctx, state);
     let mut rng = Rng::new(state.rng.clone());
     let revealed = rng.chance(config.ladder_chance);
     state.rng = rng.state;

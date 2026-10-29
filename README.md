@@ -39,7 +39,7 @@ Edit Mode includes map painting and scene tools (by mouse or keyboard, with
 screen-reader support), content forms with nested editors, reference pickers,
 profit readouts and thumbnails, project and export settings, Problems, mods,
 an art and animation studio (raster and SVG), creator patterns and interface
-panels. Tractr reads and writes its own project JSON (schema version 1) and does not
+panels. Tractr reads its own project JSON (schema versions 2 and 3) and does not
 import other formats. Tractr began as a port of a web version, which is now a
 separate project. See [ROADMAP.md](ROADMAP.md).
 
@@ -191,10 +191,13 @@ one back, or the `project.json` of a project folder.
 
 **A project doesn't open.** The editor says why. A project saved by a newer
 version of the editor (its schema version is newer than this engine supports)
-needs that version: update first. Tractr reads schema version 1 only; files in other
+needs that version: update first. Tractr reads schema versions 2 and 3; files in other
 formats are refused, not upgraded. When a
 current project fails to open, keep a copy of the file and open an issue with
 it attached.
+Classic projects keep version 2. Saving or exporting a project with the new
+gameplay features writes version 3, so older editors refuse it instead of losing
+those settings.
 
 **Export Game says "The player template has no … slot. Use the templates that
 came with this editor." or "The … player template has no …".** The player

@@ -25,6 +25,7 @@ fn custom_calendar() -> CalendarConfig {
     CalendarConfig {
         seasons: vec![season("a", "Alpha", 10), season("b", "Beta", 10), season("c", "Gamma", 10)],
         festivals: Vec::new(),
+        ..CalendarConfig::default()
     }
 }
 
@@ -37,7 +38,9 @@ fn calendar_with_festival() -> CalendarConfig {
             season_id: "a".to_owned(),
             day: 5,
             music: None,
+            ..CalendarFestival::default()
         }],
+        ..CalendarConfig::default()
     }
 }
 
@@ -93,8 +96,11 @@ fn resolves_day_of_season_season_year_across_uneven_and_even_custom_calendars() 
 
 #[test]
 fn honors_each_seasons_own_length_for_heterogeneous_calendars() {
-    let uneven =
-        CalendarConfig { seasons: vec![season("short", "Short", 5), season("long", "Long", 20)], festivals: vec![] };
+    let uneven = CalendarConfig {
+        seasons: vec![season("short", "Short", 5), season("long", "Long", 20)],
+        festivals: vec![],
+        ..CalendarConfig::default()
+    };
     assert_eq!(game_time::day_of_season(&uneven, 5), 5);
     assert_eq!(game_time::season_for_day(&uneven, 5), "short");
     assert_eq!(game_time::day_of_season(&uneven, 6), 1);
@@ -106,12 +112,13 @@ fn honors_each_seasons_own_length_for_heterogeneous_calendars() {
 
 #[test]
 fn falls_back_to_the_classic_four_season_calendar_when_seasons_is_empty_or_degenerate() {
-    let empty = CalendarConfig { seasons: vec![], festivals: vec![] };
+    let empty = CalendarConfig { seasons: vec![], festivals: vec![], ..CalendarConfig::default() };
     assert_eq!(season_ids(&game_time::calendar_seasons(&empty)), ["spring", "summer", "fall", "winter"]);
     assert_eq!(game_time::season_for_day(&empty, 1), "spring");
     assert_eq!(game_time::season_for_day(&empty, 29), "summer");
 
-    let all_zero = CalendarConfig { seasons: vec![season("x", "X", 0)], festivals: vec![] };
+    let all_zero =
+        CalendarConfig { seasons: vec![season("x", "X", 0)], festivals: vec![], ..CalendarConfig::default() };
     assert_eq!(season_ids(&game_time::calendar_seasons(&all_zero)), ["spring", "summer", "fall", "winter"]);
 }
 
@@ -120,7 +127,7 @@ fn season_by_id_looks_up_the_effective_fallback_safe_season_list() {
     let calendar = custom_calendar();
     assert_eq!(game_time::season_by_id(&calendar, "b").map(|s| s.name.as_str()), Some("Beta"));
     assert!(game_time::season_by_id(&calendar, "nope").is_none());
-    let empty = CalendarConfig { seasons: vec![], festivals: vec![] };
+    let empty = CalendarConfig { seasons: vec![], festivals: vec![], ..CalendarConfig::default() };
     assert_eq!(game_time::season_by_id(&empty, "spring").map(|s| s.name.as_str()), Some("Spring"));
 }
 
@@ -408,7 +415,9 @@ fn issue_calendar() -> CalendarConfig {
             season_id: "summer".to_owned(),
             day: 3,
             music: None,
+            ..CalendarFestival::default()
         }],
+        ..CalendarConfig::default()
     }
 }
 
@@ -474,6 +483,7 @@ fn a_repeated_season_id_cannot_trap_the_calendar() {
     let calendar = CalendarConfig {
         seasons: vec![season("a", "A", 2), season("b", "B", 2), season("a", "A again", 3)],
         festivals: Vec::new(),
+        ..CalendarConfig::default()
     };
     assert_eq!(season_ids(&game_time::calendar_seasons(&calendar)), vec!["a", "b"]);
     let (ctx, mut state) = calendar_game(calendar, "a", 1);
@@ -533,9 +543,9 @@ proptest::proptest! {
                 season_id: seasons[festival_season].id.clone(),
                 day: festival_day,
                 music: None,
-            }],
+             ..CalendarFestival::default() }],
             seasons: seasons.clone(),
-        };
+         ..CalendarConfig::default() };
         let start = start % seasons.len();
         let (ctx, mut state) = calendar_game(calendar, &seasons[start].id, start_day);
         let year_length: u32 = lengths.iter().sum();

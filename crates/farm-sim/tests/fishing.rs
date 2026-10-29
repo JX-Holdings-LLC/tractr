@@ -41,6 +41,7 @@ fn carp(difficulty: f64) -> FishTableEntry {
         item_id: "fish-carp".to_owned(),
         weight: 1,
         difficulty: units::from_authoring::<Probability>(difficulty),
+        ..FishTableEntry::default()
     }
 }
 

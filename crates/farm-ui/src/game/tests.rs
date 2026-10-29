@@ -18,6 +18,61 @@ fn command(actions: &[GameAction]) -> Option<&Command> {
     })
 }
 
+#[test]
+fn hud_buff_icons_and_time_disappear_at_expiration() {
+    let mut fixture = Fixture::starter();
+    let images = |fixture: &Fixture| {
+        fixture.last.commands.iter().filter(|command| matches!(command, farm_render::DrawCmd::Image { .. })).count()
+    };
+    fixture.idle();
+    let before = images(&fixture);
+    farm_sim::buffs::apply(
+        &fixture.ctx,
+        &mut fixture.state,
+        &farm_sim::schema::BuffDefinition {
+            id: "lucky-soup".into(),
+            stat: "luck".into(),
+            amount: 20,
+            duration_minutes: 10,
+            icon: Some("seed-wheat".into()),
+            ..Default::default()
+        },
+        "soup",
+    );
+    fixture.idle();
+    assert_eq!(images(&fixture), before + 1, "the authored item icon is drawn");
+    assert!(fixture.texts().iter().any(|text| text == "lucky-soup"));
+    assert!(fixture.texts().iter().any(|text| text == "10 min"));
+    fixture.state.clock.time_minutes += farm_sim::units::minutes(10);
+    fixture.idle();
+    assert_eq!(images(&fixture), before);
+    assert!(!fixture.texts().iter().any(|text| text == "lucky-soup"));
+}
+
+#[test]
+fn skill_reward_stats_follow_the_players_language() {
+    let mut fixture = Fixture::with(|project| {
+        project.settings.skill_definitions = Some(vec![farm_sim::schema::SkillDefinition {
+            id: "gardening".into(),
+            name: "Gardening".into(),
+            rewards: vec![farm_sim::schema::SkillReward {
+                level: 1,
+                stat: "maxHealth".into(),
+                amount: 5,
+                ..Default::default()
+            }],
+            ..Default::default()
+        }]);
+    });
+    fixture.game_ui.panel = Some(Panel::Inventory);
+    for (language, expected) in [(crate::i18n::Lang::En, "Maximum health"), (crate::i18n::Lang::Es, "Salud máxima")] {
+        fixture.ui.set_lang(language);
+        fixture.idle();
+        assert!(fixture.texts().iter().any(|text| text.contains(expected)));
+        assert!(!fixture.texts().iter().any(|text| text.contains("maxHealth")));
+    }
+}
+
 fn with_dialogue(fixture: &mut Fixture, npc: &str, dialogue: &str) {
     fixture.state.dialogue = Some(DialogueState { npc_id: npc.into(), dialogue_id: dialogue.into(), line: None });
     fixture.idle();
@@ -631,4 +686,37 @@ fn the_pointer_over_a_pack_minigame_reaches_it_in_canvas_units() {
     assert!(matches!(&dragged_in[..], [p] if !p.down && !p.pressed), "hovering only: {dragged_in:?}");
     let up = UiInput { pointer: physical(100.0, 50.0), pointer_released: true, ..UiInput::default() };
     assert!(pointers(fixture.frame(up)).iter().all(|p| !p.released && !p.pressed));
+}
+
+#[test]
+fn failed_request_log_shows_deadline_and_actual_rolled_objective() {
+    use farm_sim::schema::{Quest, QuestObjective};
+    let mut fixture = Fixture::with(|project| {
+        project.quests = vec![Quest {
+            id: "request".into(),
+            name: "Request".into(),
+            objectives: vec![QuestObjective {
+                id: "collect".into(),
+                r#type: "collect".into(),
+                description: "Outdated template target".into(),
+                target_item_id: Some("material-wood".into()),
+                target_item_quantity: Some(9),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }];
+    });
+    let request = fixture.ctx.content.quests[0].clone();
+    let progress = fixture.state.quests.get_mut("request").unwrap();
+    progress.status = "failed".into();
+    progress.deadline_day = Some(5);
+    progress.request = Some(Box::new(request));
+    fixture.game_ui.panel = Some(Panel::Quests);
+    fixture.idle();
+    fixture.idle();
+    let texts = fixture.texts();
+    assert!(texts.iter().any(|text| text == "FAILED QUESTS"), "{texts:?}");
+    assert!(texts.iter().any(|text| text.contains("Deadline: day 5")), "{texts:?}");
+    assert!(texts.iter().any(|text| text.contains("Collect 9 ×")), "{texts:?}");
+    assert!(!texts.iter().any(|text| text.contains("Outdated template target")), "{texts:?}");
 }

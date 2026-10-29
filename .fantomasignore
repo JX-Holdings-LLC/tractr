@@ -1,0 +1,7 @@
+# Deterministic generators own these files (tools/codegen/check.sh).
+src/FarmEngine.Authoring/SchemaJson.fs
+src/FarmEngine.Authoring/FontCoverage.fs
+src/FarmEngine.Authoring.Net/RecordJson.fs
+src/FarmEngine.Authoring.Net/RecordWith.fs
+**/bin/**
+**/obj/**

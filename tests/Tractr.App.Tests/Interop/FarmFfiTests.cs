@@ -12,6 +12,54 @@ namespace Tractr.App.Tests.Interop;
 public sealed class FarmFfiTests
 {
     [Fact]
+    public void MissingAudioDependencyLoadsOnlyTheApplicationLocalSilentEngine()
+    {
+        var tried = new List<string>();
+        var result = NativeMethods.LoadWithSilentFallback("/app/libfarm_ffi.so", "/app/libfarm_ffi_silent.so", path =>
+        {
+            tried.Add(path);
+            if (tried.Count == 1) throw new DllNotFoundException("libasound.so.2 is missing");
+            return 42;
+        });
+        Assert.Equal((nint)42, result);
+        Assert.Equal(["/app/libfarm_ffi.so", "/app/libfarm_ffi_silent.so"], tried);
+    }
+
+    [Fact]
+    public void MissingSilentEnginePreservesBothLoaderErrors()
+    {
+        var error = Assert.Throws<DllNotFoundException>(() => NativeMethods.LoadWithSilentFallback(
+            "/app/libfarm_ffi.so", "/app/libfarm_ffi_silent.so", path => throw new DllNotFoundException(path)));
+        Assert.Contains("/app/libfarm_ffi.so", error.Message, StringComparison.Ordinal);
+        Assert.Contains("/app/libfarm_ffi_silent.so", error.Message, StringComparison.Ordinal);
+    }
+
+    [NativeFact]
+    public void LinuxBuildShipsAWorkingSilentEngine()
+    {
+        if (!OperatingSystem.IsLinux() || !RustAudio.OutputAvailable) return;
+        var path = Path.Combine(Path.GetDirectoryName(typeof(FarmFfi).Assembly.Location)!, "libfarm_ffi_silent.so");
+        Assert.True(File.Exists(path), "Linux builds must ship the silent engine fallback");
+        var library = NativeLibrary.Load(path);
+        try
+        {
+            var abi = Marshal.GetDelegateForFunctionPointer<ReadAbi>(NativeLibrary.GetExport(library, "fe_abi_version"));
+            var audio = Marshal.GetDelegateForFunctionPointer<ReadAudio>(NativeLibrary.GetExport(library, "fe_audio_output"));
+            Assert.Equal(FarmFfi.AbiVersion, abi());
+            Assert.Equal((byte)0, audio());
+        }
+        finally
+        {
+            NativeLibrary.Free(library);
+        }
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate uint ReadAbi();
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate byte ReadAudio();
+
+    [Fact]
     public void ProbeNeverThrows()
     {
         _ = FarmFfi.IsAvailable;

@@ -9,6 +9,49 @@ namespace Tractr.App.Tests.ViewModels;
 public sealed class SettingsViewModelTests
 {
     [Fact]
+    public void WeekdayTranslationsSurviveLanguageChangesAndSaveAsOneEdit()
+    {
+        using var test = new TestWorkspace();
+        var before = test.Project;
+        var viewModel = new SettingsViewModel(test.Workspace);
+        viewModel.ResetWeekdays();
+        viewModel.Locale = "es";
+        viewModel.Weekdays[0].LocalName = "Lunes";
+        viewModel.Locale = "en";
+        Assert.Equal("", viewModel.Weekdays[0].LocalName);
+        viewModel.Weekdays[0].LocalName = "Monday";
+        viewModel.Locale = "es";
+        Assert.Equal("Lunes", viewModel.Weekdays[0].LocalName);
+        viewModel.WeekdayOffset = "2";
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Settings saved.", viewModel.Message);
+        var calendar = test.Project.Settings.Calendar;
+        Assert.NotNull(calendar.Weekdays);
+        Assert.NotNull(calendar.WeekdayOffset);
+        Assert.Equal(7, calendar.Weekdays.Value.Length);
+        Assert.Equal(2.0, calendar.WeekdayOffset.Value);
+        var words = calendar.Weekdays.Value[0].Words;
+        Assert.NotNull(words);
+        Assert.Equal("Lunes", words.Value.Single(word => word.Item1 == "es").Item2);
+        Assert.Equal("Monday", words.Value.Single(word => word.Item1 == "en").Item2);
+        test.Workspace.Undo();
+        Assert.Same(before, test.Project);
+    }
+
+    [Fact]
+    public void SavingFestivalDatesRetainsItsProgram()
+    {
+        using var test = new TestWorkspace();
+        var viewModel = new SettingsViewModel(test.Workspace);
+        viewModel.AddFestivalCommand.Execute(null);
+        var festival = viewModel.Festivals[^1];
+        festival.Program = FestivalProgram.Default.WithSceneId("scene-farm").WithEntranceSceneId("scene-farm").WithOpenMinute(540).WithCloseMinute(1020);
+        viewModel.SaveCommand.Execute(null);
+        Assert.Equal("Settings saved.", viewModel.Message);
+        Assert.Equal(festival.Program, test.Project.Settings.Calendar.Festivals[^1].Program.OrNull());
+    }
+
+    [Fact]
     public void ProjectSettingsSaveAsOneUndoStepAndErrorsNameTheField()
     {
         using var test = new TestWorkspace();

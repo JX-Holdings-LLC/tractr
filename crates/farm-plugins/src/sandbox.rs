@@ -636,12 +636,16 @@ mod tests {
         init(instance.as_mut(), r#"["onDayStart","onAction","onCropHarvest"]"#, source).unwrap();
         let thrown = dispatch(instance.as_mut(), "onDayStart", "{}").unwrap();
         assert_eq!(thrown.status, status::THREW);
-        assert_eq!(thrown.output, format!("{}…", "x".repeat(MAX_ERROR_MESSAGE_BYTES)));
+        assert!(
+            instance.call(GuestExport::OutputLen, &[]).unwrap() <= MAX_ERROR_MESSAGE_BYTES as i32,
+            "the guest itself bounds the ABI output"
+        );
+        assert_eq!(thrown.output, format!("{}…", "x".repeat(MAX_ERROR_MESSAGE_BYTES - 3)));
         let result = dispatch(instance.as_mut(), "onAction", "{}").unwrap();
         assert_eq!((result.status, result.oversized, result.output.as_str()), (status::OK, true, ""));
         // Cuts land on character boundaries.
         let accented = dispatch(instance.as_mut(), "onCropHarvest", "{}").unwrap();
-        assert_eq!(accented.output, format!("{}…", "é".repeat(MAX_ERROR_MESSAGE_BYTES / 2)));
+        assert_eq!(accented.output, format!("{}…", "é".repeat((MAX_ERROR_MESSAGE_BYTES - 3) / 2)));
     }
 
     #[test]

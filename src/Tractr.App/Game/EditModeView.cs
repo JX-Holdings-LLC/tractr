@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -14,6 +15,7 @@ using FarmEngine.Schemas;
 using Tractr.App.Localization;
 using Tractr.App.Projects;
 using Tractr.App.Services;
+using Tractr.App.ViewModels.EditMode;
 
 namespace Tractr.App.Game;
 
@@ -31,7 +33,8 @@ public sealed partial class EditModeView : UserControl
     public const string PortingNotice = "Tip: click the map (or Tab to it), then use the arrow keys and Enter or Space to edit from the keyboard. Letter keys pick tools (B brush, R rectangle, G fill, E erase…).";
 
     private readonly ProjectWorkspace _workspace;
-    private readonly MapCanvas _canvas = new() { Name = "EditCanvas", Cursor = new Cursor(StandardCursorType.Hand) };
+    private readonly EditorPreview _preview = new();
+    private readonly MapCanvas _canvas;
     private readonly ScrollViewer _scroller;
     private readonly Border _hover = new() { Name = "HoverHighlight", BorderThickness = new Thickness(2), IsHitTestVisible = false, IsVisible = false, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
     /// <summary>The keyboard editing cursor (web GameView edit cursor): a gold frame over one tile.</summary>
@@ -71,22 +74,38 @@ public sealed partial class EditModeView : UserControl
     private GameProject? _projectForCanvas;
     /// <summary>What the project info panel shows, to rebuild it only when that changed (not per painted tile).</summary>
     private string? _infoKey;
-    private string? _sceneId;
-    private string? _brush;
+    private string? _sceneId { get => ViewModel.SceneId; set => ViewModel.SceneId = value; }
+    private string? _brush { get => ViewModel.Brush; set => ViewModel.Brush = value; }
     /// <summary>The brush's art (null: none). With <see cref="_brush"/> the editor owns the brush, not the history.</summary>
-    private VisualRef? _brushVisual;
-    private string? _strokeId;
-    private int _strokeCount;
-    private (int X, int Y)? _lastPainted;
+    private VisualRef? _brushVisual { get => ViewModel.BrushVisual; set => ViewModel.BrushVisual = value; }
+    private string? _strokeId { get => ViewModel.StrokeId; set => ViewModel.StrokeId = value; }
+    private int _strokeCount { get => ViewModel.StrokeCount; set => ViewModel.StrokeCount = value; }
+    private (int X, int Y)? _lastPainted { get => ViewModel.LastPainted; set => ViewModel.LastPainted = value; }
     private bool _fitPending = true;
     private double _zoom = 1;
-    private (int X, int Y) _cursorTile;
+    private (int X, int Y) _cursorTile { get => ViewModel.CursorTile; set => ViewModel.CursorTile = value; }
     private bool _updatingScenes;
     private TopLevel? _topLevel;
+
+    public MapEditorViewModel ViewModel { get; }
 
     public EditModeView(ProjectWorkspace workspace)
     {
         _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
+        ViewModel = new MapEditorViewModel(workspace);
+        _editorMessage.Bind(TextBlock.TextProperty, new Binding(nameof(MapEditorViewModel.Message)) { Source = ViewModel });
+        void DraftText(TextBox box, Action<string> update)
+        {
+            box.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) update(box.Text ?? ""); };
+        }
+        DraftText(_sceneName, value => ViewModel.SceneName = value);
+        DraftText(_sceneWidth, value => ViewModel.SceneWidth = value);
+        DraftText(_sceneHeight, value => ViewModel.SceneHeight = value);
+        DraftText(_doorX, value => ViewModel.DoorX = value);
+        DraftText(_doorY, value => ViewModel.DoorY = value);
+        _doorReturn.IsCheckedChanged += (_, _) => ViewModel.ReturnDoor = _doorReturn.IsChecked == true;
+        _doorDestination.SelectionChanged += (_, _) => ViewModel.DoorDestinationId = (_doorDestination.SelectedItem as ComboBoxItem)?.Tag as string;
+        _canvas = new MapCanvas { Name = "EditCanvas", Cursor = new Cursor(StandardCursorType.Hand), SharedPreview = _preview };
         Name = "EditModeView";
         _hover.BorderBrush = (IBrush?)Application.Current?.FindResource("FarmAccentBrush") ?? Brushes.Gold;
         _hover.Background = new SolidColorBrush(Color.Parse("#33FFFFFF"));
@@ -109,11 +128,11 @@ public sealed partial class EditModeView : UserControl
         var center = BuildMapCenter();
 
         // Side panel: map tools, scene and transition controls, history.
-        _undo = Ui.Button(Ui.IconLabel("IconUndo", "Undo"), () => _workspace.Undo(), "tool");
+        _undo = Ui.Button(Ui.IconLabel("IconUndo", "Undo"), () => ViewModel.Undo(), "tool");
         _undo.Name = "UndoButton";
         AutomationProperties.SetName(_undo, "Undo");
         ToolTip.SetTip(_undo, EditorShortcuts.Display("Undo (Ctrl+Z)"));
-        _redo = Ui.Button(Ui.IconLabel("IconRedo", "Redo"), () => _workspace.Redo(), "tool");
+        _redo = Ui.Button(Ui.IconLabel("IconRedo", "Redo"), () => ViewModel.Redo(), "tool");
         _redo.Name = "RedoButton";
         AutomationProperties.SetName(_redo, "Redo");
         ToolTip.SetTip(_redo, EditorShortcuts.Display("Redo (Ctrl+Y)"));
@@ -121,25 +140,30 @@ public sealed partial class EditModeView : UserControl
 
         // The tabs, in EditorTab order.
         _tabs = new TabControl { Name = "EditorTabs" };
-        _contentEditor = new ContentEditorView(workspace, PickOnMap);
+        ViewModel.NavigationRequested += (tab, scene) =>
+        {
+            if (scene is not null && _workspace.Current?.Scenes.Any(candidate => candidate.Id == scene) == true) SelectScene(scene);
+            _tabs.SelectedIndex = (int)tab;
+        };
+        _contentEditor = new ContentEditorView(workspace, PickOnMap, _preview);
         _settingsEditor = new SettingsEditorView(workspace, PickOnMap);
         _modsEditor = new ModsEditorView(workspace);
         _artEditor = new ArtEditorView(workspace, (type, visual) =>
         {
             UseBrush(type, visual);
             SelectedTab = EditorTab.Map;
-        });
+        }, _preview);
         _workshop = new WorkshopView(workspace, () => _sceneId, PickOnMap, OpenWorkshopLink);
         _interfaceEditor = new InterfaceEditorView(workspace);
         _problems = new ProblemsView(workspace, OpenProblem);
-        AddTab(EditorTab.Map, "Map", center);
-        AddTab(EditorTab.Content, "Content", _contentEditor);
-        AddTab(EditorTab.Problems, "Problems", _problems);
-        AddTab(EditorTab.Settings, "Settings", _settingsEditor);
-        AddTab(EditorTab.Mods, "Mods", _modsEditor);
-        AddTab(EditorTab.Art, "Art", _artEditor);
-        AddTab(EditorTab.Workshop, "Workshop", _workshop);
-        AddTab(EditorTab.Interface, "Interface", _interfaceEditor);
+        AddTab(EditorTab.Map, EditorStrings.Get("tab.map"), center);
+        AddTab(EditorTab.Content, EditorStrings.Get("tab.content"), _contentEditor);
+        AddTab(EditorTab.Problems, EditorStrings.Get("tab.problems"), _problems);
+        AddTab(EditorTab.Settings, EditorStrings.Get("tab.settings"), _settingsEditor);
+        AddTab(EditorTab.Mods, EditorStrings.Get("tab.mods"), _modsEditor);
+        AddTab(EditorTab.Art, EditorStrings.Get("tab.art"), _artEditor);
+        AddTab(EditorTab.Workshop, EditorStrings.Get("tab.workshop"), _workshop);
+        AddTab(EditorTab.Interface, EditorStrings.Get("tab.interface"), _interfaceEditor);
         _tabs.SelectionChanged += OnTabChanged;
         SelectedTab = EditorTab.Map;
         var dock = new DockPanel();
@@ -291,7 +315,7 @@ public sealed partial class EditModeView : UserControl
     public EditorTab SelectedTab
     {
         get => (EditorTab)_tabs.SelectedIndex;
-        set => _tabs.SelectedIndex = (int)value;
+        set => ViewModel.Navigate(value);
     }
 
     private void AddTab(EditorTab tab, string header, Control content)
@@ -305,6 +329,7 @@ public sealed partial class EditModeView : UserControl
     {
         if (!ReferenceEquals(args.Source, _tabs)) return;
         var tab = SelectedTab;
+        ViewModel.SelectedTab = tab;
         _sidePanel.IsVisible = tab == EditorTab.Map;
         switch (tab)
         {
@@ -381,10 +406,7 @@ public sealed partial class EditModeView : UserControl
 
     private void SetBrush(string? value, VisualRef? visual)
     {
-        _brush = value;
-        _brushVisual = value is null ? null : visual;
-        // The brush is editor state, not content: no undo step (#45).
-        if (value is not null) _workspace.ApplyWithoutHistory(Edits.SelectBrush(value, visual));
+        ViewModel.SelectBrush(value, visual);
         _fillScene.IsEnabled = value is not null;
         if (value is not null)
         {
@@ -521,29 +543,24 @@ public sealed partial class EditModeView : UserControl
     /// (clears crop and node, updates the selected tile type).
     /// Inside a drag stroke the paints merge into one undo entry.
     /// </summary>
-    public void PaintTile(int x, int y)
-    {
-        var brush = _brush;
-        var scene = CurrentScene();
-        if (brush is null || scene is null || y < 0 || y >= scene.Tiles.Length || x < 0 || x >= scene.Tiles[y].Length)
-        {
-            return;
-        }
+    public void PaintTile(int x, int y) => ViewModel.PaintTile(x, y);
 
-        var edit = Edits.PaintTiles(scene.Id, _selectedLayer, new[] { new ValueTuple<int, int>(x, y) }, brush);
-        if (_strokeId is { } strokeId)
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        foreach (var tab in Enum.GetValues<EditorTab>())
         {
-            _workspace.ApplyInStroke(strokeId, edit);
-        }
-        else
-        {
-            _workspace.Apply(edit);
+            if (_tabs.Items[(int)tab] is TabItem item)
+            {
+                item.Header = EditorStrings.Get("tab." + tab.ToString().ToLowerInvariant());
+            }
         }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        EditorStrings.LanguageChanged += OnLanguageChanged;
+        OnLanguageChanged(this, EventArgs.Empty);
         _topLevel = TopLevel.GetTopLevel(this);
         _topLevel?.AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
@@ -562,11 +579,13 @@ public sealed partial class EditModeView : UserControl
         }
 
         _canvas.Dispose();
+        _preview.Dispose();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        EditorStrings.LanguageChanged -= OnLanguageChanged;
         _topLevel?.RemoveHandler(KeyDownEvent, OnKeyDown);
         _topLevel = null;
         EndStroke();
@@ -595,12 +614,12 @@ public sealed partial class EditModeView : UserControl
 
         if (e.Key == Key.Z && !shift)
         {
-            _workspace.Undo();
+            ViewModel.Undo();
             e.Handled = true;
         }
         else if (e.Key == Key.Y || (e.Key == Key.Z && shift))
         {
-            _workspace.Redo();
+            ViewModel.Redo();
             e.Handled = true;
         }
     }
@@ -612,7 +631,7 @@ public sealed partial class EditModeView : UserControl
         if (e.Kind == ProjectChangeKind.Edited && _brush is not null && _workspace.Current is { } current
             && (current.SelectedTileType != _brush || !Equals(current.SelectedTileVisual.OrNull(), _brushVisual)))
         {
-            _workspace.ApplyWithoutHistory(Edits.SelectBrush(_brush, _brushVisual));
+            ViewModel.ApplyWithoutHistory(Edits.SelectBrush(_brush, _brushVisual));
             return;
         }
 
@@ -632,18 +651,7 @@ public sealed partial class EditModeView : UserControl
         }
     }
 
-    private Scene? CurrentScene()
-    {
-        var project = _workspace.Current;
-        if (project is null)
-        {
-            return null;
-        }
-
-        return project.Scenes.FirstOrDefault(s => s.Id == _sceneId)
-            ?? project.Scenes.FirstOrDefault(s => s.Id == project.Player.SceneId)
-            ?? project.Scenes.FirstOrDefault();
-    }
+    private Scene? CurrentScene() => ViewModel.Scene;
 
     private void Refresh()
     {
@@ -828,7 +836,7 @@ public sealed partial class EditModeView : UserControl
         _paletteKey = key;
         foreach (var image in _palette.GetLogicalDescendants().OfType<Image>()) VisualPreview.Release(image);
         _palette.Children.Clear();
-        using var art = terrains.Any(terrain => terrain.Visual.OrNull() is not null) ? new VisualPreview() : null;
+        using var art = terrains.Any(terrain => terrain.Visual.OrNull() is not null) ? new VisualPreview(_preview) : null;
         void Swatch(TerrainDefinition? terrain)
         {
             var label = terrain is null ? EditorStrings.Get("palette.inspect") : string.IsNullOrWhiteSpace(terrain.Name) ? terrain.Id : terrain.Name;
@@ -963,7 +971,7 @@ public sealed partial class EditModeView : UserControl
                 break;
             case var key when (e.KeyModifiers & KeyModifiers.Shift) == 0 && ToolKeys.TryGetValue(key, out var tool):
                 Tool = tool;
-                _editorMessage.Text = $"{ToolLabel(tool)} tool.";
+                ViewModel.Message = $"{ToolLabel(tool)} tool.";
                 break;
             default:
                 return;
@@ -1010,7 +1018,7 @@ public sealed partial class EditModeView : UserControl
         if (_gestureStart is not null)
         {
             UpdateGesturePreview(tile, tile);
-            _editorMessage.Text = $"Corner marked at ({tile.X}, {tile.Y}). Move to the opposite corner and press Enter; Escape cancels.";
+            ViewModel.Message = $"Corner marked at ({tile.X}, {tile.Y}). Move to the opposite corner and press Enter; Escape cancels.";
             return;
         }
 
@@ -1022,7 +1030,7 @@ public sealed partial class EditModeView : UserControl
         _gestureStart = null;
         _lastPainted = null;
         _hover.IsVisible = false;
-        _editorMessage.Text = Tool == MapTool.Select ? "Selection cancelled." : "Rectangle cancelled.";
+        ViewModel.Message = Tool == MapTool.Select ? "Selection cancelled." : "Rectangle cancelled.";
     }
 
     private void EndStroke()

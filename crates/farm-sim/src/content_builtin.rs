@@ -554,6 +554,7 @@ fn fish(item_id: &str, weight: u32, difficulty: f64) -> FishTableEntry {
         item_id: item_id.to_owned(),
         weight,
         difficulty: units::from_authoring::<units::Probability>(difficulty),
+        ..FishTableEntry::default()
     }
 }
 

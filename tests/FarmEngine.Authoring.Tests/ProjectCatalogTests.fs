@@ -10,10 +10,11 @@ let private same (expected: GameProject) (actual: GameProject) =
 
 // ── The sample games against the golden content fixtures ────────────────────
 
-/// The golden content fixtures hold the sample projects (with pinned times), at the current
-/// schema version.
-let samples : obj[] seq =
-    [ "starter-farm"; "cozy-garden"; "quest-rpg"; "blank" ] |> Seq.map (fun name -> [| box name |])
+/// The golden content fixtures pin classic sample projects. New templates opt into the
+/// current schema and weekdays; their remaining authored content stays unchanged.
+let samples: obj[] seq =
+    [ "starter-farm"; "cozy-garden"; "quest-rpg"; "blank" ]
+    |> Seq.map (fun name -> [| box name |])
 
 let private build (name: string) =
     match name with
@@ -24,16 +25,38 @@ let private build (name: string) =
     | _ -> invalidArg (nameof name) name
 
 [<Theory; MemberData(nameof samples)>]
-let ``sample projects match the golden content fixtures`` (name: string) =
-    let expected = Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ]) |> Json.stableStringify
-    let stable (project: GameProject) = SchemaJson.encodeGameProject project |> Json.stableStringify
+let ``sample projects retain classic content with explicit new template defaults`` (name: string) =
+    let expected =
+        Json.get "project" (readJson [ "Golden"; "content"; name + ".json" ])
+        |> Json.stableStringify
+
+    let stable (project: GameProject) =
+        SchemaJson.encodeGameProject project |> Json.stableStringify
+
     let project = build name
-    // The factory output is already in the current schema shape…
-    assertSameStable name expected (stable project)
-    // …and loading leaves it as it is.
+    Assert.Equal(3.0, project.SchemaVersion)
+
+    Assert.Equal<string list>(
+        [ "monday"; "tuesday"; "wednesday"; "thursday"; "friday"; "saturday"; "sunday" ],
+        project.Settings.Calendar.Weekdays.Value |> List.map _.Id
+    )
+
+    let classic =
+        { project with
+            SchemaVersion = 2.0
+            Settings =
+                { project.Settings with
+                    Calendar =
+                        { project.Settings.Calendar with
+                            Weekdays = None
+                        }
+                }
+        }
+
+    assertSameStable name expected (stable classic)
+    // Loading preserves the new template defaults as well as the rest of the project.
     let loaded = ProjectLoad.loadProject (ProjectLoad.toJson project)
     Assert.True(loaded.Ok, String.concat "; " loaded.Errors)
-    assertSameStable (name + " (loaded)") expected (stable loaded.Data.Value)
     Assert.Equal(stableOf SchemaJson.encodeGameProject project, stableOf SchemaJson.encodeGameProject loaded.Data.Value)
 
 [<Fact>]
@@ -41,7 +64,10 @@ let ``the samples look and play differently`` () =
     let starter = ProjectCatalog.CreateInitialProject fixedTime
     let cozy = ProjectCatalog.CreateCozyFarmProject fixedTime
     let quest = ProjectCatalog.CreateQuestRpgProject fixedTime
-    let farm (project: GameProject) = project.Scenes |> List.find (fun scene -> scene.Id = "scene-farm")
+
+    let farm (project: GameProject) =
+        project.Scenes |> List.find (fun scene -> scene.Id = "scene-farm")
+
     let tiles (scene: Scene) = scene.Tiles |> List.concat
     // The garden: a pond, growing beds (one ready to harvest) and two hens.
     let garden = farm cozy
@@ -49,20 +75,30 @@ let ``the samples look and play differently`` () =
     Assert.True(tiles garden |> List.exists (fun tile -> tile.Background = "water"))
     let crops = tiles garden |> List.choose (fun tile -> tile.Crop)
     Assert.Equal<string list>([ "carrot"; "strawberry"; "wheat" ], crops |> List.map (fun crop -> crop.Type) |> List.distinct |> List.sort)
-    Assert.Equal(2, cozy.Animals |> List.filter (fun animal -> animal.SceneId = "scene-farm") |> List.length)
+
+    Assert.Equal(
+        2,
+        cozy.Animals
+        |> List.filter (fun animal -> animal.SceneId = "scene-farm")
+        |> List.length
+    )
+
     Assert.NotEqual<Tile list>(tiles (farm starter), tiles garden)
     // The quest: the farm's south door leads to a village square, where the elder waits.
     let square = quest.Scenes |> List.find (fun scene -> scene.Id = "scene-square")
     Assert.Equal("scene-square", (farm quest).Transitions |> List.exactlyOne |> fun t -> t.ToSceneId)
     Assert.Equal("scene-farm", square.Transitions |> List.exactlyOne |> fun t -> t.ToSceneId)
     Assert.Equal("scene-square", (quest.Npcs |> List.find (fun npc -> npc.Id = "npc-elder")).SceneId)
+
     for project in [ cozy; quest ] do
         Assert.Empty(Problems.collect project |> Problems.errors)
 
-let templates : obj[] seq = seq {
-    for id in ProjectCatalog.All do
-        for now in [0.0; 123456789.0; 1790553600000.0] do yield [|box id; box now|]
-}
+let templates: obj[] seq =
+    seq {
+        for id in ProjectCatalog.All do
+            for now in [ 0.0; 123456789.0; 1790553600000.0 ] do
+                yield [| box id; box now |]
+    }
 
 [<Theory; MemberData(nameof templates)>]
 let ``every template is a valid project that compiles to a cartridge`` (id: string) (now: float) =
@@ -93,6 +129,7 @@ let ``sample routing and unknown template fallbacks`` (id: string) =
     let now = 42.0
     let starter = ProjectCatalog.CreateInitialProject now
     let blank = ProjectCatalog.CreateBlankProject now
+
     let factory =
         match id with
         | "cozy" -> Some(ProjectCatalog.CreateCozyFarmProject now)
@@ -112,7 +149,13 @@ let ``project ids are the creation time in base 36`` (now: float, expected: stri
 [<Fact>]
 let ``new projects take the template the name and an id`` () =
     let cozy = ProjectCatalog.CreateCozyFarmProject fixedTime
-    let named (id: string) = { cozy with Id = id; Name = "My Garden" }
+
+    let named (id: string) =
+        { cozy with
+            Id = id
+            Name = "My Garden"
+        }
+
     same (named "proj-loyw3v28") (ProjectCatalog.CreateNewProject("cozy", "My Garden", null, fixedTime))
     same (named "custom-id") (ProjectCatalog.CreateNewProject("cozy", "My Garden", "custom-id", fixedTime))
     same (named "") (ProjectCatalog.CreateNewProject("cozy", "My Garden", "", fixedTime))
@@ -124,6 +167,7 @@ let ``new projects take the template the name and an id`` () =
 [<Fact>]
 let ``the starter pack validates as a content pack and round trips`` () =
     let pack = ProjectCatalog.CreateContentDefaultPack()
+
     match PackRules.validateContentPack (SchemaJson.encodeContentPack pack) with
     | Ok validated -> Assert.Equal(stableOf SchemaJson.encodeContentPack pack, stableOf SchemaJson.encodeContentPack validated)
     | Error errors -> failwith (String.concat "; " errors)
@@ -163,7 +207,9 @@ let ``the starter project is seeded entirely from the pack`` () =
 [<Fact>]
 let ``the default player is pinned`` () =
     let expected =
-        Json.parse """{"x":5,"y":5,"direction":"down","sceneId":"scene-farm","inventory":[],"maxInventorySize":20,"money":100,"activeQuests":[],"completedQuests":[]}"""
+        Json.parse
+            """{"x":5,"y":5,"direction":"down","sceneId":"scene-farm","inventory":[],"maxInventorySize":20,"money":100,"activeQuests":[],"completedQuests":[]}"""
+
     Assert.Equal(Result.map Json.stableStringify expected, Ok(stableOf SchemaJson.encodePlayer (ProjectCatalog.CreateDefaultPlayer "scene-farm")))
 
 /// Port of the C# PolishAndEcosystemTests quest template case (m8 ecosystem).
@@ -182,7 +228,14 @@ let ``fresh projects are equal and independent`` () =
     let original = ProjectCatalog.CreateInitialProject 0.0
     let baseline = stableOf SchemaJson.encodeGameProject original
     let other = ProjectCatalog.CreateInitialProject 0.0
-    let emptied = { other with Scenes = []; Items = []; Weather = { other.Weather with Types = [] } }
+
+    let emptied =
+        { other with
+            Scenes = []
+            Items = []
+            Weather = { other.Weather with Types = [] }
+        }
+
     Assert.NotEqual(original, emptied)
     Assert.Equal(baseline, stableOf SchemaJson.encodeGameProject original)
     Assert.Equal(baseline, stableOf SchemaJson.encodeGameProject (ProjectCatalog.CreateInitialProject 0.0))
@@ -204,7 +257,12 @@ let ``sample transformations leave the initial game independent`` () =
 [<Fact>]
 let ``duplicate copies the project under a new id with its own game id`` () =
     let project = starter ()
-    let project = { project with Export = Some(Defaults.newExportSettings project) }
+
+    let project =
+        { project with
+            Export = Some(Defaults.newExportSettings project)
+        }
+
     let newId = ProjectCatalog.NewProjectId 1790553600000.0
     let copy = ProjectList.Duplicate(project, newId, null)
     Assert.Equal(newId, copy.Id)
@@ -215,7 +273,14 @@ let ``duplicate copies the project under a new id with its own game id`` () =
     Assert.Equal("local." + newId, copy.Export.Value.GameId)
     Assert.Equal(project.Export.Value.ExecutableName, copy.Export.Value.ExecutableName)
     // Everything else is the same game.
-    same { project with Id = newId; Name = copy.Name; Export = copy.Export } copy
+    same
+        { project with
+            Id = newId
+            Name = copy.Name
+            Export = copy.Export
+        }
+        copy
+
     Assert.Equal("Second Farm", (ProjectList.Duplicate(project, newId, " Second Farm ")).Name)
     Assert.True((ProjectList.Duplicate(starter (), newId, null)).Export.IsNone)
     let problems = errors copy

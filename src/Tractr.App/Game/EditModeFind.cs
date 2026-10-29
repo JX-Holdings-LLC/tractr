@@ -32,7 +32,7 @@ public sealed partial class EditModeView
     private readonly ListBox _quickOpenResults = new() { Name = "QuickOpenResults", MaxHeight = 360 };
     private List<FindResult> _found = [];
     /// <summary>A "Pick on map" waiting for a tile: what to do with it, and where to go back to.</summary>
-    private (Action<int, int> Done, string? ReturnScene, EditorTab ReturnTab)? _pick;
+    private (Action<int, int> Done, string? ReturnScene, EditorTab ReturnTab)? _pick { get => ViewModel.PendingPick; set => ViewModel.PendingPick = value; }
 
     /// <summary>The markers drawn over the scene on show.</summary>
     public IReadOnlyList<MapMarker> Markers => _markers;
@@ -83,6 +83,7 @@ public sealed partial class EditModeView
                 "arrival" => ("A", "#3B5BA9"),
                 "event" => ("!", "#9B2C6F"),
                 "mine" => ("M", "#3F3F46"),
+                "request-board" => ("Q", "#8A4B12"),
                 _ => ("S", "#0B6B3A"),
             };
             if (marker.Kind == "event" && (marker.X2 != marker.X || marker.Y2 != marker.Y))
@@ -144,24 +145,36 @@ public sealed partial class EditModeView
             case "door":
                 Tool = MapTool.Door;
                 ChooseDoor(tile.X, tile.Y);
-                _editorMessage.Text = $"{marker.Label}: edit it below.";
+                ViewModel.Message = $"{marker.Label}: edit it below.";
                 return true;
             case "arrival":
                 SelectScene(marker.TargetId);
                 Tool = MapTool.Door;
                 ChooseDoor(marker.FromX, marker.FromY);
                 SetCursor((marker.FromX, marker.FromY));
-                _editorMessage.Text = $"The door that lands there: edit it below.";
+                ViewModel.Message = $"The door that lands there: edit it below.";
                 return true;
             case "event":
                 SelectedTab = EditorTab.Content;
                 _contentEditor.ViewModel.SelectEntry("Events", marker.TargetId);
                 return true;
             case "mine":
-                SelectedTab = EditorTab.Settings;
+                if (string.IsNullOrEmpty(marker.TargetId))
+                {
+                    SelectedTab = EditorTab.Settings;
+                }
+                else
+                {
+                    SelectedTab = EditorTab.Content;
+                    _contentEditor.ViewModel.SelectEntry("Mines", marker.TargetId);
+                }
+                return true;
+            case "request-board":
+                SelectedTab = EditorTab.Content;
+                _contentEditor.ViewModel.SelectEntry("Request boards", marker.TargetId);
                 return true;
             default:
-                _editorMessage.Text = marker.Label;
+                ViewModel.Message = marker.Label;
                 return true;
         }
     }
@@ -175,43 +188,21 @@ public sealed partial class EditModeView
     /// </summary>
     public void PickOnMap(string sceneId, string prompt, Action<int, int> done)
     {
-        ArgumentNullException.ThrowIfNull(done);
-        var returnTab = SelectedTab;
-        var returnScene = _sceneId;
-        SelectedTab = EditorTab.Map;
-        if (_workspace.Current?.Scenes.Any(s => s.Id == sceneId) == true && sceneId != _sceneId) SelectScene(sceneId);
-        _pick = (done, returnScene, returnTab);
-        _editorMessage.Text = $"{prompt} Escape cancels.";
+        ViewModel.BeginPick(sceneId, prompt, done);
         _canvas.Focus();
     }
 
     /// <summary>A pending pick takes the tile; true when one did.</summary>
-    private bool CompletePick((int X, int Y) tile)
-    {
-        if (_pick is not { } pick) return false;
-        _pick = null;
-        if (pick.ReturnScene is { } scene && scene != _sceneId) SelectScene(scene);
-        // The form gets the tile before its tab is shown again, so it keeps it as unsaved fields.
-        pick.Done(tile.X, tile.Y);
-        SelectedTab = pick.ReturnTab;
-        return true;
-    }
+    private bool CompletePick((int X, int Y) tile) => ViewModel.CompletePick(tile);
 
-    private void CancelPick()
-    {
-        if (_pick is not { } pick) return;
-        _pick = null;
-        if (pick.ReturnScene is { } scene && scene != _sceneId) SelectScene(scene);
-        SelectedTab = pick.ReturnTab;
-        _editorMessage.Text = "Pick cancelled.";
-    }
+    private void CancelPick() => ViewModel.CancelPick();
 
     /// <summary>The door form's arrival tile, clicked in the destination scene.</summary>
     private void PickDoorArrival()
     {
         if (_doorDestination.SelectedItem is not ComboBoxItem { Tag: string destination })
         {
-            _editorMessage.Text = "Choose the scene the door leads to first.";
+            ViewModel.Message = "Choose the scene the door leads to first.";
             return;
         }
 
@@ -230,7 +221,7 @@ public sealed partial class EditModeView
             _doorX.Text = x.ToString(CultureInfo.InvariantCulture);
             _doorY.Text = y.ToString(CultureInfo.InvariantCulture);
             _doorReturn.IsChecked = returning;
-            _editorMessage.Text = $"Arrival set to ({x}, {y}). Choose Save door to keep it.";
+            ViewModel.Message = $"Arrival set to ({x}, {y}). Choose Save door to keep it.";
         });
     }
 

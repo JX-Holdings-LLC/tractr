@@ -54,11 +54,13 @@ type NavigationTarget =
 /// and `Code` a stable dotted id (`dialogue.unreachable`) the UI can filter on. The extra
 /// members exist for C#, which reads them instead of matching on the unions.
 type Problem =
-    { Severity: Severity
-      Code: string
-      Message: string
-      Path: string
-      Target: NavigationTarget option }
+    {
+        Severity: Severity
+        Code: string
+        Message: string
+        Path: string
+        Target: NavigationTarget option
+    }
 
     member this.IsError = (this.Severity = Severity.Error)
     member this.IsWarning = (this.Severity = Severity.Warning)
@@ -122,16 +124,37 @@ type Problem =
         | Some target ->
             match target with
             | NavigationTarget.Scene(id, _, _) -> id
-            | NavigationTarget.Npc id | NavigationTarget.Item id | NavigationTarget.Crop id | NavigationTarget.Quest id
-            | NavigationTarget.Event id | NavigationTarget.Shop id | NavigationTarget.Recipe id | NavigationTarget.NodeType id
-            | NavigationTarget.MachineType id | NavigationTarget.AnimalSpecies id | NavigationTarget.FishTable id
-            | NavigationTarget.Action id | NavigationTarget.Minigame id | NavigationTarget.Pack id | NavigationTarget.Asset id
-            | NavigationTarget.Terrain id | NavigationTarget.Tool id | NavigationTarget.ItemCategory id
-            | NavigationTarget.CropQuality id | NavigationTarget.CropMutation id | NavigationTarget.Cutscene id
-            | NavigationTarget.HeartEvent id | NavigationTarget.Building id | NavigationTarget.PlacedBuilding id
-            | NavigationTarget.Monster id | NavigationTarget.Collection id | NavigationTarget.Bundle id
-            | NavigationTarget.Achievement id | NavigationTarget.Mail id -> id
-            | NavigationTarget.Settings | NavigationTarget.Interface -> null
+            | NavigationTarget.Npc id
+            | NavigationTarget.Item id
+            | NavigationTarget.Crop id
+            | NavigationTarget.Quest id
+            | NavigationTarget.Event id
+            | NavigationTarget.Shop id
+            | NavigationTarget.Recipe id
+            | NavigationTarget.NodeType id
+            | NavigationTarget.MachineType id
+            | NavigationTarget.AnimalSpecies id
+            | NavigationTarget.FishTable id
+            | NavigationTarget.Action id
+            | NavigationTarget.Minigame id
+            | NavigationTarget.Pack id
+            | NavigationTarget.Asset id
+            | NavigationTarget.Terrain id
+            | NavigationTarget.Tool id
+            | NavigationTarget.ItemCategory id
+            | NavigationTarget.CropQuality id
+            | NavigationTarget.CropMutation id
+            | NavigationTarget.Cutscene id
+            | NavigationTarget.HeartEvent id
+            | NavigationTarget.Building id
+            | NavigationTarget.PlacedBuilding id
+            | NavigationTarget.Monster id
+            | NavigationTarget.Collection id
+            | NavigationTarget.Bundle id
+            | NavigationTarget.Achievement id
+            | NavigationTarget.Mail id -> id
+            | NavigationTarget.Settings
+            | NavigationTarget.Interface -> null
 
     /// Tile to scroll to for a scene target (0 otherwise).
     member this.TargetX =
@@ -149,66 +172,84 @@ module ProblemPath =
     let private isIdentifier (key: string) =
         key.Length > 0
         && not (System.Char.IsDigit key.[0])
-        && key |> Seq.forall (fun c -> System.Char.IsLetterOrDigit c || c = '_' || c = '$' || c = '-')
+        && key
+           |> Seq.forall (fun c -> System.Char.IsLetterOrDigit c || c = '_' || c = '$' || c = '-')
 
     /// The member `key` of the value at `parent`: `parent.key`, or `parent["key"]` for a key
     /// that a dotted path would misread (a number, which reads as an index, or one with dots).
     let memberPath (parent: string) (key: string) : string =
-        if isIdentifier key then parent + "." + key else parent + "[" + Json.quote key + "]"
+        if isIdentifier key then
+            parent + "." + key
+        else
+            parent + "[" + Json.quote key + "]"
 
 /// Collects problems while the checks run.
 type internal Sink() =
     let items = ResizeArray<Problem>()
 
     member _.Add(severity: Severity, code: string, path: string, message: string, target: NavigationTarget option) =
-        items.Add { Severity = severity; Code = code; Message = message; Path = path; Target = target }
+        items.Add
+            {
+                Severity = severity
+                Code = code
+                Message = message
+                Path = path
+                Target = target
+            }
 
-    member this.Error(code, path, message, target) = this.Add(Severity.Error, code, path, message, target)
-    member this.Warning(code, path, message, target) = this.Add(Severity.Warning, code, path, message, target)
-    member this.Info(code, path, message, target) = this.Add(Severity.Info, code, path, message, target)
+    member this.Error(code, path, message, target) =
+        this.Add(Severity.Error, code, path, message, target)
+
+    member this.Warning(code, path, message, target) =
+        this.Add(Severity.Warning, code, path, message, target)
+
+    member this.Info(code, path, message, target) =
+        this.Add(Severity.Info, code, path, message, target)
 
     member _.ToList() : Problem list = List.ofSeq items
 
 /// Id sets every check looks things up in, built once per `Problems.collect`.
 type internal Context =
-    { Project: GameProject
-      Scenes: System.Collections.Generic.IDictionary<string, Scene>
-      ItemIds: System.Collections.Generic.HashSet<string>
-      NpcIds: System.Collections.Generic.HashSet<string>
-      QuestIds: System.Collections.Generic.HashSet<string>
-      ShopIds: System.Collections.Generic.HashSet<string>
-      ActionIds: System.Collections.Generic.HashSet<string>
-      MinigameIds: System.Collections.Generic.HashSet<string>
-      MachineTypeIds: System.Collections.Generic.HashSet<string>
-      NodeTypeIds: System.Collections.Generic.HashSet<string>
-      CropIds: System.Collections.Generic.HashSet<string>
-      SpeciesIds: System.Collections.Generic.HashSet<string>
-      AssetIds: System.Collections.Generic.HashSet<string>
-      SeasonIds: System.Collections.Generic.HashSet<string>
-      FestivalIds: System.Collections.Generic.HashSet<string>
-      WeatherIds: System.Collections.Generic.HashSet<string>
-      /// The game's terrains, tools, item categories, crop qualities and mutations (M1).
-      TerrainIds: System.Collections.Generic.HashSet<string>
-      ToolIds: System.Collections.Generic.HashSet<string>
-      CategoryIds: System.Collections.Generic.HashSet<string>
-      QualityIds: System.Collections.Generic.HashSet<string>
-      MutationIds: System.Collections.Generic.HashSet<string>
-      /// Cutscenes, sound assets and music assets (M2).
-      CutsceneIds: System.Collections.Generic.HashSet<string>
-      SoundIds: System.Collections.Generic.HashSet<string>
-      MusicIds: System.Collections.Generic.HashSet<string>
-      /// Building types and the buildings on the start map (M5), monsters (M7), collections,
-      /// bundles, achievements and letters (M6).
-      BuildingIds: System.Collections.Generic.HashSet<string>
-      PlacedBuildingIds: System.Collections.Generic.HashSet<string>
-      MonsterIds: System.Collections.Generic.HashSet<string>
-      CollectionIds: System.Collections.Generic.HashSet<string>
-      BundleIds: System.Collections.Generic.HashSet<string>
-      AchievementIds: System.Collections.Generic.HashSet<string>
-      MailIds: System.Collections.Generic.HashSet<string>
-      /// Flags something can set: `setFlag`/`clearFlag` and the variable outcomes, dialogue `eventFlag`s, the
-      /// project's flag table and every event's auto-managed fired flag.
-      KnownFlags: System.Collections.Generic.HashSet<string> }
+    {
+        Project: GameProject
+        Scenes: System.Collections.Generic.IDictionary<string, Scene>
+        ItemIds: System.Collections.Generic.HashSet<string>
+        NpcIds: System.Collections.Generic.HashSet<string>
+        QuestIds: System.Collections.Generic.HashSet<string>
+        ShopIds: System.Collections.Generic.HashSet<string>
+        ActionIds: System.Collections.Generic.HashSet<string>
+        MinigameIds: System.Collections.Generic.HashSet<string>
+        MachineTypeIds: System.Collections.Generic.HashSet<string>
+        NodeTypeIds: System.Collections.Generic.HashSet<string>
+        CropIds: System.Collections.Generic.HashSet<string>
+        SpeciesIds: System.Collections.Generic.HashSet<string>
+        AssetIds: System.Collections.Generic.HashSet<string>
+        SeasonIds: System.Collections.Generic.HashSet<string>
+        FestivalIds: System.Collections.Generic.HashSet<string>
+        WeatherIds: System.Collections.Generic.HashSet<string>
+        /// The game's terrains, tools, item categories, crop qualities and mutations (M1).
+        TerrainIds: System.Collections.Generic.HashSet<string>
+        ToolIds: System.Collections.Generic.HashSet<string>
+        CategoryIds: System.Collections.Generic.HashSet<string>
+        QualityIds: System.Collections.Generic.HashSet<string>
+        MutationIds: System.Collections.Generic.HashSet<string>
+        /// Cutscenes, sound assets and music assets (M2).
+        CutsceneIds: System.Collections.Generic.HashSet<string>
+        SoundIds: System.Collections.Generic.HashSet<string>
+        MusicIds: System.Collections.Generic.HashSet<string>
+        /// Building types and the buildings on the start map (M5), monsters (M7), collections,
+        /// bundles, achievements and letters (M6).
+        BuildingIds: System.Collections.Generic.HashSet<string>
+        PlacedBuildingIds: System.Collections.Generic.HashSet<string>
+        MonsterIds: System.Collections.Generic.HashSet<string>
+        CollectionIds: System.Collections.Generic.HashSet<string>
+        BundleIds: System.Collections.Generic.HashSet<string>
+        AchievementIds: System.Collections.Generic.HashSet<string>
+        MailIds: System.Collections.Generic.HashSet<string>
+        /// Flags something can set: `setFlag`/`clearFlag` and the variable outcomes, dialogue `eventFlag`s, the
+        /// project's flag table and every event's auto-managed fired flag.
+        KnownFlags: System.Collections.Generic.HashSet<string>
+    }
 
 module internal Context =
     open System.Collections.Generic
@@ -219,62 +260,95 @@ module internal Context =
         outcomes
         |> Seq.choose (fun o ->
             match o.Type with
-            | EventOutcomeTypes.SetFlag | EventOutcomeTypes.ClearFlag -> o.FlagName
+            | EventOutcomeTypes.SetFlag
+            | EventOutcomeTypes.ClearFlag -> o.FlagName
             // Variables are flags that hold a number or a text (M3).
-            | EventOutcomeTypes.SetVariable | EventOutcomeTypes.AddVariable -> o.Variable
+            | EventOutcomeTypes.SetVariable
+            | EventOutcomeTypes.AddVariable -> o.Variable
             | _ -> None)
 
     let create (project: GameProject) : Context =
         let scenes = Dictionary<string, Scene>()
+
         for scene in project.Scenes do
-            if not (scenes.ContainsKey scene.Id) then scenes.[scene.Id] <- scene
+            if not (scenes.ContainsKey scene.Id) then
+                scenes.[scene.Id] <- scene
+
         let crops = ids (ContentCompiler.mergeCrops project.CustomCrops |> List.map fst)
         let flags = HashSet<string>()
-        let add (xs: seq<string>) = for x in xs do flags.Add x |> ignore
+
+        let add (xs: seq<string>) =
+            for x in xs do
+                flags.Add x |> ignore
+
         add (project.EventFlags |> List.map fst)
         add (project.Events |> Seq.map (fun e -> EventsSchema.EventFiredFlag e.Id))
         add (project.Events |> Seq.collect (fun e -> flagsIn e.Outcomes))
         add (project.Actions |> Seq.collect (fun a -> flagsIn a.Outcomes))
-        add (project.Minigames |> Seq.collect (fun m -> m.ResultTiers |> Seq.collect (fun t -> flagsIn t.Outcomes)))
+
+        add (
+            project.Minigames
+            |> Seq.collect (fun m -> m.ResultTiers |> Seq.collect (fun t -> flagsIn t.Outcomes))
+        )
         // Rewards of collections, bundles and letters (M6) set flags too.
-        add (defaultArg project.Collections [] |> Seq.collect (fun c -> c.Rewards |> Seq.collect (fun r -> flagsIn r.Outcomes)))
+        add (
+            defaultArg project.Collections []
+            |> Seq.collect (fun c -> c.Rewards |> Seq.collect (fun r -> flagsIn r.Outcomes))
+        )
+
         add (defaultArg project.Bundles [] |> Seq.collect (fun b -> flagsIn b.Outcomes))
         add (defaultArg project.Mail [] |> Seq.collect (fun m -> flagsIn m.Outcomes))
-        let dialogueFlags (d: Dialogue) = d.Options |> Seq.choose (fun o -> o.EventFlag)
+
+        let dialogueFlags (d: Dialogue) =
+            d.Options |> Seq.choose (fun o -> o.EventFlag)
+
         add (project.Dialogues |> Seq.collect dialogueFlags)
         add (project.Npcs |> Seq.collect (fun n -> n.Dialogue |> Seq.collect dialogueFlags))
-        { Project = project
-          Scenes = scenes
-          ItemIds = ids (project.Items |> Seq.map (fun i -> i.Id))
-          NpcIds = ids (project.Npcs |> Seq.map (fun n -> n.Id))
-          QuestIds = ids (project.Quests |> Seq.map (fun q -> q.Id))
-          ShopIds = ids (project.Shops |> Seq.map (fun s -> s.Id))
-          ActionIds = ids (project.Actions |> Seq.map (fun a -> a.Id))
-          MinigameIds = ids (project.Minigames |> Seq.map (fun m -> m.Id))
-          MachineTypeIds = ids (project.MachineTypes |> Seq.map (fun m -> m.Id))
-          NodeTypeIds = ids (EditScenes.placeableNodeTypes project |> Seq.map (fun n -> n.Id))
-          CropIds = crops
-          SpeciesIds = ids (project.AnimalSpecies |> Seq.map (fun s -> s.Id))
-          AssetIds = ids (project.CustomAssets |> Seq.map (fun a -> a.Id))
-          SeasonIds = ids (project.Settings.Calendar.Seasons |> Seq.map (fun s -> s.Id))
-          FestivalIds = ids (project.Settings.Calendar.Festivals |> Seq.map (fun f -> f.Id))
-          WeatherIds = ids (project.Weather.Types |> Seq.map (fun w -> w.Id))
-          TerrainIds = ids (ContentCompiler.terrains project |> Seq.map (fun t -> t.Id))
-          ToolIds = ids (ContentCompiler.tools project |> Seq.map (fun t -> t.Id))
-          CategoryIds = ids (ContentCompiler.itemCategories project |> Seq.map (fun c -> c.Id))
-          QualityIds = ids (ContentCompiler.cropQualities project |> Seq.map (fun q -> q.Id))
-          MutationIds = ids (ContentCompiler.cropMutations project |> Seq.map (fun m -> m.Id))
-          CutsceneIds = ids (defaultArg project.Cutscenes [] |> Seq.map (fun c -> c.Id))
-          SoundIds = ids (project.CustomAssets |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Sound) |> Seq.map (fun a -> a.Id))
-          MusicIds = ids (project.CustomAssets |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Music) |> Seq.map (fun a -> a.Id))
-          BuildingIds = ids (defaultArg project.BuildingTypes [] |> Seq.map (fun b -> b.Id))
-          PlacedBuildingIds = ids (defaultArg project.Buildings [] |> Seq.map (fun b -> b.Id))
-          MonsterIds = ids (defaultArg project.Monsters [] |> Seq.map (fun m -> m.Id))
-          CollectionIds = ids (defaultArg project.Collections [] |> Seq.map (fun c -> c.Id))
-          BundleIds = ids (defaultArg project.Bundles [] |> Seq.map (fun b -> b.Id))
-          AchievementIds = ids (defaultArg project.Achievements [] |> Seq.map (fun a -> a.Id))
-          MailIds = ids (defaultArg project.Mail [] |> Seq.map (fun m -> m.Id))
-          KnownFlags = flags }
+
+        {
+            Project = project
+            Scenes = scenes
+            ItemIds = ids (project.Items |> Seq.map (fun i -> i.Id))
+            NpcIds = ids (project.Npcs |> Seq.map (fun n -> n.Id))
+            QuestIds = ids (project.Quests |> Seq.map (fun q -> q.Id))
+            ShopIds = ids (project.Shops |> Seq.map (fun s -> s.Id))
+            ActionIds = ids (project.Actions |> Seq.map (fun a -> a.Id))
+            MinigameIds = ids (project.Minigames |> Seq.map (fun m -> m.Id))
+            MachineTypeIds = ids (project.MachineTypes |> Seq.map (fun m -> m.Id))
+            NodeTypeIds = ids (EditScenes.placeableNodeTypes project |> Seq.map (fun n -> n.Id))
+            CropIds = crops
+            SpeciesIds = ids (project.AnimalSpecies |> Seq.map (fun s -> s.Id))
+            AssetIds = ids (project.CustomAssets |> Seq.map (fun a -> a.Id))
+            SeasonIds = ids (project.Settings.Calendar.Seasons |> Seq.map (fun s -> s.Id))
+            FestivalIds = ids (project.Settings.Calendar.Festivals |> Seq.map (fun f -> f.Id))
+            WeatherIds = ids (project.Weather.Types |> Seq.map (fun w -> w.Id))
+            TerrainIds = ids (ContentCompiler.terrains project |> Seq.map (fun t -> t.Id))
+            ToolIds = ids (ContentCompiler.tools project |> Seq.map (fun t -> t.Id))
+            CategoryIds = ids (ContentCompiler.itemCategories project |> Seq.map (fun c -> c.Id))
+            QualityIds = ids (ContentCompiler.cropQualities project |> Seq.map (fun q -> q.Id))
+            MutationIds = ids (ContentCompiler.cropMutations project |> Seq.map (fun m -> m.Id))
+            CutsceneIds = ids (defaultArg project.Cutscenes [] |> Seq.map (fun c -> c.Id))
+            SoundIds =
+                ids (
+                    project.CustomAssets
+                    |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Sound)
+                    |> Seq.map (fun a -> a.Id)
+                )
+            MusicIds =
+                ids (
+                    project.CustomAssets
+                    |> Seq.filter (fun a -> a.Type = CustomAssetTypes.Music)
+                    |> Seq.map (fun a -> a.Id)
+                )
+            BuildingIds = ids (defaultArg project.BuildingTypes [] |> Seq.map (fun b -> b.Id))
+            PlacedBuildingIds = ids (defaultArg project.Buildings [] |> Seq.map (fun b -> b.Id))
+            MonsterIds = ids (defaultArg project.Monsters [] |> Seq.map (fun m -> m.Id))
+            CollectionIds = ids (defaultArg project.Collections [] |> Seq.map (fun c -> c.Id))
+            BundleIds = ids (defaultArg project.Bundles [] |> Seq.map (fun b -> b.Id))
+            AchievementIds = ids (defaultArg project.Achievements [] |> Seq.map (fun a -> a.Id))
+            MailIds = ids (defaultArg project.Mail [] |> Seq.map (fun m -> m.Id))
+            KnownFlags = flags
+        }
 
     /// A scene tile is inside the scene grid.
     let tileInScene (context: Context) (sceneId: string) (x: float) (y: float) =

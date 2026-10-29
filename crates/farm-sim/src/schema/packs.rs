@@ -230,6 +230,8 @@ pub struct PackContent {
     /// Monsters the pack adds or replaces (M9: the M7 content).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monsters: Option<Vec<MonsterDefinition>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skills: Option<Vec<super::SkillDefinition>>,
     /// Game panels the pack adds (M9), shown only with `permissions.uiPanels`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_panels: Option<Vec<GamePanel>>,
@@ -444,6 +446,28 @@ pub enum PluginMutation {
     SetRelationship { npc_id: String, status: String },
     #[serde(rename = "sendMail")]
     SendMail { mail_id: String },
+    #[serde(rename = "setInventorySize")]
+    SetInventorySize {
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
+    #[serde(rename = "addInventorySize")]
+    AddInventorySize {
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
+    #[serde(rename = "addMaxEnergy")]
+    AddMaxEnergy {
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
+    #[serde(rename = "addMaxHealth")]
+    AddMaxHealth {
+        #[serde(with = "crate::units::int")]
+        amount: i32,
+    },
+    #[serde(rename = "applyBuff")]
+    ApplyBuff { buff: super::BuffDefinition },
     #[serde(rename = "modifyHealth")]
     ModifyHealth {
         /// int, -1000..1000.
@@ -488,6 +512,11 @@ impl PluginMutation {
             Self::RemoveMachine { .. } => "removeMachine",
             Self::SetRelationship { .. } => "setRelationship",
             Self::SendMail { .. } => "sendMail",
+            Self::SetInventorySize { .. } => "setInventorySize",
+            Self::AddInventorySize { .. } => "addInventorySize",
+            Self::AddMaxEnergy { .. } => "addMaxEnergy",
+            Self::AddMaxHealth { .. } => "addMaxHealth",
+            Self::ApplyBuff { .. } => "applyBuff",
             Self::ModifyHealth { .. } => "modifyHealth",
             Self::SaveData { .. } => "saveData",
         }

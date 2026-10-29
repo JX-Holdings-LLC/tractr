@@ -6,10 +6,12 @@ open FarmEngine.Schemas
 /// one and structural sharing keeps that cheap. `Stroke` names the drag-paint stroke whose edits
 /// are being merged into the newest history entry (see `applyInStroke`).
 type Document =
-    { Project: GameProject
-      Past: GameProject list
-      Future: GameProject list
-      Stroke: string option }
+    {
+        Project: GameProject
+        Past: GameProject list
+        Future: GameProject list
+        Stroke: string option
+    }
 
 module Document =
     /// Undo depth (web `UNDO_LIMIT`).
@@ -17,7 +19,12 @@ module Document =
     let UndoLimit = 50
 
     let create (project: GameProject) =
-        { Project = project; Past = []; Future = []; Stroke = None }
+        {
+            Project = project
+            Past = []
+            Future = []
+            Stroke = None
+        }
 
     /// The project after `edit`, with no history bookkeeping (used by `apply` and by previews).
     /// A no-op hands back the same `GameProject` instance.
@@ -49,6 +56,7 @@ module Document =
         | SetSceneAllSeasons(sceneId, allSeasons) -> EditScenes.setSceneAllSeasons sceneId allSeasons project
         | SetSceneMonsters(sceneId, monsters) -> EditScenes.setSceneMonsters sceneId monsters project
         | SetSceneLayers(sceneId, layers) -> EditScenes.setSceneLayers sceneId layers project
+        | SetSceneForageSpawns(sceneId, tables) -> EditScenes.setSceneForageSpawns sceneId tables project
         | ResizeScene(sceneId, width, height) -> EditScenes.resizeScene sceneId width height project
         | DuplicateScene(sceneId, newSceneId) -> EditScenes.duplicateScene sceneId newSceneId project
         | SetTransition(sceneId, transition) -> EditScenes.setTransition sceneId transition project
@@ -83,6 +91,10 @@ module Document =
         | RemoveAnimalSpecies speciesId -> EditContent.removeAnimalSpecies speciesId project
         | UpsertAnimal animal -> EditContent.upsertAnimal animal project
         | RemoveAnimal animalId -> EditContent.removeAnimal animalId project
+        | UpsertMine mine -> EditContent.upsertMine mine project
+        | RemoveMine mineId -> EditContent.removeMine mineId project
+        | UpsertRequestBoard board -> EditContent.upsertRequestBoard board project
+        | RemoveRequestBoard boardId -> EditContent.removeRequestBoard boardId project
         | UpsertFishTable table -> EditContent.upsertFishTable table project
         | RemoveFishTable tableId -> EditContent.removeFishTable tableId project
         | UpsertAction action -> EditContent.upsertAction action project
@@ -144,16 +156,29 @@ module Document =
 
     let private push (project: GameProject) (past: GameProject list) =
         let past = project :: past
-        if past.Length > UndoLimit then List.truncate UndoLimit past else past
+
+        if past.Length > UndoLimit then
+            List.truncate UndoLimit past
+        else
+            past
 
     /// Applies `edit`, recording one undo entry when the project changed (a `Batch` is one entry).
     /// No-ops leave the document untouched (same instance). Ends any drag stroke.
     let apply (edit: Edit) (document: Document) : Document =
         let next = run document.Project edit
+
         if LanguagePrimitives.PhysicalEquality next document.Project then
-            (if document.Stroke.IsNone then document else { document with Stroke = None })
+            (if document.Stroke.IsNone then
+                 document
+             else
+                 { document with Stroke = None })
         else
-            { Project = next; Past = push document.Project document.Past; Future = []; Stroke = None }
+            {
+                Project = next
+                Past = push document.Project document.Past
+                Future = []
+                Stroke = None
+            }
 
     /// Drag painting (web `beginPaintStroke` / `endPaintStroke`): every edit of one stroke lands in
     /// ONE undo entry. The first changing edit of a stroke pushes history; later edits with the
@@ -161,13 +186,25 @@ module Document =
     /// redo) starts a new entry, so the stroke needs no explicit end.
     let applyInStroke (strokeId: string) (edit: Edit) (document: Document) : Document =
         let next = run document.Project edit
-        if LanguagePrimitives.PhysicalEquality next document.Project then document
-        elif document.Stroke = Some strokeId then { document with Project = next }
-        else { Project = next; Past = push document.Project document.Past; Future = []; Stroke = Some strokeId }
+
+        if LanguagePrimitives.PhysicalEquality next document.Project then
+            document
+        elif document.Stroke = Some strokeId then
+            { document with Project = next }
+        else
+            {
+                Project = next
+                Past = push document.Project document.Past
+                Future = []
+                Stroke = Some strokeId
+            }
 
     /// Ends the current stroke, so the next stroke edit starts a new history entry.
     let endStroke (document: Document) : Document =
-        if document.Stroke.IsNone then document else { document with Stroke = None }
+        if document.Stroke.IsNone then
+            document
+        else
+            { document with Stroke = None }
 
     /// Applies `edit` without an undo entry (#45): for editor state kept in the project that is
     /// not content, such as the tile brush (`SelectBrush`), so picking a brush never uses up undo
@@ -176,9 +213,17 @@ module Document =
     /// brush, selects its own again afterwards.
     let applyWithoutHistory (edit: Edit) (document: Document) : Document =
         let next = run document.Project edit
+
         if LanguagePrimitives.PhysicalEquality next document.Project then
-            (if document.Stroke.IsNone then document else { document with Stroke = None })
-        else { document with Project = next; Stroke = None }
+            (if document.Stroke.IsNone then
+                 document
+             else
+                 { document with Stroke = None })
+        else
+            { document with
+                Project = next
+                Stroke = None
+            }
 
     let canUndo (document: Document) = not document.Past.IsEmpty
     let canRedo (document: Document) = not document.Future.IsEmpty
@@ -186,9 +231,21 @@ module Document =
     let undo (document: Document) : Document =
         match document.Past with
         | [] -> document
-        | previous :: rest -> { Project = previous; Past = rest; Future = document.Project :: document.Future; Stroke = None }
+        | previous :: rest ->
+            {
+                Project = previous
+                Past = rest
+                Future = document.Project :: document.Future
+                Stroke = None
+            }
 
     let redo (document: Document) : Document =
         match document.Future with
         | [] -> document
-        | next :: rest -> { Project = next; Past = document.Project :: document.Past; Future = rest; Stroke = None }
+        | next :: rest ->
+            {
+                Project = next
+                Past = document.Project :: document.Past
+                Future = rest
+                Stroke = None
+            }

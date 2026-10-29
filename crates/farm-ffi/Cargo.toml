@@ -14,12 +14,10 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["audio-out"]
-# Play Mode's sound on the default output device (cpal). On Linux cpal links ALSA
-# (libasound.so.2) when the library loads, and cpal 0.18 has no backend that opens it at run time,
-# so a library built with this feature does not load at all on a machine without libasound, and
-# Play Mode, the map preview and sessions are all unavailable there. Build without it
-# (`cargo build -p farm-ffi --no-default-features`, or `dotnet build -p:FarmFfiAudio=false`) for an
-# editor that runs without ALSA and plays Play Mode silently.
+# Play Mode's sound on the default output device (cpal). On Linux cpal links ALSA.
+# The editor build also ships a no-default-features libfarm_ffi_silent.so and automatically
+# loads it if the normal library cannot load, so missing ALSA disables only sound.
+# FarmFfiAudio=false builds just the silent engine under the normal library filename.
 audio-out = ["farm-player/audio-out"]
 
 [dependencies]

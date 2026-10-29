@@ -128,6 +128,8 @@ public sealed class ContentEditorViewModel : ObservableObject
             Builtins = new ContentBuiltins("crop", ContentReadouts.BuiltinCrops, ContentReadouts.IsBuiltinCrop,
                 entity => Edits.UpsertCrop(ContentReadouts.CustomizeCrop((CropDefinition)entity))),
         },
+        Of("Mines", p => p.Mines.OrEmpty(), Defaults.NewMine, Edits.UpsertMine, Edits.RemoveMine),
+        Of("Request boards", p => p.RequestBoards.OrEmpty(), Defaults.NewRequestBoard, Edits.UpsertRequestBoard, Edits.RemoveRequestBoard),
         Of("Quests", p => p.Quests, Defaults.NewQuest, Edits.UpsertQuest, Edits.RemoveQuest),
         Of("Events", p => p.Events, Defaults.NewEvent, Edits.UpsertEvent, Edits.RemoveEvent),
         Of("Cutscenes", p => p.Cutscenes.OrEmpty(), Defaults.NewCutscene, Edits.UpsertCutscene, Edits.RemoveCutscene, Defaults.DuplicateCutscene),
@@ -243,6 +245,18 @@ public sealed class ContentEditorViewModel : ObservableObject
 
     /// <summary>The category and id the form on show was built for.</summary>
     private (ContentCategory Category, string Id)? _formFor;
+    private object? _rowAssets;
+    private GameProject? _formProject;
+    private static readonly System.Reflection.PropertyInfo[] FormContextFields = typeof(GameProject)
+        .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+        .Where(field => field.GetIndexParameters().Length == 0 && field.Name is not
+            (nameof(GameProject.Scenes) or nameof(GameProject.SelectedTileType) or nameof(GameProject.SelectedTileVisual)))
+        .ToArray();
+
+    private static bool SameFormContext(GameProject before, GameProject after) =>
+        FormContextFields.All(field => Equals(field.GetValue(before), field.GetValue(after)))
+        && before.Scenes.Select(scene => (scene.Id, scene.Name, scene.Width, scene.Height))
+            .SequenceEqual(after.Scenes.Select(scene => (scene.Id, scene.Name, scene.Width, scene.Height)));
 
     private IContentDraft? _draft;
 
@@ -523,6 +537,12 @@ public sealed class ContentEditorViewModel : ObservableObject
             return;
         }
 
+        if (_formFor is { } currentForm && ReferenceEquals(currentForm.Category, _category) && currentForm.Id == _selectedId
+            && _formProject is { } prior && project is not null && SameFormContext(prior, project))
+        {
+            return;
+        }
+
         LoadForm();
     }
 
@@ -540,7 +560,9 @@ public sealed class ContentEditorViewModel : ObservableObject
         }
 
         if (!rows.Any(row => row.Id == _selectedId)) SelectedId = null;
-        Rows = rows;
+        var assetsChanged = !ReferenceEquals(_rowAssets, project?.CustomAssets);
+        _rowAssets = project?.CustomAssets;
+        if (assetsChanged || !Rows.SequenceEqual(rows)) Rows = rows;
         SetCanAdd(project is not null);
         SetCanDelete(_selectedId is not null);
     }
@@ -553,6 +575,7 @@ public sealed class ContentEditorViewModel : ObservableObject
     {
         Draft.Hide();
         _formFor = null;
+        _formProject = _workspace.Current;
         _draft = null;
         Summary = null;
         ProfitName = null;

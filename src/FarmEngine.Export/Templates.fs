@@ -9,15 +9,17 @@ open System.Text.Json
 /// the executable, `template.json` (`{ "target", "version", "sha256", "files" }`) and the
 /// player's third-party license notices (and for the web, the page files).
 type PlayerTemplate =
-    { Target: ExportTarget
-      Folder: string
-      Executable: string
-      Licenses: string
-      Version: string
-      /// Every file export uses, by name (`farm-player`, `THIRD-PARTY.txt`, `index.html`, …),
-      /// as read and checked against the manifest. Export uses these bytes, never the files
-      /// again, so what was checked is what ships.
-      Files: Map<string, byte[]> }
+    {
+        Target: ExportTarget
+        Folder: string
+        Executable: string
+        Licenses: string
+        Version: string
+        /// Every file export uses, by name (`farm-player`, `THIRD-PARTY.txt`, `index.html`, …),
+        /// as read and checked against the manifest. Export uses these bytes, never the files
+        /// again, so what was checked is what ships.
+        Files: Map<string, byte[]>
+    }
 
     /// A checked file of the template (`Templates.find` has read every file its target uses).
     member this.Read(name: string) : byte[] =
@@ -37,6 +39,7 @@ module Templates =
     /// share one version (Directory.Build.props), so this is the app's and farmc's too.
     let editorVersion =
         let assembly = typeof<PlayerTemplate>.Assembly
+
         match assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>() with
         | null ->
             match assembly.GetName().Version with
@@ -78,7 +81,8 @@ module Templates =
                         match p.Value.GetString() with
                         | null -> None
                         | hash -> Some(p.Name, hash)
-                    else None)
+                    else
+                        None)
                 |> Map.ofSeq
             )
         | _ -> None
@@ -92,6 +96,7 @@ module Templates =
         let folder = Path.Combine(root, target.Id)
         let name = target.DisplayName
         let manifest = Path.Combine(folder, ManifestFile)
+
         if not (File.Exists manifest) then
             Error(sprintf "No %s player template in %s. Install the templates that came with this editor, or point FARM_PLAYER_TEMPLATES at them." name folder)
         else
@@ -99,40 +104,67 @@ module Templates =
                 try
                     use document = JsonDocument.Parse(File.ReadAllText manifest)
                     let root = document.RootElement
-                    if root.ValueKind <> JsonValueKind.Object then None
-                    else Some(text root "target", text root "version", text root "sha256", hashes root)
+
+                    if root.ValueKind <> JsonValueKind.Object then
+                        None
+                    else
+                        Some(text root "target", text root "version", text root "sha256", hashes root)
                 with
                 | :? JsonException
                 | :? IOException -> None
+
             match parsed with
             | None -> Error(sprintf "The %s player template's %s is not valid JSON." name ManifestFile)
-            | Some(Some manifestTarget, _, _, _) when manifestTarget <> target.Id ->
-                Error(sprintf "The %s player template is for %s." name manifestTarget)
+            | Some(Some manifestTarget, _, _, _) when manifestTarget <> target.Id -> Error(sprintf "The %s player template is for %s." name manifestTarget)
             | Some(_, Some templateVersion, _, _) when templateVersion <> version ->
-                Error(sprintf "The %s player template is version %s, but this editor is version %s. Use the templates that came with this editor." name templateVersion version)
+                Error(
+                    sprintf
+                        "The %s player template is version %s, but this editor is version %s. Use the templates that came with this editor."
+                        name
+                        templateVersion
+                        version
+                )
             | Some(Some _, Some templateVersion, Some sha, files) ->
                 let files = defaultArg files Map.empty
-                let wanted = (target.TemplateExecutable, Some sha) :: [ for file in checkedFiles target -> file, files.TryFind file ]
+
+                let wanted =
+                    (target.TemplateExecutable, Some sha)
+                    :: [ for file in checkedFiles target -> file, files.TryFind file ]
+
                 let rec load (acc: Map<string, byte[]>) (remaining: (string * string option) list) =
                     match remaining with
                     | [] -> Ok acc
                     | (file, expected) :: rest ->
                         let path = Path.Combine(folder, file)
-                        if not (File.Exists path) then Error(sprintf "The %s player template has no %s." name file)
+
+                        if not (File.Exists path) then
+                            Error(sprintf "The %s player template has no %s." name file)
                         else
                             match expected with
-                            | None -> Error(sprintf "The %s player template's %s has no checksum for %s. Use the templates that came with this editor." name ManifestFile file)
+                            | None ->
+                                Error(
+                                    sprintf
+                                        "The %s player template's %s has no checksum for %s. Use the templates that came with this editor."
+                                        name
+                                        ManifestFile
+                                        file
+                                )
                             | Some hash ->
                                 let bytes = File.ReadAllBytes path
+
                                 if not (String.Equals(Binary.sha256 bytes, hash, StringComparison.OrdinalIgnoreCase)) then
                                     Error(sprintf "The %s player template is damaged: %s does not match its checksum." name file)
-                                else load (acc.Add(file, bytes)) rest
+                                else
+                                    load (acc.Add(file, bytes)) rest
+
                 load Map.empty wanted
                 |> Result.map (fun loaded ->
-                    { Target = target
-                      Folder = folder
-                      Executable = Path.Combine(folder, target.TemplateExecutable)
-                      Licenses = Path.Combine(folder, LicensesFile)
-                      Version = templateVersion
-                      Files = loaded })
+                    {
+                        Target = target
+                        Folder = folder
+                        Executable = Path.Combine(folder, target.TemplateExecutable)
+                        Licenses = Path.Combine(folder, LicensesFile)
+                        Version = templateVersion
+                        Files = loaded
+                    })
             | Some _ -> Error(sprintf "The %s player template's %s needs target, version and sha256." name ManifestFile)

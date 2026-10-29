@@ -207,6 +207,8 @@ pub enum EventCondition {
     /// The deepest mine floor reached is at least `min` (M6).
     #[serde(rename = "mineFloor")]
     MineFloor {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        mine_id: Option<String>,
         #[serde(default = "one", with = "crate::units::count")]
         min: u32,
     },
@@ -260,6 +262,25 @@ pub enum EventCondition {
         #[serde(default)]
         npc_id: String,
     },
+    #[serde(rename = "weekday")]
+    Weekday {
+        #[serde(default)]
+        weekday_ids: Vec<String>,
+    },
+    #[serde(rename = "perk")]
+    Perk {
+        #[serde(default)]
+        skill: String,
+        #[serde(default)]
+        perk_id: String,
+        #[serde(default)]
+        choice_id: String,
+    },
+    #[serde(rename = "buff")]
+    Buff {
+        #[serde(default)]
+        id: String,
+    },
 }
 
 fn default_compare() -> String {
@@ -305,6 +326,7 @@ impl EventCondition {
             Self::Friendship { .. } => "friendship",
             Self::Weather { .. } => "weather",
             Self::FestivalId { .. } => "festivalId",
+            Self::Weekday { .. } => "weekday",
             Self::Variable { .. } => "variable",
             Self::All { .. } => "all",
             Self::Any { .. } => "any",
@@ -315,6 +337,8 @@ impl EventCondition {
             Self::DayOfSeason { .. } => "dayOfSeason",
             Self::Relationship { .. } => "relationship",
             Self::Money { .. } => "money",
+            Self::Perk { .. } => "perk",
+            Self::Buff { .. } => "buff",
             Self::SkillLevel { .. } => "skillLevel",
             Self::MineFloor { .. } => "mineFloor",
             Self::Collection { .. } => "collection",
@@ -385,6 +409,11 @@ pub mod event_outcome_types {
     /// Send a letter (`mailId`, M6): it arrives the next morning.
     pub const SEND_MAIL: &str = "sendMail";
     /// Restore (or, negative, take) `amount` health (M7).
+    pub const SET_INVENTORY_SIZE: &str = "setInventorySize";
+    pub const ADD_INVENTORY_SIZE: &str = "addInventorySize";
+    pub const ADD_MAX_ENERGY: &str = "addMaxEnergy";
+    pub const ADD_MAX_HEALTH: &str = "addMaxHealth";
+    pub const APPLY_BUFF: &str = "applyBuff";
     pub const MODIFY_HEALTH: &str = "modifyHealth";
 
     pub const ALL: &[&str] = &[
@@ -426,6 +455,11 @@ pub mod event_outcome_types {
         SET_RELATIONSHIP,
         SEND_MAIL,
         MODIFY_HEALTH,
+        SET_INVENTORY_SIZE,
+        ADD_INVENTORY_SIZE,
+        ADD_MAX_ENERGY,
+        ADD_MAX_HEALTH,
+        APPLY_BUFF,
     ];
 }
 
@@ -473,11 +507,16 @@ pub enum OutcomeKind {
     SetRelationship,
     SendMail,
     ModifyHealth,
+    SetInventorySize,
+    AddInventorySize,
+    AddMaxEnergy,
+    AddMaxHealth,
+    ApplyBuff,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 38] = [
+    pub const ALL: [OutcomeKind; 43] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -516,6 +555,11 @@ impl OutcomeKind {
         Self::SetRelationship,
         Self::SendMail,
         Self::ModifyHealth,
+        Self::SetInventorySize,
+        Self::AddInventorySize,
+        Self::AddMaxEnergy,
+        Self::AddMaxHealth,
+        Self::ApplyBuff,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -559,6 +603,11 @@ impl OutcomeKind {
             Self::RemoveMachine => t::REMOVE_MACHINE,
             Self::SetRelationship => t::SET_RELATIONSHIP,
             Self::SendMail => t::SEND_MAIL,
+            Self::SetInventorySize => t::SET_INVENTORY_SIZE,
+            Self::AddInventorySize => t::ADD_INVENTORY_SIZE,
+            Self::AddMaxEnergy => t::ADD_MAX_ENERGY,
+            Self::AddMaxHealth => t::ADD_MAX_HEALTH,
+            Self::ApplyBuff => t::APPLY_BUFF,
             Self::ModifyHealth => t::MODIFY_HEALTH,
         }
     }
@@ -646,6 +695,8 @@ pub struct EventOutcome {
     /// The letter `sendMail` sends (M6).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mail_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub buff: Option<super::BuffDefinition>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

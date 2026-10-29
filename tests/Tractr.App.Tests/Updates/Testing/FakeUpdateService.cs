@@ -1,9 +1,8 @@
 namespace Tractr.Updates.Testing;
 
 /// <summary>
-/// Scriptable <see cref="IUpdateService"/> for tests, screenshots and UI demos
-/// (run the app with <c>TRACTR_FAKE_UPDATES</c> set to <c>available</c>, <c>uptodate</c>,
-/// <c>error</c> or <c>notinstalled</c>; any other value acts like <c>available</c>; docs/RELEASING.md).
+/// Scriptable <see cref="IUpdateService"/> for tests and headless UI screenshots.
+/// Lives only in the test assembly; production always uses the real update service.
 /// </summary>
 public sealed class FakeUpdateService : IUpdateService
 {

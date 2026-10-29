@@ -344,6 +344,7 @@ fn with_fishing(project: &mut GameProject) {
             item_id: "crop-wheat".to_owned(),
             weight: 1,
             difficulty: units::PROBABILITY_ONE,
+            ..FishTableEntry::default()
         }],
         ..FishTable::default()
     }];

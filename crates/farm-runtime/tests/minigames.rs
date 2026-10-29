@@ -160,7 +160,11 @@ fn the_editor_lists_the_same_kinds_and_settings() {
     let mut fsharp: Vec<(String, Vec<String>)> = Vec::new();
     for line in source.lines().map(str::trim) {
         let setting = line.strip_prefix("Settings = [ ").unwrap_or(line);
-        if let Some(rest) = line.strip_prefix("{ Id = ").or_else(|| line.strip_prefix("[ { Id = ")) {
+        if let Some(rest) = line
+            .strip_prefix("Id = ")
+            .or_else(|| line.strip_prefix("{ Id = "))
+            .or_else(|| line.strip_prefix("[ { Id = "))
+        {
             fsharp.push((quoted(rest).expect("kind id"), Vec::new()));
         } else if ["[ number \"", "[ integer \"", "[ text \"", "number \"", "integer \"", "text \""]
             .iter()

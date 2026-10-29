@@ -13,7 +13,11 @@ module Icons =
     /// The bytes of a `data:image/png;base64,…` URL.
     let decodeDataUrl (url: string) : Result<byte[], string> =
         let comma = url.IndexOf ','
-        if not (url.StartsWith("data:image/png", StringComparison.OrdinalIgnoreCase)) || comma < 0 then
+
+        if
+            not (url.StartsWith("data:image/png", StringComparison.OrdinalIgnoreCase))
+            || comma < 0
+        then
             Error "The icon asset is not a PNG image."
         elif not (url.Substring(0, comma).EndsWith(";base64", StringComparison.OrdinalIgnoreCase)) then
             Error "The icon asset is not base64 data."
@@ -29,6 +33,7 @@ module Icons =
             match typeof<PackageFile>.Assembly.GetManifestResourceStream "default-icon.png" with
             | null -> invalidOp "The default icon resource is missing."
             | stream -> stream
+
         use memory = new MemoryStream()
         stream.CopyTo memory
         memory.ToArray()
@@ -51,10 +56,16 @@ module Icons =
         use surface = SKSurface.Create info
         let canvas = surface.Canvas
         canvas.Clear SKColors.Transparent
-        let scale = min (float32 size / float32 source.Width) (float32 size / float32 source.Height)
+
+        let scale =
+            min (float32 size / float32 source.Width) (float32 size / float32 source.Height)
+
         let width = float32 source.Width * scale
         let height = float32 source.Height * scale
-        let target = SKRect.Create((float32 size - width) / 2.0f, (float32 size - height) / 2.0f, width, height)
+
+        let target =
+            SKRect.Create((float32 size - width) / 2.0f, (float32 size - height) / 2.0f, width, height)
+
         use paint = new SKPaint(IsAntialias = true)
         canvas.DrawImage(source, target, sampling scale, paint)
         canvas.Flush()
@@ -69,7 +80,8 @@ module Icons =
     let MaxPixels = 16L * 1024L * 1024L
 
     /// The eight bytes every PNG file starts with.
-    let private pngSignature = [| 0x89uy; byte 'P'; byte 'N'; byte 'G'; 13uy; 10uy; 26uy; 10uy |]
+    let private pngSignature =
+        [| 0x89uy; byte 'P'; byte 'N'; byte 'G'; 13uy; 10uy; 26uy; 10uy |]
 
     /// True when `bytes` start with the PNG signature.
     let isPng (bytes: byte[]) =
@@ -79,6 +91,7 @@ module Icons =
     let private renderPng (png: byte[]) : Result<(int * byte[]) list, string> =
         use data = SKData.CreateCopy png
         use codec = SKCodec.Create data
+
         match codec with
         | null -> Error "The icon image could not be decoded."
         | codec when codec.EncodedFormat <> SKEncodedImageFormat.Png -> Error "The icon image is not a PNG image."
@@ -96,6 +109,7 @@ module Icons =
             )
         | codec ->
             use source = SKBitmap.Decode codec
+
             match source with
             | null -> Error "The icon image could not be decoded."
             | source when source.Width < 1 || source.Height < 1 -> Error "The icon image is empty."
@@ -108,4 +122,7 @@ module Icons =
     /// the size in the image header is checked against the art import limits before anything is
     /// decoded, so a small file claiming a huge image (a decompression bomb) is refused cheaply.
     let render (png: byte[]) : Result<(int * byte[]) list, string> =
-        if isPng png then renderPng png else Error "The icon image is not a PNG image."
+        if isPng png then
+            renderPng png
+        else
+            Error "The icon image is not a PNG image."

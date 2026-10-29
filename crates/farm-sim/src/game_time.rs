@@ -149,6 +149,23 @@ pub fn festival_on_day(calendar: &CalendarConfig, absolute_day: u32) -> Option<&
     festival_on(calendar, &position.season.id, position.day_of_season)
 }
 
+/// The weekday follows the absolute day across season and year boundaries.
+pub fn weekday(calendar: &CalendarConfig, absolute_day: u32) -> Option<&crate::schema::CalendarWeekday> {
+    let days = calendar.weekdays.as_ref()?;
+    if days.is_empty() {
+        return None;
+    }
+    let index = (u64::from(absolute_day.saturating_sub(1)) + u64::from(calendar.weekday_offset.unwrap_or(0)))
+        % days.len() as u64;
+    days.get(index as usize)
+}
+
+/// Localized weekday name, falling back to its authored name.
+pub fn weekday_name(calendar: &CalendarConfig, absolute_day: u32, locale: &str) -> Option<String> {
+    weekday(calendar, absolute_day)
+        .map(|day| day.words.as_ref().and_then(|words| words.get(locale)).unwrap_or(&day.name).clone())
+}
+
 /// The festival on `day_of_season` of `season_id`, if any.
 pub fn festival_on<'a>(
     calendar: &'a CalendarConfig,
@@ -225,7 +242,7 @@ pub fn format_time_of_day_in(day_minutes: u32, time_minutes: u32) -> String {
 /// End the day: nightly world pass + calendar roll + energy restore.
 /// Emits onDayEnd / onSeasonChange / onYearStart / onDayStart hooks.
 pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepOptions) -> Effects {
-    let mut effects: Effects = Vec::new();
+    let mut effects = crate::festivals::finish_day(ctx, state);
     let settings = &ctx.content.settings;
     let previous_day = state.clock.day;
     let previous_season = state.clock.season.clone();
@@ -257,6 +274,7 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     night_world_pass(ctx, state, &next, night, &cover, &mut rng);
     multi_tile::after_night(state, &multi_tile_crops);
 
+    state.player.buffs.retain(|buff| buff.definition.persists_after_sleep);
     let (energy, money) = wake_energy_and_money(ctx, state, options, &mut effects);
 
     state.clock.day = next.day;
@@ -278,11 +296,14 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     state.storage = None;
     crate::cutscenes::stop(state);
     state.shop_purchases_today = IndexMap::new();
+    crate::commerce::expire_sales(ctx, state);
+    crate::npcs::npc_movement::select_schedules(ctx, state);
 
     // Animals: age, mood, product rolls (M4c). Machines finish overnight jobs automatically
     // since completion is an absolute-minute comparison (M4a).
     animals::advance_animals_nightly(ctx, state);
     crafting::settle_machines(ctx, state);
+    crate::fishing::produce_overnight(ctx, state);
     // The shipping bins are emptied and paid for (M6), the building work goes on and animals
     // in buildings with room may have young (M5), health fills and the monsters come back (M7).
     effects.extend(crate::goals::ship_overnight(ctx, state));
@@ -290,6 +311,8 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     effects.extend(animals::breed_overnight(ctx, state));
     crate::combat::restore_overnight(ctx, state);
     crate::combat::spawn_scenes(ctx, state);
+    crate::foraging::morning(ctx, state);
+    effects.extend(quests::after_step(ctx, state));
     effects.extend(quests::restart_repeatable_quests(ctx, state));
 
     if let Some(weather_def) = weather_def {
@@ -611,7 +634,7 @@ fn wake_energy_and_money(
     effects: &mut Effects,
 ) -> (i32, i64) {
     let settings = &ctx.content.settings;
-    let max_energy = state.player.max_energy;
+    let max_energy = crate::buffs::max_energy(ctx, state);
     let mut money = state.player.money;
     if !options.collapsed {
         return (max_energy, money);

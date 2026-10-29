@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct CalendarView {
     pub season_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weekday_name: Option<String>,
     pub season_days: u32,
     pub day_of_season: u32,
     pub time_text: String,
@@ -28,6 +30,7 @@ pub fn calendar_view(content: &farm_sim::GameContent, state: &GameState) -> Cale
     let date = farm_sim::game_time::clock_date(calendar, &state.clock);
     CalendarView {
         season_name: season.map(|s| s.name.clone()),
+        weekday_name: farm_sim::game_time::weekday_name(calendar, state.clock.day, &content.settings.locale),
         season_days: date.season.days,
         day_of_season: date.day_of_season,
         time_text: farm_sim::game_time::format_time_of_day_in(

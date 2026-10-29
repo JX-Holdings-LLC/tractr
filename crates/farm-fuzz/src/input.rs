@@ -200,7 +200,22 @@ pub fn plugin_mutation(ids: &Ids, c: &mut Choices<'_>) -> PluginMutation {
             status: c.pick_str(&["single", "dating", "engaged", "married", "rival"]),
         },
         27 => PluginMutation::SendMail { mail_id: c.pick_str(&["mail-a", "mail-missing"]) },
-        28 => PluginMutation::ModifyHealth { delta: c.int(-1000, 1000) },
+        28 => match c.below(6) {
+            0 => PluginMutation::ModifyHealth { delta: c.int(-1000, 1000) },
+            1 => PluginMutation::SetInventorySize { amount: c.int(-1000, 1000) },
+            2 => PluginMutation::AddInventorySize { amount: c.int(-1000, 1000) },
+            3 => PluginMutation::AddMaxEnergy { amount: c.int(-1000, 1000) },
+            4 => PluginMutation::AddMaxHealth { amount: c.int(-1000, 1000) },
+            _ => PluginMutation::ApplyBuff {
+                buff: farm_sim::schema::BuffDefinition {
+                    id: "fuzz-buff".into(),
+                    stat: c.pick_str(farm_sim::buffs::STATS),
+                    amount: c.int(-1000, 1000),
+                    duration_minutes: c.int(0, 2000) as u32,
+                    ..Default::default()
+                },
+            },
+        },
         _ => PluginMutation::SaveData { data: serde_json::json!({ "n": c.int(0, 100) }) },
     }
 }
@@ -232,7 +247,16 @@ pub fn command(ids: &Ids, c: &mut Choices<'_>) -> Command {
             let quality = (c.byte().is_multiple_of(2)).then(|| c.pick_str(&["silver", "gold", "iridium", "plastic"]));
             Command::SellItem { item_id: c.pick(&ids.items), quantity: c.int(0, 2000) as u32, quality }
         }
-        19 => Command::RepairTool { item_id: c.pick(&ids.items) },
+        19 => match c.below(4) {
+            0 => Command::RepairTool { item_id: c.pick(&ids.items) },
+            1 => Command::UpgradeTool { item_id: c.pick(&ids.items) },
+            2 => Command::CollectToolUpgrade { item_id: c.pick(&ids.items) },
+            _ => Command::ChoosePerk {
+                skill: c.pick_str(SKILL_NAMES),
+                perk_id: "profession".into(),
+                choice_id: "grower".into(),
+            },
+        },
         20 => Command::Craft { recipe_id: c.pick(&ids.recipes) },
         21 => match c.below(3) {
             0 => Command::PlaceMachine { machine_type_id: c.pick(&ids.machines) },

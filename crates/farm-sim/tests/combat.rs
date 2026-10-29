@@ -164,6 +164,47 @@ fn a_weapon_hits_slays_and_gives_drops_and_experience() {
 }
 
 #[test]
+fn a_luck_buff_changes_monster_loot_without_advancing_extra_randomness() {
+    let (ctx, mut state) = make_engine(
+        |project| {
+            combat(project);
+            project.monsters.as_mut().unwrap()[0].drops = vec![
+                NodeDrop { item_id: "slime-goo".into(), min: 1, max: 1, weight: 100, ..Default::default() },
+                NodeDrop { item_id: "berry".into(), min: 1, max: 1, weight: 10, ..Default::default() },
+            ];
+        },
+        "lucky-sword",
+    );
+    slime(&mut state, 3, 3, 1);
+    state.rng = (0..1024)
+        .map(farm_sim::rng::create_rng_state_from_u32)
+        .find(|seed| {
+            let mut plain = farm_sim::rng::Rng::new(seed.clone());
+            let mut lucky = plain.clone();
+            plain.weighted(&[100, 10]) == Some(0) && lucky.weighted(&[200, 110]) == Some(1)
+        })
+        .unwrap();
+    let mut lucky = state.clone();
+    farm_sim::buffs::apply(
+        &ctx,
+        &mut lucky,
+        &farm_sim::schema::BuffDefinition {
+            id: "luck".into(),
+            stat: "luck".into(),
+            amount: 100,
+            duration_minutes: 10,
+            ..Default::default()
+        },
+        "test",
+    );
+    run(&ctx, &mut state, Command::UseTool { tool: "sword".into() });
+    run(&ctx, &mut lucky, Command::UseTool { tool: "sword".into() });
+    assert_eq!(farm_sim::inventory::count_item(&state.player.inventory, "slime-goo"), 1);
+    assert_eq!(farm_sim::inventory::count_item(&lucky.player.inventory, "berry"), 1);
+    assert_eq!(lucky.rng, state.rng);
+}
+
+#[test]
 fn food_heals_and_hazard_terrain_hurts() {
     let (ctx, mut state) = make_engine(
         |project| {

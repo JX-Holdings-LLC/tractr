@@ -383,13 +383,13 @@
   "fixtures/county-fair-mod.json": {
     "ok": false,
     "errors": [
-      "Project data has no schemaVersion (this engine reads version 2)."
+      "Project data has no schemaVersion (this engine reads version 3)."
     ]
   },
   "fixtures/demo-mod.json": {
     "ok": false,
     "errors": [
-      "Project data has no schemaVersion (this engine reads version 2)."
+      "Project data has no schemaVersion (this engine reads version 3)."
     ]
   },
   "fixtures/fixture-project.json": {
@@ -406,13 +406,13 @@
   "fixtures/lantern-night-mod.json": {
     "ok": false,
     "errors": [
-      "Project data has no schemaVersion (this engine reads version 2)."
+      "Project data has no schemaVersion (this engine reads version 3)."
     ]
   },
   "fixtures/my-first-mod.json": {
     "ok": false,
     "errors": [
-      "Project data has no schemaVersion (this engine reads version 2)."
+      "Project data has no schemaVersion (this engine reads version 3)."
     ]
   },
   "fixtures/packs-project.json": {
@@ -438,13 +438,13 @@
   "fixtures/volcano-mod.json": {
     "ok": false,
     "errors": [
-      "Project data has no schemaVersion (this engine reads version 2)."
+      "Project data has no schemaVersion (this engine reads version 3)."
     ]
   },
   "broken/schemaVersion not an integer": {
     "ok": false,
     "errors": [
-      "Project schema version 8.5 is newer than this engine supports (2). Update the engine."
+      "Project schema version 8.5 is newer than this engine supports (3). Update the engine."
     ]
   },
   "broken/mode missing": {
@@ -504,13 +504,13 @@
   "broken/tile type unknown": {
     "ok": true,
     "errors": [],
-    "json": "bebad197ec5df23b",
-    "stable": "d9977d20d0043b68",
+    "json": "da70d799de03ac1e",
+    "stable": "390832b635b8f1d3",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][1]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 1,1)|scene"
     ],
-    "content": "739ad80deaf8f9b4",
+    "content": "d06b99d08bd9ed44",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][1]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 1,1)"
   },
   "broken/tile type missing": {
@@ -522,13 +522,13 @@
   "broken/tile background unknown": {
     "ok": true,
     "errors": [],
-    "json": "66e7c0a76c23ad5c",
-    "stable": "dd1604c70c049d89",
+    "json": "1c969fddb0629671",
+    "stable": "c4a4b79d6de35286",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][2]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 2,1)|scene"
     ],
-    "content": "0c881a9b34c3ad3b",
+    "content": "76a3cd699b59b3b5",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][2]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 2,1)"
   },
   "broken/tile background missing": {
@@ -540,52 +540,52 @@
   "broken/tile overlay unknown": {
     "ok": true,
     "errors": [],
-    "json": "a1cfe0dfb8784a93",
-    "stable": "58961adb59492402",
+    "json": "eb54e4474b3b379a",
+    "stable": "50c10f4b7b929a63",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][3]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 3,1)|scene"
     ],
-    "content": "3c914081666d62a6",
+    "content": "1608becacf59a8ac",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][3]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 3,1)"
   },
   "broken/tile object unknown": {
     "ok": true,
     "errors": [],
-    "json": "6c4c8b06f1b2155b",
-    "stable": "7d937a5889e75446",
+    "json": "4e00e63f4c38cb96",
+    "stable": "c4c24b45ef271c8a",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][4]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 4,1)|scene"
     ],
-    "content": "55a59b8895e641ce",
+    "content": "afceb1d085893b6a",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][4]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 4,1)"
   },
   "broken/tile decor on a missing layer with a missing terrain": {
     "ok": true,
     "errors": [],
-    "json": "76452bc46ae57c12",
-    "stable": "f2b9bdae49b49578",
+    "json": "eb62a3f1c7a969d2",
+    "stable": "215583a49bed92f3",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][6]|Scene \"Farm\" has tiles of missing terrain \"leaves\" (first at 6,1)|scene",
       "error|scene.unknownLayer|scenes[0].tiles[1][6]|Scene \"Farm\" has tiles of missing layer \"canopy\" (first at 6,1)|scene"
     ],
-    "content": "8619a05eeccf8a60",
+    "content": "9f5274576f4fccfc",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][6]: Scene \"Farm\" has tiles of missing terrain \"leaves\" (first at 6,1)\nscenes[0].tiles[1][6]: Scene \"Farm\" has tiles of missing layer \"canopy\" (first at 6,1)"
   },
   "broken/light out of range": {
     "ok": true,
     "errors": [],
-    "json": "9c9990dd7579fccc",
-    "stable": "ab062a5171496dae",
+    "json": "676186ff3a9f68bd",
+    "stable": "da6c81732b4b3e0a",
     "problems": [
       "warning|lint.nodeTypes|nodeTypes[0].light.radius|Expected a whole number from 1 to 16, received 40|nodeType",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "warning|nodeType.noDrops|nodeTypes[0].drops|Node type \"Lamp\" drops nothing|nodeType"
     ],
-    "content": "0f44c0752fa55eb9",
-    "cartridge": "d6803756183e5d45"
+    "content": "919f5b260ecb30ef",
+    "cartridge": "490eeab52b9ba7c4"
   },
   "broken/tile soilState unknown": {
     "ok": false,
@@ -596,14 +596,14 @@
   "broken/crop quality and mutation unknown": {
     "ok": true,
     "errors": [],
-    "json": "695ce8918406b4a2",
-    "stable": "ce4c94a948452901",
+    "json": "5dc9a9e1f1b7818e",
+    "stable": "1061593de475c0aa",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownQuality|scenes[0].tiles[2][2]|Scene \"Farm\" has tiles of missing crop quality \"legendary\" (first at 2,2)|scene",
       "error|scene.unknownMutation|scenes[0].tiles[2][2]|Scene \"Farm\" has tiles of missing crop mutation \"weird\" (first at 2,2)|scene"
     ],
-    "content": "8bd7cd414b579d37",
+    "content": "96ce964df4a7be24",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[2][2]: Scene \"Farm\" has tiles of missing crop quality \"legendary\" (first at 2,2)\nscenes[0].tiles[2][2]: Scene \"Farm\" has tiles of missing crop mutation \"weird\" (first at 2,2)"
   },
   "broken/crop quality missing": {
@@ -621,26 +621,26 @@
   "broken/item type unknown": {
     "ok": true,
     "errors": [],
-    "json": "018ea4d3a30864f3",
-    "stable": "cc0a752203367e99",
+    "json": "9d8d350c76f0e865",
+    "stable": "0cdcb184fc9b60d5",
     "problems": [
       "warning|crop.noSeedItem|customCrops[0]|Crop \"Wheat\" has no seed item, so nobody can plant it|crop",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|item.unknownCategory|items[0].type|Item \"Wheat Seeds\" is of missing kind \"weapon\"|item"
     ],
-    "content": "03ba29d31d20f7e9",
+    "content": "d771e7dec1687b25",
     "cartridge": "throws InvalidOperationException: items[0].type: Item \"Wheat Seeds\" is of missing kind \"weapon\""
   },
   "broken/item toolType unknown": {
     "ok": true,
     "errors": [],
-    "json": "cd449e5f0fed167c",
-    "stable": "ed29c4daed94a60d",
+    "json": "1cab05bf01caebcb",
+    "stable": "84aeca03178108c0",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|item.unknownTool|items[0].toolType|Item \"Wheat Seeds\" is missing tool \"laser\"|item"
     ],
-    "content": "a6fda8ee269a101d",
+    "content": "e371a49dc1b972fd",
     "cartridge": "throws InvalidOperationException: items[0].toolType: Item \"Wheat Seeds\" is missing tool \"laser\""
   },
   "broken/item toolTier zero": {
@@ -695,7 +695,7 @@
   "broken/quest objective type unknown": {
     "ok": false,
     "errors": [
-      "quests.0.objectives.0.type: Invalid enum value. Expected 'collect' | 'harvest' | 'talk' | 'visit' | 'craft' | 'gift', received 'dance'"
+      "quests.0.objectives.0.type: Invalid enum value. Expected 'collect' | 'harvest' | 'talk' | 'visit' | 'craft' | 'gift' | 'ship' | 'slay' | 'catch' | 'hearts' | 'bundle' | 'mineFloor', received 'dance'"
     ]
   },
   "broken/event trigger unknown": {
@@ -732,7 +732,7 @@
   "broken/event outcome type unknown": {
     "ok": false,
     "errors": [
-      "events.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
+      "events.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'setInventorySize' | 'addInventorySize' | 'addMaxEnergy' | 'addMaxHealth' | 'applyBuff' | 'modifyHealth', received 'explode'"
     ]
   },
   "broken/event outcome type missing": {
@@ -752,27 +752,27 @@
   "broken/changeTile newTileType unknown": {
     "ok": true,
     "errors": [],
-    "json": "15a9894609cf9335",
-    "stable": "02a382a0f37e0874",
+    "json": "f5edf37ecb0339b2",
+    "stable": "6194f3143e46e44f",
     "problems": [
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|outcome.unknownTerrain|events[0].outcomes[0].newTileType|Event \"Broken ev-broken\" changes a tile to missing terrain \"lava\"|event"
     ],
-    "content": "567505c4bde5be6c",
+    "content": "834ff5542bfabfd0",
     "cartridge": "throws InvalidOperationException: events[0].outcomes[0].newTileType: Event \"Broken ev-broken\" changes a tile to missing terrain \"lava\""
   },
   "broken/outcome amount not finite": {
     "ok": true,
     "errors": [],
-    "json": "acd12893d65277b8",
-    "stable": "383ef468d5e3df6c",
+    "json": "a40add90ed46f64a",
+    "stable": "d6c6b5573c4d458c",
     "problems": [
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "37bc42ba079e5c4a",
-    "cartridge": "7ddd2267534d5dc1"
+    "content": "f5b679258802aec9",
+    "cartridge": "89ddec84bf9f8cab"
   },
   "broken/action energyCost negative": {
     "ok": false,
@@ -795,14 +795,14 @@
   "broken/action outcome type unknown": {
     "ok": false,
     "errors": [
-      "actions.1.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
+      "actions.1.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'setInventorySize' | 'addInventorySize' | 'addMaxEnergy' | 'addMaxHealth' | 'applyBuff' | 'modifyHealth', received 'explode'"
     ]
   },
   "broken/minigame result tier": {
     "ok": false,
     "errors": [
       "minigames.0.resultTiers.0.minScore: Number must be between 0 and 1",
-      "minigames.0.resultTiers.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'bogus'"
+      "minigames.0.resultTiers.0.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'setInventorySize' | 'addInventorySize' | 'addMaxEnergy' | 'addMaxHealth' | 'applyBuff' | 'modifyHealth', received 'bogus'"
     ]
   },
   "broken/node type numbers": {
@@ -822,13 +822,13 @@
   "broken/node type requiredTool": {
     "ok": true,
     "errors": [],
-    "json": "ec37ac04b0b512a7",
-    "stable": "8ae77d3d664010b9",
+    "json": "db765e9f453aac37",
+    "stable": "3484b5d2e19e5803",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|nodeType.unknownTool|nodeTypes[0].requiredTool|Node type \"Tree\" needs missing tool \"spoon\"|nodeType"
     ],
-    "content": "77ebc309ca7cc6db",
+    "content": "d5ff96d64c88abc6",
     "cartridge": "throws InvalidOperationException: nodeTypes[0].requiredTool: Node type \"Tree\" needs missing tool \"spoon\""
   },
   "broken/node type requiredTool missing": {
@@ -919,20 +919,20 @@
   "broken/project id empty": {
     "ok": true,
     "errors": [],
-    "json": "fc50aca931cbc2db",
-    "stable": "25af6b2521f1d20e",
+    "json": "5bb04b76c9d646f0",
+    "stable": "e30b02f13a58d805",
     "problems": [
       "warning|lint.id|id|Required id must be a non-empty string|settings",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
-    "cartridge": "3c781d5cdc285fb5"
+    "content": "a01ad6c3a036d7f5",
+    "cartridge": "03ec997c8c931560"
   },
   "broken/scene id empty": {
     "ok": true,
     "errors": [],
-    "json": "38301bc0998073bd",
-    "stable": "250da0ac28c4243c",
+    "json": "6bbcfdaae8186544",
+    "stable": "78db18ddf4e5cae6",
     "problems": [
       "warning|lint.scenes|scenes[0].id|Required id must be a non-empty string|scene",
       "error|content.scenes|startSceneId|Start scene \"scene-farm\" does not exist|settings",
@@ -942,112 +942,112 @@
       "error|player.sceneMissing|player.sceneId|The player starts in missing scene \"scene-farm\"|",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "7949400bac852420",
+    "content": "9923a1a71f9183dc",
     "cartridge": "throws InvalidOperationException: startSceneId: Start scene \"scene-farm\" does not exist\nnpcs[0]: NPC \"Old Farmer\" is placed in missing scene \"scene-farm\"\nnpcs[1]: NPC \"Merchant Mia\" is placed in missing scene \"scene-farm\"\nplayer.sceneId: The player starts in missing scene \"scene-farm\""
   },
   "broken/duplicate scene id": {
     "ok": true,
     "errors": [],
-    "json": "096be994a6a6165c",
-    "stable": "5c31644a20c57255",
+    "json": "4448d538558d4664",
+    "stable": "23a9a27527567631",
     "problems": [
       "error|duplicate.scene|scenes[1].id|Duplicate scene id \"scene-farm\"|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "bd484b9439021ca7",
+    "content": "c0be6905fa8dcbb9",
     "cartridge": "throws InvalidOperationException: scenes[1].id: Duplicate scene id \"scene-farm\""
   },
   "broken/tile rows vs height": {
     "ok": true,
     "errors": [],
-    "json": "d446ad99e7b2ff99",
-    "stable": "3995bccef2180432",
+    "json": "569036db1bc91d63",
+    "stable": "1f84eb4f9c76111b",
     "problems": [
       "error|scene.gridRows|scenes[0].tiles|Scene \"Farm\" is 12 tiles high but its map has 11 rows|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "e961fce44cab5223",
+    "content": "9e5951068e3ad91b",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles: Scene \"Farm\" is 12 tiles high but its map has 11 rows"
   },
   "broken/tile row vs width": {
     "ok": true,
     "errors": [],
-    "json": "d30b50c713dadb28",
-    "stable": "674560d8aae06e19",
+    "json": "5d289cc971bf9fb9",
+    "stable": "f8c7ae900022635a",
     "problems": [
       "error|scene.gridWidth|scenes[0].tiles[4]|Scene \"Farm\" is 16 tiles wide but row 4 of its map has 15 tiles|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "7942b9ec7508ec61",
+    "content": "10350b9e635fc7b8",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[4]: Scene \"Farm\" is 16 tiles wide but row 4 of its map has 15 tiles"
   },
   "broken/transition target empty": {
     "ok": true,
     "errors": [],
-    "json": "21c4d34f45f85e56",
-    "stable": "bfa4b2953dc74dac",
+    "json": "18747a05a04541c2",
+    "stable": "1e9883f15c9528f0",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" at (0,0) leads to missing scene \"\"|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "1a9a21a377d121ec",
+    "content": "d00618ec155d0b10",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" at (0,0) leads to missing scene \"\""
   },
   "broken/start scene missing": {
     "ok": true,
     "errors": [],
-    "json": "c00bf6475660404d",
-    "stable": "f5d61c2461bf1eb1",
+    "json": "b1c817070fe6978d",
+    "stable": "703730fad6e7884a",
     "problems": [
       "error|content.scenes|startSceneId|Start scene \"nowhere\" does not exist|settings",
       "warning|content.scenes|scenes[0]|Scene \"Farm\" is unreachable (no transition leads to it)|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "73316bafa2652441",
+    "content": "bb0b3807cfe4500c",
     "cartridge": "throws InvalidOperationException: startSceneId: Start scene \"nowhere\" does not exist"
   },
   "broken/player sceneId empty": {
     "ok": true,
     "errors": [],
-    "json": "a5da31d50507d869",
-    "stable": "ae358a788f05107c",
+    "json": "4b1c0f6ce55454f1",
+    "stable": "74ddb85624704f24",
     "problems": [
       "error|player.sceneMissing|player.sceneId|The player starts in missing scene \"\"|",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
+    "content": "a01ad6c3a036d7f5",
     "cartridge": "throws InvalidOperationException: player.sceneId: The player starts in missing scene \"\""
   },
   "broken/inventory item id empty": {
     "ok": true,
     "errors": [],
-    "json": "94c9e6b3851cd837",
-    "stable": "0978da5be3f8506f",
+    "json": "fc204907f1454311",
+    "stable": "9418538b5e95cc76",
     "problems": [
       "warning|lint.player|player.inventory[0].item.id|Required id must be a non-empty string|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
-    "cartridge": "28ef4b2eaae43479"
+    "content": "a01ad6c3a036d7f5",
+    "cartridge": "88bb0da8e2df710d"
   },
   "broken/item id empty": {
     "ok": true,
     "errors": [],
-    "json": "12080e27f59cb99c",
-    "stable": "5c402760fd314f1e",
+    "json": "6988ad3a9ff3b6b2",
+    "stable": "92bdb8003179db69",
     "problems": [
       "warning|lint.items|items[0].id|Required id must be a non-empty string|item",
       "error|content.shops|shops[0]|Shop \"General Store\" stocks missing item \"seed-wheat\"|shop",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "2acd61b7da654857",
+    "content": "d4768e662ed45f12",
     "cartridge": "throws InvalidOperationException: shops[0]: Shop \"General Store\" stocks missing item \"seed-wheat\""
   },
   "broken/npc ids empty": {
     "ok": true,
     "errors": [],
-    "json": "f786690fc3a3f618",
-    "stable": "99b1269c8aafaf7b",
+    "json": "17b76050faabbeab",
+    "stable": "35b2a967a18515a6",
     "problems": [
       "warning|lint.npcs|npcs[0].id|Required id must be a non-empty string|npc",
       "warning|lint.npcs|npcs[0].dialogue[0].id|Required id must be a non-empty string|npc",
@@ -1059,55 +1059,55 @@
       "error|quest.giverMissing|quests[1].giver|Quest \"Supply Run\" is given by missing NPC \"npc-farmer\"|quest",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "af55c68504307419",
+    "content": "d317325daf08c020",
     "cartridge": "throws InvalidOperationException: dialogues[0].npcId: Dialogue \"dialogue-farmer-greeting\" belongs to missing NPC \"npc-farmer\"\ndialogues[1].npcId: Dialogue \"dialogue-farmer-crops\" belongs to missing NPC \"npc-farmer\"\ndialogues[3].npcId: Dialogue \"\" belongs to missing NPC \"npc-farmer\"\nquests[0].giver: Quest \"First Harvest\" is given by missing NPC \"npc-farmer\"\nquests[1].giver: Quest \"Supply Run\" is given by missing NPC \"npc-farmer\""
   },
   "broken/dialogue id empty": {
     "ok": true,
     "errors": [],
-    "json": "0aaa773ef61e6ba8",
-    "stable": "31902c1738b91965",
+    "json": "8df6ce963dc1b569",
+    "stable": "1ac735001a92817f",
     "problems": [
       "warning|lint.dialogues|dialogues[0].id|Required id must be a non-empty string|",
       "warning|dialogue.notOnNpc|dialogues[0]|Dialogue \"\" is in the project list but not on NPC \"npc-farmer\"|npc",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "86e311dd25d1c78d",
-    "cartridge": "004901fb942e7c45"
+    "content": "3d3894ef1eb239ff",
+    "cartridge": "ad5805a915e48273"
   },
   "broken/quest ids empty": {
     "ok": true,
     "errors": [],
-    "json": "bd3a5b5464822d28",
-    "stable": "17ac715fd5bca90f",
+    "json": "b87748d2010cee95",
+    "stable": "45af46526ce86525",
     "problems": [
       "warning|lint.quests|quests[0].id|Required id must be a non-empty string|quest",
       "warning|lint.quests|quests[0].objectives[0].id|Required id must be a non-empty string|quest",
       "error|content.quests|quests[1]|Quest \"Supply Run\" requires missing quest \"quest-first-harvest\"|quest",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "90d7f71671e95683",
+    "content": "345bce0a24530b32",
     "cartridge": "throws InvalidOperationException: quests[1]: Quest \"Supply Run\" requires missing quest \"quest-first-harvest\""
   },
   "broken/event id empty": {
     "ok": true,
     "errors": [],
-    "json": "7148ba5bcfbddfb9",
-    "stable": "3b5d748424f9436c",
+    "json": "a54ddffdaf9434e8",
+    "stable": "1698d99b0c635578",
     "problems": [
       "warning|lint.events|events[0].id|Required id must be a non-empty string|event",
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "4ccb67da0c1f3c0f",
-    "cartridge": "157c34b99c5e2606"
+    "content": "e47285abb7b19498",
+    "cartridge": "fb57596bcaccff1a"
   },
   "broken/region conditions inverted": {
     "ok": true,
     "errors": [],
-    "json": "c0eeb16bca263582",
-    "stable": "7521d44191e99ff1",
+    "json": "7ac3a9dcbb78d23a",
+    "stable": "a46c2c4cdfc2359a",
     "problems": [
       "warning|lint.events|events[0].conditions[0].x2|x2 must be >= x|event",
       "warning|lint.events|events[0].conditions[0].y2|y2 must be >= y|event",
@@ -1116,14 +1116,14 @@
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f30dae736881cf84",
-    "cartridge": "5f0bc4bab5ce3251"
+    "content": "3d6056b06f97e46c",
+    "cartridge": "8e32af2ee72fcfce"
   },
   "broken/condition ids empty": {
     "ok": true,
     "errors": [],
-    "json": "2464c25aa6b9cd23",
-    "stable": "3d3cdb9950305396",
+    "json": "11fa256a552632d0",
+    "stable": "5ddde8e57ad13cc4",
     "problems": [
       "warning|lint.events|events[0].conditions[0].itemId|Required id must be a non-empty string|event",
       "warning|lint.events|events[0].conditions[1].itemId|Required id must be a non-empty string|event",
@@ -1137,14 +1137,14 @@
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "91d89840749ca16a",
+    "content": "6dd0a6b19cff1851",
     "cartridge": "throws InvalidOperationException: events[0]: Event \"Broken ev-broken\" checks missing item \"\"\nevents[0]: Event \"Broken ev-broken\" checks missing quest \"\""
   },
   "broken/ranges inverted": {
     "ok": true,
     "errors": [],
-    "json": "039c334a12569c0d",
-    "stable": "4fdbcd21e8e318c9",
+    "json": "b02ab8a2bc810840",
+    "stable": "de32bb4bb77c8eeb",
     "problems": [
       "warning|lint.events|events[0].conditions[0]|minDay is greater than maxDay|event",
       "warning|lint.events|events[0].conditions[1]|minYear is greater than maxYear|event",
@@ -1152,28 +1152,28 @@
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "7b06270e4910c41f",
-    "cartridge": "c457efa1871f95e6"
+    "content": "c8c18356d32c0bde",
+    "cartridge": "f412e34e5db65978"
   },
   "broken/action and minigame ids empty": {
     "ok": true,
     "errors": [],
-    "json": "bae7915a3b6284fb",
-    "stable": "e224eb4135ee4bf6",
+    "json": "fbc8e0b593a95a18",
+    "stable": "1bc0c48389ce75d9",
     "problems": [
       "warning|lint.actions|actions[0].id|Required id must be a non-empty string|action",
       "warning|lint.minigames|minigames[0].id|Required id must be a non-empty string|minigame",
       "error|item.useActionMissing|items[57].useActionId|Item \"Growth Charm\" uses missing action \"action-growth-blessing\"|item",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "e2c21efacfacf4ce",
+    "content": "9f88fc40d5c4c08e",
     "cartridge": "throws InvalidOperationException: items[57].useActionId: Item \"Growth Charm\" uses missing action \"action-growth-blessing\""
   },
   "broken/definition ids empty": {
     "ok": true,
     "errors": [],
-    "json": "44d455cffa29f94d",
-    "stable": "c97b6221bb547327",
+    "json": "ffb06ae455cb1891",
+    "stable": "28594f142fe78199",
     "problems": [
       "warning|lint.shops|shops[0].id|Required id must be a non-empty string|shop",
       "warning|lint.recipes|recipes[0].id|Required id must be a non-empty string|recipe",
@@ -1194,14 +1194,14 @@
       "error|recipe.unknownMachine|recipes[4].machineTypeId|Recipe \"Iron Bar\" needs missing machine \"machine-furnace\"|recipe",
       "error|animal.unknownSpecies|animals[0].speciesId|Animal \"Hen\" is of missing species \"animal-chicken\"|animalSpecies"
     ],
-    "content": "e6e795e1a143f251",
+    "content": "d05d74c2d73ede13",
     "cartridge": "throws InvalidOperationException: npcs[1].dialogue: Dialogue \"dialogue-merchant-greeting\" opens missing shop \"shop-general\"\nweather.table.spring[0].weatherId: The spring weather table rolls missing weather \"sun\"\nweather.table.summer[0].weatherId: The summer weather table rolls missing weather \"sun\"\nweather.table.fall[0].weatherId: The fall weather table rolls missing weather \"sun\"\nweather.table.winter[0].weatherId: The winter weather table rolls missing weather \"sun\"\nrecipes[3].machineTypeId: Recipe \"Copper Bar\" needs missing machine \"machine-furnace\"\nrecipes[4].machineTypeId: Recipe \"Iron Bar\" needs missing machine \"machine-furnace\"\nanimals[0].speciesId: Animal \"Hen\" is of missing species \"animal-chicken\""
   },
   "broken/calendar ids empty": {
     "ok": true,
     "errors": [],
-    "json": "61e180e2cfdf4597",
-    "stable": "5b0d30d1d108ee3e",
+    "json": "68a1a7bc80794e94",
+    "stable": "cfa30e1abb7b2a92",
     "problems": [
       "warning|lint.settings|settings.calendar.seasons[0].id|Required id must be a non-empty string|settings",
       "warning|lint.settings|settings.calendar.festivals[0].id|Required id must be a non-empty string|settings",
@@ -1219,76 +1219,76 @@
       "warning|shop.unknownSeason|shops[0].stock[5].seasons[0]|Shop \"General Store\" sells \"seed-strawberry\" in season \"spring\", which is not in the calendar|shop",
       "warning|shop.unknownSeason|shops[0].stock[7].seasons[0]|Shop \"General Store\" sells \"seed-cauliflower\" in season \"spring\", which is not in the calendar|shop"
     ],
-    "content": "3beda5c1e2454c59",
-    "cartridge": "4309a8ef4b362df9"
+    "content": "1f070f5a63f71b26",
+    "cartridge": "e70305e9bbabd3d3"
   },
   "broken/transition to a missing scene": {
     "ok": true,
     "errors": [],
-    "json": "bee281877c74c273",
-    "stable": "6c8a795f84c7f316",
+    "json": "6ea0dd17feb49bea",
+    "stable": "60a6d51d8e5aba93",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" at (0,0) leads to missing scene \"ghost-scene\"|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "4fd2678f80973771",
+    "content": "78e06c42a92ef168",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" at (0,0) leads to missing scene \"ghost-scene\""
   },
   "broken/transition lands out of bounds": {
     "ok": true,
     "errors": [],
-    "json": "1e4c8f626b99fd5d",
-    "stable": "f8ac11877d0638fe",
+    "json": "951328a8b42ff963",
+    "stable": "af44837f11dbd8f1",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" lands out of bounds at (99,-1) in \"Farm\"|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "e63bf8cccb3d2b51",
+    "content": "c7fcce83d71f909c",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" lands out of bounds at (99,-1) in \"Farm\""
   },
   "broken/unreachable scenes": {
     "ok": true,
     "errors": [],
-    "json": "0975670c29a63ee4",
-    "stable": "d9d376adb41ea209",
+    "json": "345c6580b9ffda9f",
+    "stable": "6789cf9a7ca9499b",
     "problems": [
       "warning|content.scenes|scenes[1]|Scene \"Island\" is unreachable (no transition leads to it)|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "7d00b15fe13f751f",
-    "cartridge": "67c19fb79e761cd1"
+    "content": "80d50df21a363f51",
+    "cartridge": "c1575cc15439481a"
   },
   "broken/dialogue links": {
     "ok": true,
     "errors": [],
-    "json": "9bc27a4951573330",
-    "stable": "3dd0d147f3311e97",
+    "json": "edff07896fa03b98",
+    "stable": "ef850f10fce61ae6",
     "problems": [
       "error|content.dialogue|npcs[0].dialogue|Dialogue \"dialogue-farmer-greeting\" opens missing shop \"shop-ghost\"|npc",
       "error|content.dialogue|npcs[0].dialogue|Dialogue \"dialogue-farmer-greeting\" offers missing quest \"quest-ghost\"|npc",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "9e4f3725beb4e1d9",
+    "content": "14ead94d1055331a",
     "cartridge": "throws InvalidOperationException: npcs[0].dialogue: Dialogue \"dialogue-farmer-greeting\" opens missing shop \"shop-ghost\"\nnpcs[0].dialogue: Dialogue \"dialogue-farmer-greeting\" offers missing quest \"quest-ghost\""
   },
   "broken/npc placement and schedule": {
     "ok": true,
     "errors": [],
-    "json": "e473cc4b64600f30",
-    "stable": "180c7b18fcef9444",
+    "json": "851bacdca231575b",
+    "stable": "39cb3d21298ac1a2",
     "problems": [
       "error|content.npcs|npcs[0]|NPC \"Old Farmer\" is placed in missing scene \"scene-ghost\"|npc",
       "error|content.npcs|npcs[1]|NPC \"Merchant Mia\" schedule targets missing scene \"scene-ghost-2\"|npc",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "d4ec52fa99fa9abf",
+    "content": "848c47e9207f884f",
     "cartridge": "throws InvalidOperationException: npcs[0]: NPC \"Old Farmer\" is placed in missing scene \"scene-ghost\"\nnpcs[1]: NPC \"Merchant Mia\" schedule targets missing scene \"scene-ghost-2\""
   },
   "broken/quest references": {
     "ok": true,
     "errors": [],
-    "json": "dbc0618b570aa07a",
-    "stable": "a88d4b9b0b0ca1cf",
+    "json": "a8b7332bff73ba26",
+    "stable": "e9541b7a098dfb46",
     "problems": [
       "error|content.quests|quests[0]|Quest \"First Harvest\" requires missing quest \"quest-ghost\"|quest",
       "error|content.quests|quests[0]|Quest \"First Harvest\" objective targets missing item \"item-ghost\"|quest",
@@ -1298,14 +1298,14 @@
       "error|content.quests|quests[0]|Quest \"First Harvest\" rewards missing item \"reward-ghost\"|quest",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "8119763a7ca50afa",
+    "content": "ce0f32a4a399a403",
     "cartridge": "throws InvalidOperationException: quests[0]: Quest \"First Harvest\" requires missing quest \"quest-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing item \"item-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing NPC \"npc-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing scene \"scene-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing crop \"crop-ghost\"\nquests[0]: Quest \"First Harvest\" rewards missing item \"reward-ghost\""
   },
   "broken/event references": {
     "ok": true,
     "errors": [],
-    "json": "009b7d8d616276ac",
-    "stable": "32a1fd9407f8cc8e",
+    "json": "c46abc35ea7a2e6a",
+    "stable": "14d6671b8835018e",
     "problems": [
       "error|content.events|events[0]|Event \"Broken ev-broken\" belongs to missing scene \"scene-ghost\"|event",
       "error|content.events|events[0]|Event \"Broken ev-broken\" checks missing item \"item-ghost\"|event",
@@ -1318,104 +1318,104 @@
       "error|event.outcomeMissingField|events[0].outcomes[4].itemId|Event \"Broken ev-broken\" has a giveItem outcome with no itemId|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "b75418dac72f8fd4",
+    "content": "a55f62da3104effd",
     "cartridge": "throws InvalidOperationException: events[0]: Event \"Broken ev-broken\" belongs to missing scene \"scene-ghost\"\nevents[0]: Event \"Broken ev-broken\" checks missing item \"item-ghost\"\nevents[0]: Event \"Broken ev-broken\" checks missing quest \"quest-ghost\"\nevents[0]: Event \"Broken ev-broken\" references missing item \"item-ghost-2\"\nevents[0]: Event \"Broken ev-broken\" references missing quest \"quest-ghost-2\"\nevents[0]: Event \"Broken ev-broken\" references missing NPC \"npc-ghost\"\nevents[0]: Event \"Broken ev-broken\" warps to missing scene \"scene-ghost-2\"\nevents[0].outcomes[4].itemId: Event \"Broken ev-broken\" has a giveItem outcome with no itemId"
   },
   "broken/shop stocks a missing item": {
     "ok": true,
     "errors": [],
-    "json": "f0ea32b9cb5b3b1d",
-    "stable": "55099e956b4d44d0",
+    "json": "22ad764e602402e3",
+    "stable": "2da6e7e72d012e99",
     "problems": [
       "error|content.shops|shops[0]|Shop \"General Store\" stocks missing item \"item-ghost\"|shop",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "834d3c25441d1884",
+    "content": "62d950379762b7cf",
     "cartridge": "throws InvalidOperationException: shops[0]: Shop \"General Store\" stocks missing item \"item-ghost\""
   },
   "broken/node type drops a missing item": {
     "ok": true,
     "errors": [],
-    "json": "5aefd5ab305de9cd",
-    "stable": "b24117f30900a97d",
+    "json": "e2102f9f763024b6",
+    "stable": "7c6b414a0b0a9911",
     "problems": [
       "error|content.nodes|nodeTypes[0].drops|Node type \"Tree\" drops missing item \"item-ghost\"|nodeType",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "2538eb9ae53b0455",
+    "content": "1375a42fd57ebff9",
     "cartridge": "throws InvalidOperationException: nodeTypes[0].drops: Node type \"Tree\" drops missing item \"item-ghost\""
   },
   "broken/placed node of a missing type": {
     "ok": true,
     "errors": [],
-    "json": "57f264fc0d84cc50",
-    "stable": "050093361662ae24",
+    "json": "0be7bf29ffc1d51a",
+    "stable": "c8463b93ebe910f8",
     "problems": [
       "error|content.nodes|scenes[0].tiles|Scene \"Farm\" has a placed node of missing type \"node-ghost\" at (3,2)|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "0bf0e71293c51157",
+    "content": "7bcdcde7009a9ca5",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles: Scene \"Farm\" has a placed node of missing type \"node-ghost\" at (3,2)"
   },
   "broken/planted crop of a missing type": {
     "ok": true,
     "errors": [],
-    "json": "7b60ae1a72b338c1",
-    "stable": "8ce76c5807ffe0d1",
+    "json": "f7d4180f0b71f1c6",
+    "stable": "7fb51426e3022366",
     "problems": [
       "warning|content.crops|scenes[0].tiles|Scene \"Farm\" has a planted crop of missing type \"crop-ghost\" at (4,2)|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "db091e9d1d6e584e",
-    "cartridge": "378bbeadea21f705"
+    "content": "7f80d2db39af08d7",
+    "cartridge": "8686fab34657e2b4"
   },
   "broken/crop out of season": {
     "ok": true,
     "errors": [],
-    "json": "d555c7ba829957a2",
-    "stable": "94524ff1ad3e3fcd",
+    "json": "0ff72792bbfd4af6",
+    "stable": "a01397f19ad9b126",
     "problems": [
       "warning|content.crops|scenes[0].tiles|Scene \"Farm\": Pumpkin at (5,2) cannot grow in the starting season (spring)|scene",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "5aedc8ab6d1194e1",
-    "cartridge": "fc589a57694c9318"
+    "content": "3150bb0f1238c7b7",
+    "cartridge": "a37c78342c506ea2"
   },
   "broken/seed of a missing crop": {
     "ok": true,
     "errors": [],
-    "json": "6d9e23ac5aab1a2e",
-    "stable": "f9e3d450cfd1184b",
+    "json": "6cdcac0805ca4545",
+    "stable": "0adc8c30c6509193",
     "problems": [
       "error|content.items|items[58]|Seed \"Ghost Seeds\" references missing crop \"crop-ghost\"|item",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "31945e177463c767",
+    "content": "c5d9720d49d12860",
     "cartridge": "throws InvalidOperationException: items[58]: Seed \"Ghost Seeds\" references missing crop \"crop-ghost\""
   },
   "broken/pack problems": {
     "ok": true,
     "errors": [],
-    "json": "ac801971ed95d116",
-    "stable": "d68783175a6a2e89",
+    "json": "cbe2fff3dd22a8fb",
+    "stable": "bc32134b233a759a",
     "problems": [
       "error|content.packs|contentPacks[0]|Pack 'lonely' depends on 'pack-ghost' which is not installed/enabled|pack",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
+    "content": "a01ad6c3a036d7f5",
     "cartridge": "throws InvalidOperationException: contentPacks[0]: Pack 'lonely' depends on 'pack-ghost' which is not installed/enabled"
   },
   "broken/pack without contentInject": {
     "ok": true,
     "errors": [],
-    "json": "b497afada8d8ab1f",
-    "stable": "f16c678caab36bc9",
+    "json": "de5b9c770220f48c",
+    "stable": "d352aaa0ae3d5d85",
     "problems": [
       "warning|content.packs|contentPacks[0]|Pack 'no-inject' ships content but does not have the contentInject permission — its content is not loaded|pack",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
-    "cartridge": "a8aa4e5b3a52a87e"
+    "content": "a01ad6c3a036d7f5",
+    "cartridge": "163abaacf9154cb7"
   },
   "broken/scenes null": {
     "ok": false,
@@ -1536,100 +1536,100 @@
       "npcs.0.patrolPoints.1.y: Expected integer, received 2.25",
       "npcs.1.birthday.day: Expected integer, received 3.5",
       "quests.0.status: Invalid enum value. Expected 'not-started' | 'active' | 'completed' | 'failed', received 'maybe'",
-      "quests.0.objectives.0.type: Invalid enum value. Expected 'collect' | 'harvest' | 'talk' | 'visit' | 'craft' | 'gift', received 'dance'",
+      "quests.0.objectives.0.type: Invalid enum value. Expected 'collect' | 'harvest' | 'talk' | 'visit' | 'craft' | 'gift' | 'ship' | 'slay' | 'catch' | 'hearts' | 'bundle' | 'mineFloor', received 'dance'",
       "events.0.trigger: Invalid enum value. Expected 'enter' | 'interact' | 'tick' | 'dayStart' | 'time' | 'harvest' | 'sell' | 'craft' | 'catch' | 'pickUp' | 'friendship' | 'quest' | 'build' | 'bundle' | 'achievement' | 'slay', received 'sometimes'",
       "events.1.conditions.0.quantity: Expected integer, received 0.5",
       "events.1.conditions.1.quantity: Number must be greater than 0",
       "events.2.conditions.0.status: Invalid enum value. Expected 'not-started' | 'active' | 'completed' | 'failed', received 'zzz'",
-      "events.3.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'modifyHealth', received 'explode'"
+      "events.3.outcomes.0.type: Invalid enum value. Expected 'message' | 'modifyFriendship' | 'modifyEnergy' | 'waterArea' | 'giveItem' | 'takeItem' | 'giveMoney' | 'takeMoney' | 'setFlag' | 'clearFlag' | 'startQuest' | 'completeQuest' | 'spawnNPC' | 'removeNPC' | 'changeTile' | 'warpPlayer' | 'startDialogue' | 'lockTransition' | 'unlockTransition' | 'playSound' | 'performAction' | 'startMinigame' | 'playMusic' | 'startCutscene' | 'setVariable' | 'addVariable' | 'moveNpc' | 'setWeather' | 'giveExperience' | 'addShopStock' | 'removeShopStock' | 'placeNode' | 'removeNode' | 'placeMachine' | 'removeMachine' | 'setRelationship' | 'sendMail' | 'setInventorySize' | 'addInventorySize' | 'addMaxEnergy' | 'addMaxHealth' | 'applyBuff' | 'modifyHealth', received 'explode'"
     ]
   },
   "code/starter": {
     "ok": true,
     "errors": [],
-    "json": "16dde3de7d3b004b",
-    "stable": "cb385b31dc950c15",
+    "json": "99bd0c5e105722f7",
+    "stable": "9d6adeff7b8aa8a3",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
-    "cartridge": "30aa865f778c98bb"
+    "content": "a01ad6c3a036d7f5",
+    "cartridge": "be84e789c46bcad5"
   },
   "code/blank": {
     "ok": true,
     "errors": [],
-    "json": "8773b74509408b8a",
-    "stable": "12690da63cf71ee6",
+    "json": "dd9cee95280c23c3",
+    "stable": "af2e4104d938e61c",
     "problems": [
       "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
     ],
-    "content": "7b16c1e22c80636b",
-    "cartridge": "5fc93b414e400caa"
+    "content": "9a5a311da4eaf6a9",
+    "cartridge": "a2ca9d463426c402"
   },
   "code/cozy": {
     "ok": true,
     "errors": [],
-    "json": "15ad9f1c8a13e6d8",
-    "stable": "6656f974af8038e8",
+    "json": "4e30df8fb42e8011",
+    "stable": "44b9cd61918fb8ff",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "d0bd4d4b871d05d3",
-    "cartridge": "547d71f894ccd527"
+    "content": "8a11cabf057313a8",
+    "cartridge": "1e4d0051ec753d97"
   },
   "code/quest": {
     "ok": true,
     "errors": [],
-    "json": "27792f2d5d02460a",
-    "stable": "17362bcc6528182b",
+    "json": "130c76ad16171a21",
+    "stable": "7ef47eaac08f907b",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "62f66ac5aacc23ad",
-    "cartridge": "4623a08cd994c65b"
+    "content": "9adce41fa3f9f0f3",
+    "cartridge": "22df7cf6d3701160"
   },
   "code/template-starter": {
     "ok": true,
     "errors": [],
-    "json": "16dde3de7d3b004b",
-    "stable": "cb385b31dc950c15",
+    "json": "99bd0c5e105722f7",
+    "stable": "9d6adeff7b8aa8a3",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "f8ffc610ec336c7e",
-    "cartridge": "30aa865f778c98bb"
+    "content": "a01ad6c3a036d7f5",
+    "cartridge": "be84e789c46bcad5"
   },
   "code/template-blank": {
     "ok": true,
     "errors": [],
-    "json": "8773b74509408b8a",
-    "stable": "12690da63cf71ee6",
+    "json": "dd9cee95280c23c3",
+    "stable": "af2e4104d938e61c",
     "problems": [
       "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
     ],
-    "content": "7b16c1e22c80636b",
-    "cartridge": "5fc93b414e400caa"
+    "content": "9a5a311da4eaf6a9",
+    "cartridge": "a2ca9d463426c402"
   },
   "code/template-cozy": {
     "ok": true,
     "errors": [],
-    "json": "15ad9f1c8a13e6d8",
-    "stable": "6656f974af8038e8",
+    "json": "4e30df8fb42e8011",
+    "stable": "44b9cd61918fb8ff",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "d0bd4d4b871d05d3",
-    "cartridge": "547d71f894ccd527"
+    "content": "8a11cabf057313a8",
+    "cartridge": "1e4d0051ec753d97"
   },
   "code/template-quest": {
     "ok": true,
     "errors": [],
-    "json": "27792f2d5d02460a",
-    "stable": "17362bcc6528182b",
+    "json": "130c76ad16171a21",
+    "stable": "7ef47eaac08f907b",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
     ],
-    "content": "62f66ac5aacc23ad",
-    "cartridge": "4623a08cd994c65b"
+    "content": "9adce41fa3f9f0f3",
+    "cartridge": "22df7cf6d3701160"
   }
 }

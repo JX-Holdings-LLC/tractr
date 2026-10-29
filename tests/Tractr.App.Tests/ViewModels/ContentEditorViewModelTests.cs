@@ -40,6 +40,27 @@ public sealed class ContentEditorViewModelTests
     }
 
     [Fact]
+    public void PaintingKeepsTheContentRowsAndUnchangedForm()
+    {
+        using var test = new TestWorkspace();
+        var (viewModel, draft) = Create(test);
+        viewModel.SelectRow(test.Project.Npcs[0].Id);
+        var rows = viewModel.Rows;
+        var originalDraft = draft();
+        var notifications = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
+        test.Workspace.Apply(Edits.PaintTile(test.Project.Player.SceneId, 2, 2, "water"));
+        Assert.Same(rows, viewModel.Rows);
+        Assert.Same(originalDraft, draft());
+        Assert.DoesNotContain(nameof(ContentEditorViewModel.FormEntity), notifications);
+        Assert.DoesNotContain(nameof(ContentEditorViewModel.Rows), notifications);
+        // An entry or its picker context changing still refreshes the form.
+        test.Workspace.Apply(Edits.UpsertNpc(test.Project.Npcs[0].WithName("Changed")));
+        Assert.NotSame(originalDraft, draft());
+        Assert.Contains(nameof(ContentEditorViewModel.Rows), notifications);
+    }
+
+    [Fact]
     public void AnEntrySavesAsOneUndoStep()
     {
         using var test = new TestWorkspace();

@@ -14,6 +14,7 @@ let private error (result: Result<'T, string>) =
 let ``a matching template is found`` () =
     use dir = new TempDir()
     fakeTemplates dir.Path "1.0.0" |> ignore
+
     match Templates.find dir.Path ExportTarget.LinuxX64 "1.0.0" with
     | Error e -> failwith e
     | Ok template ->

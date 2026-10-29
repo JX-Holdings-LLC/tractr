@@ -63,8 +63,18 @@ type ActionDef =
     }
 
     /// A `ActionDef` with every field at its schema default.
-    static member Default : ActionDef =
-        { Id = ""; Name = ""; Description = ""; Conditions = []; FailMessage = ""; Outcomes = []; EnergyCost = 0.0; Hotkey = None; Extra = [] }
+    static member Default: ActionDef =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Conditions = []
+            FailMessage = ""
+            Outcomes = []
+            EnergyCost = 0.0
+            Hotkey = None
+            Extra = []
+        }
 
 // ---- Building the farm (M5, Rust schema/farm.rs) ----
 
@@ -78,8 +88,7 @@ and AreaEffect =
     }
 
     /// A `AreaEffect` with every field at its schema default.
-    static member Default : AreaEffect =
-        { Effect = "water"; Radius = 1.0 }
+    static member Default: AreaEffect = { Effect = "water"; Radius = 1.0 }
 
 /// A building a builder puts up (M5): a footprint on a farm scene with a door into an interior
 /// scene made from a template.
@@ -124,8 +133,27 @@ and BuildingDefinition =
     }
 
     /// A `BuildingDefinition` with every field at its schema default.
-    static member Default : BuildingDefinition =
-        { Id = ""; Name = ""; Description = ""; Visual = None; Color = "#b5651d"; Width = 3.0; Height = 2.0; Door = None; InteriorSceneId = None; InteriorDoor = None; Cost = 0.0; Materials = []; BuildDays = 2.0; Scenes = []; Capacity = 0.0; UpgradeOf = None; Light = None; Extra = [] }
+    static member Default: BuildingDefinition =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Visual = None
+            Color = "#b5651d"
+            Width = 3.0
+            Height = 2.0
+            Door = None
+            InteriorSceneId = None
+            InteriorDoor = None
+            Cost = 0.0
+            Materials = []
+            BuildDays = 2.0
+            Scenes = []
+            Capacity = 0.0
+            UpgradeOf = None
+            Light = None
+            Extra = []
+        }
 
 /// A building on the map (M5), from the project's start (`GameProject.Buildings`) or built in play.
 and BuildingState =
@@ -148,8 +176,17 @@ and BuildingState =
     }
 
     /// A `BuildingState` with every field at its schema default.
-    static member Default : BuildingState =
-        { Id = ""; BuildingId = ""; SceneId = ""; X = 0.0; Y = 0.0; InteriorSceneId = ""; DaysLeft = 0.0; UpgradeTo = None }
+    static member Default: BuildingState =
+        {
+            Id = ""
+            BuildingId = ""
+            SceneId = ""
+            X = 0.0
+            Y = 0.0
+            InteriorSceneId = ""
+            DaysLeft = 0.0
+            UpgradeTo = None
+        }
 
 /// One more product of an animal species (M5) beside its `ProductItemId`.
 and AnimalProduct =
@@ -162,8 +199,12 @@ and AnimalProduct =
     }
 
     /// A `AnimalProduct` with every field at its schema default.
-    static member Default : AnimalProduct =
-        { ItemId = ""; IntervalDays = 1.0; MinMood = 30.0 }
+    static member Default: AnimalProduct =
+        {
+            ItemId = ""
+            IntervalDays = 1.0
+            MinMood = 30.0
+        }
 
 /// A product quality an animal's mood earns (M5): the best tier whose `MinMood` it has.
 and MoodQuality =
@@ -175,8 +216,7 @@ and MoodQuality =
     }
 
     /// A `MoodQuality` with every field at its schema default.
-    static member Default : MoodQuality =
-        { MinMood = 0.0; Quality = "" }
+    static member Default: MoodQuality = { MinMood = 0.0; Quality = "" }
 
 /// How animals of a species have young (M5): each night an adult in a building with room may.
 and AnimalBreeding =
@@ -188,8 +228,7 @@ and AnimalBreeding =
     }
 
     /// A `AnimalBreeding` with every field at its schema default.
-    static member Default : AnimalBreeding =
-        { Chance = 0.05; MinMood = 70.0 }
+    static member Default: AnimalBreeding = { Chance = 0.05; MinMood = 70.0 }
 
 /// Progress toward one of `AnimalSpeciesDefinition.Products` (M5).
 and ProductProgress =
@@ -200,8 +239,7 @@ and ProductProgress =
     }
 
     /// A `ProductProgress` with every field at its schema default.
-    static member Default : ProductProgress =
-        { Days = 0.0; Ready = false }
+    static member Default: ProductProgress = { Days = 0.0; Ready = false }
 
 /// A farm map a new game can start with (M5).
 and FarmLayout =
@@ -214,8 +252,13 @@ and FarmLayout =
     }
 
     /// A `FarmLayout` with every field at its schema default.
-    static member Default : FarmLayout =
-        { Id = ""; Name = ""; Description = ""; SceneId = "" }
+    static member Default: FarmLayout =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            SceneId = ""
+        }
 
 /// The farm (M5): its scene, the layouts a new game picks from, and pests.
 and FarmSettings =
@@ -229,8 +272,12 @@ and FarmSettings =
     }
 
     /// A `FarmSettings` with every field at its schema default.
-    static member Default : FarmSettings =
-        { SceneId = ""; Layouts = []; PestChance = 0.0 }
+    static member Default: FarmSettings =
+        {
+            SceneId = ""
+            Layouts = []
+            PestChance = 0.0
+        }
 
 // ---- Long-term goals (M6, Rust schema/goals.rs) ----
 
@@ -245,8 +292,12 @@ and CollectionReward =
     }
 
     /// A `CollectionReward` with every field at its schema default.
-    static member Default : CollectionReward =
-        { Count = 0.0; Message = ""; Outcomes = [] }
+    static member Default: CollectionReward =
+        {
+            Count = 0.0
+            Message = ""
+            Outcomes = []
+        }
 
 /// A museum, catalogue or other list of items to find (M6).
 and CollectionDefinition =
@@ -266,8 +317,17 @@ and CollectionDefinition =
     }
 
     /// A `CollectionDefinition` with every field at its schema default.
-    static member Default : CollectionDefinition =
-        { Id = ""; Name = ""; Description = ""; Items = []; Kind = "found"; SceneId = None; Rewards = []; Extra = [] }
+    static member Default: CollectionDefinition =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Items = []
+            Kind = "found"
+            SceneId = None
+            Rewards = []
+            Extra = []
+        }
 
 /// A line of a bundle (M6): `Quantity` of an item, of `Quality` or better.
 and BundleItem =
@@ -280,8 +340,12 @@ and BundleItem =
     }
 
     /// A `BundleItem` with every field at its schema default.
-    static member Default : BundleItem =
-        { ItemId = ""; Quantity = 1.0; Quality = None }
+    static member Default: BundleItem =
+        {
+            ItemId = ""
+            Quantity = 1.0
+            Quality = None
+        }
 
 /// A Community Center-style list of items to hand in (M6); done, it runs its outcomes (rewards,
 /// flags, an unlocked door: the world fixed).
@@ -305,8 +369,19 @@ and BundleDefinition =
     }
 
     /// A `BundleDefinition` with every field at its schema default.
-    static member Default : BundleDefinition =
-        { Id = ""; Name = ""; Description = ""; Group = ""; SceneId = None; Items = []; Required = None; Message = ""; Outcomes = []; Extra = [] }
+    static member Default: BundleDefinition =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Group = ""
+            SceneId = None
+            Items = []
+            Required = None
+            Message = ""
+            Outcomes = []
+            Extra = []
+        }
 
 /// Something to achieve (M6): unlocked the moment its conditions hold.
 and AchievementDefinition =
@@ -325,8 +400,17 @@ and AchievementDefinition =
     }
 
     /// A `AchievementDefinition` with every field at its schema default.
-    static member Default : AchievementDefinition =
-        { Id = ""; Name = ""; Description = ""; Conditions = []; Hidden = false; Visual = None; SteamId = None; Extra = [] }
+    static member Default: AchievementDefinition =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Conditions = []
+            Hidden = false
+            Visual = None
+            SteamId = None
+            Extra = []
+        }
 
 /// A letter (M6). It arrives in the morning: after a `sendMail` outcome or a quest that sends
 /// it, or by itself on a morning its `Conditions` hold (an NPC at some hearts, a birthday).
@@ -351,8 +435,19 @@ and MailDefinition =
     }
 
     /// A `MailDefinition` with every field at its schema default.
-    static member Default : MailDefinition =
-        { Id = ""; Subject = ""; From = ""; Text = ""; Attachments = []; Money = 0.0; Outcomes = []; Conditions = []; Repeat = false; Extra = [] }
+    static member Default: MailDefinition =
+        {
+            Id = ""
+            Subject = ""
+            From = ""
+            Text = ""
+            Attachments = []
+            Money = 0.0
+            Outcomes = []
+            Conditions = []
+            Repeat = false
+            Extra = []
+        }
 
 // ---- Combat and adventure (M7, Rust schema/combat.rs) ----
 
@@ -376,8 +471,16 @@ and CombatSettings =
     }
 
     /// A `CombatSettings` with every field at its schema default.
-    static member Default : CombatSettings =
-        { Enabled = false; MaxHealth = 100.0; FaintMoneyPenalty = 0.0; FaintSceneId = None; FaintX = None; FaintY = None; HurtTicks = 30.0 }
+    static member Default: CombatSettings =
+        {
+            Enabled = false
+            MaxHealth = 100.0
+            FaintMoneyPenalty = 0.0
+            FaintSceneId = None
+            FaintX = None
+            FaintY = None
+            HurtTicks = 30.0
+        }
 
 /// A monster (M7).
 and MonsterDefinition =
@@ -408,8 +511,22 @@ and MonsterDefinition =
     }
 
     /// A `MonsterDefinition` with every field at its schema default.
-    static member Default : MonsterDefinition =
-        { Id = ""; Name = ""; Visual = None; Color = "#6a8f3a"; Health = 10.0; Damage = 5.0; Defense = 0.0; Speed = 2.0; Movement = "chase"; Sight = 5.0; Drops = []; Experience = 5.0; Extra = [] }
+    static member Default: MonsterDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            Color = "#6a8f3a"
+            Health = 10.0
+            Damage = 5.0
+            Defense = 0.0
+            Speed = 2.0
+            Movement = "chase"
+            Sight = 5.0
+            Drops = []
+            Experience = 5.0
+            Extra = []
+        }
 
 /// Monsters a scene has each morning (M7): `Count` of a monster on free tiles of the area
 /// (`X..=X2`, `Y..=Y2`; absent ends: the whole scene).
@@ -429,8 +546,15 @@ and MonsterSpawn =
     }
 
     /// A `MonsterSpawn` with every field at its schema default.
-    static member Default : MonsterSpawn =
-        { MonsterId = ""; Count = 1.0; X = None; Y = None; X2 = None; Y2 = None }
+    static member Default: MonsterSpawn =
+        {
+            MonsterId = ""
+            Count = 1.0
+            X = None
+            Y = None
+            X2 = None
+            Y2 = None
+        }
 
 /// A weighted monster of a mine depth band (M7).
 and MineMonsterWeight =
@@ -441,8 +565,7 @@ and MineMonsterWeight =
     }
 
     /// A `MineMonsterWeight` with every field at its schema default.
-    static member Default : MineMonsterWeight =
-        { MonsterId = ""; Weight = 0.0 }
+    static member Default: MineMonsterWeight = { MonsterId = ""; Weight = 0.0 }
 
 /// A hazard terrain a mine depth band scatters over its floors (M7), on the overlay layer.
 and MineHazard =
@@ -453,8 +576,7 @@ and MineHazard =
     }
 
     /// A `MineHazard` with every field at its schema default.
-    static member Default : MineHazard =
-        { TerrainId = ""; Density = 0.05 }
+    static member Default: MineHazard = { TerrainId = ""; Density = 0.05 }
 
 /// A weighted treasure of a mine depth band (M7): an item left on a floor tile.
 and MineTreasure =
@@ -465,8 +587,7 @@ and MineTreasure =
     }
 
     /// A `MineTreasure` with every field at its schema default.
-    static member Default : MineTreasure =
-        { ItemId = ""; Weight = 0.0 }
+    static member Default: MineTreasure = { ItemId = ""; Weight = 0.0 }
 
 // ---- The conditions M5–M7 add ----
 
@@ -476,10 +597,30 @@ and MoneyCondition =
         Min: float
     }
 
-    static member Default : MoneyCondition =
-        { Min = 0.0 }
+    static member Default: MoneyCondition = { Min = 0.0 }
 
 /// The player's level in a skill is at least `Min` (M6).
+and PerkCondition =
+    {
+        Skill: string
+        PerkId: string
+        ChoiceId: string
+    }
+
+    static member Default: PerkCondition =
+        {
+            Skill = ""
+            PerkId = ""
+            ChoiceId = ""
+        }
+
+and BuffCondition =
+    {
+        Id: string
+    }
+
+    static member Default: BuffCondition = { Id = "" }
+
 and SkillLevelCondition =
     {
         Skill: string
@@ -487,18 +628,17 @@ and SkillLevelCondition =
         Min: float
     }
 
-    static member Default : SkillLevelCondition =
-        { Skill = ""; Min = 1.0 }
+    static member Default: SkillLevelCondition = { Skill = ""; Min = 1.0 }
 
 /// The deepest mine floor reached is at least `Min` (M6).
 and MineFloorCondition =
     {
         /// int.
         Min: float
+        MineId: string option
     }
 
-    static member Default : MineFloorCondition =
-        { Min = 1.0 }
+    static member Default: MineFloorCondition = { Min = 1.0; MineId = None }
 
 /// A collection holds at least `Min` items; absent `Min`: all of its items (M6).
 and CollectionCondition =
@@ -508,8 +648,7 @@ and CollectionCondition =
         Min: float option
     }
 
-    static member Default : CollectionCondition =
-        { CollectionId = ""; Min = None }
+    static member Default: CollectionCondition = { CollectionId = ""; Min = None }
 
 /// A bundle is complete (M6).
 and BundleCondition =
@@ -517,8 +656,7 @@ and BundleCondition =
         BundleId: string
     }
 
-    static member Default : BundleCondition =
-        { BundleId = "" }
+    static member Default: BundleCondition = { BundleId = "" }
 
 /// An achievement is unlocked (M6).
 and AchievementCondition =
@@ -526,8 +664,7 @@ and AchievementCondition =
         AchievementId: string
     }
 
-    static member Default : AchievementCondition =
-        { AchievementId = "" }
+    static member Default: AchievementCondition = { AchievementId = "" }
 
 /// At least `Min` units shipped of an item; an empty `ItemId`: of everything (M6).
 and ShippedCondition =
@@ -537,8 +674,7 @@ and ShippedCondition =
         Min: float
     }
 
-    static member Default : ShippedCondition =
-        { ItemId = ""; Min = 1.0 }
+    static member Default: ShippedCondition = { ItemId = ""; Min = 1.0 }
 
 /// At least `Min` standing buildings of a kind, its upgrades counting (M5).
 and BuildingCondition =
@@ -548,8 +684,7 @@ and BuildingCondition =
         Min: float
     }
 
-    static member Default : BuildingCondition =
-        { BuildingId = ""; Min = 1.0 }
+    static member Default: BuildingCondition = { BuildingId = ""; Min = 1.0 }
 
 /// At least `Min` monsters slain of a kind; an empty `MonsterId`: of any (M7).
 and SlainCondition =
@@ -559,8 +694,7 @@ and SlainCondition =
         Min: float
     }
 
-    static member Default : SlainCondition =
-        { MonsterId = ""; Min = 1.0 }
+    static member Default: SlainCondition = { MonsterId = ""; Min = 1.0 }
 
 /// Today is an NPC's birthday; an empty `NpcId`: anyone's (M6).
 and BirthdayCondition =
@@ -568,8 +702,7 @@ and BirthdayCondition =
         NpcId: string
     }
 
-    static member Default : BirthdayCondition =
-        { NpcId = "" }
+    static member Default: BirthdayCondition = { NpcId = "" }
 
 and AnimalSpeciesDefinition =
     {
@@ -601,8 +734,23 @@ and AnimalSpeciesDefinition =
     }
 
     /// A `AnimalSpeciesDefinition` with every field at its schema default.
-    static member Default : AnimalSpeciesDefinition =
-        { Id = ""; Name = ""; Visual = None; PurchaseCost = 0.0; FeedItemId = None; ProductItemId = ""; ProductIntervalDays = 1.0; DaysToAdult = 3.0; Color = "#e8d8c3"; Housing = None; Products = None; MoodQualities = None; Breeding = None; Extra = [] }
+    static member Default: AnimalSpeciesDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            PurchaseCost = 0.0
+            FeedItemId = None
+            ProductItemId = ""
+            ProductIntervalDays = 1.0
+            DaysToAdult = 3.0
+            Color = "#e8d8c3"
+            Housing = None
+            Products = None
+            MoodQualities = None
+            Breeding = None
+            Extra = []
+        }
 
 /// A live animal (persisted per project/save).
 and AnimalState =
@@ -634,8 +782,24 @@ and AnimalState =
     }
 
     /// A `AnimalState` with every field at its schema default.
-    static member Default : AnimalState =
-        { Id = ""; SpeciesId = ""; Name = ""; SceneId = ""; X = 0.0; Y = 0.0; Mood = 70.0; FedToday = false; PettedToday = false; AgeDays = 0.0; DaysSinceProduct = 0.0; ProductReady = false; BuildingId = None; MoreProducts = None; Extra = [] }
+    static member Default: AnimalState =
+        {
+            Id = ""
+            SpeciesId = ""
+            Name = ""
+            SceneId = ""
+            X = 0.0
+            Y = 0.0
+            Mood = 70.0
+            FedToday = false
+            PettedToday = false
+            AgeDays = 0.0
+            DaysSinceProduct = 0.0
+            ProductReady = false
+            BuildingId = None
+            MoreProducts = None
+            Extra = []
+        }
 
 and AnimationClip =
     {
@@ -647,8 +811,7 @@ and AnimationClip =
     }
 
     /// A `AnimationClip` with every field at its schema default.
-    static member Default : AnimationClip =
-        { Name = ""; Loop = true; Frames = [] }
+    static member Default: AnimationClip = { Name = ""; Loop = true; Frames = [] }
 
 /// Rectangles are in source pixels; display size remains independent of art resolution.
 and ArtFrame =
@@ -667,8 +830,15 @@ and ArtFrame =
     }
 
     /// A `ArtFrame` with every field at its schema default.
-    static member Default : ArtFrame =
-        { AssetId = None; X = 0.0; Y = 0.0; Width = 0.0; Height = 0.0; Ticks = 6.0 }
+    static member Default: ArtFrame =
+        {
+            AssetId = None
+            X = 0.0
+            Y = 0.0
+            Width = 0.0
+            Height = 0.0
+            Ticks = 6.0
+        }
 
 /// The look of a game's sky (M1): the day/night tint and the foliage tint. Empty or absent parts
 /// keep the look below them: a scene's look, then its season's, then the game's, then the built-in.
@@ -682,8 +852,7 @@ and AtmosphereLook =
     }
 
     /// A `AtmosphereLook` with every field at its schema default.
-    static member Default : AtmosphereLook =
-        { Daylight = []; FoliageTint = None }
+    static member Default: AtmosphereLook = { Daylight = []; FoliageTint = None }
 
 /// A game's atmosphere (M1): its look, and a look per season.
 and AtmosphereSettings =
@@ -695,8 +864,20 @@ and AtmosphereSettings =
     }
 
     /// A `AtmosphereSettings` with every field at its schema default.
-    static member Default : AtmosphereSettings =
-        { AllSeasons = AtmosphereLook.Default; Seasons = [] }
+    static member Default: AtmosphereSettings =
+        {
+            AllSeasons = AtmosphereLook.Default
+            Seasons = []
+        }
+
+and CalendarWeekday =
+    {
+        Id: string
+        Name: string
+        Words: ((string * string) list) option
+    }
+
+    static member Default: CalendarWeekday = { Id = ""; Name = ""; Words = None }
 
 and CalendarConfig =
     {
@@ -704,11 +885,142 @@ and CalendarConfig =
         Seasons: CalendarSeason list
         /// Named festival days, each pinned to a season + day-of-season.
         Festivals: CalendarFestival list
+        Weekdays: (CalendarWeekday list) option
+        WeekdayOffset: float option
     }
 
     /// A `CalendarConfig` with every field at its schema default.
-    static member Default : CalendarConfig =
-        { Seasons = [ ({ Id = "spring"; Name = "Spring"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "summer"; Name = "Summer"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "fall"; Name = "Fall"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason); ({ Id = "winter"; Name = "Winter"; Days = 28.0; Temperature = None; Music = None } : CalendarSeason) ]; Festivals = [] }
+    static member Default: CalendarConfig =
+        {
+            Seasons =
+                [
+                    ({
+                        Id = "spring"
+                        Name = "Spring"
+                        Days = 28.0
+                        Temperature = None
+                        Music = None
+                    }
+                    : CalendarSeason)
+                    ({
+                        Id = "summer"
+                        Name = "Summer"
+                        Days = 28.0
+                        Temperature = None
+                        Music = None
+                    }
+                    : CalendarSeason)
+                    ({
+                        Id = "fall"
+                        Name = "Fall"
+                        Days = 28.0
+                        Temperature = None
+                        Music = None
+                    }
+                    : CalendarSeason)
+                    ({
+                        Id = "winter"
+                        Name = "Winter"
+                        Days = 28.0
+                        Temperature = None
+                        Music = None
+                    }
+                    : CalendarSeason)
+                ]
+            Festivals = []
+            Weekdays = None
+            WeekdayOffset = None
+        }
+
+and FestivalAttendance =
+    {
+        NpcId: string
+        X: float
+        Y: float
+        DialogueId: string option
+    }
+
+    static member Default: FestivalAttendance =
+        {
+            NpcId = ""
+            X = 0.0
+            Y = 0.0
+            DialogueId = None
+        }
+
+and FestivalContest =
+    {
+        ItemId: string
+        MinimumQuality: string option
+        ConsumeItem: bool
+        Rewards: EventOutcome list
+    }
+
+    static member Default: FestivalContest =
+        {
+            ItemId = ""
+            MinimumQuality = None
+            ConsumeItem = false
+            Rewards = []
+        }
+
+and FestivalActivity =
+    {
+        X: float
+        Y: float
+        MinigameId: string option
+        CutsceneId: string option
+        ActionId: string option
+        Contest: FestivalContest option
+    }
+
+    static member Default: FestivalActivity =
+        {
+            X = 0.0
+            Y = 0.0
+            MinigameId = None
+            CutsceneId = None
+            ActionId = None
+            Contest = None
+        }
+
+and FestivalProgram =
+    {
+        SceneId: string
+        EntranceSceneId: string
+        EntranceX: float
+        EntranceY: float
+        ArrivalX: float
+        ArrivalY: float
+        OpenMinute: float
+        CloseMinute: float
+        EndDay: bool
+        Attendance: FestivalAttendance list
+        Conditions: EventCondition list
+        OnMiss: EventOutcome list
+        ShopId: string option
+        ShopTile: GridPoint option
+        Activity: FestivalActivity option
+    }
+
+    static member Default: FestivalProgram =
+        {
+            SceneId = ""
+            EntranceSceneId = ""
+            EntranceX = 0.0
+            EntranceY = 0.0
+            ArrivalX = 0.0
+            ArrivalY = 0.0
+            OpenMinute = 0.0
+            CloseMinute = 0.0
+            EndDay = false
+            Attendance = []
+            Conditions = []
+            OnMiss = []
+            ShopId = None
+            ShopTile = None
+            Activity = None
+        }
 
 and CalendarFestival =
     {
@@ -718,13 +1030,21 @@ and CalendarFestival =
         SeasonId: string
         /// 1-based day within that season. int, positive.
         Day: float
+        Program: FestivalProgram option
         /// A music asset that plays all festival day (M2).
         Music: string option
     }
 
     /// A `CalendarFestival` with every field at its schema default.
-    static member Default : CalendarFestival =
-        { Id = ""; Name = ""; SeasonId = ""; Day = 0.0; Music = None }
+    static member Default: CalendarFestival =
+        {
+            Id = ""
+            Name = ""
+            SeasonId = ""
+            Day = 0.0
+            Music = None
+            Program = None
+        }
 
 and CalendarSeason =
     {
@@ -739,8 +1059,14 @@ and CalendarSeason =
     }
 
     /// A `CalendarSeason` with every field at its schema default.
-    static member Default : CalendarSeason =
-        { Id = ""; Name = ""; Days = 0.0; Temperature = None; Music = None }
+    static member Default: CalendarSeason =
+        {
+            Id = ""
+            Name = ""
+            Days = 0.0
+            Temperature = None
+            Music = None
+        }
 
 and ContentPack =
     {
@@ -752,8 +1078,13 @@ and ContentPack =
     }
 
     /// A `ContentPack` with every field at its schema default.
-    static member Default : ContentPack =
-        { Manifest = PackManifest.Default; Content = PackContent.Default; Plugins = []; Extra = [] }
+    static member Default: ContentPack =
+        {
+            Manifest = PackManifest.Default
+            Content = PackContent.Default
+            Plugins = []
+            Extra = []
+        }
 
 /// A dropped/growing crop instance on a tile (game state, not content).
 and Crop =
@@ -782,8 +1113,23 @@ and Crop =
     }
 
     /// A `Crop` with every field at its schema default.
-    static member Default : Crop =
-        { Type = ""; PlantedOnDay = None; DaysGrown = None; Withered = None; Stage = 0.0; Watered = false; LastWateredDay = None; Quality = ""; Mutation = None; IsMultiTileRoot = None; MultiTileId = None; HarvestCount = 0.0; DaysWithoutWater = 0.0; Extra = [] }
+    static member Default: Crop =
+        {
+            Type = ""
+            PlantedOnDay = None
+            DaysGrown = None
+            Withered = None
+            Stage = 0.0
+            Watered = false
+            LastWateredDay = None
+            Quality = ""
+            Mutation = None
+            IsMultiTileRoot = None
+            MultiTileId = None
+            HarvestCount = 0.0
+            DaysWithoutWater = 0.0
+            Extra = []
+        }
 
 and CropDefinition =
     {
@@ -816,8 +1162,27 @@ and CropDefinition =
     }
 
     /// A `CropDefinition` with every field at its schema default.
-    static member Default : CropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Light = None; Extra = [] }
+    static member Default: CropDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            SeedCost = 0.0
+            BaseHarvestValue = 0.0
+            GrowthDays = None
+            Stages = 0.0
+            Seasons = []
+            RegrowthDays = None
+            CanRegrow = false
+            MultiTile = None
+            MutationChance = None
+            YieldMin = 0.0
+            YieldMax = 0.0
+            HarvestItemId = None
+            Requirements = None
+            Light = None
+            Extra = []
+        }
 
 /// TS `CropDefinitionSchema.multiTile` (inline object).
 and CropMultiTile =
@@ -829,8 +1194,7 @@ and CropMultiTile =
     }
 
     /// A `CropMultiTile` with every field at its schema default.
-    static member Default : CropMultiTile =
-        { Width = 0.0; Height = 0.0 }
+    static member Default: CropMultiTile = { Width = 0.0; Height = 0.0 }
 
 /// A crop mutation (M1): a rare harvest that yields more. Mutations are checked in list order.
 and CropMutationDefinition =
@@ -849,8 +1213,15 @@ and CropMutationDefinition =
     }
 
     /// A `CropMutationDefinition` with every field at its schema default.
-    static member Default : CropMutationDefinition =
-        { Id = ""; Name = ""; YieldMultiplier = 1.0; Share = 0.0; Color = ""; Extra = [] }
+    static member Default: CropMutationDefinition =
+        {
+            Id = ""
+            Name = ""
+            YieldMultiplier = 1.0
+            Share = 0.0
+            Color = ""
+            Extra = []
+        }
 
 /// A crop quality tier (M1). Tiers are ranked in list order, the first being the plain one.
 and CropQualityDefinition =
@@ -872,8 +1243,17 @@ and CropQualityDefinition =
     }
 
     /// A `CropQualityDefinition` with every field at its schema default.
-    static member Default : CropQualityDefinition =
-        { Id = ""; Name = ""; PriceMultiplier = 1.0; YieldMultiplier = 1.0; MutationMultiplier = 1.0; Stars = 0.0; Color = ""; Extra = [] }
+    static member Default: CropQualityDefinition =
+        {
+            Id = ""
+            Name = ""
+            PriceMultiplier = 1.0
+            YieldMultiplier = 1.0
+            MutationMultiplier = 1.0
+            Stars = 0.0
+            Color = ""
+            Extra = []
+        }
 
 and CustomAsset =
     {
@@ -895,8 +1275,19 @@ and CustomAsset =
     }
 
     /// A `CustomAsset` with every field at its schema default.
-    static member Default : CustomAsset =
-        { Id = ""; Name = ""; Type = ""; Width = None; Height = None; Animations = None; DataUrl = ""; TileType = None; Sheet = None; Extra = [] }
+    static member Default: CustomAsset =
+        {
+            Id = ""
+            Name = ""
+            Type = ""
+            Width = None
+            Height = None
+            Animations = None
+            DataUrl = ""
+            TileType = None
+            Sheet = None
+            Extra = []
+        }
 
 /// A project's own crop (`customCrops`): the fields of `CropDefinition`.
 and CustomCropDefinition =
@@ -930,8 +1321,27 @@ and CustomCropDefinition =
     }
 
     /// A `CustomCropDefinition` with every field at its schema default.
-    static member Default : CustomCropDefinition =
-        { Id = ""; Name = ""; Visual = None; SeedCost = 0.0; BaseHarvestValue = 0.0; GrowthDays = None; Stages = 0.0; Seasons = []; RegrowthDays = None; CanRegrow = false; MultiTile = None; MutationChance = None; YieldMin = 0.0; YieldMax = 0.0; HarvestItemId = None; Requirements = None; Light = None; Extra = [] }
+    static member Default: CustomCropDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            SeedCost = 0.0
+            BaseHarvestValue = 0.0
+            GrowthDays = None
+            Stages = 0.0
+            Seasons = []
+            RegrowthDays = None
+            CanRegrow = false
+            MultiTile = None
+            MutationChance = None
+            YieldMin = 0.0
+            YieldMax = 0.0
+            HarvestItemId = None
+            Requirements = None
+            Light = None
+            Extra = []
+        }
 
 /// A day/night tint keyframe: at `Minute` of the day the scene is multiplied by `Color`.
 and DaylightKey =
@@ -943,8 +1353,7 @@ and DaylightKey =
     }
 
     /// A `DaylightKey` with every field at its schema default.
-    static member Default : DaylightKey =
-        { Minute = 0.0; Color = "" }
+    static member Default: DaylightKey = { Minute = 0.0; Color = "" }
 
 /// A cutscene (M2): steps that run over time — characters move, face and emote, the camera pans,
 /// the screen fades, music changes, lines are said and choices branch. Events start one with the
@@ -962,8 +1371,14 @@ and Cutscene =
     }
 
     /// A `Cutscene` with every field at its schema default.
-    static member Default : Cutscene =
-        { Id = ""; Name = ""; Steps = []; Skippable = true; Extra = [] }
+    static member Default: Cutscene =
+        {
+            Id = ""
+            Name = ""
+            Steps = []
+            Skippable = true
+            Extra = []
+        }
 
 /// One answer of a cutscene `choice` step: its text and the step label it jumps to.
 and CutsceneChoice =
@@ -974,8 +1389,7 @@ and CutsceneChoice =
     }
 
     /// A `CutsceneChoice` with every field at its schema default.
-    static member Default : CutsceneChoice =
-        { Text = ""; Goto = "" }
+    static member Default: CutsceneChoice = { Text = ""; Goto = "" }
 
 /// One step of a cutscene. Like an outcome, one flat object whose `type` (one of
 /// `CutsceneStepTypes`) says which fields apply.
@@ -1022,8 +1436,28 @@ and CutsceneStep =
     }
 
     /// A `CutsceneStep` with every field at its schema default.
-    static member Default : CutsceneStep =
-        { Type = ""; Label = None; Actor = None; X = None; Y = None; Direction = None; Emote = None; Seconds = None; Text = None; Speaker = None; Expression = None; Options = []; Goto = None; Conditions = []; Mode = None; Color = None; SoundId = None; Outcomes = []; Wait = None }
+    static member Default: CutsceneStep =
+        {
+            Type = ""
+            Label = None
+            Actor = None
+            X = None
+            Y = None
+            Direction = None
+            Emote = None
+            Seconds = None
+            Text = None
+            Speaker = None
+            Expression = None
+            Options = []
+            Goto = None
+            Conditions = []
+            Mode = None
+            Color = None
+            SoundId = None
+            Outcomes = []
+            Wait = None
+        }
 
 and Dialogue =
     {
@@ -1038,8 +1472,15 @@ and Dialogue =
     }
 
     /// A `Dialogue` with every field at its schema default.
-    static member Default : Dialogue =
-        { Id = ""; NpcId = ""; Text = ""; Options = []; Expression = None; Extra = [] }
+    static member Default: Dialogue =
+        {
+            Id = ""
+            NpcId = ""
+            Text = ""
+            Options = []
+            Expression = None
+            Extra = []
+        }
 
 and DialogueOption =
     {
@@ -1071,8 +1512,25 @@ and DialogueOption =
     }
 
     /// A `DialogueOption` with every field at its schema default.
-    static member Default : DialogueOption =
-        { Text = ""; NextDialogueId = None; GiveItem = None; GiveItemQuantity = None; TakeMoney = None; GiveMoney = None; EventFlag = None; Once = None; HiddenIfFlag = None; RequiresItem = None; RequiresFlag = None; OpenShopId = None; OfferQuestId = None; RequiresFriendship = None; ActionId = None; Extra = [] }
+    static member Default: DialogueOption =
+        {
+            Text = ""
+            NextDialogueId = None
+            GiveItem = None
+            GiveItemQuantity = None
+            TakeMoney = None
+            GiveMoney = None
+            EventFlag = None
+            Once = None
+            HiddenIfFlag = None
+            RequiresItem = None
+            RequiresFlag = None
+            OpenShopId = None
+            OfferQuestId = None
+            RequiresFriendship = None
+            ActionId = None
+            Extra = []
+        }
 
 /// A single event/action outcome. Not a discriminated union: one flat object whose `type` selects which optional fields apply.
 and EventOutcome =
@@ -1120,13 +1578,46 @@ and EventOutcome =
         Status: string option
         /// The letter `sendMail` sends (M6).
         MailId: string option
+        Buff: BuffDefinition option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `EventOutcome` with every field at its schema default.
-    static member Default : EventOutcome =
-        { Type = ""; Message = None; ItemId = None; ItemQuantity = None; Amount = None; Radius = None; FlagName = None; QuestId = None; NpcId = None; DialogueId = None; TileX = None; TileY = None; NewTileType = None; SceneId = None; X = None; Y = None; SoundId = None; ActionId = None; MinigameId = None; CutsceneId = None; Variable = None; Text = None; WeatherId = None; Skill = None; ShopId = None; NodeTypeId = None; MachineTypeId = None; Status = None; MailId = None; Extra = [] }
+    static member Default: EventOutcome =
+        {
+            Type = ""
+            Message = None
+            ItemId = None
+            ItemQuantity = None
+            Amount = None
+            Radius = None
+            FlagName = None
+            QuestId = None
+            NpcId = None
+            DialogueId = None
+            TileX = None
+            TileY = None
+            NewTileType = None
+            SceneId = None
+            X = None
+            Y = None
+            SoundId = None
+            ActionId = None
+            MinigameId = None
+            CutsceneId = None
+            Variable = None
+            Text = None
+            WeatherId = None
+            Skill = None
+            ShopId = None
+            NodeTypeId = None
+            MachineTypeId = None
+            Status = None
+            MailId = None
+            Buff = None
+            Extra = []
+        }
 
 /// The project's export settings (Export Game).
 and ExportSettings =
@@ -1148,8 +1639,20 @@ and ExportSettings =
     }
 
     /// A `ExportSettings` with every field at its schema default.
-    static member Default : ExportSettings =
-        { Title = None; ExecutableName = None; Version = None; GameId = ""; Author = None; Company = None; IconAssetId = None; Window = ExportWindow.Default; PixelScale = "integer"; Credits = None; Targets = [ "windows-x64"; "linux-x64" ] }
+    static member Default: ExportSettings =
+        {
+            Title = None
+            ExecutableName = None
+            Version = None
+            GameId = ""
+            Author = None
+            Company = None
+            IconAssetId = None
+            Window = ExportWindow.Default
+            PixelScale = "integer"
+            Credits = None
+            Targets = [ "windows-x64"; "linux-x64" ]
+        }
 
 /// Default window for a standalone exported game.
 and ExportWindow =
@@ -1160,8 +1663,12 @@ and ExportWindow =
     }
 
     /// A `ExportWindow` with every field at its schema default.
-    static member Default : ExportWindow =
-        { Width = 1280; Height = 800; Fullscreen = false }
+    static member Default: ExportWindow =
+        {
+            Width = 1280
+            Height = 800
+            Fullscreen = false
+        }
 
 and FishTable =
     {
@@ -1177,11 +1684,24 @@ and FishTable =
         JunkItemId: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
+        Filter: FishingFilter option
+        Layered: bool option
     }
 
     /// A `FishTable` with every field at its schema default.
-    static member Default : FishTable =
-        { Id = ""; Name = ""; Seasons = None; SceneIds = None; Entries = []; JunkChance = 0.15; JunkItemId = None; Extra = [] }
+    static member Default: FishTable =
+        {
+            Id = ""
+            Name = ""
+            Seasons = None
+            SceneIds = None
+            Entries = []
+            JunkChance = 0.15
+            JunkItemId = None
+            Extra = []
+            Filter = None
+            Layered = None
+        }
 
 and FishTableEntry =
     {
@@ -1190,11 +1710,17 @@ and FishTableEntry =
         Weight: float
         /// 0..1 — harder fish escape low-tier rods more often.
         Difficulty: float
+        Rules: FishingRules option
     }
 
     /// A `FishTableEntry` with every field at its schema default.
-    static member Default : FishTableEntry =
-        { ItemId = ""; Weight = 0.0; Difficulty = 0.3 }
+    static member Default: FishTableEntry =
+        {
+            ItemId = ""
+            Weight = 0.0
+            Difficulty = 0.3
+            Rules = None
+        }
 
 and GameContent =
     {
@@ -1206,6 +1732,7 @@ and GameContent =
         Npcs: Npc list
         Dialogues: Dialogue list
         Quests: Quest list
+        RequestBoards: (RequestBoard list) option
         Events: GameEvent list
         Shops: ShopDefinition list
         NodeTypes: NodeTypeDefinition list
@@ -1216,6 +1743,7 @@ and GameContent =
         AnimalSpecies: AnimalSpeciesDefinition list
         FishTables: FishTable list
         Mine: MineConfig
+        Mines: (MineDefinition list) option
         /// Creator-defined actions (extensibility layer).
         Actions: ActionDef list
         /// Declared minigames (extensibility layer).
@@ -1252,8 +1780,44 @@ and GameContent =
     }
 
     /// A `GameContent` with every field at its schema default.
-    static member Default : GameContent =
-        { ContentVersion = 0.0; Crops = []; Items = []; Npcs = []; Dialogues = []; Quests = []; Events = []; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; Scenes = []; StartSceneId = ""; Terrains = []; Tools = []; ItemCategories = []; CropQualities = []; CropMutations = []; Cutscenes = []; HeartEvents = []; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None }
+    static member Default: GameContent =
+        {
+            ContentVersion = 0.0
+            Crops = []
+            Items = []
+            Npcs = []
+            Dialogues = []
+            Quests = []
+            RequestBoards = None
+            Events = []
+            Shops = []
+            NodeTypes = []
+            Settings = ProjectSettings.Default
+            Recipes = []
+            MachineTypes = []
+            Weather = WeatherConfig.Default
+            AnimalSpecies = []
+            FishTables = []
+            Mine = MineConfig.Default
+            Mines = None
+            Actions = []
+            Minigames = []
+            Scenes = []
+            StartSceneId = ""
+            Terrains = []
+            Tools = []
+            ItemCategories = []
+            CropQualities = []
+            CropMutations = []
+            Cutscenes = []
+            HeartEvents = []
+            BuildingTypes = None
+            Collections = None
+            Bundles = None
+            Achievements = None
+            Mail = None
+            Monsters = None
+        }
 
 and GameEvent =
     {
@@ -1277,8 +1841,20 @@ and GameEvent =
     }
 
     /// A `GameEvent` with every field at its schema default.
-    static member Default : GameEvent =
-        { Id = ""; Name = ""; SceneId = ""; Trigger = ""; Conditions = []; Outcomes = []; Active = false; Repeatable = false; Subject = None; Minute = None; Extra = [] }
+    static member Default: GameEvent =
+        {
+            Id = ""
+            Name = ""
+            SceneId = ""
+            Trigger = ""
+            Conditions = []
+            Outcomes = []
+            Active = false
+            Repeatable = false
+            Subject = None
+            Minute = None
+            Extra = []
+        }
 
 and GamePanel =
     {
@@ -1290,8 +1866,13 @@ and GamePanel =
     }
 
     /// A `GamePanel` with every field at its schema default.
-    static member Default : GamePanel =
-        { Id = ""; Title = ""; VisibleFlag = None; Entries = [] }
+    static member Default: GamePanel =
+        {
+            Id = ""
+            Title = ""
+            VisibleFlag = None
+            Entries = []
+        }
 
 /// TS `GamePanelSchema.entries` item (inline object).
 and GamePanelEntry =
@@ -1303,8 +1884,7 @@ and GamePanelEntry =
     }
 
     /// A `GamePanelEntry` with every field at its schema default.
-    static member Default : GamePanelEntry =
-        { Label = ""; Kind = ""; Value = "" }
+    static member Default: GamePanelEntry = { Label = ""; Kind = ""; Value = "" }
 
 and GameProject =
     {
@@ -1319,6 +1899,7 @@ and GameProject =
         Events: GameEvent list
         Dialogues: Dialogue list
         Quests: Quest list
+        RequestBoards: (RequestBoard list) option
         Player: Player
         /// Flags a new game starts with: `boolean | number | string` (plugins store numbers and
         /// strings, and Keep changes writes them back as they are), so each value is checked to be
@@ -1361,6 +1942,7 @@ and GameProject =
         Animals: AnimalState list
         FishTables: FishTable list
         Mine: MineConfig
+        Mines: (MineDefinition list) option
         Actions: ActionDef list
         Minigames: MinigameDef list
         /// Installed content packs (M5). Array order = load order.
@@ -1416,8 +1998,75 @@ and GameProject =
     }
 
     /// A `GameProject` with every field at its schema default.
-    static member Default : GameProject =
-        { SchemaVersion = 0.0; Id = ""; Name = ""; Version = ""; Scenes = []; Npcs = []; Items = []; Events = []; Dialogues = []; Quests = []; Player = Player.Default; EventFlags = []; StartSceneId = ""; Mode = ""; SelectedTileType = ""; SelectedTileVisual = None; SelectedNpcId = None; SelectedItemId = None; CustomAssets = []; CustomCrops = None; PlayerVisual = None; Graphics = None; GamePanels = None; CurrentSeason = ""; CurrentDay = 0.0; CurrentDayOfSeason = None; CurrentTimeMinutes = 0.0; CurrentYear = 0.0; GameStartTime = 0.0; Shops = []; NodeTypes = []; Settings = ProjectSettings.Default; Recipes = []; MachineTypes = []; Weather = WeatherConfig.Default; AnimalSpecies = []; Animals = []; FishTables = []; Mine = MineConfig.Default; Actions = []; Minigames = []; ContentPacks = []; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Buildings = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; Export = None; RngState = None; CurrentWeatherId = None; SocialState = None; MineDeepestFloor = None; QuarantinedItems = None; KeptState = None; Extra = [] }
+    static member Default: GameProject =
+        {
+            SchemaVersion = 0.0
+            Id = ""
+            Name = ""
+            Version = ""
+            Scenes = []
+            Npcs = []
+            Items = []
+            Events = []
+            Dialogues = []
+            Quests = []
+            RequestBoards = None
+            Player = Player.Default
+            EventFlags = []
+            StartSceneId = ""
+            Mode = ""
+            SelectedTileType = ""
+            SelectedTileVisual = None
+            SelectedNpcId = None
+            SelectedItemId = None
+            CustomAssets = []
+            CustomCrops = None
+            PlayerVisual = None
+            Graphics = None
+            GamePanels = None
+            CurrentSeason = ""
+            CurrentDay = 0.0
+            CurrentDayOfSeason = None
+            CurrentTimeMinutes = 0.0
+            CurrentYear = 0.0
+            GameStartTime = 0.0
+            Shops = []
+            NodeTypes = []
+            Settings = ProjectSettings.Default
+            Recipes = []
+            MachineTypes = []
+            Weather = WeatherConfig.Default
+            AnimalSpecies = []
+            Animals = []
+            FishTables = []
+            Mine = MineConfig.Default
+            Mines = None
+            Actions = []
+            Minigames = []
+            ContentPacks = []
+            Terrains = None
+            Tools = None
+            ItemCategories = None
+            CropQualities = None
+            CropMutations = None
+            Cutscenes = None
+            HeartEvents = None
+            BuildingTypes = None
+            Buildings = None
+            Collections = None
+            Bundles = None
+            Achievements = None
+            Mail = None
+            Monsters = None
+            Export = None
+            RngState = None
+            CurrentWeatherId = None
+            SocialState = None
+            MineDeepestFloor = None
+            QuarantinedItems = None
+            KeptState = None
+            Extra = []
+        }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -1433,8 +2082,13 @@ and GameWords =
     }
 
     /// A `GameWords` with every field at its schema default.
-    static member Default : GameWords =
-        { Money = None; Energy = None; Skills = []; Locales = [] }
+    static member Default: GameWords =
+        {
+            Money = None
+            Energy = None
+            Skills = []
+            Locales = []
+        }
 
 and GiftTastes =
     {
@@ -1447,8 +2101,14 @@ and GiftTastes =
     }
 
     /// A `GiftTastes` with every field at its schema default.
-    static member Default : GiftTastes =
-        { Loved = []; Liked = []; Disliked = []; Hated = []; Extra = [] }
+    static member Default: GiftTastes =
+        {
+            Loved = []
+            Liked = []
+            Disliked = []
+            Hated = []
+            Extra = []
+        }
 
 /// What a crop needs to be planted and to grow, beyond water and its seasons (M1).
 and GrowthRequirements =
@@ -1471,8 +2131,16 @@ and GrowthRequirements =
     }
 
     /// A `GrowthRequirements` with every field at its schema default.
-    static member Default : GrowthRequirements =
-        { Terrains = []; Light = None; MinTemperature = None; MaxTemperature = None; SceneTags = []; Fertilizers = []; Neighbors = [] }
+    static member Default: GrowthRequirements =
+        {
+            Terrains = []
+            Light = None
+            MinTemperature = None
+            MaxTemperature = None
+            SceneTags = []
+            Fertilizers = []
+            Neighbors = []
+        }
 
 and GraphicsSettings =
     {
@@ -1480,8 +2148,7 @@ and GraphicsSettings =
     }
 
     /// A `GraphicsSettings` with every field at its schema default.
-    static member Default : GraphicsSettings =
-        { PixelArt = true }
+    static member Default: GraphicsSettings = { PixelArt = true }
 
 /// An integer tile coordinate: TS inline `{ x: int, y: int }` objects in `NPCSchema.patrolPoints` and `NpcStateSchema.path`.
 and GridPoint =
@@ -1493,8 +2160,7 @@ and GridPoint =
     }
 
     /// A `GridPoint` with every field at its schema default.
-    static member Default : GridPoint =
-        { X = 0.0; Y = 0.0 }
+    static member Default: GridPoint = { X = 0.0; Y = 0.0 }
 
 and InventorySlot =
     {
@@ -1506,8 +2172,12 @@ and InventorySlot =
     }
 
     /// A `InventorySlot` with every field at its schema default.
-    static member Default : InventorySlot =
-        { Item = Item.Default; Quantity = 0.0; Quality = None }
+    static member Default: InventorySlot =
+        {
+            Item = Item.Default
+            Quantity = 0.0
+            Quality = None
+        }
 
 /// A kind of item (M1) and what items of it do. The built-in kinds are seed, tool, crop, gift,
 /// quest, fertilizer, material and fish.
@@ -1536,8 +2206,20 @@ and ItemCategoryDefinition =
     }
 
     /// A `ItemCategoryDefinition` with every field at its schema default.
-    static member Default : ItemCategoryDefinition =
-        { Id = ""; Name = ""; Plantable = false; Fertilizer = false; Equippable = false; Edible = false; Energy = 0.0; Placeable = false; Giftable = true; Sellable = true; Extra = [] }
+    static member Default: ItemCategoryDefinition =
+        {
+            Id = ""
+            Name = ""
+            Plantable = false
+            Fertilizer = false
+            Equippable = false
+            Edible = false
+            Energy = 0.0
+            Placeable = false
+            Giftable = true
+            Sellable = true
+            Extra = []
+        }
 
 and Item =
     {
@@ -1564,17 +2246,42 @@ and Item =
         ConsumeOnUse: bool option
         /// Energy it restores when eaten, for an edible kind (M1); absent: the kind's.
         Energy: float option
+        Buffs: (BuffDefinition list) option
         /// The item is clothing the player can wear (M4).
         Wear: WearDefinition option
         /// Health it restores when eaten, with combat on (M7). int.
         Health: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
+        FishingGear: FishingGear option
     }
 
     /// A `Item` with every field at its schema default.
-    static member Default : Item =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Type = ""; Stackable = false; MaxStack = 0.0; Value = 0.0; CropType = None; ToolType = None; ToolPower = None; ToolTier = None; Durability = None; MaxDurability = None; UseActionId = None; ConsumeOnUse = None; Energy = None; Wear = None; Health = None; Extra = [] }
+    static member Default: Item =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            Description = ""
+            Type = ""
+            Stackable = false
+            MaxStack = 0.0
+            Value = 0.0
+            CropType = None
+            ToolType = None
+            ToolPower = None
+            ToolTier = None
+            Durability = None
+            MaxDurability = None
+            UseActionId = None
+            ConsumeOnUse = None
+            Energy = None
+            Buffs = None
+            Wear = None
+            Health = None
+            Extra = []
+            FishingGear = None
+        }
 
 /// TS `TileMachineSchema.processing` (inline object): an in-flight machine job.
 and MachineProcessing =
@@ -1584,8 +2291,11 @@ and MachineProcessing =
     }
 
     /// A `MachineProcessing` with every field at its schema default.
-    static member Default : MachineProcessing =
-        { RecipeId = ""; CompletesAtMinute = 0.0 }
+    static member Default: MachineProcessing =
+        {
+            RecipeId = ""
+            CompletesAtMinute = 0.0
+        }
 
 and MachineTypeDefinition =
     {
@@ -1613,11 +2323,28 @@ and MachineTypeDefinition =
         Light: LightSource option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
+        FishProduction: FishProduction option
     }
 
     /// A `MachineTypeDefinition` with every field at its schema default.
-    static member Default : MachineTypeDefinition =
-        { Id = ""; Name = ""; Visual = None; Description = ""; Color = "#9a7b4f"; ItemId = None; BlocksMovement = true; StationCategories = []; Storage = None; Shipping = None; Gate = None; AreaEffects = None; Light = None; Extra = [] }
+    static member Default: MachineTypeDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            Description = ""
+            Color = "#9a7b4f"
+            ItemId = None
+            BlocksMovement = true
+            StationCategories = []
+            Storage = None
+            Shipping = None
+            Gate = None
+            AreaEffects = None
+            Light = None
+            Extra = []
+            FishProduction = None
+        }
 
 and MineBand =
     {
@@ -1642,8 +2369,34 @@ and MineBand =
     }
 
     /// A `MineBand` with every field at its schema default.
-    static member Default : MineBand =
-        { FromFloor = 0.0; ToFloor = 0.0; Rocks = []; Density = 0.35; Monsters = None; MonsterCount = None; Hazards = None; Treasure = None; TreasureCount = None }
+    static member Default: MineBand =
+        {
+            FromFloor = 0.0
+            ToFloor = 0.0
+            Rocks = []
+            Density = 0.35
+            Monsters = None
+            MonsterCount = None
+            Hazards = None
+            Treasure = None
+            TreasureCount = None
+        }
+
+and MineDefinition =
+    {
+        Id: string
+        Name: string
+        Config: MineConfig
+        Music: string option
+    }
+
+    static member Default: MineDefinition =
+        {
+            Id = ""
+            Name = ""
+            Config = MineConfig.Default
+            Music = None
+        }
 
 and MineConfig =
     {
@@ -1670,8 +2423,20 @@ and MineConfig =
     }
 
     /// A `MineConfig` with every field at its schema default.
-    static member Default : MineConfig =
-        { Enabled = false; EntranceSceneId = None; EntranceX = None; EntranceY = None; Floors = 20.0; FloorWidth = 14.0; FloorHeight = 12.0; Bands = []; LadderChance = 0.18; ElevatorEvery = 5.0; Extra = [] }
+    static member Default: MineConfig =
+        {
+            Enabled = false
+            EntranceSceneId = None
+            EntranceX = None
+            EntranceY = None
+            Floors = 20.0
+            FloorWidth = 14.0
+            FloorHeight = 12.0
+            Bands = []
+            LadderChance = 0.18
+            ElevatorEvery = 5.0
+            Extra = []
+        }
 
 /// TS `MineBandSchema.rocks` item (inline object): a weighted node type.
 and MineRockWeight =
@@ -1682,8 +2447,7 @@ and MineRockWeight =
     }
 
     /// A `MineRockWeight` with every field at its schema default.
-    static member Default : MineRockWeight =
-        { NodeTypeId = ""; Weight = 0.0 }
+    static member Default: MineRockWeight = { NodeTypeId = ""; Weight = 0.0 }
 
 and MinigameDef =
     {
@@ -1700,8 +2464,15 @@ and MinigameDef =
     }
 
     /// A `MinigameDef` with every field at its schema default.
-    static member Default : MinigameDef =
-        { Id = ""; Name = ""; Kind = "timing-bar"; Config = []; ResultTiers = []; Extra = [] }
+    static member Default: MinigameDef =
+        {
+            Id = ""
+            Name = ""
+            Kind = "timing-bar"
+            Config = []
+            ResultTiers = []
+            Extra = []
+        }
 
 and MinigameResultTier =
     {
@@ -1711,8 +2482,7 @@ and MinigameResultTier =
     }
 
     /// A `MinigameResultTier` with every field at its schema default.
-    static member Default : MinigameResultTier =
-        { MinScore = 0.0; Outcomes = [] }
+    static member Default: MinigameResultTier = { MinScore = 0.0; Outcomes = [] }
 
 and MovementConfig =
     {
@@ -1721,8 +2491,7 @@ and MovementConfig =
     }
 
     /// A `MovementConfig` with every field at its schema default.
-    static member Default : MovementConfig =
-        { PlayerSpeed = 4.5 }
+    static member Default: MovementConfig = { PlayerSpeed = 4.5 }
 
 /// Weighted drop-table entry for a gathering node.
 /// Neighbours a crop needs around its tile: crops of a type, a terrain, or water.
@@ -1739,8 +2508,13 @@ and NeighborRequirement =
     }
 
     /// A `NeighborRequirement` with every field at its schema default.
-    static member Default : NeighborRequirement =
-        { Kind = ""; Id = None; Radius = 1.0; Min = 1.0 }
+    static member Default: NeighborRequirement =
+        {
+            Kind = ""
+            Id = None
+            Radius = 1.0
+            Min = 1.0
+        }
 
 and NodeDrop =
     {
@@ -1752,12 +2526,20 @@ and NodeDrop =
         /// positive.
         Weight: float
         /// Undeclared keys, in order.
+        Seasons: (string list) option
         Extra: (string * Json) list
     }
 
     /// A `NodeDrop` with every field at its schema default.
-    static member Default : NodeDrop =
-        { ItemId = ""; Min = 0.0; Max = 0.0; Weight = 0.0; Extra = [] }
+    static member Default: NodeDrop =
+        {
+            ItemId = ""
+            Min = 0.0
+            Max = 0.0
+            Weight = 0.0
+            Seasons = None
+            Extra = []
+        }
 
 /// A gathering node type (tree, rock, weeds, …) — content-defined so mods and projects can add their own.
 and NodeTypeDefinition =
@@ -1781,12 +2563,27 @@ and NodeTypeDefinition =
         /// The light it gives at night while standing (M8).
         Light: LightSource option
         /// Undeclared keys, in order.
+        Seasons: (string list) option
         Extra: (string * Json) list
     }
 
     /// A `NodeTypeDefinition` with every field at its schema default.
-    static member Default : NodeTypeDefinition =
-        { Id = ""; Name = ""; Visual = None; Health = 0.0; RequiredTool = ""; RequiredToolTier = 1.0; Drops = []; RespawnDays = None; Color = "#7a5a3a"; BlocksMovement = true; Light = None; Extra = [] }
+    static member Default: NodeTypeDefinition =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            Health = 0.0
+            RequiredTool = ""
+            RequiredToolTier = 1.0
+            Drops = []
+            RespawnDays = None
+            Color = "#7a5a3a"
+            BlocksMovement = true
+            Light = None
+            Seasons = None
+            Extra = []
+        }
 
 /// TS `NPC` (`NPCSchema`).
 and Npc =
@@ -1807,6 +2604,7 @@ and Npc =
         PatrolPoints: (GridPoint list) option
         /// Time-based schedule (M3): sorted by minute; latest passed entry wins.
         Schedule: (NpcScheduleEntry list) option
+        Schedules: (NpcScheduleVariant list) option
         /// Gift preferences (M4 social); unlisted items are neutral.
         GiftTastes: GiftTastes option
         /// Birthday: day-of-season (1-28) within birthSeason, doubles gift effects.
@@ -1823,8 +2621,29 @@ and Npc =
     }
 
     /// A `Npc` with every field at its schema default.
-    static member Default : Npc =
-        { Id = ""; Name = ""; Visual = None; X = 0.0; Y = 0.0; SceneId = ""; Dialogue = []; CanMove = false; MovePattern = None; WanderRadius = None; PatrolPoints = None; Schedule = None; GiftTastes = None; Birthday = None; Appearance = ""; Lines = None; Portraits = None; Romanceable = None; Extra = [] }
+    static member Default: Npc =
+        {
+            Id = ""
+            Name = ""
+            Visual = None
+            X = 0.0
+            Y = 0.0
+            SceneId = ""
+            Dialogue = []
+            CanMove = false
+            MovePattern = None
+            WanderRadius = None
+            PatrolPoints = None
+            Schedule = None
+            Schedules = None
+            GiftTastes = None
+            Birthday = None
+            Appearance = ""
+            Lines = None
+            Portraits = None
+            Romanceable = None
+            Extra = []
+        }
 
 /// TS `NPCSchema.birthday` (inline object).
 and NpcBirthday =
@@ -1836,10 +2655,25 @@ and NpcBirthday =
     }
 
     /// A `NpcBirthday` with every field at its schema default.
-    static member Default : NpcBirthday =
-        { Season = ""; Day = 0.0 }
+    static member Default: NpcBirthday = { Season = ""; Day = 0.0 }
 
 /// A scheduled destination: at `minute` (of day), head to (sceneId, x, y).
+and NpcScheduleVariant =
+    {
+        Id: string
+        Name: string
+        Conditions: EventCondition list
+        Stops: NpcScheduleEntry list
+    }
+
+    static member Default: NpcScheduleVariant =
+        {
+            Id = ""
+            Name = ""
+            Conditions = []
+            Stops = []
+        }
+
 and NpcScheduleEntry =
     {
         Minute: float
@@ -1853,8 +2687,14 @@ and NpcScheduleEntry =
     }
 
     /// A `NpcScheduleEntry` with every field at its schema default.
-    static member Default : NpcScheduleEntry =
-        { Minute = 0.0; SceneId = ""; X = 0.0; Y = 0.0; Extra = [] }
+    static member Default: NpcScheduleEntry =
+        {
+            Minute = 0.0
+            SceneId = ""
+            X = 0.0
+            Y = 0.0
+            Extra = []
+        }
 
 /// Per-NPC social state (friendship points etc.).
 and NpcSocialState =
@@ -1873,8 +2713,15 @@ and NpcSocialState =
     }
 
     /// A `NpcSocialState` with every field at its schema default.
-    static member Default : NpcSocialState =
-        { Friendship = 0.0; GiftsToday = 0.0; LastGiftDay = None; TalkedDay = None; Status = None; StatusDay = None }
+    static member Default: NpcSocialState =
+        {
+            Friendship = 0.0
+            GiftsToday = 0.0
+            LastGiftDay = None
+            TalkedDay = None
+            Status = None
+            StatusDay = None
+        }
 
 and PackContent =
     {
@@ -1921,6 +2768,7 @@ and PackContent =
         Mail: (MailDefinition list) option
         /// Monsters the pack adds or replaces (M9: the M7 content).
         Monsters: (MonsterDefinition list) option
+        Skills: (SkillDefinition list) option
         /// Game panels the pack adds (M9), shown only with `permissions.uiPanels`.
         GamePanels: (GamePanel list) option
         /// Per-locale string tables for game text (M7 i18n). Keys address content fields: `item:{id}:name`, `item:{id}:description`, `dialogue:{id}:text`, `quest:{id}:name`, `quest:{id}:description`. The authored text is the fallback locale.
@@ -1930,8 +2778,43 @@ and PackContent =
     }
 
     /// A `PackContent` with every field at its schema default.
-    static member Default : PackContent =
-        { Crops = []; Items = []; Recipes = []; MachineTypes = []; NodeTypes = []; AnimalSpecies = []; FishTables = []; WeatherTypes = []; Npcs = []; Dialogues = []; Scenes = []; Events = []; Quests = []; Shops = []; Actions = []; Minigames = []; PlayerStart = None; Terrains = None; Tools = None; ItemCategories = None; CropQualities = None; CropMutations = None; Cutscenes = None; HeartEvents = None; BuildingTypes = None; Collections = None; Bundles = None; Achievements = None; Mail = None; Monsters = None; GamePanels = None; Strings = []; Extra = [] }
+    static member Default: PackContent =
+        {
+            Crops = []
+            Items = []
+            Recipes = []
+            MachineTypes = []
+            NodeTypes = []
+            AnimalSpecies = []
+            FishTables = []
+            WeatherTypes = []
+            Npcs = []
+            Dialogues = []
+            Scenes = []
+            Events = []
+            Quests = []
+            Shops = []
+            Actions = []
+            Minigames = []
+            PlayerStart = None
+            Terrains = None
+            Tools = None
+            ItemCategories = None
+            CropQualities = None
+            CropMutations = None
+            Cutscenes = None
+            HeartEvents = None
+            BuildingTypes = None
+            Collections = None
+            Bundles = None
+            Achievements = None
+            Mail = None
+            Monsters = None
+            Skills = None
+            GamePanels = None
+            Strings = []
+            Extra = []
+        }
 
 and PackDependency =
     {
@@ -1940,8 +2823,7 @@ and PackDependency =
     }
 
     /// A `PackDependency` with every field at its schema default.
-    static member Default : PackDependency =
-        { PackId = ""; Version = None }
+    static member Default: PackDependency = { PackId = ""; Version = None }
 
 /// How a project stores an installed pack. Array order = load order.
 and PackInstallation =
@@ -1951,8 +2833,11 @@ and PackInstallation =
     }
 
     /// A `PackInstallation` with every field at its schema default.
-    static member Default : PackInstallation =
-        { Pack = ContentPack.Default; Enabled = true }
+    static member Default: PackInstallation =
+        {
+            Pack = ContentPack.Default
+            Enabled = true
+        }
 
 and PackManifest =
     {
@@ -1975,8 +2860,20 @@ and PackManifest =
     }
 
     /// A `PackManifest` with every field at its schema default.
-    static member Default : PackManifest =
-        { Id = ""; Name = ""; Version = ""; Description = None; Author = None; EngineCompatibility = "*"; Base = false; Dependencies = []; Overrides = []; Permissions = PackPermissions.Default; Extra = [] }
+    static member Default: PackManifest =
+        {
+            Id = ""
+            Name = ""
+            Version = ""
+            Description = None
+            Author = None
+            EngineCompatibility = "*"
+            Base = false
+            Dependencies = []
+            Overrides = []
+            Permissions = PackPermissions.Default
+            Extra = []
+        }
 
 and PackPermissions =
     {
@@ -1999,8 +2896,15 @@ and PackPermissions =
     }
 
     /// A `PackPermissions` with every field at its schema default.
-    static member Default : PackPermissions =
-        { Hooks = []; ContentInject = true; UiPanels = false; Mutations = None; Minigames = None; Extra = [] }
+    static member Default: PackPermissions =
+        {
+            Hooks = []
+            ContentInject = true
+            UiPanels = false
+            Mutations = None
+            Minigames = None
+            Extra = []
+        }
 
 /// Optional player-start block so a base pack can express the whole starter game.
 and PackPlayerStart =
@@ -2017,8 +2921,15 @@ and PackPlayerStart =
     }
 
     /// A `PackPlayerStart` with every field at its schema default.
-    static member Default : PackPlayerStart =
-        { SceneId = None; X = None; Y = None; Money = None; Inventory = []; Extra = [] }
+    static member Default: PackPlayerStart =
+        {
+            SceneId = None
+            X = None
+            Y = None
+            Money = None
+            Inventory = []
+            Extra = []
+        }
 
 /// A sandboxed plugin: `source` is the body of `function (api) { ... }` and registers handlers with `api.on(hookName, fn)`. Handlers return an array of mutations (validated as `PluginMutation`) — never raw state access.
 and PackPlugin =
@@ -2036,8 +2947,15 @@ and PackPlugin =
     }
 
     /// A `PackPlugin` with every field at its schema default.
-    static member Default : PackPlugin =
-        { Id = ""; Name = None; Hooks = []; Minigames = None; Source = ""; Extra = [] }
+    static member Default: PackPlugin =
+        {
+            Id = ""
+            Name = None
+            Hooks = []
+            Minigames = None
+            Source = ""
+            Extra = []
+        }
 
 /// TS `PackPlayerStartSchema.inventory` item (inline object).
 and PackStartItem =
@@ -2048,8 +2966,7 @@ and PackStartItem =
     }
 
     /// A `PackStartItem` with every field at its schema default.
-    static member Default : PackStartItem =
-        { ItemId = ""; Quantity = 0.0 }
+    static member Default: PackStartItem = { ItemId = ""; Quantity = 0.0 }
 
 /// The project's player start/record (TS `PlayerSchema`); runtime uses `PlayerState`.
 and Player =
@@ -2084,8 +3001,28 @@ and Player =
     }
 
     /// A `Player` with every field at its schema default.
-    static member Default : Player =
-        { X = 0.0; Y = 0.0; Direction = ""; SceneId = ""; Inventory = []; MaxInventorySize = 0.0; Money = 0.0; Energy = None; MaxEnergy = None; Skills = None; ActiveQuests = []; CompletedQuests = []; EquippedTool = None; Name = None; FarmName = None; Look = None; Worn = None; Health = None; Extra = [] }
+    static member Default: Player =
+        {
+            X = 0.0
+            Y = 0.0
+            Direction = ""
+            SceneId = ""
+            Inventory = []
+            MaxInventorySize = 0.0
+            Money = 0.0
+            Energy = None
+            MaxEnergy = None
+            Skills = None
+            ActiveQuests = []
+            CompletedQuests = []
+            EquippedTool = None
+            Name = None
+            FarmName = None
+            Look = None
+            Worn = None
+            Health = None
+            Extra = []
+        }
 
 /// The player character's colours (M4): `#rrggbb` each; absent ones keep the built-in art's.
 and PlayerLook =
@@ -2099,8 +3036,163 @@ and PlayerLook =
     }
 
     /// A `PlayerLook` with every field at its schema default.
-    static member Default : PlayerLook =
-        { Skin = None; Hair = None; Shirt = None; Pants = None; Accent = None }
+    static member Default: PlayerLook =
+        {
+            Skin = None
+            Hair = None
+            Shirt = None
+            Pants = None
+            Accent = None
+        }
+
+and BuffDefinition =
+    {
+        Id: string
+        Stat: string
+        Amount: float
+        DurationMinutes: float
+        Icon: string option
+        PersistsAfterSleep: bool option
+        Additive: bool option
+    }
+
+    static member Default: BuffDefinition =
+        {
+            Id = ""
+            Stat = ""
+            Amount = 0.0
+            DurationMinutes = 0.0
+            Icon = None
+            PersistsAfterSleep = None
+            Additive = None
+        }
+
+and SkillTraining =
+    {
+        Action: string
+        Subject: string option
+        Experience: float
+    }
+
+    static member Default: SkillTraining =
+        {
+            Action = ""
+            Subject = None
+            Experience = 0.0
+        }
+
+and SkillReward =
+    {
+        Level: float
+        Stat: string
+        Amount: float
+        Outcomes: (EventOutcome list) option
+    }
+
+    static member Default: SkillReward =
+        {
+            Level = 0.0
+            Stat = ""
+            Amount = 0.0
+            Outcomes = None
+        }
+
+and SkillPerkChoice =
+    {
+        Id: string
+        Name: string
+        Stat: string
+        Amount: float
+        Outcomes: (EventOutcome list) option
+    }
+
+    static member Default: SkillPerkChoice =
+        {
+            Id = ""
+            Name = ""
+            Stat = ""
+            Amount = 0.0
+            Outcomes = None
+        }
+
+and SkillPerk =
+    {
+        Id: string
+        Level: float
+        Choices: SkillPerkChoice list
+    }
+
+    static member Default: SkillPerk = { Id = ""; Level = 1.0; Choices = [] }
+
+and SkillDefinition =
+    {
+        Id: string
+        Name: string
+        Icon: string option
+        Training: SkillTraining list
+        Rewards: SkillReward list
+        Perks: (SkillPerk list) option
+    }
+
+    static member Default: SkillDefinition =
+        {
+            Id = ""
+            Name = ""
+            Icon = None
+            Training = []
+            Rewards = []
+            Perks = None
+        }
+
+and PlayerUpgrade =
+    {
+        Id: string
+        Kind: string
+        Amount: float
+    }
+
+    static member Default: PlayerUpgrade = { Id = ""; Kind = ""; Amount = 0.0 }
+
+and ToolUpgrade =
+    {
+        FromItemId: string
+        ToItemId: string
+        Cost: float
+        Materials: RecipeIngredient list
+        Nights: float
+    }
+
+    static member Default: ToolUpgrade =
+        {
+            FromItemId = ""
+            ToItemId = ""
+            Cost = 0.0
+            Materials = []
+            Nights = 1.0
+        }
+
+and ProgressionLimits =
+    {
+        MaxInventorySize: float
+        MaxEnergy: float
+        MaxHealth: float
+    }
+
+    static member Default: ProgressionLimits =
+        {
+            MaxInventorySize = 120.0
+            MaxEnergy = 1000.0
+            MaxHealth = 1000.0
+        }
+
+/// The progression editor's grouped draft; the project stores these in settings.
+and ProgressionSettings =
+    {
+        Limits: ProgressionLimits option
+        Skills: (SkillDefinition list) option
+    }
+
+    static member Default: ProgressionSettings = { Limits = None; Skills = None }
 
 and ProjectSettings =
     {
@@ -2135,11 +3227,78 @@ and ProjectSettings =
         Farm: FarmSettings option
         /// Player health, monsters and fainting (M7); absent: no combat.
         Combat: CombatSettings option
+        /// Limits for permanent player upgrades.
+        Progression: ProgressionLimits option
+        SkillDefinitions: (SkillDefinition list) option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
-    static member Default : ProjectSettings =
-        { Movement = MovementConfig.Default; EnergyEnabled = true; MaxEnergy = 100.0; CollapseEnergyFraction = 0.5; CollapseMoneyPenalty = 50.0; Time = TimeConfig.Default; Calendar = CalendarConfig.Default; SkillsEnabled = true; SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]; Locale = "en"; ShowMadeWithCredit = false; Words = None; Atmosphere = None; Relationships = None; CharacterCreator = None; Farm = None; Combat = None }
+    static member Default: ProjectSettings =
+        {
+            Movement = MovementConfig.Default
+            EnergyEnabled = true
+            MaxEnergy = 100.0
+            CollapseEnergyFraction = 0.5
+            CollapseMoneyPenalty = 50.0
+            Time = TimeConfig.Default
+            Calendar = CalendarConfig.Default
+            SkillsEnabled = true
+            SkillLevelCurve = [ 0.0; 50.0; 150.0; 300.0; 500.0; 750.0; 1050.0; 1400.0; 1800.0; 2250.0 ]
+            Locale = "en"
+            ShowMadeWithCredit = false
+            Words = None
+            Atmosphere = None
+            Relationships = None
+            CharacterCreator = None
+            Farm = None
+            Combat = None
+            Progression = None
+            SkillDefinitions = None
+        }
+
+and RequestBoard =
+    {
+        Id: string
+        Name: string
+        SceneId: string
+        X: float
+        Y: float
+        IntervalDays: float
+        Entries: RequestBoardEntry list
+    }
+
+    static member Default: RequestBoard =
+        {
+            Id = ""
+            Name = ""
+            SceneId = ""
+            X = 0.0
+            Y = 0.0
+            IntervalDays = 1.0
+            Entries = []
+        }
+
+and RequestBoardEntry =
+    {
+        QuestId: string
+        Weight: float
+        ItemIds: (string list) option
+        MinQuantity: float option
+        MaxQuantity: float option
+        MinReward: float option
+        MaxReward: float option
+    }
+
+    static member Default: RequestBoardEntry =
+        {
+            QuestId = ""
+            Weight = 1.0
+            ItemIds = None
+            MinQuantity = None
+            MaxQuantity = None
+            MinReward = None
+            MaxReward = None
+        }
 
 and Quest =
     {
@@ -2159,13 +3318,34 @@ and Quest =
         /// Absolute-day window (M3): offered from/until these days (inclusive).
         AvailableFromDay: float option
         AvailableToDay: float option
+        DeadlineDays: float option
+        DeadlineDay: float option
+        OnFail: (EventOutcome list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `Quest` with every field at its schema default.
-    static member Default : Quest =
-        { Id = ""; Name = ""; Description = ""; Giver = None; Status = ""; Objectives = []; Rewards = QuestRewards.Default; Prerequisites = None; AutoStart = None; Repeatable = None; AvailableSeasons = None; AvailableFromDay = None; AvailableToDay = None; Extra = [] }
+    static member Default: Quest =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Giver = None
+            Status = ""
+            Objectives = []
+            Rewards = QuestRewards.Default
+            Prerequisites = None
+            AutoStart = None
+            Repeatable = None
+            AvailableSeasons = None
+            AvailableFromDay = None
+            AvailableToDay = None
+            DeadlineDays = None
+            DeadlineDay = None
+            OnFail = None
+            Extra = []
+        }
 
 and QuestObjective =
     {
@@ -2180,6 +3360,9 @@ and QuestObjective =
         [<JsonKey "targetNPCId">]
         TargetNpcId: string option
         TargetSceneId: string option
+        TargetMonsterId: string option
+        TargetBundleId: string option
+        TargetMineId: string option
         Completed: bool
         Progress: float
         /// Undeclared keys, in order.
@@ -2187,8 +3370,24 @@ and QuestObjective =
     }
 
     /// A `QuestObjective` with every field at its schema default.
-    static member Default : QuestObjective =
-        { Id = ""; Type = ""; Description = ""; TargetItemId = None; TargetItemQuantity = None; TargetCropType = None; TargetCropQuantity = None; TargetNpcId = None; TargetSceneId = None; Completed = false; Progress = 0.0; Extra = [] }
+    static member Default: QuestObjective =
+        {
+            Id = ""
+            Type = ""
+            Description = ""
+            TargetItemId = None
+            TargetItemQuantity = None
+            TargetCropType = None
+            TargetCropQuantity = None
+            TargetNpcId = None
+            TargetSceneId = None
+            TargetMonsterId = None
+            TargetBundleId = None
+            TargetMineId = None
+            Completed = false
+            Progress = 0.0
+            Extra = []
+        }
 
 /// TS `QuestRewardsSchema.items` item (inline object).
 and QuestRewardItem =
@@ -2198,8 +3397,7 @@ and QuestRewardItem =
     }
 
     /// A `QuestRewardItem` with every field at its schema default.
-    static member Default : QuestRewardItem =
-        { ItemId = ""; Quantity = 0.0 }
+    static member Default: QuestRewardItem = { ItemId = ""; Quantity = 0.0 }
 
 and QuestRewards =
     {
@@ -2215,8 +3413,15 @@ and QuestRewards =
     }
 
     /// A `QuestRewards` with every field at its schema default.
-    static member Default : QuestRewards =
-        { Money = None; Items = None; Experience = None; Skill = None; MailId = None; Extra = [] }
+    static member Default: QuestRewards =
+        {
+            Money = None
+            Items = None
+            Experience = None
+            Skill = None
+            MailId = None
+            Extra = []
+        }
 
 and RecipeDefinition =
     {
@@ -2238,8 +3443,19 @@ and RecipeDefinition =
     }
 
     /// A `RecipeDefinition` with every field at its schema default.
-    static member Default : RecipeDefinition =
-        { Id = ""; Name = ""; Inputs = []; Outputs = []; ProcessingMinutes = 0.0; MachineTypeId = None; Category = "crafting"; RequiresStationCategory = None; Unlock = None; Extra = [] }
+    static member Default: RecipeDefinition =
+        {
+            Id = ""
+            Name = ""
+            Inputs = []
+            Outputs = []
+            ProcessingMinutes = 0.0
+            MachineTypeId = None
+            Category = "crafting"
+            RequiresStationCategory = None
+            Unlock = None
+            Extra = []
+        }
 
 and RecipeIngredient =
     {
@@ -2249,8 +3465,7 @@ and RecipeIngredient =
     }
 
     /// A `RecipeIngredient` with every field at its schema default.
-    static member Default : RecipeIngredient =
-        { ItemId = ""; Quantity = 0.0 }
+    static member Default: RecipeIngredient = { ItemId = ""; Quantity = 0.0 }
 
 /// TS `RecipeUnlockSchema.skill` (inline object).
 and RecipeSkillRequirement =
@@ -2261,8 +3476,7 @@ and RecipeSkillRequirement =
     }
 
     /// A `RecipeSkillRequirement` with every field at its schema default.
-    static member Default : RecipeSkillRequirement =
-        { Skill = ""; Level = 0.0 }
+    static member Default: RecipeSkillRequirement = { Skill = ""; Level = 0.0 }
 
 and RecipeUnlock =
     {
@@ -2277,8 +3491,13 @@ and RecipeUnlock =
     }
 
     /// A `RecipeUnlock` with every field at its schema default.
-    static member Default : RecipeUnlock =
-        { Skill = None; QuestId = None; Seasons = None; Extra = [] }
+    static member Default: RecipeUnlock =
+        {
+            Skill = None
+            QuestId = None
+            Seasons = None
+            Extra = []
+        }
 
 /// Serialized PRNG state — deterministic resume is a core guarantee.
 and RngState =
@@ -2291,8 +3510,11 @@ and RngState =
     }
 
     /// A `RngState` with every field at its schema default.
-    static member Default : RngState =
-        { Algorithm = "xoshiro128ss"; S = [ 0u; 0u; 0u; 0u ] }
+    static member Default: RngState =
+        {
+            Algorithm = "xoshiro128ss"
+            S = [ 0u; 0u; 0u; 0u ]
+        }
 
 
 /// A light that glows at night (M8): lamps, glowing crops, lit windows. Drawn by the game, never
@@ -2310,8 +3532,13 @@ and LightSource =
     }
 
     /// A `LightSource` with every field at its schema default.
-    static member Default : LightSource =
-        { Radius = 3.0; Color = ""; Brightness = 100.0; Extra = [] }
+    static member Default: LightSource =
+        {
+            Radius = 3.0
+            Color = ""
+            Brightness = 100.0
+            Extra = []
+        }
 
 /// An extra layer of a scene (M8), painted with terrains like the three fixed layers: drawn over
 /// the object layer, or (`Above`) over the player and everything standing. Scenery: it never
@@ -2327,8 +3554,13 @@ and SceneLayer =
     }
 
     /// A `SceneLayer` with every field at its schema default.
-    static member Default : SceneLayer =
-        { Id = ""; Name = ""; Above = None; Extra = [] }
+    static member Default: SceneLayer =
+        {
+            Id = ""
+            Name = ""
+            Above = None
+            Extra = []
+        }
 
 and Scene =
     {
@@ -2365,12 +3597,34 @@ and Scene =
         /// Its extra layers beyond background, overlay and object, in drawing order (M8).
         Layers: (SceneLayer list) option
         /// Undeclared keys, in order.
+        ForageSpawns: (ForageSpawnTable list) option
         Extra: (string * Json) list
     }
 
     /// A `Scene` with every field at its schema default.
-    static member Default : Scene =
-        { Id = ""; Name = ""; Width = 0.0; Height = 0.0; Tiles = []; Transitions = []; Npcs = []; Events = []; Indoor = None; Dark = None; Temperature = None; Tags = None; Atmosphere = None; Music = None; AllSeasons = None; Building = None; Monsters = None; Layers = None; Extra = [] }
+    static member Default: Scene =
+        {
+            Id = ""
+            Name = ""
+            Width = 0.0
+            Height = 0.0
+            Tiles = []
+            Transitions = []
+            Npcs = []
+            Events = []
+            Indoor = None
+            Dark = None
+            Temperature = None
+            Tags = None
+            Atmosphere = None
+            Music = None
+            AllSeasons = None
+            Building = None
+            Monsters = None
+            Layers = None
+            ForageSpawns = None
+            Extra = []
+        }
 
 and SceneTransition =
     {
@@ -2386,8 +3640,74 @@ and SceneTransition =
     }
 
     /// A `SceneTransition` with every field at its schema default.
-    static member Default : SceneTransition =
-        { FromX = 0.0; FromY = 0.0; ToSceneId = ""; ToX = 0.0; ToY = 0.0; Locked = None; Extra = [] }
+    static member Default: SceneTransition =
+        {
+            FromX = 0.0
+            FromY = 0.0
+            ToSceneId = ""
+            ToX = 0.0
+            ToY = 0.0
+            Locked = None
+            Extra = []
+        }
+
+and ShopHours =
+    {
+        Open: float
+        Close: float
+    }
+
+    static member Default: ShopHours = { Open = 540.0; Close = 1020.0 }
+
+and ShopClosedOn =
+    {
+        Weekdays: string list
+        Seasons: string list
+        Festivals: string list
+    }
+
+    static member Default: ShopClosedOn =
+        {
+            Weekdays = []
+            Seasons = []
+            Festivals = []
+        }
+
+and ShopPriceModifier =
+    {
+        Seasons: string list
+        Weekdays: string list
+        Conditions: EventCondition list
+        ItemId: string option
+        BuyMultiplier: float option
+        SellMultiplier: float option
+    }
+
+    static member Default: ShopPriceModifier =
+        {
+            Seasons = []
+            Weekdays = []
+            Conditions = []
+            ItemId = None
+            BuyMultiplier = None
+            SellMultiplier = None
+        }
+
+and ShopSaturation =
+    {
+        QuantityPerStep: float
+        ReductionPerStep: float
+        MinimumMultiplier: float
+        RecoveryDays: float
+    }
+
+    static member Default: ShopSaturation =
+        {
+            QuantityPerStep = 10.0
+            ReductionPerStep = 0.1
+            MinimumMultiplier = 0.25
+            RecoveryDays = 3.0
+        }
 
 and ShopDefinition =
     {
@@ -2405,13 +3725,36 @@ and ShopDefinition =
         Buildings: (string list) option
         /// Animal species it sells (M5).
         Animals: (string list) option
+        ToolUpgrades: (ToolUpgrade list) option
+        Hours: ShopHours option
+        ClosedOn: ShopClosedOn option
+        KeeperNpcId: string option
+        PriceModifiers: (ShopPriceModifier list) option
+        Saturation: ShopSaturation option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `ShopDefinition` with every field at its schema default.
-    static member Default : ShopDefinition =
-        { Id = ""; Name = ""; Stock = []; SellPriceMultiplier = 1.0; BuysItems = true; RepairsTools = false; RepairCostPerPoint = 0.5; Buildings = None; Animals = None; Extra = [] }
+    static member Default: ShopDefinition =
+        {
+            Id = ""
+            Name = ""
+            Stock = []
+            SellPriceMultiplier = 1.0
+            BuysItems = true
+            RepairsTools = false
+            RepairCostPerPoint = 0.5
+            Buildings = None
+            Animals = None
+            ToolUpgrades = None
+            Hours = None
+            ClosedOn = None
+            KeeperNpcId = None
+            PriceModifiers = None
+            Saturation = None
+            Extra = []
+        }
 
 /// A single line in a shop's stock list.
 and ShopStockEntry =
@@ -2423,13 +3766,21 @@ and ShopStockEntry =
         Seasons: (string list) option
         /// Max units purchasable per in-game day (absent = unlimited). int, positive.
         DailyLimit: float option
+        Upgrade: PlayerUpgrade option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
     /// A `ShopStockEntry` with every field at its schema default.
-    static member Default : ShopStockEntry =
-        { ItemId = ""; Price = None; Seasons = None; DailyLimit = None; Extra = [] }
+    static member Default: ShopStockEntry =
+        {
+            ItemId = ""
+            Price = None
+            Seasons = None
+            DailyLimit = None
+            Upgrade = None
+            Extra = []
+        }
 
 and SkillState =
     {
@@ -2439,8 +3790,7 @@ and SkillState =
     }
 
     /// A `SkillState` with every field at its schema default.
-    static member Default : SkillState =
-        { Xp = 0.0; Level = 0.0 }
+    static member Default: SkillState = { Xp = 0.0; Level = 0.0 }
 
 /// Sprite-sheet slicing metadata (M7). A sheet is a grid: columns = walk frames, rows = directions (down, left, right, up) when `directional`. Assets without this stay static images; games with zero art still render via the colored-rectangle fallback.
 and SpriteSheet =
@@ -2459,8 +3809,15 @@ and SpriteSheet =
     }
 
     /// A `SpriteSheet` with every field at its schema default.
-    static member Default : SpriteSheet =
-        { FrameWidth = 0.0; FrameHeight = 0.0; Frames = 0.0; TicksPerFrame = 6.0; Directional = true; Extra = [] }
+    static member Default: SpriteSheet =
+        {
+            FrameWidth = 0.0
+            FrameHeight = 0.0
+            Frames = 0.0
+            TicksPerFrame = 6.0
+            Directional = true
+            Extra = []
+        }
 
 and Tile =
     {
@@ -2497,8 +3854,27 @@ and Tile =
     }
 
     /// A `Tile` with every field at its schema default.
-    static member Default : Tile =
-        { X = 0.0; Y = 0.0; Type = ""; Background = ""; Overlay = None; Object = None; Crop = None; Item = None; Node = None; Machine = None; LadderDown = None; Collision = false; Visuals = None; SoilState = None; SoilMoisture = 0.0; SoilFertility = 0.0; Decor = None; Extra = [] }
+    static member Default: Tile =
+        {
+            X = 0.0
+            Y = 0.0
+            Type = ""
+            Background = ""
+            Overlay = None
+            Object = None
+            Crop = None
+            Item = None
+            Node = None
+            Machine = None
+            LadderDown = None
+            Collision = false
+            Visuals = None
+            SoilState = None
+            SoilMoisture = 0.0
+            SoilFertility = 0.0
+            Decor = None
+            Extra = []
+        }
 
 /// Live machine instance on a tile.
 /// A kind of ground, path or object a tile can be (M1), and its rules. The built-in terrains are
@@ -2542,8 +3918,27 @@ and TerrainDefinition =
     }
 
     /// A `TerrainDefinition` with every field at its schema default.
-    static member Default : TerrainDefinition =
-        { Id = ""; Name = ""; Layer = "background"; Color = ""; Visual = None; Walkable = true; Plantable = false; WaterSource = false; Fishable = false; BlocksLight = false; HazardEnergy = 0.0; Indoor = false; Damage = None; Transforms = []; Autotile = None; Tall = None; Light = None; Extra = [] }
+    static member Default: TerrainDefinition =
+        {
+            Id = ""
+            Name = ""
+            Layer = "background"
+            Color = ""
+            Visual = None
+            Walkable = true
+            Plantable = false
+            WaterSource = false
+            Fishable = false
+            BlocksLight = false
+            HazardEnergy = 0.0
+            Indoor = false
+            Damage = None
+            Transforms = []
+            Autotile = None
+            Tall = None
+            Light = None
+            Extra = []
+        }
 
 /// A terrain change a tool makes.
 and TerrainTransform =
@@ -2557,8 +3952,7 @@ and TerrainTransform =
     }
 
     /// A `TerrainTransform` with every field at its schema default.
-    static member Default : TerrainTransform =
-        { Action = ""; Tool = None; Into = "" }
+    static member Default: TerrainTransform = { Action = ""; Tool = None; Into = "" }
 
 and TileMachine =
     {
@@ -2576,8 +3970,15 @@ and TileMachine =
     }
 
     /// A `TileMachine` with every field at its schema default.
-    static member Default : TileMachine =
-        { TypeId = ""; Processing = None; Output = None; Contents = None; Open = None; Extra = [] }
+    static member Default: TileMachine =
+        {
+            TypeId = ""
+            Processing = None
+            Output = None
+            Contents = None
+            Open = None
+            Extra = []
+        }
 
 /// Live node instance state stored on a tile.
 and TileNode =
@@ -2588,12 +3989,25 @@ and TileNode =
         /// Set when depleted; used for respawn scheduling. int.
         DepletedOnDay: float option
         /// Undeclared keys, in order.
+        DormantHealth: float option
+        SpawnedOnDay: float option
+        SpawnedSeason: string option
+        ExpiresOnDay: float option
         Extra: (string * Json) list
     }
 
     /// A `TileNode` with every field at its schema default.
-    static member Default : TileNode =
-        { TypeId = ""; RemainingHealth = 0.0; DepletedOnDay = None; Extra = [] }
+    static member Default: TileNode =
+        {
+            TypeId = ""
+            RemainingHealth = 0.0
+            DepletedOnDay = None
+            DormantHealth = None
+            SpawnedOnDay = None
+            SpawnedSeason = None
+            ExpiresOnDay = None
+            Extra = []
+        }
 
 /// TS `TileSchema.visuals` (inline object): per-layer art overrides.
 and TileVisuals =
@@ -2604,8 +4018,12 @@ and TileVisuals =
     }
 
     /// A `TileVisuals` with every field at its schema default.
-    static member Default : TileVisuals =
-        { Background = None; Overlay = None; Object = None }
+    static member Default: TileVisuals =
+        {
+            Background = None
+            Overlay = None
+            Object = None
+        }
 
 and TimeConfig =
     {
@@ -2623,8 +4041,14 @@ and TimeConfig =
     }
 
     /// A `TimeConfig` with every field at its schema default.
-    static member Default : TimeConfig =
-        { DayStartMinute = 360.0; DayEndMinute = 1560.0; MinutesPerRealSecond = 1.0; PauseInModals = None; DayMinutes = None }
+    static member Default: TimeConfig =
+        {
+            DayStartMinute = 360.0
+            DayEndMinute = 1560.0
+            MinutesPerRealSecond = 1.0
+            PauseInModals = None
+            DayMinutes = None
+        }
 
 /// The area a tool covers at one tier: `Width` tiles across the player's facing, `Length` tiles ahead.
 and ToolArea =
@@ -2636,8 +4060,7 @@ and ToolArea =
     }
 
     /// A `ToolArea` with every field at its schema default.
-    static member Default : ToolArea =
-        { Width = 1.0; Length = 1.0 }
+    static member Default: ToolArea = { Width = 1.0; Length = 1.0 }
 
 /// A tool (M1): what it does, what it costs and its key. The built-in tools are the watering can,
 /// hoe, axe, pickaxe, scythe and fishing rod.
@@ -2665,8 +4088,19 @@ and ToolDefinition =
     }
 
     /// A `ToolDefinition` with every field at its schema default.
-    static member Default : ToolDefinition =
-        { Id = ""; Name = ""; Description = ""; Action = ""; Key = None; EnergyCost = 0.0; Area = []; Skill = None; PlaceTerrain = None; Extra = [] }
+    static member Default: ToolDefinition =
+        {
+            Id = ""
+            Name = ""
+            Description = ""
+            Action = ""
+            Key = None
+            EnergyCost = 0.0
+            Area = []
+            Skill = None
+            PlaceTerrain = None
+            Extra = []
+        }
 
 and VisualRef =
     {
@@ -2676,8 +4110,12 @@ and VisualRef =
     }
 
     /// A `VisualRef` with every field at its schema default.
-    static member Default : VisualRef =
-        { AssetId = ""; Animation = None; Frame = None }
+    static member Default: VisualRef =
+        {
+            AssetId = ""
+            Animation = None
+            Frame = None
+        }
 
 and WeatherConfig =
     {
@@ -2691,8 +4129,13 @@ and WeatherConfig =
     }
 
     /// A `WeatherConfig` with every field at its schema default.
-    static member Default : WeatherConfig =
-        { Types = []; Table = []; Overlays = None; Extra = [] }
+    static member Default: WeatherConfig =
+        {
+            Types = []
+            Table = []
+            Overlays = None
+            Extra = []
+        }
 
 /// How a weather looks on screen (M1): particles and a tint. The built-in overlays are rain and snow.
 and WeatherOverlayDefinition =
@@ -2714,8 +4157,16 @@ and WeatherOverlayDefinition =
     }
 
     /// A `WeatherOverlayDefinition` with every field at its schema default.
-    static member Default : WeatherOverlayDefinition =
-        { Id = ""; Style = "rain"; Color = ""; Density = 1.0; Speed = 1.0; Tint = None; Extra = [] }
+    static member Default: WeatherOverlayDefinition =
+        {
+            Id = ""
+            Style = "rain"
+            Color = ""
+            Density = 1.0
+            Speed = 1.0
+            Tint = None
+            Extra = []
+        }
 
 and WeatherTableEntry =
     {
@@ -2725,8 +4176,7 @@ and WeatherTableEntry =
     }
 
     /// A `WeatherTableEntry` with every field at its schema default.
-    static member Default : WeatherTableEntry =
-        { WeatherId = ""; Weight = 0.0 }
+    static member Default: WeatherTableEntry = { WeatherId = ""; Weight = 0.0 }
 
 and WeatherTypeDefinition =
     {
@@ -2748,8 +4198,17 @@ and WeatherTypeDefinition =
     }
 
     /// A `WeatherTypeDefinition` with every field at its schema default.
-    static member Default : WeatherTypeDefinition =
-        { Id = ""; Name = ""; WatersOutdoorSoil = false; CropDamageChance = 0.0; NpcsStayInside = false; Overlay = None; Music = None; Extra = [] }
+    static member Default: WeatherTypeDefinition =
+        {
+            Id = ""
+            Name = ""
+            WatersOutdoorSoil = false
+            CropDamageChance = 0.0
+            NpcsStayInside = false
+            Overlay = None
+            Music = None
+            Extra = []
+        }
 
 /// A line an NPC may say when the player talks to it (M4): in place of its first dialogue's
 /// text, on days when its conditions hold. Lines whose conditions hold share the day by weight.
@@ -2765,8 +4224,13 @@ and NpcLine =
     }
 
     /// A `NpcLine` with every field at its schema default.
-    static member Default : NpcLine =
-        { Text = ""; Conditions = []; Expression = None; Weight = None }
+    static member Default: NpcLine =
+        {
+            Text = ""
+            Conditions = []
+            Expression = None
+            Weight = None
+        }
 
 /// A portrait an NPC shows in the dialogue box for an expression (M4).
 and NpcPortrait =
@@ -2777,8 +4241,11 @@ and NpcPortrait =
     }
 
     /// A `NpcPortrait` with every field at its schema default.
-    static member Default : NpcPortrait =
-        { Expression = ""; Visual = VisualRef.Default }
+    static member Default: NpcPortrait =
+        {
+            Expression = ""
+            Visual = VisualRef.Default
+        }
 
 /// A cutscene that plays once when the player has enough hearts with an NPC (M4).
 and HeartEvent =
@@ -2798,8 +4265,17 @@ and HeartEvent =
     }
 
     /// A `HeartEvent` with every field at its schema default.
-    static member Default : HeartEvent =
-        { Id = ""; Name = ""; NpcId = ""; Hearts = 0.0; CutsceneId = ""; SceneId = None; Conditions = []; Extra = [] }
+    static member Default: HeartEvent =
+        {
+            Id = ""
+            Name = ""
+            NpcId = ""
+            Hearts = 0.0
+            CutsceneId = ""
+            SceneId = None
+            Conditions = []
+            Extra = []
+        }
 
 /// A game's relationship rules (M4). Every part is off until the creator turns it on.
 and RelationshipSettings =
@@ -2843,8 +4319,28 @@ and RelationshipSettings =
     }
 
     /// A `RelationshipSettings` with every field at its schema default.
-    static member Default : RelationshipSettings =
-        { DecayPerDay = 0.0; Dating = false; DatingHearts = 8.0; DatingItemId = None; Marriage = false; ProposalHearts = 10.0; ProposalItemId = None; WeddingDays = 3.0; WeddingCutsceneId = None; HomeSceneId = None; HomeX = None; HomeY = None; SpouseHelps = true; SpouseGiftItemIds = []; Children = false; ChildDays = 14.0; MaxChildren = 2.0; ChildNames = []; Extra = [] }
+    static member Default: RelationshipSettings =
+        {
+            DecayPerDay = 0.0
+            Dating = false
+            DatingHearts = 8.0
+            DatingItemId = None
+            Marriage = false
+            ProposalHearts = 10.0
+            ProposalItemId = None
+            WeddingDays = 3.0
+            WeddingCutsceneId = None
+            HomeSceneId = None
+            HomeX = None
+            HomeY = None
+            SpouseHelps = true
+            SpouseGiftItemIds = []
+            Children = false
+            ChildDays = 14.0
+            MaxChildren = 2.0
+            ChildNames = []
+            Extra = []
+        }
 
 /// Where and how a piece of clothing is worn (M4).
 and WearDefinition =
@@ -2858,8 +4354,12 @@ and WearDefinition =
     }
 
     /// A `WearDefinition` with every field at its schema default.
-    static member Default : WearDefinition =
-        { Slot = ""; Color = None; Visual = None }
+    static member Default: WearDefinition =
+        {
+            Slot = ""
+            Color = None
+            Visual = None
+        }
 
 /// Player entered a tile (or region when x2/y2 present).
 and EnterTileCondition =
@@ -2870,8 +4370,13 @@ and EnterTileCondition =
         Y2: float option
     }
 
-    static member Default : EnterTileCondition =
-        { X = 0.0; Y = 0.0; X2 = None; Y2 = None }
+    static member Default: EnterTileCondition =
+        {
+            X = 0.0
+            Y = 0.0
+            X2 = None
+            Y2 = None
+        }
 
 /// Player interacted while facing a tile (or region).
 and InteractTileCondition =
@@ -2882,8 +4387,13 @@ and InteractTileCondition =
         Y2: float option
     }
 
-    static member Default : InteractTileCondition =
-        { X = 0.0; Y = 0.0; X2 = None; Y2 = None }
+    static member Default: InteractTileCondition =
+        {
+            X = 0.0
+            Y = 0.0
+            X2 = None
+            Y2 = None
+        }
 
 and HasItemCondition =
     {
@@ -2891,8 +4401,7 @@ and HasItemCondition =
         Quantity: float
     }
 
-    static member Default : HasItemCondition =
-        { ItemId = ""; Quantity = 1.0 }
+    static member Default: HasItemCondition = { ItemId = ""; Quantity = 1.0 }
 
 and InventorySpaceCondition =
     {
@@ -2901,8 +4410,7 @@ and InventorySpaceCondition =
         Quantity: float
     }
 
-    static member Default : InventorySpaceCondition =
-        { ItemId = ""; Quantity = 1.0 }
+    static member Default: InventorySpaceCondition = { ItemId = ""; Quantity = 1.0 }
 
 and FlagCondition =
     {
@@ -2910,8 +4418,7 @@ and FlagCondition =
         Value: bool
     }
 
-    static member Default : FlagCondition =
-        { Flag = ""; Value = true }
+    static member Default: FlagCondition = { Flag = ""; Value = true }
 
 and DayRangeCondition =
     {
@@ -2919,16 +4426,14 @@ and DayRangeCondition =
         MaxDay: float option
     }
 
-    static member Default : DayRangeCondition =
-        { MinDay = None; MaxDay = None }
+    static member Default: DayRangeCondition = { MinDay = None; MaxDay = None }
 
 and SeasonCondition =
     {
         Seasons: string list
     }
 
-    static member Default : SeasonCondition =
-        { Seasons = [] }
+    static member Default: SeasonCondition = { Seasons = [] }
 
 and YearRangeCondition =
     {
@@ -2936,8 +4441,7 @@ and YearRangeCondition =
         MaxYear: float option
     }
 
-    static member Default : YearRangeCondition =
-        { MinYear = None; MaxYear = None }
+    static member Default: YearRangeCondition = { MinYear = None; MaxYear = None }
 
 and TimeOfDayCondition =
     {
@@ -2945,8 +4449,7 @@ and TimeOfDayCondition =
         MaxMinute: float
     }
 
-    static member Default : TimeOfDayCondition =
-        { MinMinute = 0.0; MaxMinute = 0.0 }
+    static member Default: TimeOfDayCondition = { MinMinute = 0.0; MaxMinute = 0.0 }
 
 and QuestStatusCondition =
     {
@@ -2955,8 +4458,7 @@ and QuestStatusCondition =
         Status: string
     }
 
-    static member Default : QuestStatusCondition =
-        { QuestId = ""; Status = "" }
+    static member Default: QuestStatusCondition = { QuestId = ""; Status = "" }
 
 /// Friendship threshold with an NPC (M4 heart events).
 and FriendshipCondition =
@@ -2965,8 +4467,7 @@ and FriendshipCondition =
         Min: float
     }
 
-    static member Default : FriendshipCondition =
-        { NpcId = ""; Min = 0.0 }
+    static member Default: FriendshipCondition = { NpcId = ""; Min = 0.0 }
 
 /// Current weather (M4).
 and WeatherCondition =
@@ -2974,17 +4475,22 @@ and WeatherCondition =
         WeatherIds: string list
     }
 
-    static member Default : WeatherCondition =
-        { WeatherIds = [] }
+    static member Default: WeatherCondition = { WeatherIds = [] }
 
 /// Today is the named festival (M9 calendar).
+and WeekdayCondition =
+    {
+        WeekdayIds: string list
+    }
+
+    static member Default: WeekdayCondition = { WeekdayIds = [] }
+
 and FestivalIdCondition =
     {
         FestivalId: string
     }
 
-    static member Default : FestivalIdCondition =
-        { FestivalId = "" }
+    static member Default: FestivalIdCondition = { FestivalId = "" }
 
 /// A variable (a flag holding a number or text, M3) compared with a number (`Value`) or, when
 /// `Text` is set, with a text.
@@ -2997,8 +4503,13 @@ and VariableCondition =
         Text: string option
     }
 
-    static member Default : VariableCondition =
-        { Name = ""; Compare = "eq"; Value = None; Text = None }
+    static member Default: VariableCondition =
+        {
+            Name = ""
+            Compare = "eq"
+            Value = None
+            Text = None
+        }
 
 /// Every condition of the group holds (M3).
 and AllCondition =
@@ -3006,8 +4517,7 @@ and AllCondition =
         Conditions: EventCondition list
     }
 
-    static member Default : AllCondition =
-        { Conditions = [] }
+    static member Default: AllCondition = { Conditions = [] }
 
 /// At least one condition of the group holds (M3).
 and AnyCondition =
@@ -3015,8 +4525,7 @@ and AnyCondition =
         Conditions: EventCondition list
     }
 
-    static member Default : AnyCondition =
-        { Conditions = [] }
+    static member Default: AnyCondition = { Conditions = [] }
 
 /// None of the conditions of the group holds (M3).
 and NotCondition =
@@ -3024,8 +4533,7 @@ and NotCondition =
         Conditions: EventCondition list
     }
 
-    static member Default : NotCondition =
-        { Conditions = [] }
+    static member Default: NotCondition = { Conditions = [] }
 
 /// A random chance (M3). 0..1.
 and ChanceCondition =
@@ -3033,8 +4541,7 @@ and ChanceCondition =
         Chance: float
     }
 
-    static member Default : ChanceCondition =
-        { Chance = 0.0 }
+    static member Default: ChanceCondition = { Chance = 0.0 }
 
 /// The player is in one of these scenes (M3).
 and SceneCondition =
@@ -3042,8 +4549,7 @@ and SceneCondition =
         SceneIds: string list
     }
 
-    static member Default : SceneCondition =
-        { SceneIds = [] }
+    static member Default: SceneCondition = { SceneIds = [] }
 
 /// Whole hearts with an NPC within a range (M4); an empty `NpcId` is the NPC the player is
 /// talking to.
@@ -3054,8 +4560,7 @@ and HeartsCondition =
         Max: float option
     }
 
-    static member Default : HeartsCondition =
-        { NpcId = ""; Min = None; Max = None }
+    static member Default: HeartsCondition = { NpcId = ""; Min = None; Max = None }
 
 /// The day of the season within a range (M4).
 and DayOfSeasonCondition =
@@ -3064,8 +4569,7 @@ and DayOfSeasonCondition =
         MaxDay: float option
     }
 
-    static member Default : DayOfSeasonCondition =
-        { MinDay = None; MaxDay = None }
+    static member Default: DayOfSeasonCondition = { MinDay = None; MaxDay = None }
 
 /// The player's relationship with an NPC (M4), one of `RelationshipStatuses`; an empty `NpcId`
 /// is the NPC the player is talking to, else anyone.
@@ -3075,8 +4579,7 @@ and RelationshipCondition =
         Status: string
     }
 
-    static member Default : RelationshipCondition =
-        { NpcId = ""; Status = "" }
+    static member Default: RelationshipCondition = { NpcId = ""; Status = "" }
 
 /// TS `EventConditionSchema`: a union on `type`.
 and [<RequireQualifiedAccess>] EventCondition =
@@ -3103,6 +4606,8 @@ and [<RequireQualifiedAccess>] EventCondition =
     | DayOfSeason of DayOfSeasonCondition
     | Relationship of RelationshipCondition
     | Money of MoneyCondition
+    | Perk of PerkCondition
+    | Buff of BuffCondition
     | SkillLevel of SkillLevelCondition
     | MineFloor of MineFloorCondition
     | Collection of CollectionCondition
@@ -3112,6 +4617,7 @@ and [<RequireQualifiedAccess>] EventCondition =
     | Building of BuildingCondition
     | Slain of SlainCondition
     | Birthday of BirthdayCondition
+    | Weekday of WeekdayCondition
 
     /// The `type` discriminator.
     member this.Type =
@@ -3139,6 +4645,8 @@ and [<RequireQualifiedAccess>] EventCondition =
         | DayOfSeason _ -> "dayOfSeason"
         | Relationship _ -> "relationship"
         | Money _ -> "money"
+        | Perk _ -> "perk"
+        | Buff _ -> "buff"
         | SkillLevel _ -> "skillLevel"
         | MineFloor _ -> "mineFloor"
         | Collection _ -> "collection"
@@ -3148,3 +4656,116 @@ and [<RequireQualifiedAccess>] EventCondition =
         | Building _ -> "building"
         | Slain _ -> "slain"
         | Birthday _ -> "birthday"
+        | Weekday _ -> "weekday"
+
+
+and ForageSpawnTable =
+    {
+        Id: string
+        Entries: MineRockWeight list
+        Maximum: float
+        Terrains: string list
+        Seasons: (string list) option
+        SceneTags: (string list) option
+        Region: ForageRegion option
+        LifetimeDays: float option
+    }
+
+    static member Default: ForageSpawnTable =
+        {
+            Id = ""
+            Entries = []
+            Maximum = 0.0
+            Terrains = []
+            Seasons = None
+            SceneTags = None
+            Region = None
+            LifetimeDays = None
+        }
+
+and ForageRegion =
+    {
+        X: float
+        Y: float
+        Width: float
+        Height: float
+    }
+
+    static member Default: ForageRegion =
+        {
+            X = 0.0
+            Y = 0.0
+            Width = 1.0
+            Height = 1.0
+        }
+
+
+and FishingFilter =
+    {
+        Seasons: (string list) option
+        WeatherIds: (string list) option
+        StartMinute: float option
+        EndMinute: float option
+        Condition: EventCondition option
+    }
+
+    static member Default: FishingFilter =
+        {
+            Seasons = None
+            WeatherIds = None
+            StartMinute = None
+            EndMinute = None
+            Condition = None
+        }
+
+and FishingRules =
+    {
+        Filter: FishingFilter option
+        Xp: float option
+        Quality: bool option
+        MinSize: float option
+        MaxSize: float option
+    }
+
+    static member Default: FishingRules =
+        {
+            Filter = None
+            Xp = None
+            Quality = None
+            MinSize = None
+            MaxSize = None
+        }
+
+and FishingGear =
+    {
+        Kind: string
+        FishIds: string list
+        WeightBonus: float
+        EscapeReduction: float
+        QualityBonus: float
+    }
+
+    static member Default: FishingGear =
+        {
+            Kind = "bait"
+            FishIds = []
+            WeightBonus = 0.0
+            EscapeReduction = 0.0
+            QualityBonus = 0.0
+        }
+
+and FishProduction =
+    {
+        TableId: string option
+        SpeciesItemId: string option
+        EveryDays: float
+        Quantity: float
+    }
+
+    static member Default: FishProduction =
+        {
+            TableId = None
+            SpeciesItemId = None
+            EveryDays = 1.0
+            Quantity = 1.0
+        }

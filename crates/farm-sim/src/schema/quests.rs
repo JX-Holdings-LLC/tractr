@@ -22,6 +22,12 @@ pub struct QuestObjective {
     pub target_npc_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_scene_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_monster_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_bundle_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_mine_id: Option<String>,
     pub completed: bool,
     #[serde(with = "crate::units::count")]
     pub progress: u32,
@@ -87,6 +93,76 @@ pub struct Quest {
     pub available_from_day: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub available_to_day: Option<u32>,
+    /// Number of playable days, including the acceptance day.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub deadline_days: Option<u32>,
+    /// Absolute final playable day (inclusive).
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub deadline_day: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub on_fail: Option<Vec<super::EventOutcome>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+/// Deterministic requests offered at a scene tile. Each period offers one weighted template.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RequestBoard {
+    pub id: String,
+    pub name: String,
+    pub scene_id: String,
+    #[serde(with = "crate::units::int")]
+    pub x: i32,
+    #[serde(with = "crate::units::int")]
+    pub y: i32,
+    #[serde(with = "crate::units::count")]
+    pub interval_days: u32,
+    pub entries: Vec<RequestBoardEntry>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RequestBoardEntry {
+    pub quest_id: String,
+    #[serde(with = "crate::units::count")]
+    pub weight: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub min_quantity: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub max_quantity: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::money::opt")]
+    pub min_reward: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::money::opt")]
+    pub max_reward: Option<i64>,
+}
+
+impl Default for RequestBoard {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            name: String::new(),
+            scene_id: String::new(),
+            x: 0,
+            y: 0,
+            interval_days: 1,
+            entries: Vec::new(),
+        }
+    }
+}
+
+impl Default for RequestBoardEntry {
+    fn default() -> Self {
+        Self {
+            quest_id: String::new(),
+            weight: 1,
+            item_ids: None,
+            min_quantity: None,
+            max_quantity: None,
+            min_reward: None,
+            max_reward: None,
+        }
+    }
 }

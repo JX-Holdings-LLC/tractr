@@ -319,7 +319,7 @@ fn clear_exception(ctx: *mut q::JSContext) {
 }
 
 /// `String(value)` as Rust text (lossy for lone surrogates). `None` if the conversion threw.
-fn to_text(ctx: *mut q::JSContext, value: q::JSValue) -> Option<String> {
+fn to_text(ctx: *mut q::JSContext, value: q::JSValue, limit: usize) -> Option<String> {
     let mut len: usize = 0;
     // SAFETY: `value` is live in `ctx`; the returned C string is released below.
     let ptr = unsafe { q::JS_ToCStringLen(ctx, &mut len, value) };
@@ -328,8 +328,11 @@ fn to_text(ctx: *mut q::JSContext, value: q::JSValue) -> Option<String> {
         return None;
     }
     // SAFETY: QuickJS returned `len` readable bytes at `ptr`.
-    let bytes = unsafe { std::slice::from_raw_parts(ptr.cast::<u8>(), len) };
-    let text = String::from_utf8_lossy(bytes).into_owned();
+    let bytes = unsafe { std::slice::from_raw_parts(ptr.cast::<u8>(), len.min(limit)) };
+    let mut text = String::from_utf8_lossy(bytes).into_owned();
+    if len > limit {
+        truncate_error(&mut text);
+    }
     // SAFETY: `ptr` came from JS_ToCStringLen in `ctx`.
     unsafe { q::JS_FreeCString(ctx, ptr) };
     Some(text)
@@ -348,12 +351,13 @@ fn take_exception_message(ctx: *mut q::JSContext) -> String {
             clear_exception(ctx);
         // SAFETY: tag inspection only.
         } else if unsafe { q::JS_IsString(message.raw) } {
-            if let Some(text) = to_text(ctx, message.raw) {
+            if let Some(text) = to_text(ctx, message.raw, MAX_ERROR_BYTES) {
                 return text;
             }
         }
     }
-    to_text(ctx, exception.raw).unwrap_or_else(|| "(exception could not be converted to a string)".to_owned())
+    to_text(ctx, exception.raw, MAX_ERROR_BYTES)
+        .unwrap_or_else(|| "(exception could not be converted to a string)".to_owned())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -494,8 +498,31 @@ fn read_inputs(first: usize, second: usize) -> Option<(String, String)> {
     })
 }
 
+// Keep errors bounded before copying them into the ABI output buffer. The host also
+// enforces its own limit, including when running an older or hostile guest.
+const MAX_ERROR_BYTES: usize = 1024;
+
+fn truncate_error(text: &mut String) {
+    let mut end = text.len().min(MAX_ERROR_BYTES - '…'.len_utf8());
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    text.truncate(end);
+    text.push('…');
+}
+
 fn report(status: i32, output: &str) -> i32 {
-    set_output(output);
+    if status != STATUS_OK && output.len() > MAX_ERROR_BYTES {
+        let mut end = MAX_ERROR_BYTES;
+        while !output.is_char_boundary(end) {
+            end -= 1;
+        }
+        let mut bounded = output[..end].to_owned();
+        truncate_error(&mut bounded);
+        set_output(&bounded);
+    } else {
+        set_output(output);
+    }
     status
 }
 
@@ -675,7 +702,7 @@ pub extern "C" fn fp_dispatch(hook_len: usize, payload_len: usize) -> i32 {
     if !unsafe { q::JS_IsString(result.raw) } {
         return report(STATUS_NOT_SERIALIZABLE, "handler result could not be serialized");
     }
-    match to_text(ctx, result.raw) {
+    match to_text(ctx, result.raw, usize::MAX) {
         Some(json) => report(STATUS_OK, &json),
         None => report(STATUS_NOT_SERIALIZABLE, "handler result could not be serialized"),
     }

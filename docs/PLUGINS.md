@@ -432,3 +432,13 @@ Notes for engine developers (the 2026-09-30 audit's defence-in-depth items).
   them. The guest itself still copies a thrown message in full into its own
   memory (within its 40 MiB); cutting it there too needs a guest rebuild
   (`tools/plugin-guest/build.sh`), which is left for the next guest change.
+
+### Player progression mutations
+
+Optional capabilities `setInventorySize`, `addInventorySize`, `addMaxEnergy`
+and `addMaxHealth` take an integer `amount` between -1000 and 1000 and apply the
+same configured limits as event outcomes. An occupied backpack slot is never
+lost. `applyBuff` takes a `buff` record (`id`, `stat`, integer `amount`, positive
+`durationMinutes`, optional `icon`, `persistsAfterSleep` and `additive`). The
+payload is bounded to 2048 bytes, duration to 525600 minutes, amount to ±1000,
+and at most 64 active buffs are retained. Reusing a buff id refreshes it.
