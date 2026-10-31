@@ -1,0 +1,175 @@
+{
+  "id": "npc-pip",
+  "name": "Pip",
+  "visual": {
+    "assetId": "art-npc-pip"
+  },
+  "x": 15,
+  "y": 11,
+  "sceneId": "scene-square",
+  "dialogue": [
+    {
+      "id": "dlg-pip",
+      "npcId": "npc-pip",
+      "text": "Psst. I found a MAP. Rook says it's a real treasure map but he won't tell me where it goes unless a grown-up asks. You're a grown-up, right?",
+      "options": [
+        {
+          "text": "I'll ask Rook.",
+          "offerQuestId": "quest-pips-map"
+        },
+        {
+          "text": "Maybe later, Pip."
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-square",
+      "x": 15,
+      "y": 11
+    },
+    {
+      "minute": 540,
+      "sceneId": "scene-farm",
+      "x": 13,
+      "y": 9
+    },
+    {
+      "minute": 780,
+      "sceneId": "scene-square",
+      "x": 16,
+      "y": 11
+    },
+    {
+      "minute": 960,
+      "sceneId": "scene-riverside",
+      "x": 10,
+      "y": 10
+    },
+    {
+      "minute": 1140,
+      "sceneId": "scene-square",
+      "x": 15,
+      "y": 11
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "product-egg",
+      "fish-perch"
+    ],
+    "liked": [
+      "gift-flower"
+    ],
+    "disliked": [
+      "material-stone"
+    ],
+    "hated": [
+      "crop-emberroot"
+    ]
+  },
+  "birthday": {
+    "season": "spring",
+    "day": 5
+  },
+  "appearance": "villager",
+  "lines": [
+    {
+      "text": "Did you know frogs can see behind them? I'm practising.",
+      "conditions": [],
+      "expression": "happy"
+    },
+    {
+      "text": "Puddles! Best weather ever!",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ],
+      "expression": "happy",
+      "weight": 2
+    },
+    {
+      "text": "Sela is my big sister. She can catch a fish with her eyes closed. Probably.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 360,
+          "maxMinute": 660
+        }
+      ]
+    },
+    {
+      "text": "Emberroot is SPICY. Do not lick it. Trust me.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-roots",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "text": "It's my birthday! Did you bring a frog? An egg is also okay.",
+      "conditions": [
+        {
+          "type": "dayRange",
+          "minDay": 5,
+          "maxDay": 5
+        }
+      ],
+      "expression": "happy",
+      "weight": 5
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-pip",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-pip",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-pip",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "dlg-pip",
+  "npcId": "npc-pip",
+  "text": "Psst. I found a MAP. Rook says it's a real treasure map but he won't tell me where it goes unless a grown-up asks. You're a grown-up, right?",
+  "options": [
+    {
+      "text": "I'll ask Rook.",
+      "offerQuestId": "quest-pips-map"
+    },
+    {
+      "text": "Maybe later, Pip."
+    }
+  ],
+  "expression": "happy"
+}

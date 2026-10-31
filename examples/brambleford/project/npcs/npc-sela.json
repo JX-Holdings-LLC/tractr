@@ -1,0 +1,153 @@
+{
+  "id": "npc-sela",
+  "name": "Sela Marsh",
+  "visual": {
+    "assetId": "art-npc-sela"
+  },
+  "x": 16,
+  "y": 10,
+  "sceneId": "scene-riverside",
+  "dialogue": [
+    {
+      "id": "dlg-sela",
+      "npcId": "npc-sela",
+      "text": "Shh. They're biting today. If you've got a rod, the bend past the bridge is the sweet spot.",
+      "options": [
+        {
+          "text": "Teach me?",
+          "offerQuestId": "quest-something-biting"
+        },
+        {
+          "text": "I'll leave you to it."
+        }
+      ]
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-riverside",
+      "x": 16,
+      "y": 10
+    },
+    {
+      "minute": 1140,
+      "sceneId": "scene-square",
+      "x": 19,
+      "y": 9
+    },
+    {
+      "minute": 1320,
+      "sceneId": "scene-riverside",
+      "x": 16,
+      "y": 10
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "fish-catfish"
+    ],
+    "liked": [
+      "fish-carp",
+      "fish-perch",
+      "food-ember-stew"
+    ],
+    "disliked": [
+      "gift-flower"
+    ],
+    "hated": [
+      "junk-boot"
+    ]
+  },
+  "appearance": "villager",
+  "lines": [
+    {
+      "text": "Quiet water, loud thoughts.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 360,
+          "maxMinute": 660
+        }
+      ]
+    },
+    {
+      "text": "The river runs faster in the rain. So do the catfish.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Dad built a little boat once. Sank in a week. Best week of my life.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 1080,
+          "maxMinute": 1560
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "You've been feeding the village. Pip says you're a wizard. I said farmer. Same thing.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-roots",
+          "status": "completed"
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-sela",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-sela",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-sela",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ],
+  "romanceable": true
+}

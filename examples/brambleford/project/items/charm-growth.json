@@ -1,0 +1,11 @@
+{
+  "id": "charm-growth",
+  "name": "Growth Charm",
+  "description": "A quartz charm warm to the touch. Use it to feel its blessing.",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 10,
+  "value": 320,
+  "useActionId": "action-growth-blessing",
+  "consumeOnUse": true
+}

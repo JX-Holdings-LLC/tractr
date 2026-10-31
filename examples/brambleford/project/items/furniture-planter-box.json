@@ -1,0 +1,9 @@
+{
+  "id": "furniture-planter-box",
+  "name": "Planter Box",
+  "description": "A handmade wooden planter box",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 9,
+  "value": 140
+}

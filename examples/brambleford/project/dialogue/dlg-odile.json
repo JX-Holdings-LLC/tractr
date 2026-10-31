@@ -1,0 +1,21 @@
+{
+  "id": "dlg-odile",
+  "npcId": "npc-odile",
+  "text": "Welcome to Brambleford, dear. Your Aunt Wren kept Thistledown Farm blooming for forty years. We'd all be so glad to see it green again.",
+  "options": [
+    {
+      "text": "I'll do my best.",
+      "giveItem": "seed-emberroot",
+      "giveItemQuantity": 5,
+      "once": true
+    },
+    {
+      "text": "What happened to the Lantern Night?",
+      "nextDialogueId": "dlg-odile-lanterns"
+    },
+    {
+      "text": "Just saying hello!"
+    }
+  ],
+  "expression": "happy"
+}

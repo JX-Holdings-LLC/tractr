@@ -1,0 +1,11 @@
+{
+  "id": "dlg-odile-lanterns",
+  "npcId": "npc-odile",
+  "text": "Every spring we lit the lanterns with moonmelons from Wren's field. Then the mill went quiet, the seeds ran out, and... well. Some lights take a while to come back.",
+  "options": [
+    {
+      "text": "Maybe I can help."
+    }
+  ],
+  "expression": "sad"
+}

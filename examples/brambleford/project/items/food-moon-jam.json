@@ -1,0 +1,10 @@
+{
+  "id": "food-moon-jam",
+  "name": "Moonmelon Jam",
+  "description": "Spread on toast at midnight, as is tradition.",
+  "type": "food",
+  "stackable": true,
+  "maxStack": 20,
+  "value": 300,
+  "energy": 60
+}

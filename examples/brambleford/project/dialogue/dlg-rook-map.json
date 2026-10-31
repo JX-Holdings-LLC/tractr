@@ -1,0 +1,12 @@
+{
+  "id": "dlg-rook-map",
+  "npcId": "npc-rook",
+  "text": "The X is under the old well. Not the treasure, mind. The treasure is that he'll spend all afternoon looking. Tell him I said so.",
+  "options": [
+    {
+      "text": "Ha. I'll tell him.",
+      "eventFlag": "rook-told"
+    }
+  ],
+  "expression": "happy"
+}

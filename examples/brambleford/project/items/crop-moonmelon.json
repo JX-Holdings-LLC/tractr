@@ -1,0 +1,13 @@
+{
+  "id": "crop-moonmelon",
+  "name": "Moonmelon",
+  "visual": {
+    "assetId": "art-item-moonmelon"
+  },
+  "description": "A cool, silvery melon that glows after dark.",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 120,
+  "cropType": "moonmelon"
+}

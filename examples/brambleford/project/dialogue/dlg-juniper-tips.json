@@ -1,0 +1,10 @@
+{
+  "id": "dlg-juniper-tips",
+  "npcId": "npc-juniper",
+  "text": "Till with T, plant, then water with Q every day. Emberroot's ready in three days. Moonmelon takes five, but it keeps on giving, and it glows!",
+  "options": [
+    {
+      "text": "Thanks!"
+    }
+  ]
+}

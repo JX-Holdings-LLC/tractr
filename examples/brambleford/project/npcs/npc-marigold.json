@@ -1,0 +1,148 @@
+{
+  "id": "npc-marigold",
+  "name": "Marigold Fenn",
+  "visual": {
+    "assetId": "art-npc-marigold"
+  },
+  "x": 6,
+  "y": 4,
+  "sceneId": "scene-square",
+  "dialogue": [
+    {
+      "id": "dlg-marigold",
+      "npcId": "npc-marigold",
+      "text": "Hello, sunshine! The Copper Kettle's been serving stew without emberroot for a year. It's soup. It's just soup. Bring me some and I'll teach you the real thing.",
+      "options": [
+        {
+          "text": "I'll bring you emberroot.",
+          "offerQuestId": "quest-ember-stew"
+        },
+        {
+          "text": "Just browsing the smells."
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-square",
+      "x": 6,
+      "y": 4
+    },
+    {
+      "minute": 900,
+      "sceneId": "scene-riverside",
+      "x": 9,
+      "y": 6
+    },
+    {
+      "minute": 1080,
+      "sceneId": "scene-square",
+      "x": 6,
+      "y": 4
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "crop-emberroot"
+    ],
+    "liked": [
+      "product-egg",
+      "crop-moonmelon"
+    ],
+    "disliked": [
+      "material-fiber"
+    ],
+    "hated": [
+      "junk-boot"
+    ]
+  },
+  "appearance": "merchant",
+  "lines": [
+    {
+      "text": "Every pot I stir has a little bit of someone's farm in it.",
+      "conditions": [],
+      "expression": "happy"
+    },
+    {
+      "text": "Rain means soup weather. Soup weather means everyone visits. Everyone visiting means more soup.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "Bram eats three bowls and then says he isn't hungry. Every day.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 1080,
+          "maxMinute": 1560
+        }
+      ]
+    },
+    {
+      "text": "Ember Stew is back on the menu! You did that.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-ember-stew",
+          "status": "completed"
+        }
+      ],
+      "expression": "happy",
+      "weight": 2
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-marigold",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-marigold",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-marigold",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ]
+}

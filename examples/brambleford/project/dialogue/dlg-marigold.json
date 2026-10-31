@@ -1,0 +1,15 @@
+{
+  "id": "dlg-marigold",
+  "npcId": "npc-marigold",
+  "text": "Hello, sunshine! The Copper Kettle's been serving stew without emberroot for a year. It's soup. It's just soup. Bring me some and I'll teach you the real thing.",
+  "options": [
+    {
+      "text": "I'll bring you emberroot.",
+      "offerQuestId": "quest-ember-stew"
+    },
+    {
+      "text": "Just browsing the smells."
+    }
+  ],
+  "expression": "happy"
+}

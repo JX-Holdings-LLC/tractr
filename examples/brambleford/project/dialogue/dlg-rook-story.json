@@ -1,0 +1,10 @@
+{
+  "id": "dlg-rook-story",
+  "npcId": "npc-rook",
+  "text": "Long ago a farmer planted a melon under a full moon, and it never stopped glowing. They say every moonmelon since is a cutting of that first light.",
+  "options": [
+    {
+      "text": "That's lovely."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "snack-trail-mix",
+  "name": "Trail Mix",
+  "description": "A foraged snack. Use it for a quick pick-me-up.",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 20,
+  "value": 8,
+  "useActionId": "action-forage-snack",
+  "consumeOnUse": true
+}

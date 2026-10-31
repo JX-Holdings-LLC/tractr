@@ -1,0 +1,19 @@
+{
+  "id": "dlg-juniper",
+  "npcId": "npc-juniper",
+  "text": "Vale Seeds and Sundries! Emberroot's fresh in. Tools, fertilizer, and the odd mystery packet.",
+  "options": [
+    {
+      "text": "Let's see the shop.",
+      "openShopId": "shop-vale"
+    },
+    {
+      "text": "How do I grow emberroot?",
+      "nextDialogueId": "dlg-juniper-tips"
+    },
+    {
+      "text": "Bye, Juniper!"
+    }
+  ],
+  "expression": "happy"
+}

@@ -1,0 +1,218 @@
+{
+  "id": "npc-odile",
+  "name": "Mayor Odile",
+  "visual": {
+    "assetId": "art-npc-odile"
+  },
+  "x": 9,
+  "y": 4,
+  "sceneId": "scene-square",
+  "dialogue": [
+    {
+      "id": "dlg-odile",
+      "npcId": "npc-odile",
+      "text": "Welcome to Brambleford, dear. Your Aunt Wren kept Thistledown Farm blooming for forty years. We'd all be so glad to see it green again.",
+      "options": [
+        {
+          "text": "I'll do my best.",
+          "giveItem": "seed-emberroot",
+          "giveItemQuantity": 5,
+          "once": true
+        },
+        {
+          "text": "What happened to the Lantern Night?",
+          "nextDialogueId": "dlg-odile-lanterns"
+        },
+        {
+          "text": "Just saying hello!"
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "id": "dlg-odile-lanterns",
+      "npcId": "npc-odile",
+      "text": "Every spring we lit the lanterns with moonmelons from Wren's field. Then the mill went quiet, the seeds ran out, and... well. Some lights take a while to come back.",
+      "options": [
+        {
+          "text": "Maybe I can help."
+        }
+      ],
+      "expression": "sad"
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-square",
+      "x": 9,
+      "y": 4
+    },
+    {
+      "minute": 720,
+      "sceneId": "scene-square",
+      "x": 15,
+      "y": 10
+    },
+    {
+      "minute": 1020,
+      "sceneId": "scene-riverside",
+      "x": 4,
+      "y": 6
+    },
+    {
+      "minute": 1200,
+      "sceneId": "scene-square",
+      "x": 9,
+      "y": 4
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "crop-moonmelon",
+      "gift-flower"
+    ],
+    "liked": [
+      "crop-emberroot",
+      "food-moon-jam"
+    ],
+    "disliked": [
+      "material-stone"
+    ],
+    "hated": [
+      "junk-boot"
+    ]
+  },
+  "birthday": {
+    "season": "spring",
+    "day": 9
+  },
+  "appearance": "elder",
+  "lines": [
+    {
+      "text": "Good morning! The square always looks brightest before the bakery smoke rolls in.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 360,
+          "maxMinute": 660
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "Rain again. Wren used to say the emberroot drinks it and laughs.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Five emberroot, and the soil will remember what it's for. That's how it starts.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-roots",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "text": "Bram's been grumbling at that mill for a year. Perhaps he'd let you help.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-roots",
+          "status": "completed"
+        },
+        {
+          "type": "questStatus",
+          "questId": "quest-silent-mill",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "text": "Moonmelons! Three, and I'll have the lanterns out of the attic before you can blink.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-lantern-night",
+          "status": "active"
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "Look at it glow. Thank you, truly.",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "lanterns-lit",
+          "value": true
+        }
+      ],
+      "expression": "happy",
+      "weight": 3
+    },
+    {
+      "text": "Evenings are long without the lanterns. I keep a candle in my window, just in case.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 1080,
+          "maxMinute": 1560
+        }
+      ],
+      "expression": "sad"
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-odile",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-odile",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-odile",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ]
+}

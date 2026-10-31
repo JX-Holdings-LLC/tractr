@@ -1,0 +1,3714 @@
+{
+  "schemaVersion": 3,
+  "id": "project-1",
+  "name": "Brambleford",
+  "version": "1.0",
+  "scenes": [
+    "scenes/scene-farm.json",
+    "scenes/scene-square.json",
+    "scenes/scene-riverside.json"
+  ],
+  "npcs": [
+    "npcs/npc-odile.json",
+    "npcs/npc-bram.json",
+    "npcs/npc-juniper.json",
+    "npcs/npc-pip.json",
+    "npcs/npc-sela.json",
+    "npcs/npc-marigold.json",
+    "npcs/npc-rook.json"
+  ],
+  "items": [
+    "items/tool-hoe.json",
+    "items/tool-watering-can.json",
+    "items/tool-axe.json",
+    "items/tool-pickaxe.json",
+    "items/tool-scythe.json",
+    "items/tool-hoe-2.json",
+    "items/tool-watering-can-2.json",
+    "items/tool-axe-2.json",
+    "items/tool-pickaxe-2.json",
+    "items/material-wood.json",
+    "items/material-stone.json",
+    "items/material-fiber.json",
+    "items/fertilizer-basic.json",
+    "items/fertilizer-quality.json",
+    "items/gift-flower.json",
+    "items/tool-fishing-rod.json",
+    "items/fish-carp.json",
+    "items/fish-perch.json",
+    "items/fish-catfish.json",
+    "items/junk-boot.json",
+    "items/feed-hay.json",
+    "items/product-egg.json",
+    "items/product-milk.json",
+    "items/ore-copper.json",
+    "items/ore-iron.json",
+    "items/gem-quartz.json",
+    "items/bar-copper.json",
+    "items/bar-iron.json",
+    "items/machine-furnace.json",
+    "items/machine-preserves.json",
+    "items/machine-kitchen.json",
+    "items/machine-workbench.json",
+    "items/furniture-tool-rack.json",
+    "items/furniture-planter-box.json",
+    "items/snack-trail-mix.json",
+    "items/machine-altar.json",
+    "items/charm-growth.json",
+    "items/seed-emberroot.json",
+    "items/crop-emberroot.json",
+    "items/seed-moonmelon.json",
+    "items/crop-moonmelon.json",
+    "items/food-ember-stew.json",
+    "items/food-moon-jam.json"
+  ],
+  "events": [
+    {
+      "id": "evt-arrival",
+      "name": "Arrival",
+      "sceneId": "scene-farm",
+      "trigger": "enter",
+      "conditions": [
+        {
+          "type": "enterTile",
+          "x": 0,
+          "y": 0,
+          "x2": 23,
+          "y2": 15
+        },
+        {
+          "type": "flag",
+          "flag": "arrived",
+          "value": false
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Thistledown Farm. Aunt Wren's field is overgrown, but the soil still smells sweet."
+        },
+        {
+          "type": "setFlag",
+          "flagName": "arrived"
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "evt-pip-asked",
+      "name": "Pip's map quest",
+      "sceneId": "",
+      "trigger": "quest",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-pips-map",
+          "status": "active"
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "setFlag",
+          "flagName": "pip-asked"
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "quest-pips-map"
+    },
+    {
+      "id": "evt-mill-fixed",
+      "name": "The mill grinds again",
+      "sceneId": "",
+      "trigger": "quest",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-silent-mill",
+          "status": "completed"
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "setFlag",
+          "flagName": "mill-fixed"
+        },
+        {
+          "type": "addShopStock",
+          "itemId": "seed-moonmelon",
+          "shopId": "shop-vale"
+        },
+        {
+          "type": "playSound",
+          "soundId": "coin"
+        },
+        {
+          "type": "message",
+          "message": "Down by the river, the grindstone rumbles back to life. Juniper now sells moonmelon seeds!"
+        },
+        {
+          "type": "sendMail",
+          "mailId": "mail-bram-thanks"
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "quest-silent-mill"
+    },
+    {
+      "id": "evt-lantern-night",
+      "name": "Lantern Night",
+      "sceneId": "",
+      "trigger": "quest",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-lantern-night",
+          "status": "completed"
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "setFlag",
+          "flagName": "lanterns-lit"
+        },
+        {
+          "type": "startCutscene",
+          "cutsceneId": "cut-lantern-night"
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "quest-lantern-night"
+    },
+    {
+      "id": "evt-moon-glow",
+      "name": "First moonmelon glow",
+      "sceneId": "",
+      "trigger": "harvest",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "The moonmelon is cool in your hands, and faintly, unmistakably, glowing."
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "crop-moonmelon"
+    },
+    {
+      "id": "evt-dusk",
+      "name": "Lanterns at dusk",
+      "sceneId": "scene-square",
+      "trigger": "time",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "lanterns-lit",
+          "value": true
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "The street lanterns flicker on, one by one."
+        }
+      ],
+      "active": true,
+      "repeatable": true,
+      "minute": 1140
+    }
+  ],
+  "dialogues": [
+    "dialogue/dlg-odile.json",
+    "dialogue/dlg-odile-lanterns.json",
+    "dialogue/dlg-bram.json",
+    "dialogue/dlg-juniper.json",
+    "dialogue/dlg-juniper-tips.json",
+    "dialogue/dlg-pip.json",
+    "dialogue/dlg-sela.json",
+    "dialogue/dlg-marigold.json",
+    "dialogue/dlg-rook.json",
+    "dialogue/dlg-rook-map.json",
+    "dialogue/dlg-rook-story.json"
+  ],
+  "quests": [
+    {
+      "id": "quest-roots",
+      "name": "Roots in the Ground",
+      "description": "Aunt Wren's field has been asleep for a year. Wake it up: harvest 5 emberroot. (Till with T, plant seeds, water with Q.)",
+      "giver": "npc-odile",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-roots",
+          "type": "harvest",
+          "description": "Harvest 5 emberroot",
+          "targetCropType": "emberroot",
+          "targetCropQuantity": 5,
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 150,
+        "items": [
+          {
+            "itemId": "seed-emberroot",
+            "quantity": 6
+          }
+        ]
+      },
+      "autoStart": true,
+      "repeatable": false
+    },
+    {
+      "id": "quest-silent-mill",
+      "name": "The Silent Mill",
+      "description": "Bram's grindstone axle snapped. Bring him 10 wood and 5 stone so the mill can grind moonmelon seed again.",
+      "giver": "npc-bram",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-mill-wood",
+          "type": "collect",
+          "description": "Gather 10 wood",
+          "targetItemId": "material-wood",
+          "targetItemQuantity": 10,
+          "completed": false,
+          "progress": 0
+        },
+        {
+          "id": "obj-mill-stone",
+          "type": "collect",
+          "description": "Gather 5 stone",
+          "targetItemId": "material-stone",
+          "targetItemQuantity": 5,
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 200,
+        "items": [
+          {
+            "itemId": "seed-moonmelon",
+            "quantity": 4
+          }
+        ]
+      },
+      "prerequisites": [
+        "quest-roots"
+      ],
+      "autoStart": false,
+      "repeatable": false
+    },
+    {
+      "id": "quest-lantern-night",
+      "name": "Lantern Night",
+      "description": "Grow 3 moonmelons so Brambleford can light its lanterns again.",
+      "giver": "npc-odile",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-moon",
+          "type": "harvest",
+          "description": "Harvest 3 moonmelons",
+          "targetCropType": "moonmelon",
+          "targetCropQuantity": 3,
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 500
+      },
+      "prerequisites": [
+        "quest-silent-mill"
+      ],
+      "autoStart": true,
+      "repeatable": false
+    },
+    {
+      "id": "quest-ember-stew",
+      "name": "Real Ember Stew",
+      "description": "Bring Marigold 4 emberroot for the Copper Kettle.",
+      "giver": "npc-marigold",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-stew",
+          "type": "collect",
+          "description": "Bring 4 emberroot",
+          "targetItemId": "crop-emberroot",
+          "targetItemQuantity": 4,
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 120,
+        "items": [
+          {
+            "itemId": "food-ember-stew",
+            "quantity": 2
+          }
+        ]
+      },
+      "autoStart": false,
+      "repeatable": false
+    },
+    {
+      "id": "quest-something-biting",
+      "name": "Something's Biting",
+      "description": "Catch 2 carp in the river below the bridge.",
+      "giver": "npc-sela",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-fish",
+          "type": "catch",
+          "description": "Catch 2 carp",
+          "targetItemId": "fish-carp",
+          "targetItemQuantity": 2,
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 100,
+        "items": [
+          {
+            "itemId": "fish-catfish",
+            "quantity": 1
+          }
+        ]
+      },
+      "autoStart": false,
+      "repeatable": false
+    },
+    {
+      "id": "quest-pips-map",
+      "name": "Pip's Treasure Map",
+      "description": "Ask Rook about Pip's map.",
+      "giver": "npc-pip",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-pip-rook",
+          "type": "talk",
+          "description": "Talk to Rook",
+          "targetNPCId": "npc-rook",
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 50,
+        "items": [
+          {
+            "itemId": "gift-flower",
+            "quantity": 2
+          }
+        ]
+      },
+      "autoStart": false,
+      "repeatable": false
+    }
+  ],
+  "player": {
+    "x": 12,
+    "y": 5,
+    "direction": "down",
+    "sceneId": "scene-farm",
+    "inventory": [
+      {
+        "item": {
+          "id": "seed-emberroot",
+          "name": "Emberroot Seeds",
+          "visual": {
+            "assetId": "art-item-seed-emberroot"
+          },
+          "description": "Warm little seeds. Sprout in 3 days, spring and summer.",
+          "type": "seed",
+          "stackable": true,
+          "maxStack": 99,
+          "value": 15,
+          "cropType": "emberroot"
+        },
+        "quantity": 10
+      },
+      {
+        "item": {
+          "id": "tool-hoe",
+          "name": "Hoe",
+          "description": "Till grass into soil for planting",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 50,
+          "toolType": "hoe",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "tool-watering-can",
+          "name": "Watering Can",
+          "description": "Water your crops to help them grow",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 50,
+          "toolType": "watering-can",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "tool-axe",
+          "name": "Axe",
+          "description": "Chop down trees and wooden objects",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 100,
+          "toolType": "axe",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "tool-pickaxe",
+          "name": "Pickaxe",
+          "description": "Break rocks and mine ore",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 150,
+          "toolType": "pickaxe",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "tool-scythe",
+          "name": "Scythe",
+          "description": "Harvest crops quickly in an area",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 200,
+          "toolType": "scythe",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "tool-fishing-rod",
+          "name": "Fishing Rod",
+          "description": "Catch fish from water tiles",
+          "type": "tool",
+          "stackable": false,
+          "maxStack": 1,
+          "value": 120,
+          "toolType": "fishing-rod",
+          "toolPower": 1,
+          "durability": 100,
+          "maxDurability": 100
+        },
+        "quantity": 1
+      },
+      {
+        "item": {
+          "id": "feed-hay",
+          "name": "Hay",
+          "description": "Animal feed — one serving a day keeps them happy",
+          "type": "material",
+          "stackable": true,
+          "maxStack": 999,
+          "value": 3
+        },
+        "quantity": 5
+      }
+    ],
+    "maxInventorySize": 20,
+    "money": 200,
+    "activeQuests": [],
+    "completedQuests": []
+  },
+  "eventFlags": {},
+  "startSceneId": "scene-farm",
+  "mode": "play",
+  "selectedTileType": "grass",
+  "selectedNPCId": null,
+  "selectedItemId": null,
+  "customAssets": [
+    {
+      "id": "art-crop-emberroot",
+      "name": "Emberroot (growing)",
+      "type": "art",
+      "width": 160,
+      "height": 48,
+      "animations": [
+        {
+          "name": "growth",
+          "loop": true,
+          "frames": [
+            {
+              "x": 0,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 32,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 64,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 96,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 128,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-crop-emberroot.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-crop-moonmelon",
+      "name": "Moonmelon (growing)",
+      "type": "art",
+      "width": 160,
+      "height": 48,
+      "animations": [
+        {
+          "name": "growth",
+          "loop": true,
+          "frames": [
+            {
+              "x": 0,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 32,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 64,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 96,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            },
+            {
+              "x": 128,
+              "y": 16,
+              "width": 32,
+              "height": 32,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-crop-moonmelon.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-item-emberroot",
+      "name": "Emberroot",
+      "type": "item",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-item-emberroot.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-item-moonmelon",
+      "name": "Moonmelon",
+      "type": "item",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-item-moonmelon.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-item-seed-emberroot",
+      "name": "Emberroot seeds",
+      "type": "item",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-item-seed-emberroot.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-item-seed-moonmelon",
+      "name": "Moonmelon seeds",
+      "type": "item",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-item-seed-moonmelon.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-lantern",
+      "name": "Street lantern",
+      "type": "tile",
+      "width": 64,
+      "height": 64,
+      "animations": [
+        {
+          "name": "lit",
+          "loop": true,
+          "frames": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 32,
+              "height": 64,
+              "ticks": 8
+            },
+            {
+              "x": 32,
+              "y": 0,
+              "width": 32,
+              "height": 64,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-prop-lantern.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-fence",
+      "name": "Fence",
+      "type": "tile",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-prop-fence.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-flowers",
+      "name": "Wildflowers",
+      "type": "tile",
+      "width": 64,
+      "height": 32,
+      "animations": [
+        {
+          "name": "sway",
+          "loop": true,
+          "frames": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 32,
+              "height": 32,
+              "ticks": 40
+            },
+            {
+              "x": 32,
+              "y": 0,
+              "width": 32,
+              "height": 32,
+              "ticks": 40
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-prop-flowers.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-millwheel",
+      "name": "Mill wheel",
+      "type": "tile",
+      "width": 64,
+      "height": 64,
+      "animations": [
+        {
+          "name": "turn",
+          "loop": true,
+          "frames": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 32,
+              "height": 64,
+              "ticks": 14
+            },
+            {
+              "x": 32,
+              "y": 0,
+              "width": 32,
+              "height": 64,
+              "ticks": 14
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-prop-millwheel.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-bridge",
+      "name": "Bridge planks",
+      "type": "tile",
+      "width": 32,
+      "height": 32,
+      "dataFile": "assets/art-prop-bridge.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-prop-well",
+      "name": "Village well",
+      "type": "tile",
+      "width": 32,
+      "height": 64,
+      "dataFile": "assets/art-prop-well.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-odile",
+      "name": "Mayor Odile",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-odile.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-odile",
+      "name": "Mayor Odile portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-odile.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-bram",
+      "name": "Bram the Miller",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-bram.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-bram",
+      "name": "Bram the Miller portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-bram.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-juniper",
+      "name": "Juniper Vale",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-juniper.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-juniper",
+      "name": "Juniper Vale portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-juniper.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-pip",
+      "name": "Pip",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-pip.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-pip",
+      "name": "Pip portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-pip.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-sela",
+      "name": "Sela Marsh",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-sela.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-sela",
+      "name": "Sela Marsh portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-sela.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-marigold",
+      "name": "Marigold Fenn",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-marigold.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-marigold",
+      "name": "Marigold Fenn portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-marigold.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-npc-rook",
+      "name": "Rook the Wanderer",
+      "type": "npc",
+      "width": 128,
+      "height": 192,
+      "animations": [
+        {
+          "name": "idle-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-down",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 4,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-left",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 52,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-right",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 100,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        },
+        {
+          "name": "idle-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 30
+            }
+          ]
+        },
+        {
+          "name": "walk-up",
+          "loop": true,
+          "frames": [
+            {
+              "x": 3,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 35,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 67,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            },
+            {
+              "x": 99,
+              "y": 148,
+              "width": 26,
+              "height": 44,
+              "ticks": 8
+            }
+          ]
+        }
+      ],
+      "dataFile": "assets/art-npc-rook.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-portrait-rook",
+      "name": "Rook the Wanderer portraits",
+      "type": "art",
+      "width": 144,
+      "height": 48,
+      "dataFile": "assets/art-portrait-rook.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "art-icon-brambleford",
+      "name": "Game icon",
+      "type": "art",
+      "width": 256,
+      "height": 256,
+      "dataFile": "assets/art-icon-brambleford.png",
+      "dataType": "image/png"
+    }
+  ],
+  "customCrops": [
+    {
+      "id": "emberroot",
+      "name": "Emberroot",
+      "visual": {
+        "assetId": "art-crop-emberroot"
+      },
+      "seedCost": 15,
+      "baseHarvestValue": 40,
+      "growthDays": 3,
+      "stages": 5,
+      "seasons": [
+        "spring",
+        "summer"
+      ],
+      "canRegrow": false,
+      "mutationChance": 0.02,
+      "yieldMin": 1,
+      "yieldMax": 2,
+      "harvestItemId": "crop-emberroot"
+    },
+    {
+      "id": "moonmelon",
+      "name": "Moonmelon",
+      "visual": {
+        "assetId": "art-crop-moonmelon"
+      },
+      "seedCost": 40,
+      "baseHarvestValue": 120,
+      "growthDays": 5,
+      "stages": 5,
+      "seasons": [
+        "spring",
+        "summer"
+      ],
+      "regrowthDays": 3,
+      "canRegrow": true,
+      "mutationChance": 0.03,
+      "yieldMin": 1,
+      "yieldMax": 1,
+      "harvestItemId": "crop-moonmelon",
+      "light": {
+        "radius": 2,
+        "color": "#9fd8ff",
+        "brightness": 55
+      }
+    }
+  ],
+  "gamePanels": [
+    {
+      "id": "panel-brambleford",
+      "title": "Brambleford",
+      "entries": [
+        {
+          "label": "Mill grinding",
+          "kind": "flag",
+          "value": "mill-fixed"
+        },
+        {
+          "label": "Lanterns lit",
+          "kind": "flag",
+          "value": "lanterns-lit"
+        },
+        {
+          "label": "Moonmelons",
+          "kind": "item",
+          "value": "crop-moonmelon"
+        }
+      ]
+    }
+  ],
+  "currentSeason": "spring",
+  "currentDay": 1,
+  "currentTimeMinutes": 360,
+  "currentYear": 1,
+  "gameStartTime": 1761900000000,
+  "shops": [
+    {
+      "id": "shop-vale",
+      "name": "Vale Seeds & Sundries",
+      "stock": [
+        {
+          "itemId": "seed-emberroot"
+        },
+        {
+          "itemId": "fertilizer-basic"
+        },
+        {
+          "itemId": "fertilizer-quality",
+          "dailyLimit": 5
+        },
+        {
+          "itemId": "tool-fishing-rod"
+        },
+        {
+          "itemId": "feed-hay"
+        },
+        {
+          "itemId": "gift-flower"
+        },
+        {
+          "itemId": "tool-hoe-2"
+        },
+        {
+          "itemId": "tool-watering-can-2"
+        }
+      ],
+      "sellPriceMultiplier": 1,
+      "buysItems": true,
+      "repairsTools": true,
+      "repairCostPerPoint": 0.5
+    }
+  ],
+  "nodeTypes": [
+    {
+      "id": "node-tree",
+      "name": "Tree",
+      "health": 4,
+      "requiredTool": "axe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "material-wood",
+          "min": 2,
+          "max": 4,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#3f6d33",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-stump",
+      "name": "Stump",
+      "health": 2,
+      "requiredTool": "axe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "material-wood",
+          "min": 1,
+          "max": 2,
+          "weight": 1
+        }
+      ],
+      "respawnDays": 3,
+      "color": "#6d5233",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-rock",
+      "name": "Rock",
+      "health": 3,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "material-stone",
+          "min": 1,
+          "max": 3,
+          "weight": 1
+        }
+      ],
+      "respawnDays": 3,
+      "color": "#8a8a95",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-boulder",
+      "name": "Boulder",
+      "health": 6,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 2,
+      "drops": [
+        {
+          "itemId": "material-stone",
+          "min": 4,
+          "max": 8,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#5e5e6b",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-weeds",
+      "name": "Weeds",
+      "health": 1,
+      "requiredTool": "scythe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "material-fiber",
+          "min": 1,
+          "max": 2,
+          "weight": 1
+        }
+      ],
+      "respawnDays": 2,
+      "color": "#7d9a3f",
+      "blocksMovement": false
+    },
+    {
+      "id": "node-mine-rock",
+      "name": "Mine Rock",
+      "health": 2,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "material-stone",
+          "min": 1,
+          "max": 2,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#6e6e78",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-copper-ore",
+      "name": "Copper Node",
+      "health": 3,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "ore-copper",
+          "min": 1,
+          "max": 3,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#b87333",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-iron-ore",
+      "name": "Iron Node",
+      "health": 4,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 2,
+      "drops": [
+        {
+          "itemId": "ore-iron",
+          "min": 1,
+          "max": 3,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#a19d94",
+      "blocksMovement": true
+    },
+    {
+      "id": "node-quartz",
+      "name": "Quartz Crystal",
+      "health": 2,
+      "requiredTool": "pickaxe",
+      "requiredToolTier": 1,
+      "drops": [
+        {
+          "itemId": "gem-quartz",
+          "min": 1,
+          "max": 1,
+          "weight": 1
+        }
+      ],
+      "respawnDays": null,
+      "color": "#cfe3ee",
+      "blocksMovement": true
+    }
+  ],
+  "settings": {
+    "movement": {
+      "playerSpeed": 4.5
+    },
+    "energyEnabled": true,
+    "maxEnergy": 100,
+    "collapseEnergyFraction": 0.5,
+    "collapseMoneyPenalty": 50,
+    "time": {
+      "dayStartMinute": 360,
+      "dayEndMinute": 1560,
+      "minutesPerRealSecond": 1
+    },
+    "calendar": {
+      "seasons": [
+        {
+          "id": "spring",
+          "name": "Spring",
+          "days": 28
+        },
+        {
+          "id": "summer",
+          "name": "Summer",
+          "days": 28
+        },
+        {
+          "id": "fall",
+          "name": "Fall",
+          "days": 28
+        },
+        {
+          "id": "winter",
+          "name": "Winter",
+          "days": 28
+        }
+      ],
+      "festivals": [
+        {
+          "id": "festival-lantern-night",
+          "name": "Lantern Night",
+          "seasonId": "spring",
+          "day": 14
+        }
+      ],
+      "weekdays": [
+        {
+          "id": "monday",
+          "name": "Monday"
+        },
+        {
+          "id": "tuesday",
+          "name": "Tuesday"
+        },
+        {
+          "id": "wednesday",
+          "name": "Wednesday"
+        },
+        {
+          "id": "thursday",
+          "name": "Thursday"
+        },
+        {
+          "id": "friday",
+          "name": "Friday"
+        },
+        {
+          "id": "saturday",
+          "name": "Saturday"
+        },
+        {
+          "id": "sunday",
+          "name": "Sunday"
+        }
+      ]
+    },
+    "skillsEnabled": true,
+    "skillLevelCurve": [
+      0,
+      50,
+      150,
+      300,
+      500,
+      750,
+      1050,
+      1400,
+      1800,
+      2250
+    ],
+    "locale": "en",
+    "showMadeWithCredit": false
+  },
+  "recipes": [
+    {
+      "id": "recipe-craft-furnace",
+      "name": "Furnace",
+      "inputs": [
+        {
+          "itemId": "material-stone",
+          "quantity": 10
+        },
+        {
+          "itemId": "ore-copper",
+          "quantity": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "machine-furnace",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "crafting"
+    },
+    {
+      "id": "recipe-craft-preserves-jar",
+      "name": "Preserves Jar",
+      "inputs": [
+        {
+          "itemId": "material-wood",
+          "quantity": 12
+        },
+        {
+          "itemId": "material-stone",
+          "quantity": 4
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "machine-preserves",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "crafting",
+      "unlock": {
+        "skill": {
+          "skill": "farming",
+          "level": 1
+        }
+      }
+    },
+    {
+      "id": "recipe-craft-hay",
+      "name": "Hay Bundle",
+      "inputs": [
+        {
+          "itemId": "material-fiber",
+          "quantity": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "feed-hay",
+          "quantity": 2
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "farming"
+    },
+    {
+      "id": "recipe-smelt-copper",
+      "name": "Copper Bar",
+      "inputs": [
+        {
+          "itemId": "ore-copper",
+          "quantity": 3
+        },
+        {
+          "itemId": "material-wood",
+          "quantity": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "bar-copper",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 120,
+      "machineTypeId": "machine-furnace",
+      "category": "smithing"
+    },
+    {
+      "id": "recipe-smelt-iron",
+      "name": "Iron Bar",
+      "inputs": [
+        {
+          "itemId": "ore-iron",
+          "quantity": 3
+        },
+        {
+          "itemId": "material-wood",
+          "quantity": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "bar-iron",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 180,
+      "machineTypeId": "machine-furnace",
+      "category": "smithing",
+      "unlock": {
+        "skill": {
+          "skill": "mining",
+          "level": 2
+        }
+      }
+    },
+    {
+      "id": "recipe-craft-kitchen",
+      "name": "Kitchen",
+      "inputs": [
+        {
+          "itemId": "material-stone",
+          "quantity": 8
+        },
+        {
+          "itemId": "material-wood",
+          "quantity": 6
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "machine-kitchen",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "crafting"
+    },
+    {
+      "id": "recipe-craft-workbench",
+      "name": "Workbench",
+      "inputs": [
+        {
+          "itemId": "material-wood",
+          "quantity": 10
+        },
+        {
+          "itemId": "material-stone",
+          "quantity": 2
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "machine-workbench",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "crafting"
+    },
+    {
+      "id": "recipe-craft-tool-rack",
+      "name": "Tool Rack",
+      "inputs": [
+        {
+          "itemId": "material-wood",
+          "quantity": 8
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "furniture-tool-rack",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "carpentry",
+      "requiresStationCategory": "carpentry"
+    },
+    {
+      "id": "recipe-craft-planter-box",
+      "name": "Planter Box",
+      "inputs": [
+        {
+          "itemId": "material-wood",
+          "quantity": 6
+        },
+        {
+          "itemId": "material-stone",
+          "quantity": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "furniture-planter-box",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "carpentry",
+      "requiresStationCategory": "carpentry"
+    },
+    {
+      "id": "recipe-growth-charm",
+      "name": "Growth Charm",
+      "inputs": [
+        {
+          "itemId": "gem-quartz",
+          "quantity": 1
+        },
+        {
+          "itemId": "material-fiber",
+          "quantity": 3
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "charm-growth",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "magic",
+      "requiresStationCategory": "magic"
+    },
+    {
+      "id": "recipe-ember-stew",
+      "name": "Ember Stew",
+      "inputs": [
+        {
+          "itemId": "crop-emberroot",
+          "quantity": 2
+        },
+        {
+          "itemId": "material-fiber",
+          "quantity": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "food-ember-stew",
+          "quantity": 1
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "cooking"
+    },
+    {
+      "id": "recipe-moon-jam",
+      "name": "Moonmelon Jam",
+      "inputs": [
+        {
+          "itemId": "crop-moonmelon",
+          "quantity": 1
+        },
+        {
+          "itemId": "crop-emberroot",
+          "quantity": 1
+        }
+      ],
+      "outputs": [
+        {
+          "itemId": "food-moon-jam",
+          "quantity": 2
+        }
+      ],
+      "processingMinutes": 0,
+      "category": "cooking"
+    }
+  ],
+  "machineTypes": [
+    {
+      "id": "machine-furnace",
+      "name": "Furnace",
+      "description": "Smelts ore into metal bars",
+      "color": "#8a4a3a",
+      "itemId": "machine-furnace",
+      "blocksMovement": true,
+      "stationCategories": []
+    },
+    {
+      "id": "machine-preserves",
+      "name": "Preserves Jar",
+      "description": "Preserves crops into higher-value goods",
+      "color": "#7a4a8a",
+      "itemId": "machine-preserves",
+      "blocksMovement": true,
+      "stationCategories": []
+    },
+    {
+      "id": "machine-kitchen",
+      "name": "Kitchen",
+      "description": "Provides the cooking station needed for cooking recipes",
+      "color": "#c2703a",
+      "itemId": "machine-kitchen",
+      "blocksMovement": true,
+      "stationCategories": [
+        "cooking"
+      ]
+    },
+    {
+      "id": "machine-workbench",
+      "name": "Workbench",
+      "description": "Provides the carpentry station needed for carpentry recipes",
+      "color": "#8a6a3f",
+      "itemId": "machine-workbench",
+      "blocksMovement": true,
+      "stationCategories": [
+        "carpentry"
+      ]
+    },
+    {
+      "id": "machine-altar",
+      "name": "Enchanter's Altar",
+      "description": "Provides the magic station needed for enchanting recipes",
+      "color": "#7a5bb5",
+      "itemId": "machine-altar",
+      "blocksMovement": true,
+      "stationCategories": [
+        "magic"
+      ]
+    }
+  ],
+  "weather": {
+    "types": [
+      {
+        "id": "sun",
+        "name": "Sunny",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": null
+      },
+      {
+        "id": "rain",
+        "name": "Rain",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "rain"
+      },
+      {
+        "id": "storm",
+        "name": "Storm",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0.03,
+        "npcsStayInside": true,
+        "overlay": "rain"
+      },
+      {
+        "id": "snow",
+        "name": "Snow",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "snow"
+      }
+    ],
+    "table": {
+      "spring": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "summer": [
+        {
+          "weatherId": "sun",
+          "weight": 7
+        },
+        {
+          "weatherId": "rain",
+          "weight": 1
+        },
+        {
+          "weatherId": "storm",
+          "weight": 2
+        }
+      ],
+      "fall": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "winter": [
+        {
+          "weatherId": "sun",
+          "weight": 5
+        },
+        {
+          "weatherId": "snow",
+          "weight": 5
+        }
+      ]
+    }
+  },
+  "animalSpecies": [
+    {
+      "id": "animal-chicken",
+      "name": "Chicken",
+      "purchaseCost": 400,
+      "feedItemId": "feed-hay",
+      "productItemId": "product-egg",
+      "productIntervalDays": 1,
+      "daysToAdult": 3,
+      "color": "#e8e0c3"
+    },
+    {
+      "id": "animal-cow",
+      "name": "Cow",
+      "purchaseCost": 1500,
+      "feedItemId": "feed-hay",
+      "productItemId": "product-milk",
+      "productIntervalDays": 2,
+      "daysToAdult": 5,
+      "color": "#d3b28a"
+    }
+  ],
+  "animals": [
+    {
+      "id": "hen-clementine",
+      "speciesId": "animal-chicken",
+      "name": "Clementine",
+      "sceneId": "scene-farm",
+      "x": 17,
+      "y": 12,
+      "mood": 70,
+      "fedToday": false,
+      "pettedToday": false,
+      "ageDays": 30,
+      "daysSinceProduct": 0,
+      "productReady": false
+    },
+    {
+      "id": "hen-biscuit",
+      "speciesId": "animal-chicken",
+      "name": "Biscuit",
+      "sceneId": "scene-farm",
+      "x": 19,
+      "y": 12,
+      "mood": 70,
+      "fedToday": false,
+      "pettedToday": false,
+      "ageDays": 30,
+      "daysSinceProduct": 0,
+      "productReady": false
+    }
+  ],
+  "fishTables": [
+    {
+      "id": "fish-table-default",
+      "name": "Pond Fish",
+      "entries": [
+        {
+          "itemId": "fish-carp",
+          "weight": 6,
+          "difficulty": 0.15
+        },
+        {
+          "itemId": "fish-perch",
+          "weight": 3,
+          "difficulty": 0.35
+        },
+        {
+          "itemId": "fish-catfish",
+          "weight": 1,
+          "difficulty": 0.6
+        }
+      ],
+      "junkChance": 0.15,
+      "junkItemId": "junk-boot"
+    }
+  ],
+  "mine": {
+    "enabled": false,
+    "floors": 20,
+    "floorWidth": 14,
+    "floorHeight": 12,
+    "bands": [],
+    "ladderChance": 0.18,
+    "elevatorEvery": 5
+  },
+  "actions": [
+    {
+      "id": "action-growth-blessing",
+      "name": "Growth Blessing",
+      "description": "The charm blesses your fields for the day.",
+      "conditions": [],
+      "failMessage": "",
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "A warm green light washes over the farm…"
+        },
+        {
+          "type": "setFlag",
+          "flagName": "growth-blessing-today"
+        }
+      ],
+      "energyCost": 0
+    },
+    {
+      "id": "action-forage-snack",
+      "name": "Trail Snack",
+      "description": "Munch a foraged snack to recover a little energy.",
+      "conditions": [],
+      "failMessage": "",
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "You feel refreshed!"
+        },
+        {
+          "type": "setFlag",
+          "flagName": "snacked-today"
+        }
+      ],
+      "energyCost": 0
+    }
+  ],
+  "minigames": [
+    {
+      "id": "fishing",
+      "name": "Fishing",
+      "kind": "timing-bar",
+      "config": {
+        "speed": 0.9,
+        "targetSize": 0.2,
+        "prompt": "Hook the fish — stop the marker in the green zone!"
+      },
+      "resultTiers": []
+    }
+  ],
+  "contentPacks": [],
+  "terrains": [
+    {
+      "id": "lantern",
+      "name": "Lantern",
+      "layer": "object",
+      "color": "#3a3640",
+      "visual": {
+        "assetId": "art-prop-lantern",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 64,
+          "ticks": 8
+        }
+      },
+      "walkable": false,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": [],
+      "tall": 1,
+      "light": {
+        "radius": 4,
+        "color": "#ffcf7a",
+        "brightness": 80
+      }
+    },
+    {
+      "id": "fence",
+      "name": "Fence",
+      "layer": "object",
+      "color": "#7a5c3a",
+      "visual": {
+        "assetId": "art-prop-fence"
+      },
+      "walkable": false,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": []
+    },
+    {
+      "id": "flowers",
+      "name": "Wildflowers",
+      "layer": "overlay",
+      "color": "#e8556a",
+      "visual": {
+        "assetId": "art-prop-flowers",
+        "animation": "sway"
+      },
+      "walkable": true,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": []
+    },
+    {
+      "id": "millwheel",
+      "name": "Mill wheel",
+      "layer": "object",
+      "color": "#6b4a2e",
+      "visual": {
+        "assetId": "art-prop-millwheel",
+        "animation": "turn"
+      },
+      "walkable": false,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": [],
+      "tall": 1
+    },
+    {
+      "id": "bridge",
+      "name": "Bridge",
+      "layer": "overlay",
+      "color": "#9a7a52",
+      "visual": {
+        "assetId": "art-prop-bridge"
+      },
+      "walkable": true,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": []
+    },
+    {
+      "id": "well",
+      "name": "Well",
+      "layer": "object",
+      "color": "#8a8a95",
+      "visual": {
+        "assetId": "art-prop-well"
+      },
+      "walkable": false,
+      "plantable": false,
+      "waterSource": false,
+      "fishable": false,
+      "blocksLight": false,
+      "hazardEnergy": 0,
+      "indoor": false,
+      "transforms": [],
+      "tall": 1
+    }
+  ],
+  "itemCategories": [
+    {
+      "id": "food",
+      "name": "Food",
+      "plantable": false,
+      "fertilizer": false,
+      "equippable": false,
+      "edible": true,
+      "energy": 30,
+      "placeable": false,
+      "giftable": true,
+      "sellable": true
+    }
+  ],
+  "cutscenes": [
+    {
+      "id": "cut-lantern-night",
+      "name": "Lantern Night",
+      "steps": [
+        {
+          "type": "fade",
+          "seconds": 1,
+          "options": [],
+          "conditions": [],
+          "mode": "out",
+          "outcomes": []
+        },
+        {
+          "type": "outcomes",
+          "options": [],
+          "conditions": [],
+          "outcomes": [
+            {
+              "type": "warpPlayer",
+              "sceneId": "scene-square",
+              "x": 12,
+              "y": 8
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-odile",
+              "sceneId": "scene-square",
+              "x": 12,
+              "y": 4
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-juniper",
+              "sceneId": "scene-square",
+              "x": 14,
+              "y": 4
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-bram",
+              "sceneId": "scene-square",
+              "x": 10,
+              "y": 5
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-marigold",
+              "sceneId": "scene-square",
+              "x": 15,
+              "y": 5
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-pip",
+              "sceneId": "scene-square",
+              "x": 11,
+              "y": 9
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-sela",
+              "sceneId": "scene-square",
+              "x": 16,
+              "y": 9
+            },
+            {
+              "type": "moveNpc",
+              "npcId": "npc-rook",
+              "sceneId": "scene-square",
+              "x": 17,
+              "y": 7
+            }
+          ]
+        },
+        {
+          "type": "fade",
+          "seconds": 1.5,
+          "options": [],
+          "conditions": [],
+          "mode": "in",
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Everyone! Gather round. For the first time in a year...",
+          "speaker": "npc-odile",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "...Brambleford lights its lanterns!",
+          "speaker": "npc-odile",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "emote",
+          "actor": "npc-pip",
+          "emote": "exclaim",
+          "seconds": 0.8,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "THEY'RE GLOWING. The melons are GLOWING. I'm never sleeping again.",
+          "speaker": "npc-pip",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Mill's grinding, lanterns are lit. Not bad for a farm that was all weeds a week ago.",
+          "speaker": "npc-bram",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Ember Stew for everyone! Bram, put that third bowl down.",
+          "speaker": "npc-marigold",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "emote",
+          "actor": "npc-sela",
+          "emote": "music",
+          "seconds": 0.8,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Dad would have liked this. He always said the river looks best with lights on it.",
+          "speaker": "npc-sela",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "I'm going to need so many more moonmelon seeds.",
+          "speaker": "npc-juniper",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "And that, friends, is a story I'll be telling on every road from here to the sea.",
+          "speaker": "npc-rook",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "emote",
+          "actor": "npc-odile",
+          "emote": "heart",
+          "seconds": 1,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Wren would be so proud of you. Welcome home, {player}.",
+          "speaker": "npc-odile",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "outcomes",
+          "options": [],
+          "conditions": [],
+          "outcomes": [
+            {
+              "type": "setFlag",
+              "flagName": "lanterns-lit"
+            },
+            {
+              "type": "modifyFriendship",
+              "amount": 100,
+              "npcId": "npc-odile"
+            }
+          ]
+        },
+        {
+          "type": "say",
+          "text": "The End... of the beginning. Thank you for playing Brambleford! The farm is yours to keep growing.",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "end",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        }
+      ],
+      "skippable": true
+    },
+    {
+      "id": "cut-sela-boat",
+      "name": "Sela's boat",
+      "steps": [
+        {
+          "type": "face",
+          "actor": "npc-sela",
+          "direction": "left",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Can I tell you something? See that bend? Dad's little boat sank right there.",
+          "speaker": "npc-sela",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Everyone laughed. He laughed loudest. Then he built another one.",
+          "speaker": "npc-sela",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "emote",
+          "actor": "npc-sela",
+          "emote": "heart",
+          "seconds": 1,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "You remind me of him a bit. You just keep planting.",
+          "speaker": "npc-sela",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "end",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        }
+      ],
+      "skippable": true
+    }
+  ],
+  "heartEvents": [
+    {
+      "id": "heart-sela-2",
+      "name": "Sela's boat",
+      "npcId": "npc-sela",
+      "hearts": 2,
+      "cutsceneId": "cut-sela-boat",
+      "conditions": []
+    }
+  ],
+  "mail": [
+    {
+      "id": "mail-wren",
+      "subject": "If you're reading this",
+      "from": "",
+      "text": "My dear,\n\nIf this letter found you, then the farm is yours. Don't fuss over the weeds. Plant emberroot first, it's forgiving. And when the time is right, plant moonmelons: Brambleford has always lit its lanterns with them.\n\nTell Odile I said she still owes me a pie.\n\nAll my love,\nAunt Wren",
+      "attachments": [
+        {
+          "itemId": "seed-emberroot",
+          "quantity": 4
+        }
+      ],
+      "money": 100,
+      "outcomes": [],
+      "conditions": [
+        {
+          "type": "dayRange",
+          "minDay": 2,
+          "maxDay": 2
+        }
+      ],
+      "repeat": false
+    },
+    {
+      "id": "mail-bram-thanks",
+      "subject": "The wheel and the stone",
+      "from": "npc-bram",
+      "text": "Farmer,\n\nShe grinds! First proper sack of seed meal in a year. Juniper's got the moonmelon seed. Come by for flour any time. Bring stones. I like stones.\n\nBram",
+      "attachments": [
+        {
+          "itemId": "seed-moonmelon",
+          "quantity": 2
+        }
+      ],
+      "money": 0,
+      "outcomes": [],
+      "conditions": [],
+      "repeat": false
+    },
+    {
+      "id": "mail-pip-birthday",
+      "subject": "IT IS MY BIRTHDAY",
+      "from": "npc-pip",
+      "text": "Hi. It is my birthday today. That is all. Eggs are a good present. Frogs are a better present. - Pip",
+      "attachments": [],
+      "money": 0,
+      "outcomes": [],
+      "conditions": [
+        {
+          "type": "dayRange",
+          "minDay": 5,
+          "maxDay": 5
+        }
+      ],
+      "repeat": false
+    }
+  ],
+  "export": {
+    "title": "Brambleford",
+    "executableName": "Brambleford",
+    "version": "1.0.0",
+    "gameId": "com.tractr-examples.brambleford",
+    "author": "Tractr example",
+    "icon": "art-icon-brambleford",
+    "window": {
+      "width": 1280,
+      "height": 800,
+      "fullscreen": false
+    },
+    "pixelScale": "integer",
+    "credits": "A Tractr demo game. Art drawn with Vixl.",
+    "targets": [
+      "web",
+      "linux-x64",
+      "windows-x64"
+    ]
+  }
+}

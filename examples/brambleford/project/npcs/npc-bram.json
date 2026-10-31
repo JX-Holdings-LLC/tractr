@@ -1,0 +1,163 @@
+{
+  "id": "npc-bram",
+  "name": "Bram the Miller",
+  "visual": {
+    "assetId": "art-npc-bram"
+  },
+  "x": 7,
+  "y": 4,
+  "sceneId": "scene-riverside",
+  "dialogue": [
+    {
+      "id": "dlg-bram",
+      "npcId": "npc-bram",
+      "text": "Wheel turns, stones don't. The axle on my grindstone cracked clean through last spring. No grinding, no moonmelon seed meal, no Lantern Night.",
+      "options": [
+        {
+          "text": "What do you need?",
+          "offerQuestId": "quest-silent-mill"
+        },
+        {
+          "text": "Sounds rough. Good luck."
+        }
+      ],
+      "expression": "sad"
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-riverside",
+      "x": 7,
+      "y": 4
+    },
+    {
+      "minute": 1080,
+      "sceneId": "scene-square",
+      "x": 7,
+      "y": 5
+    },
+    {
+      "minute": 1260,
+      "sceneId": "scene-riverside",
+      "x": 7,
+      "y": 4
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "food-ember-stew"
+    ],
+    "liked": [
+      "material-stone",
+      "material-wood"
+    ],
+    "disliked": [
+      "gift-flower"
+    ],
+    "hated": [
+      "junk-boot"
+    ]
+  },
+  "appearance": "farmer",
+  "lines": [
+    {
+      "text": "Mornin'. Flour on my boots, flour in my beard. Flour in my dreams.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 360,
+          "maxMinute": 660
+        }
+      ]
+    },
+    {
+      "text": "Ten logs and five good stones. Trees by the farm, rocks by the river.",
+      "conditions": [
+        {
+          "type": "questStatus",
+          "questId": "quest-silent-mill",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "text": "Listen to her go! Best sound in the valley.",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "mill-fixed",
+          "value": true
+        }
+      ],
+      "expression": "happy",
+      "weight": 2
+    },
+    {
+      "text": "Rain keeps the river high. Good for the wheel, bad for my knees.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Marigold's stew is the only reason I survive the winters.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 1080,
+          "maxMinute": 1560
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-bram",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-bram",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-bram",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ]
+}

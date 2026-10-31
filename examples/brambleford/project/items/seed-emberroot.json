@@ -1,0 +1,13 @@
+{
+  "id": "seed-emberroot",
+  "name": "Emberroot Seeds",
+  "visual": {
+    "assetId": "art-item-seed-emberroot"
+  },
+  "description": "Warm little seeds. Sprout in 3 days, spring and summer.",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 15,
+  "cropType": "emberroot"
+}

@@ -1,0 +1,9 @@
+{
+  "id": "machine-workbench",
+  "name": "Workbench",
+  "description": "A carpentry station — place it, then build nearby",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 9,
+  "value": 150
+}

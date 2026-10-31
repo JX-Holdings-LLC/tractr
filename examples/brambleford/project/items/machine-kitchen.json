@@ -1,0 +1,9 @@
+{
+  "id": "machine-kitchen",
+  "name": "Kitchen",
+  "description": "A cooking station — place it, then cook nearby",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 9,
+  "value": 180
+}

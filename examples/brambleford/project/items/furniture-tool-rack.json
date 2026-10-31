@@ -1,0 +1,9 @@
+{
+  "id": "furniture-tool-rack",
+  "name": "Tool Rack",
+  "description": "A sturdy wooden rack for hanging tools",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 9,
+  "value": 90
+}

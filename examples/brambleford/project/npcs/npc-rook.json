@@ -1,0 +1,144 @@
+{
+  "id": "npc-rook",
+  "name": "Rook the Wanderer",
+  "visual": {
+    "assetId": "art-npc-rook"
+  },
+  "x": 13,
+  "y": 11,
+  "sceneId": "scene-square",
+  "dialogue": [
+    {
+      "id": "dlg-rook",
+      "npcId": "npc-rook",
+      "text": "Ah, a new face. I collect stories, old boots and the occasional shiny rock. In trade, I tell people where things are buried.",
+      "options": [
+        {
+          "text": "Pip wants to know about the map.",
+          "nextDialogueId": "dlg-rook-map",
+          "requiresFlag": "pip-asked"
+        },
+        {
+          "text": "Tell me a story.",
+          "nextDialogueId": "dlg-rook-story"
+        },
+        {
+          "text": "Safe travels."
+        }
+      ]
+    },
+    {
+      "id": "dlg-rook-map",
+      "npcId": "npc-rook",
+      "text": "The X is under the old well. Not the treasure, mind. The treasure is that he'll spend all afternoon looking. Tell him I said so.",
+      "options": [
+        {
+          "text": "Ha. I'll tell him.",
+          "eventFlag": "rook-told"
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "id": "dlg-rook-story",
+      "npcId": "npc-rook",
+      "text": "Long ago a farmer planted a melon under a full moon, and it never stopped glowing. They say every moonmelon since is a cutting of that first light.",
+      "options": [
+        {
+          "text": "That's lovely."
+        }
+      ]
+    }
+  ],
+  "canMove": true,
+  "movePattern": "wander",
+  "wanderRadius": 3,
+  "giftTastes": {
+    "loved": [
+      "gem-quartz",
+      "junk-boot"
+    ],
+    "liked": [
+      "ore-copper"
+    ],
+    "disliked": [
+      "crop-emberroot"
+    ],
+    "hated": [
+      "gift-flower"
+    ]
+  },
+  "appearance": "villager",
+  "lines": [
+    {
+      "text": "Roads are long, but this village is a good place to sit down.",
+      "conditions": [],
+      "expression": "neutral"
+    },
+    {
+      "text": "Rain on my hat brim. Best drum in the world.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "I hear the lanterns are coming back. I may stay the season.",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "mill-fixed",
+          "value": true
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-rook",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-rook",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-rook",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ]
+}

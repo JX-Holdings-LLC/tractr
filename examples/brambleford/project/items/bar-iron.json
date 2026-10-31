@@ -1,0 +1,9 @@
+{
+  "id": "bar-iron",
+  "name": "Iron Bar",
+  "description": "A smelted iron ingot",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 80
+}

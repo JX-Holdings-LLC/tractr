@@ -1,0 +1,13 @@
+{
+  "id": "seed-moonmelon",
+  "name": "Moonmelon Seeds",
+  "visual": {
+    "assetId": "art-item-seed-moonmelon"
+  },
+  "description": "Pale seeds that hum faintly. 5 days, and they grow again.",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 40,
+  "cropType": "moonmelon"
+}

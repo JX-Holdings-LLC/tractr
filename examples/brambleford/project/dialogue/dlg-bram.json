@@ -1,0 +1,15 @@
+{
+  "id": "dlg-bram",
+  "npcId": "npc-bram",
+  "text": "Wheel turns, stones don't. The axle on my grindstone cracked clean through last spring. No grinding, no moonmelon seed meal, no Lantern Night.",
+  "options": [
+    {
+      "text": "What do you need?",
+      "offerQuestId": "quest-silent-mill"
+    },
+    {
+      "text": "Sounds rough. Good luck."
+    }
+  ],
+  "expression": "sad"
+}

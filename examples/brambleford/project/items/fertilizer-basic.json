@@ -1,0 +1,9 @@
+{
+  "id": "fertilizer-basic",
+  "name": "Basic Fertilizer",
+  "description": "Improves soil quality and crop growth",
+  "type": "fertilizer",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 10
+}

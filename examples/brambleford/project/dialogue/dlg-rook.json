@@ -1,0 +1,19 @@
+{
+  "id": "dlg-rook",
+  "npcId": "npc-rook",
+  "text": "Ah, a new face. I collect stories, old boots and the occasional shiny rock. In trade, I tell people where things are buried.",
+  "options": [
+    {
+      "text": "Pip wants to know about the map.",
+      "nextDialogueId": "dlg-rook-map",
+      "requiresFlag": "pip-asked"
+    },
+    {
+      "text": "Tell me a story.",
+      "nextDialogueId": "dlg-rook-story"
+    },
+    {
+      "text": "Safe travels."
+    }
+  ]
+}

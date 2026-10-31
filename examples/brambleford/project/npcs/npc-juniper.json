@@ -1,0 +1,142 @@
+{
+  "id": "npc-juniper",
+  "name": "Juniper Vale",
+  "visual": {
+    "assetId": "art-npc-juniper"
+  },
+  "x": 20,
+  "y": 4,
+  "sceneId": "scene-square",
+  "dialogue": [
+    {
+      "id": "dlg-juniper",
+      "npcId": "npc-juniper",
+      "text": "Vale Seeds and Sundries! Emberroot's fresh in. Tools, fertilizer, and the odd mystery packet.",
+      "options": [
+        {
+          "text": "Let's see the shop.",
+          "openShopId": "shop-vale"
+        },
+        {
+          "text": "How do I grow emberroot?",
+          "nextDialogueId": "dlg-juniper-tips"
+        },
+        {
+          "text": "Bye, Juniper!"
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "id": "dlg-juniper-tips",
+      "npcId": "npc-juniper",
+      "text": "Till with T, plant, then water with Q every day. Emberroot's ready in three days. Moonmelon takes five, but it keeps on giving, and it glows!",
+      "options": [
+        {
+          "text": "Thanks!"
+        }
+      ]
+    }
+  ],
+  "canMove": false,
+  "movePattern": "stationary",
+  "giftTastes": {
+    "loved": [
+      "gift-flower"
+    ],
+    "liked": [
+      "crop-emberroot",
+      "crop-moonmelon"
+    ],
+    "disliked": [
+      "junk-boot"
+    ],
+    "hated": [
+      "fish-catfish"
+    ]
+  },
+  "appearance": "merchant",
+  "lines": [
+    {
+      "text": "Seeds don't care how long a field's been asleep. They just want a chance.",
+      "conditions": [],
+      "expression": "happy"
+    },
+    {
+      "text": "I've got moonmelon seed again! Bram's mill is a miracle worker.",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "mill-fixed",
+          "value": true
+        }
+      ],
+      "expression": "happy",
+      "weight": 2
+    },
+    {
+      "text": "Rainy days are for sorting seed packets. Very soothing. Very boring.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain",
+            "storm"
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Pip keeps trying to plant pebbles in my window boxes.",
+      "conditions": [
+        {
+          "type": "timeOfDay",
+          "minMinute": 360,
+          "maxMinute": 660
+        }
+      ]
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "neutral",
+      "visual": {
+        "assetId": "art-portrait-juniper",
+        "frame": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "art-portrait-juniper",
+        "frame": {
+          "x": 48,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    },
+    {
+      "expression": "sad",
+      "visual": {
+        "assetId": "art-portrait-juniper",
+        "frame": {
+          "x": 96,
+          "y": 0,
+          "width": 48,
+          "height": 48,
+          "ticks": 8
+        }
+      }
+    }
+  ],
+  "romanceable": true
+}

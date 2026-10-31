@@ -1,0 +1,13 @@
+{
+  "id": "crop-emberroot",
+  "name": "Emberroot",
+  "visual": {
+    "assetId": "art-item-emberroot"
+  },
+  "description": "A spicy red root that stays warm in your pocket.",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 40,
+  "cropType": "emberroot"
+}

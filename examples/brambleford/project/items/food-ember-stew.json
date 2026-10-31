@@ -1,0 +1,10 @@
+{
+  "id": "food-ember-stew",
+  "name": "Ember Stew",
+  "description": "Marigold's recipe. Warms you right down to the toes.",
+  "type": "food",
+  "stackable": true,
+  "maxStack": 20,
+  "value": 110,
+  "energy": 45
+}

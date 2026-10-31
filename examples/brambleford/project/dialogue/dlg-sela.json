@@ -1,0 +1,14 @@
+{
+  "id": "dlg-sela",
+  "npcId": "npc-sela",
+  "text": "Shh. They're biting today. If you've got a rod, the bend past the bridge is the sweet spot.",
+  "options": [
+    {
+      "text": "Teach me?",
+      "offerQuestId": "quest-something-biting"
+    },
+    {
+      "text": "I'll leave you to it."
+    }
+  ]
+}
