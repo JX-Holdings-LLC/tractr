@@ -10,6 +10,9 @@
   per computer, with links and sizes, what the other files are for, and the
   build info. The README and install guide link straight to each installer of
   the latest release.
+- Fix a game whose player starts with a maximum energy of 0: sleeping
+  refilled energy to 1, above that maximum. A new game now starts the
+  maximum at 1 or more, as settings and level-ups already require.
 
 ## 0.11.1
 
