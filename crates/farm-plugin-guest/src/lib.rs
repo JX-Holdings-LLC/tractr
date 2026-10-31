@@ -15,6 +15,23 @@
 //! | `fp_init` | `(granted_len, source_len: i32) -> i32` | The buffer holds the granted-hooks JSON array, then the plugin source. Compiles the plugin and runs its top level. |
 //! | `fp_dispatch` | `(hook_len, payload_len: i32) -> i32` | The buffer holds the hook name, then the payload JSON. Calls the plugin's handler. |
 //! | `fp_output_ptr` / `fp_output_len` | `() -> i32` | The output text of the last call. |
+//! | `fp_abi_version` | `() -> i32` | [`ABI_VERSION`]: 2 since the host calls below. |
+//!
+//! ## Host calls (ABI 2)
+//!
+//! A plugin asks the host for something (the read API: the game state at the step its hook
+//! fired) with `api.host(request)`, which the bootstrap turns into JSON text and hands to the
+//! host synchronously through two imports from the module `farm`:
+//!
+//! | Import | Signature | Meaning |
+//! |---|---|---|
+//! | `host_call` | `(ptr, len: i32) -> i32` | The request text is `len` bytes at `ptr`. Returns the length of the answer, or a negative number when there is none. |
+//! | `host_answer` | `(ptr: i32)` | Copy the answer of the last `host_call` to `ptr`. |
+//!
+//! The answer is JSON text, `{"ok": value}` or `{"error": message}`; the bootstrap returns the
+//! value or throws an `Error` with the message. Everything about a request (what it may read,
+//! its fuel, its size) is decided by the host. `api.host` is new in ABI 2: plugins that don't
+//! call it run exactly as before.
 //!
 //! The status codes are the `STATUS_*` constants below; `farm-plugins` mirrors them. The
 //! output is the result JSON for [`STATUS_OK`] and a message for the error statuses.
@@ -82,6 +99,21 @@ pub const STATUS_NOT_A_FUNCTION_BODY: i32 = 6;
 /// either of those twice.
 pub const STATUS_BAD_STATE: i32 = 7;
 
+/// The guest ABI version (`fp_abi_version`): 1 had no host calls, 2 adds `api.host` and the
+/// `farm` imports.
+pub const ABI_VERSION: i32 = 2;
+
+/// Longest request text `api.host` hands the host; a longer one throws in the plugin.
+const MAX_REQUEST_BYTES: usize = 64 * 1024;
+
+#[link(wasm_import_module = "farm")]
+extern "C" {
+    /// Hand the host a request of `len` bytes at `ptr`; the answer's length, or negative.
+    fn host_call(ptr: *const u8, len: usize) -> i32;
+    /// Copy the last answer to `ptr`.
+    fn host_answer(ptr: *mut u8);
+}
+
 /// Capability hardening, the C# Jint host's `SandboxScripts.Hardening` (`@MAX@` is replaced by
 /// the string cap). Most of these names never exist in QuickJS; they are pinned to `undefined`
 /// so a plugin can't shim them into something that looks trusted.
@@ -133,15 +165,17 @@ const HARDENING: &str = r#"(function harden() {
   });
 })();"#;
 
-/// Evaluates to `bootstrap(granted, factory) → dispatch(hook, payloadJson)`, the C# host's
+/// Evaluates to `bootstrap(granted, factory, call) → dispatch(hook, payloadJson)`, the C# host's
 /// `SandboxScripts.Bootstrap` (minus its JIT warm-up line). The JSON and object helpers are
 /// captured when this script runs, before any plugin code; grants are checked in a
 /// null-prototype map the plugin can't reach. `dispatch` returns `undefined` when no handler is
 /// registered, else the JSON of the handler's array result (`"[]"` for anything else).
+/// `call` is the native host call ([`js_host`]); `api.host(request)` wraps it (ABI 2).
 const BOOTSTRAP: &str = r#"(function () {
   const parse = JSON.parse, stringify = JSON.stringify, isArray = Array.isArray;
-  const create = Object.create, freeze = Object.freeze;
-  return function bootstrap(grantedJson, factory) {
+  const create = Object.create, freeze = Object.freeze, hasOwn = Object.prototype.hasOwnProperty;
+  const ErrorType = Error, TypeErrorType = TypeError;
+  return function bootstrap(grantedJson, factory, call) {
     const granted = create(null);
     const list = parse(grantedJson);
     for (let i = 0; i < list.length; i++) granted[list[i]] = true;
@@ -149,6 +183,15 @@ const BOOTSTRAP: &str = r#"(function () {
     const api = freeze({
       on: function on(hook, fn) {
         if (typeof hook === 'string' && granted[hook] === true) handlers[hook] = fn;
+      },
+      host: function host(request) {
+        const text = stringify(request);
+        if (typeof text !== 'string') throw new TypeErrorType('api.host: the request must be JSON');
+        const raw = call(text);
+        if (typeof raw !== 'string') throw new ErrorType('api.host: the request was refused (too large, or no host)');
+        const answer = parse(raw);
+        if (answer !== null && typeof answer === 'object' && hasOwn.call(answer, 'error')) throw new ErrorType(String(answer.error));
+        return answer === null || typeof answer !== 'object' ? undefined : answer.ok;
       },
     });
     factory(api);
@@ -549,6 +592,53 @@ pub extern "C" fn fp_output_len() -> usize {
     OUTPUT.with(|out| out.borrow().len())
 }
 
+/// The ABI version ([`ABI_VERSION`]).
+#[no_mangle]
+pub extern "C" fn fp_abi_version() -> i32 {
+    ABI_VERSION
+}
+
+/// The native half of `api.host`: hands one request string to the host and returns the
+/// answer text, or `undefined` when the argument is not a string, is longer than
+/// [`MAX_REQUEST_BYTES`] or the host has no answer. Never throws: the bootstrap does.
+unsafe extern "C" fn js_host(
+    ctx: *mut q::JSContext,
+    _this: q::JSValue,
+    argc: c_int,
+    argv: *mut q::JSValue,
+) -> q::JSValue {
+    if argc < 1 || argv.is_null() {
+        return q::JS_UNDEFINED;
+    }
+    // SAFETY: QuickJS passes `argc` live arguments at `argv`.
+    let request = unsafe { *argv };
+    // SAFETY: tag inspection only.
+    if !unsafe { q::JS_IsString(request) } {
+        return q::JS_UNDEFINED;
+    }
+    let mut len: usize = 0;
+    // SAFETY: `request` is a live string in `ctx`; the C string is released below.
+    let ptr = unsafe { q::JS_ToCStringLen(ctx, &mut len, request) };
+    if ptr.is_null() {
+        clear_exception(ctx);
+        return q::JS_UNDEFINED;
+    }
+    let answer_len = if len > MAX_REQUEST_BYTES {
+        -1
+    } else {
+        // SAFETY: `ptr` holds `len` readable bytes; the host only reads them.
+        unsafe { host_call(ptr.cast::<u8>(), len) }
+    };
+    // SAFETY: `ptr` came from JS_ToCStringLen in `ctx`.
+    unsafe { q::JS_FreeCString(ctx, ptr) };
+    let Ok(answer_len) = usize::try_from(answer_len) else { return q::JS_UNDEFINED };
+    let mut answer = vec![0u8; answer_len];
+    // SAFETY: `answer` has room for the `answer_len` bytes the host copies.
+    unsafe { host_answer(answer.as_mut_ptr()) };
+    let text = String::from_utf8_lossy(&answer);
+    new_string(ctx, &text).into_raw()
+}
+
 /// Build the part of the sandbox every plugin shares: the QuickJS runtime with the heap limit,
 /// the compiler and sandbox contexts, the hardening and the bootstrap. The host calls this
 /// once, keeps the resulting linear memory as an image, and starts every plugin's instance
@@ -657,9 +747,16 @@ fn init(prepared: Prepared, granted: &str, source: &str) -> Result<Guest, Failur
 
     let ctx = contexts.sandbox;
     let granted = new_string(ctx, granted);
-    let mut args = [granted.raw, factory.raw];
+    // SAFETY: a native function with a static name; we own the new function value.
+    let call = Value::new(ctx, unsafe {
+        q::JS_NewCFunction2(ctx, Some(js_host), c"host".as_ptr(), 1, q::JSCFunctionEnum_JS_CFUNC_generic, 0)
+    });
+    if call.is_exception() {
+        return Err(Failure::from_exception(ctx));
+    }
+    let mut args = [granted.raw, factory.raw, call.raw];
     // SAFETY: `bootstrap` is a function; the arguments stay owned by their guards.
-    let dispatch = Value::new(ctx, unsafe { q::JS_Call(ctx, bootstrap.raw, q::JS_UNDEFINED, 2, args.as_mut_ptr()) });
+    let dispatch = Value::new(ctx, unsafe { q::JS_Call(ctx, bootstrap.raw, q::JS_UNDEFINED, 3, args.as_mut_ptr()) });
     if dispatch.is_exception() {
         return Err(Failure::from_exception(ctx));
     }
