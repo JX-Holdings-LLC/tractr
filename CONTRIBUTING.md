@@ -101,7 +101,7 @@ and publishes a self-contained `win-x64` build on every push.
 | `FarmEngine.Authoring` (F#) | The schema records and their JSON, project edits, undo/redo, loading, validation, Problems, content compiler, packs, sample templates, cartridge compiler and reader |
 | `FarmEngine.Authoring.Net` (F#) | The .NET edge of the F# core: `System.Text.Json` conversion, `RecordJson` and the generated `RecordWith` extensions the C# app builds records with |
 | `FarmEngine.Export` (F#) | Export Game: player templates, Windows icon/version patching, folders and archives |
-| `FarmEngine.Cli` (F#) | `farmc compile` and `farmc export` |
+| `FarmEngine.Cli` (F#) | `farmc`: `new`, `check`, `convert`, `compile` and `export` |
 | `crates/farm-sim` (Rust) | Deterministic simulation, golden-verified |
 | `crates/farm-host` (Rust) | The host protocol of `farm-ffi` (player, sessions, previews), whose player `farm-wasm` shares |
 | `crates/farm-ffi` (Rust) | C ABI the app loads: the embedded player, map previews, headless sessions |
@@ -226,6 +226,7 @@ needs that tool. CI checks that each matches its generator.
 |---|---|---|---|
 | FlatBuffers accessors (`crates/farm-cart-schema/src/*_generated.rs`) | `flatc --rust` 25.2.10 ([schemas/README.md](schemas/README.md)) | a `.fbs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring/SchemaJson.fs` (schema JSON codecs) | `dotnet fsi tools/codegen/schema-json.fsx` ([tools/codegen](tools/codegen/README.md#schemajsonfs)) | a record or union in `Schema.fs` changes | `tools/codegen/check.sh` |
+| `schemas/project.schema.json` (JSON Schema of a project file) | `dotnet fsi tools/codegen/project-schema.fsx` ([tools/codegen](tools/codegen/README.md#projectschemajson)) | a record, its doc comments or a vocabulary changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordJson.fs` tables | `python3 tools/codegen/record-json.py` | `SchemaJson.fs` changes | `tools/codegen/check.sh` |
 | `src/FarmEngine.Authoring.Net/RecordWith.fs` | `dotnet build -c Release src/FarmEngine.Authoring && dotnet fsi tools/codegen/record-with.fsx` | a schema record changes | `tools/codegen/check.sh` |
 | Player license notices (`tools/player-licenses/THIRD-PARTY.txt`) | `tools/player-licenses/generate.sh` (needs cargo-about 0.9.2) | `farm-player`'s dependencies, the fonts or the plugin guest change | `generate.sh --check` |
