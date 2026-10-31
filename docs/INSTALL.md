@@ -1,23 +1,37 @@
 # Install and update Tractr
 
-Tractr is a desktop app for Windows, Linux and macOS. Download it from the
-[latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest);
-it updates itself after that.
+Tractr is a desktop app for Windows, Linux and macOS. You need **one** file,
+the one for your computer:
+
+| Your computer | Download |
+|---|---|
+| Windows (64-bit) | [`Tractr-win-Setup.exe`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-win-Setup.exe) |
+| Mac with Apple silicon (M1 or newer) | [`Tractr-osx-arm64-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-arm64-Portable.zip) |
+| Mac with an Intel processor | [`Tractr-osx-x64-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-x64-Portable.zip) |
+| Linux (64-bit) | [`Tractr-linux-x64.AppImage`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-linux-x64.AppImage) |
+
+The links always fetch the
+[latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest).
+Not sure which Mac you have? Choose **Apple menu → About This Mac**: "Chip"
+means Apple silicon, "Processor" means Intel.
+The release's other files (`.nupkg`, `releases.*.json`) are for Tractr's
+updater, which downloads them itself after you install; `SHA256SUMS` lets you
+[check a download](#check-a-download).
 
 ## Windows
 
-1. Download `Tractr-win-Setup.exe` and run it. It installs for your user
+1. Download [`Tractr-win-Setup.exe`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-win-Setup.exe) and run it. It installs for your user
    only and needs no admin rights; it adds Start-menu and desktop shortcuts.
 2. The installer is not code-signed yet, so Windows SmartScreen may say
    *"Windows protected your PC"*. Choose **More info → Run anyway**. Updates
    installed later don't ask again.
 
-Prefer no installer? `Tractr-win-Portable.zip` is a portable copy: unzip it
+Prefer no installer? [`Tractr-win-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-win-Portable.zip) is a portable copy: unzip it
 anywhere and run `Tractr.exe`. It updates itself too.
 
 ## Linux
 
-1. Download `Tractr-linux-x64.AppImage` into a folder you can write to.
+1. Download [`Tractr-linux-x64.AppImage`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-linux-x64.AppImage) into a folder you can write to.
 2. Make it executable and run it:
 
    ```sh
@@ -37,8 +51,10 @@ On Ubuntu 24.04 the first and last are called `libasound2t64` and
 
 ## macOS
 
-1. Download `Tractr-osx-arm64-Portable.zip` for Apple Silicon or
-   `Tractr-osx-x64-Portable.zip` for an Intel Mac.
+1. Download [`Tractr-osx-arm64-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-arm64-Portable.zip)
+   for Apple silicon or
+   [`Tractr-osx-x64-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-x64-Portable.zip) for an
+   Intel Mac.
 2. Unzip it and move `Tractr.app` to Applications.
 3. Until the Mac app is signed and notarized, macOS blocks the first launch:
    open **System Settings → Privacy & Security** and choose **Open Anyway**

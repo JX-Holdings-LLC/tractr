@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.2
+
+- Publish fewer release files, and say which one to download. Releases no
+  longer carry Velopack's legacy `RELEASES` feeds (read only by apps migrating
+  from Squirrel, which Tractr never used), the three player template archives
+  (every editor package already ships them in `players/`) or
+  `build-info.txt`. The release notes end with a "Download" table: one file
+  per computer, with links and sizes, what the other files are for, and the
+  build info. The README and install guide link straight to each installer of
+  the latest release.
+
 ## 0.11.1
 
 - Reorganize the documentation by reader. Creators get an install guide, a

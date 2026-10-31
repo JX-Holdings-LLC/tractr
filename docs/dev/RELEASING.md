@@ -17,7 +17,8 @@ Actions → Release → Run workflow (main, channel, dry run)
                                    live Mac signing + notarization
                      release       dotnet test, dotnet publish -p:Version=0.3.1,
                                    export + replay on the release Windows template,
-                                   vpk download/pack, SHA256SUMS      (read-only token)
+                                   vpk download/pack, DOWNLOADS.md,
+                                   SHA256SUMS         (read-only token)
                      publish       [environment "release"] attest, stage the bundle
                      finish        verify the complete bundle; unless dry run:
                                    [environment "release"] tag, draft, upload, check
@@ -81,19 +82,40 @@ the draft bound to that commit. Release a new version for anything else.
 
 ### What the workflow produces
 
-Assets attached to the GitHub Release (Velopack's default `win` channel):
+`.release/config.json` lists every file a release publishes. The publisher
+stages only those, leaves out every other build output, and fails if one is
+missing. A release has 14 files, 15 with a delta package:
 
-| File                                   | Purpose                                                              |
-|----------------------------------------|----------------------------------------------------------------------|
-| `Tractr-win-Setup.exe`        | Installer for new users. Installs per-user to `%LocalAppData%\Tractr`, adds Start-menu and desktop shortcuts, no admin rights needed. |
-| `Tractr-win-Portable.zip`     | Portable copy (unzip and run; still self-updates).                   |
-| `Tractr-X.Y.Z-full.nupkg`     | Full update package.                                                 |
-| `Tractr-X.Y.Z-delta.nupkg`    | Delta from the previous release (small download). Only when a previous release exists. |
-| `releases.win.json`, `assets.win.json` | Update feed read by the app.                                         |
-| `RELEASES`                             | Legacy (Squirrel-compatible) feed.                                   |
-| `player-windows-x64.zip`, `player-linux-x64.tar.gz`, `player-web.tar.gz` | Export Game player templates for this version ([Export internals](EXPORT-INTERNALS.md#player-templates)). The installer already ships them in `players/`. |
-| `SHA256SUMS`                           | SHA-256 of this version's installer, packages, feeds and templates. |
-| `build-info.txt`                       | Commit, .NET SDK, rustc and vpk versions and the runner image the release was built with. |
+| File | Who uses it |
+|---|---|
+| `Tractr-win-Setup.exe` | **Users, Windows.** Installs per-user to `%LocalAppData%\Tractr`, adds Start-menu and desktop shortcuts, no admin rights needed. |
+| `Tractr-osx-arm64-Portable.zip`, `Tractr-osx-x64-Portable.zip` | **Users, macOS** (Apple silicon, Intel). `Tractr.app` in a ZIP. |
+| `Tractr-linux-x64.AppImage` | **Users, Linux x64.** |
+| `Tractr-win-Portable.zip` | Users, Windows, who want no installer (unzip and run; still self-updates). |
+| `Tractr-X.Y.Z-full.nupkg`, `Tractr-X.Y.Z-{linux-x64,osx-x64,osx-arm64}-full.nupkg` | The updater: full update package of each system (Velopack channels `win`, `linux-x64`, `osx-x64`, `osx-arm64`). |
+| `Tractr-X.Y.Z-delta.nupkg` | The Windows updater: delta from the previous release (small download). Only when a previous release exists. |
+| `releases.win.json`, `releases.{linux-x64,osx-x64,osx-arm64}.json` | The updater: the feed of each channel, read by `GithubSource`. |
+| `DOWNLOADS.md` | The "Download" section the publisher appends to the release notes (`notesAsset`): which file to download for which computer, and the build info (commit, .NET SDK, rustc, vpk, runner image). |
+| `SHA256SUMS` | SHA-256 of every other file of the release. |
+
+`tools/release/release-files.py` writes `DOWNLOADS.md` and the `SHA256SUMS` the
+attestation is made from; the publisher writes the published `SHA256SUMS` over
+the same files. The file names of the four installers carry no version, so
+`https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/<file>`
+always links to the latest stable one (README and the install guide use it).
+Keep those names: links in the wild and the docs depend on them, and the
+updater depends on the channel names in the feeds.
+
+Not published, on purpose:
+
+- **`RELEASES`, `RELEASES-<channel>`**: Velopack's legacy feed, read only by
+  apps migrating from Squirrel.Windows. Tractr never shipped with Squirrel, and
+  its updater reads `releases.<channel>.json`.
+- **`assets.<channel>.json`**: input to Velopack's own deployment commands,
+  which the workflow doesn't use.
+- **Player templates**: every editor package ships all three in `players/`, and
+  `release` builds them as workflow artifacts (`player-*`, 7 days). Builds from
+  source make their own ([Export internals](EXPORT-INTERNALS.md#player-templates)).
 
 Everything `publish` uploads is kept as a workflow artifact
 (`release-bundle-X.Y.Z`, 30 days) for debugging.
@@ -147,7 +169,7 @@ other.
   `rustup-init` to a checksum (`tools/ci/install-rust.sh`), the .NET SDK to
   `global.json`'s version (CI turns off its roll-forward), Rust to
   `rust-toolchain.toml`, and every cargo build that ships uses `--locked`.
-- **Checksums and provenance.** `SHA256SUMS` lists every published file, and
+- **Checksums and provenance.** `SHA256SUMS` lists every other published file, and
   GitHub's build provenance attestation covers them. To check a download:
   `sha256sum --check --ignore-missing SHA256SUMS`, or
   `gh attestation verify Tractr-win-Setup.exe --repo JX-Holdings-LLC/tractr`.
@@ -155,7 +177,7 @@ other.
   (source paths become `/_/`), cargo builds map the runner's paths away
   (`--remap-path-prefix`) and ship without debug info, so no runner path ends
   up in a binary. Zip and nupkg bytes still depend on the runtime's zlib;
-  `build-info.txt` records the SDK and toolchains of each release.
+  the "Build info" of each release's notes records the SDK and toolchains.
 
 ### Versions in builds
 
