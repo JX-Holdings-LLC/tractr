@@ -1289,6 +1289,35 @@ and CustomAsset =
             Extra = []
         }
 
+/// Where an art asset or a scene was imported from (Aseprite, Tiled, LDtk), so importing the file
+/// again updates it in place. Only the editor reads it; no game does.
+and ImportSource =
+    {
+        /// One of `ImportKinds`.
+        Kind: string
+        /// The asset id (Aseprite) or scene id (Tiled, LDtk) the import made.
+        TargetId: string
+        /// The file, as the creator picked it.
+        Path: string
+        /// LDtk: the level's identifier.
+        Level: string option
+        /// Aseprite: each tag or slice name and the clip it became.
+        Names: ((string * string) list) option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `ImportSource` with every field at its schema default.
+    static member Default: ImportSource =
+        {
+            Kind = ""
+            TargetId = ""
+            Path = ""
+            Level = None
+            Names = None
+            Extra = []
+        }
+
 /// A project's own crop (`customCrops`): the fields of `CropDefinition`.
 and CustomCropDefinition =
     {
@@ -1886,6 +1915,119 @@ and GamePanelEntry =
     /// A `GamePanelEntry` with every field at its schema default.
     static member Default: GamePanelEntry = { Label = ""; Kind = ""; Value = "" }
 
+/// The look of a game's interface: its fonts, panel art, icons, colours, layout and title screen.
+/// Absent parts keep the built-in look; the player's text size and readable-font settings apply on
+/// top.
+and UiSkin =
+    {
+        /// A `font` asset for headings, titles and buttons; absent: the built-in font.
+        HeadingFont: string option
+        /// A `font` asset for body text.
+        BodyFont: string option
+        /// A `font` asset for numbers (money, the clock, quantities).
+        NumberFont: string option
+        /// Colours by palette role (`UiPaletteRoles`): `#rrggbb` or `#rrggbbaa`.
+        Colors: ((string * string) list) option
+        /// 9-slice art by part (`UiSkinParts`).
+        Panels: ((string * UiNineSlice) list) option
+        /// Icons by name (`UiSkinIcons`).
+        Icons: ((string * VisualRef) list) option
+        Layout: UiLayout option
+        Title: UiTitleScreen option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `UiSkin` with every field at its schema default.
+    static member Default: UiSkin =
+        {
+            HeadingFont = None
+            BodyFont = None
+            NumberFont = None
+            Colors = None
+            Panels = None
+            Icons = None
+            Layout = None
+            Title = None
+            Extra = []
+        }
+
+/// A piece of panel art drawn in nine parts: the corners keep their size, the edges stretch along
+/// one side and the middle both ways.
+and UiNineSlice =
+    {
+        /// The image (an asset, and a frame of it for a part of a sheet).
+        Visual: VisualRef
+        /// Source pixels of each edge that do not stretch. int, nonnegative.
+        Left: float
+        /// int, nonnegative.
+        Top: float
+        /// int, nonnegative.
+        Right: float
+        /// int, nonnegative.
+        Bottom: float
+        /// UI pixels per source pixel of the edges. 1..8.
+        Scale: float option
+    }
+
+    /// A `UiNineSlice` with every field at its schema default.
+    static member Default: UiNineSlice =
+        {
+            Visual = VisualRef.Default
+            Left = 0.0
+            Top = 0.0
+            Right = 0.0
+            Bottom = 0.0
+            Scale = None
+        }
+
+/// Where the interface puts things.
+and UiLayout =
+    {
+        /// One of `UiHudPositions`; absent: top.
+        HudPosition: string option
+        /// Show the toolbar buttons (bag, quests, crafting, menu); absent: shown.
+        Toolbar: bool option
+        /// One of `UiClockStyles`; absent: `12h`.
+        ClockStyle: string option
+        /// One of `UiDialoguePositions`; absent: bottom.
+        DialoguePosition: string option
+        /// The side of a portrait in the dialogue box, in UI pixels. int, 32..160; absent: 48.
+        PortraitSize: float option
+    }
+
+    /// A `UiLayout` with every field at its schema default.
+    static member Default: UiLayout =
+        {
+            HudPosition = None
+            Toolbar = None
+            ClockStyle = None
+            DialoguePosition = None
+            PortraitSize = None
+        }
+
+/// The title screen: what is behind it, the logo and where the menu sits.
+and UiTitleScreen =
+    {
+        /// Art covering the screen; absent: the game's start scene.
+        Background: VisualRef option
+        /// A scene drawn behind the menu instead of the start scene.
+        Scene: string option
+        /// Art drawn in place of the game's name.
+        Logo: VisualRef option
+        /// One of `UiMenuPositions`; absent: center.
+        MenuPosition: string option
+    }
+
+    /// A `UiTitleScreen` with every field at its schema default.
+    static member Default: UiTitleScreen =
+        {
+            Background = None
+            Scene = None
+            Logo = None
+            MenuPosition = None
+        }
+
 and GameProject =
     {
         /// int.
@@ -1921,6 +2063,8 @@ and GameProject =
         PlayerVisual: VisualRef option
         Graphics: GraphicsSettings option
         GamePanels: (GamePanel list) option
+        /// The look of the game's interface (`UiSkin`); absent: the built-in look.
+        UiSkin: UiSkin option
         CurrentSeason: string
         CurrentDay: float
         /// 1-based day within `CurrentSeason` (mirrors GameState.clock.dayOfSeason). Absent when
@@ -1975,6 +2119,8 @@ and GameProject =
         Mail: (MailDefinition list) option
         /// Monsters (M7).
         Monsters: (MonsterDefinition list) option
+        /// The files art and scenes were imported from (Aseprite, Tiled, LDtk), for re-import.
+        Imports: (ImportSource list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -2024,6 +2170,7 @@ and GameProject =
             PlayerVisual = None
             Graphics = None
             GamePanels = None
+            UiSkin = None
             CurrentSeason = ""
             CurrentDay = 0.0
             CurrentDayOfSeason = None
@@ -2058,6 +2205,7 @@ and GameProject =
             Achievements = None
             Mail = None
             Monsters = None
+            Imports = None
             Export = None
             RngState = None
             CurrentWeatherId = None

@@ -442,7 +442,11 @@ module CustomAssetTypes =
     [<Literal>]
     let Music = "music"
 
-    let All: string list = [ Tile; Npc; Item; Player; Art; Sound; Music ]
+    /// A TrueType or OpenType font (`font/ttf`, `font/otf`) the interface skin draws text with.
+    [<Literal>]
+    let Font = "font"
+
+    let All: string list = [ Tile; Npc; Item; Player; Art; Sound; Music; Font ]
 
 /// TS `EventOutcomeSchema.type` enum.
 [<RequireQualifiedAccess>]
@@ -1140,3 +1144,150 @@ module MigrationsSchema =
             Overlays = None
             Extra = []
         }
+
+/// What a file was imported from (`ImportSource.Kind`).
+[<RequireQualifiedAccess>]
+module ImportKinds =
+    /// An Aseprite sprite sheet: a sheet image with its JSON, or a `.aseprite` file.
+    [<Literal>]
+    let Aseprite = "aseprite"
+
+    /// A Tiled map (`.tmx`, `.tmj`).
+    [<Literal>]
+    let Tiled = "tiled"
+
+    /// An LDtk level (`.ldtk`).
+    [<Literal>]
+    let Ldtk = "ldtk"
+
+    let All: string list = [ Aseprite; Tiled; Ldtk ]
+
+/// The colour roles an interface skin sets (`UiSkin.Colors`), the in-game theme's palette.
+[<RequireQualifiedAccess>]
+module UiPaletteRoles =
+    let All: string list =
+        [
+            "backdrop"
+            "background"
+            "panel"
+            "panelBorder"
+            "panelHeader"
+            "hud"
+            "hudBorder"
+            "row"
+            "rowBorder"
+            "text"
+            "muted"
+            "faint"
+            "accent"
+            "onAccent"
+            "accentText"
+            "primary"
+            "secondary"
+            "warning"
+            "error"
+            "successTint"
+            "errorTint"
+            "button"
+            "buttonHover"
+            "buttonPressed"
+            "buttonBorder"
+            "focus"
+            "track"
+            "shadow"
+        ]
+
+/// The parts an interface skin draws with 9-slice art (`UiSkin.Panels`).
+[<RequireQualifiedAccess>]
+module UiSkinParts =
+    let All: string list =
+        [
+            "panel"
+            "hud"
+            "button"
+            "buttonHover"
+            "buttonPressed"
+            "buttonDisabled"
+            "slot"
+            "tooltip"
+            "dialogue"
+            "portraitFrame"
+        ]
+
+/// The icons an interface skin replaces (`UiSkin.Icons`): the HUD's values and the toolbar's
+/// buttons.
+[<RequireQualifiedAccess>]
+module UiSkinIcons =
+    let All: string list =
+        [
+            "money"
+            "energy"
+            "health"
+            "season"
+            "day"
+            "weather"
+            "time"
+            "inventory"
+            "quests"
+            "craft"
+            "goals"
+            "mail"
+            "sleep"
+            "menu"
+        ]
+
+/// Where the HUD sits (`UiLayout.HudPosition`).
+[<RequireQualifiedAccess>]
+module UiHudPositions =
+    [<Literal>]
+    let Top = "top"
+
+    [<Literal>]
+    let Bottom = "bottom"
+
+    let All: string list = [ Top; Bottom ]
+
+/// How the HUD shows the time (`UiLayout.ClockStyle`).
+[<RequireQualifiedAccess>]
+module UiClockStyles =
+    /// 6:30 AM.
+    [<Literal>]
+    let TwelveHour = "12h"
+
+    /// 06:30.
+    [<Literal>]
+    let TwentyFourHour = "24h"
+
+    /// No clock.
+    [<Literal>]
+    let Hidden = "hidden"
+
+    let All: string list = [ TwelveHour; TwentyFourHour; Hidden ]
+
+/// Where the dialogue box sits (`UiLayout.DialoguePosition`).
+[<RequireQualifiedAccess>]
+module UiDialoguePositions =
+    [<Literal>]
+    let Bottom = "bottom"
+
+    [<Literal>]
+    let Top = "top"
+
+    let All: string list = [ Bottom; Top ]
+
+/// Where the title screen's menu sits (`UiTitleScreen.MenuPosition`).
+[<RequireQualifiedAccess>]
+module UiMenuPositions =
+    [<Literal>]
+    let Center = "center"
+
+    [<Literal>]
+    let Left = "left"
+
+    [<Literal>]
+    let Right = "right"
+
+    [<Literal>]
+    let Bottom = "bottom"
+
+    let All: string list = [ Center; Left; Right; Bottom ]

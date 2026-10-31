@@ -49,6 +49,9 @@
     <Compile Include="ProjectFolder.fs" />
     <Compile Include="AssetUsage.fs" />
     <Compile Include="ArtLibrary.fs" />
+    <Compile Include="Png.fs" />
+    <Compile Include="AsepriteImport.fs" />
+    <Compile Include="MapImport.fs" />
     <Compile Include="PackExport.fs" />
     <Compile Include="ModRegistry.fs" />
     <Compile Include="Bytes.fs" />
