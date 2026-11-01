@@ -348,6 +348,13 @@ impl PlaySession {
         &self.ctx.content
     }
 
+    /// Replaces the content with the same content in another language (#228: the player chose
+    /// one in Settings). Only its texts may differ: ids, numbers and rules stay.
+    pub fn set_content_text(&mut self, content: GameContent) {
+        self.ctx.content = content;
+        self.ctx.reindex();
+    }
+
     pub fn context(&self) -> &EngineContext {
         &self.ctx
     }

@@ -1061,12 +1061,16 @@ impl Player {
                 };
                 shell::pause(&mut self.ui, &view)
             }
-            Some(Screen::Settings) => shell::settings(
-                &mut self.ui,
-                &mut self.settings_screen,
-                &mut self.settings,
-                self.mode == PlayerMode::Embedded,
-            ),
+            Some(Screen::Settings) => {
+                let game_languages: Vec<String> = self.def.presentation.content_strings.keys().cloned().collect();
+                shell::settings(
+                    &mut self.ui,
+                    &mut self.settings_screen,
+                    &mut self.settings,
+                    self.mode == PlayerMode::Embedded,
+                    &game_languages,
+                )
+            }
             Some(Screen::Credits) => {
                 let info = &self.def.info;
                 let view = CreditsView {
@@ -1310,9 +1314,27 @@ impl Player {
         }
     }
 
+    /// The locale the game's own text is shown in (#228): the player's language, else the
+    /// system's, where the game is translated into it; None for the game's own text.
+    pub fn content_locale(&self) -> Option<String> {
+        self.def.presentation.content_locale(&self.settings.language, self.system_locale.as_deref())
+    }
+
+    /// The game's content with its text in [`Self::content_locale`].
+    fn game_content(&self) -> farm_sim::GameContent {
+        self.def.presentation.localized(&self.def.content, self.content_locale().as_deref())
+    }
+
     fn apply_settings(&mut self) {
         // Messages sent before the next frame (an autosave toast) use the new language already.
         self.ui.set_lang(self.lang());
+        // The game's own text follows the language too, in a game already running (#228).
+        if !self.def.presentation.content_strings.is_empty() && self.game.is_some() {
+            let content = self.game_content();
+            if let Some(game) = self.game.as_mut() {
+                game.session.set_content_text(content);
+            }
+        }
         self.ui.set_readable_font(self.settings.accessibility.readable_font);
         let fullscreen = self.settings.display.fullscreen;
         if self.mode == PlayerMode::Standalone {
@@ -1352,7 +1374,7 @@ impl Player {
     }
 
     fn start_game(&mut self, slot: u32) {
-        let session = PlaySession::new_game(self.def.content.clone(), &self.def.start, self.seed.as_deref());
+        let session = PlaySession::new_game(self.game_content(), &self.def.start, self.seed.as_deref());
         self.attach(session, slot, 0.0);
         // A game that asks for its player's name and colours (M4), or for one of its farm
         // layouts (M5), waits behind the creator.
@@ -1490,7 +1512,7 @@ impl Player {
             },
         };
         let (state, warnings, play_seconds) = loaded;
-        self.attach(PlaySession::new(self.def.content.clone(), state), slot, play_seconds);
+        self.attach(PlaySession::new(self.game_content(), state), slot, play_seconds);
         for warning in warnings {
             self.game_ui.toasts.push(warning, ToastKind::Info);
         }

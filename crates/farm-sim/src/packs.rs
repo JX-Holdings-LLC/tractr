@@ -406,13 +406,31 @@ fn add_locale_strings(table: &mut IndexMap<String, String>, pack: &ContentPack, 
     }
 }
 
-/// Replace authored names and texts with the entries of a merged string table.
-fn localize_content(content: GameContent, table: &IndexMap<String, String>) -> GameContent {
+/// Replace authored names and texts with the entries of a merged string table: a pack's
+/// `strings` or a game's own translation (`Presentation::content_strings`). The keys are those of
+/// the F# `Translations` module: `item:ID:name`, `npc:ID:line:LINE`, `dialogue:ID:option:OPTION`,
+/// `cutscene:ID:step:STEP:choice:CHOICE`, `mail:ID:subject`…, where a line, answer or step
+/// without an id is `#INDEX`. Keys the table lacks keep the authored text.
+pub fn localize_content(content: GameContent, table: &IndexMap<String, String>) -> GameContent {
     if table.is_empty() {
         return content;
     }
 
     let lookup = |kind: &str, id: &str, field: &str| table.get(&format!("{kind}:{id}:{field}")).cloned();
+    let part = |id: &Option<String>, index: usize| match id {
+        Some(id) if !id.is_empty() => id.clone(),
+        _ => format!("#{index}"),
+    };
+    let localize_dialogue = |dialogue: &mut crate::schema::Dialogue| {
+        if let Some(text) = lookup("dialogue", &dialogue.id, "text") {
+            dialogue.text = text;
+        }
+        for (index, option) in dialogue.options.iter_mut().enumerate() {
+            if let Some(text) = lookup("dialogue", &dialogue.id, &format!("option:{}", part(&option.id, index))) {
+                option.text = text;
+            }
+        }
+    };
 
     let mut content = content;
     for item in &mut content.items {
@@ -432,18 +450,43 @@ fn localize_content(content: GameContent, table: &IndexMap<String, String>) -> G
         }
     }
     for dialogue in &mut content.dialogues {
-        if let Some(text) = lookup("dialogue", &dialogue.id, "text") {
-            dialogue.text = text;
-        }
+        localize_dialogue(dialogue);
     }
     for npc in &mut content.npcs {
         if let Some(name) = lookup("npc", &npc.id, "name") {
             npc.name = name;
         }
         for dialogue in &mut npc.dialogue {
-            if let Some(text) = lookup("dialogue", &dialogue.id, "text") {
-                dialogue.text = text;
+            localize_dialogue(dialogue);
+        }
+        for (index, line) in npc.lines.iter_mut().flatten().enumerate() {
+            if let Some(text) = lookup("npc", &npc.id, &format!("line:{}", part(&line.id, index))) {
+                line.text = text;
             }
+        }
+    }
+    for cutscene in &mut content.cutscenes {
+        for (index, step) in cutscene.steps.iter_mut().enumerate() {
+            let key = format!("step:{}", part(&step.id, index));
+            if step.text.is_some() {
+                if let Some(text) = lookup("cutscene", &cutscene.id, &key) {
+                    step.text = Some(text);
+                }
+            }
+            for (choice_index, choice) in step.options.iter_mut().enumerate() {
+                let choice_key = format!("{key}:choice:{}", part(&choice.id, choice_index));
+                if let Some(text) = lookup("cutscene", &cutscene.id, &choice_key) {
+                    choice.text = text;
+                }
+            }
+        }
+    }
+    for mail in &mut content.mail {
+        if let Some(subject) = lookup("mail", &mail.id, "subject") {
+            mail.subject = subject;
+        }
+        if let Some(text) = lookup("mail", &mail.id, "text") {
+            mail.text = text;
         }
     }
     content
