@@ -13,17 +13,29 @@ let private usageText =
         Environment.NewLine
         [
             "Usage:"
+            "  farmc new <template> <folder>"
+            "  farmc check <project> [--json]"
+            "  farmc convert <project> --out <path>"
             "  farmc compile <project> --out <game.cart>"
             "  farmc export <project> [--target windows-x64|linux-x64|web]... --out <dir> [--templates <dir>] [--no-archive]"
             "  farmc --help | --version"
             ""
             "<project> is a project folder (or the project.json in one) or a single-file project."
-            "Options may come in any order. export does what Export Game does in the editor"
-            "(docs/EXPORT.md). Without --target it exports the project's saved targets. Templates"
-            "come from --templates, then the FARM_PLAYER_TEMPLATES variable, then players/ next to"
-            "farmc."
+            "Options may come in any order."
             ""
-            "Exit codes: 0 done, 1 the command failed, 2 the command line is wrong."
+            "new        creates a project from a template (starter, cozy, quest or blank) in a new or"
+            "           empty folder; a <folder> ending in .json is written as a single file."
+            "check      lists the project's Problems, like the editor's Problems tab, and fails when"
+            "           any is an error. --json prints them as JSON (severity, code, path, message)."
+            "convert    turns a project folder into a single-file project, or a single file into a"
+            "           folder, at a new --out path."
+            "compile    builds the cartridge the player runs."
+            "export     does what Export Game does in the editor (docs/EXPORT.md). Without --target it"
+            "           exports the project's saved targets. Templates come from --templates, then"
+            "           the FARM_PLAYER_TEMPLATES variable, then players/ next to farmc."
+            ""
+            "Exit codes: 0 done, 1 the command failed (or check found errors), 2 the command line is"
+            "wrong."
         ]
 
 /// The version farmc was built at (`-p:Version=…`, without a source revision suffix).
@@ -47,6 +59,7 @@ type Arguments =
         Out: string option
         Templates: string option
         Archives: bool
+        Json: bool
         Help: bool
     }
 
@@ -58,6 +71,7 @@ let emptyArguments =
         Out = None
         Templates = None
         Archives = true
+        Json = false
         Help = false
     }
 
@@ -91,6 +105,7 @@ let rec parseArguments (args: string list) (acc: Arguments) : Result<Arguments, 
             parseArguments rest acc
         | _ -> Error(sprintf "%s needs a value." flag)
     | "--no-archive" :: rest -> parseArguments rest { acc with Archives = false }
+    | "--json" :: rest -> parseArguments rest { acc with Json = true }
     | ("--help" | "-h") :: rest -> parseArguments rest { acc with Help = true }
     | option :: _ when isOption option -> Error(sprintf "Unknown option %s." option)
     | positional :: rest ->
@@ -100,42 +115,9 @@ let rec parseArguments (args: string list) (acc: Arguments) : Result<Arguments, 
                 Positional = positional :: acc.Positional
             }
 
-/// A project folder's files (`ProjectFolder.load`): the project files under `folder`, by their
-/// `/`-separated paths.
-let private readFolder (folder: string) : Collections.Generic.IReadOnlyDictionary<string, byte[]> =
-    let files = Collections.Generic.Dictionary<string, byte[]>(StringComparer.Ordinal)
-
-    for file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories) do
-        let relative =
-            Path.GetRelativePath(folder, file).Replace(Path.DirectorySeparatorChar, '/')
-
-        if ProjectFolder.isProjectFile relative then
-            files.[relative] <- File.ReadAllBytes file
-
-    files
-
 /// The loaded project (a folder, the `project.json` of one, or a single file), or why it could
 /// not be loaded.
-let private load (projectPath: string) : Result<GameProject, string list> =
-    let folder =
-        if Directory.Exists projectPath then
-            Some projectPath
-        elif Path.GetFileName projectPath = ProjectFolder.MainFile then
-            Option.ofObj (Path.GetDirectoryName(Path.GetFullPath projectPath))
-        else
-            None
-
-    let loaded =
-        match folder with
-        | Some folder -> ProjectFolder.load (readFolder folder)
-        | None -> ProjectJson.loadProjectText (File.ReadAllText projectPath)
-
-    if not loaded.Ok then
-        Error(List.ofSeq loaded.Errors)
-    else
-        match loaded.Data with
-        | None -> Error [ "The project loaded without project data." ]
-        | Some project -> Ok project
+let private load (projectPath: string) : Result<GameProject, string list> = ProjectFiles.load projectPath
 
 let private export (args: Arguments) (out: TextWriter) (err: TextWriter) : int =
     match args.Positional, args.Out with
@@ -191,14 +173,202 @@ let private compile (args: Arguments) (out: TextWriter) (err: TextWriter) : int 
             0
     | _ -> 2
 
-/// What a usage error says beyond the usage text.
-let private problem (command: string) (args: Arguments) : string =
+/// The text of one problem: `error code | path | message` (the Problems tab's copy format).
+let formatProblem (problem: Problem) : string =
+    sprintf "%s %s | %s | %s" problem.SeverityName problem.Code problem.Path problem.Message
+
+/// The problems as JSON: `{ ok, errors, warnings, infos, problems: [{ severity, code, path,
+/// message, target? }] }` (`target` names the editor to open: `{ kind, id }`).
+let problemsJson (problems: Problem list) : Json =
+    let count severity =
+        problems
+        |> List.filter (fun p -> p.Severity = severity)
+        |> List.length
+        |> float
+        |> JNumber
+
+    JObject
+        [
+            "ok", JBool(not (Problems.blocksExport problems))
+            "errors", count Severity.Error
+            "warnings", count Severity.Warning
+            "infos", count Severity.Info
+            "problems",
+            JArray(
+                problems
+                |> List.map (fun p ->
+                    JObject
+                        [
+                            "severity", JString p.SeverityName
+                            "code", JString p.Code
+                            "path", JString p.Path
+                            "message", JString p.Message
+                            if p.HasTarget then
+                                "target",
+                                JObject
+                                    [
+                                        "kind", JString p.TargetKind
+                                        match p.TargetId with
+                                        | Null -> ()
+                                        | NonNull id -> "id", JString id
+                                    ]
+                        ])
+            )
+        ]
+
+let private check (args: Arguments) (out: TextWriter) (err: TextWriter) : int =
+    match args.Positional, args.Out with
+    | [ projectPath ], None when args.Targets.IsEmpty && args.Templates.IsNone && args.Archives ->
+        match load projectPath with
+        | Error errors ->
+            // A project that does not load has schema errors only: report them the same way.
+            if args.Json then
+                out.WriteLine(
+                    Json.stringifyIndented (
+                        JObject
+                            [
+                                "ok", JBool false
+                                "loaded", JBool false
+                                "loadErrors", JArray(errors |> List.map JString)
+                            ]
+                    )
+                )
+            else
+                for error in errors do
+                    err.WriteLine("error " + error)
+
+            1
+        | Ok project ->
+            let problems = Problems.collect project
+
+            if args.Json then
+                out.WriteLine(Json.stringifyIndented (problemsJson problems))
+            else
+                for problem in problems do
+                    out.WriteLine(formatProblem problem)
+
+                let count severity =
+                    problems |> List.filter (fun p -> p.Severity = severity) |> List.length
+
+                let plural n (word: string) =
+                    sprintf "%d %s%s" n word (if n = 1 then "" else "s")
+
+                out.WriteLine(
+                    sprintf
+                        "%s, %s, %s."
+                        (plural (count Severity.Error) "error")
+                        (plural (count Severity.Warning) "warning")
+                        (plural (count Severity.Info) "tip")
+                )
+
+            if Problems.blocksExport problems then 1 else 0
+    | _ -> 2
+
+let private newProject (args: Arguments) (out: TextWriter) (err: TextWriter) : int =
+    match args.Positional with
+    | [ template; path ] when
+        args.Out.IsNone
+        && args.Targets.IsEmpty
+        && args.Templates.IsNone
+        && args.Archives
+        && not args.Json
+        ->
+        if not (Seq.contains template ProjectCatalog.All) then
+            2
+        elif not (ProjectFiles.isFree path) then
+            err.WriteLine(sprintf "%s already exists and is not an empty folder." path)
+            1
+        else
+            let full = Path.GetFullPath path
+            let singleFile = full.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+
+            let name =
+                let fileName =
+                    if singleFile then
+                        Path.GetFileNameWithoutExtension full
+                    else
+                        Path.GetFileName(Path.TrimEndingDirectorySeparator full)
+
+                match fileName with
+                | NonNull text when not (String.IsNullOrWhiteSpace text) -> text
+                | _ -> "My Farm"
+
+            let now = float (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+            let project = ProjectCatalog.CreateNewProject(template, name, null, now)
+
+            if singleFile then
+                ProjectFiles.writeSingleFile full project
+            else
+                ProjectFiles.writeFolder full project |> ignore
+
+            out.WriteLine(sprintf "Created \"%s\" from the %s template in %s" name template full)
+            0
+    | _ -> 2
+
+let private convert (args: Arguments) (out: TextWriter) (err: TextWriter) : int =
+    match args.Positional, args.Out with
+    | [ projectPath ], Some outputPath when args.Targets.IsEmpty && args.Templates.IsNone && args.Archives && not args.Json ->
+        if not (File.Exists projectPath || Directory.Exists projectPath) then
+            err.WriteLine(sprintf "%s does not exist." projectPath)
+            1
+        elif not (ProjectFiles.isFree outputPath) then
+            err.WriteLine(sprintf "%s already exists and is not an empty folder; choose a new --out." outputPath)
+            1
+        else
+            let full = Path.GetFullPath outputPath
+
+            match ProjectFiles.folderOf projectPath with
+            | Some _ ->
+                // Folder to single file: joined as it is, so nothing is lost or reordered.
+                match ProjectFiles.readSingleFileText projectPath with
+                | Error errors ->
+                    for error in errors do
+                        err.WriteLine error
+
+                    1
+                | Ok text ->
+                    ProjectFiles.writeSingleFileText full text
+                    out.WriteLine(sprintf "Wrote the single-file project %s" full)
+                    0
+            | None ->
+                // Single file to folder: the folder layout is written from the loaded project.
+                match load projectPath with
+                | Error errors ->
+                    for error in errors do
+                        err.WriteLine error
+
+                    1
+                | Ok project ->
+                    let files = ProjectFiles.writeFolder full project
+                    out.WriteLine(sprintf "Wrote the project folder %s (%d files)" full files.Length)
+                    0
+    | _ -> 2
+
+/// What a usage error of compile, export or convert says.
+let private problemFor (command: string) (args: Arguments) : string =
     match args.Positional, args.Out with
     | [], _ -> sprintf "%s needs a project file." command
     | _ :: _ :: _, _ -> sprintf "%s takes one project file." command
     | _, None -> sprintf "%s needs --out." command
-    | _ when command = "compile" -> "compile takes no --target, --templates or --no-archive."
+    | _ when command = "compile" || command = "convert" -> sprintf "%s takes no --target, --templates or --no-archive." command
     | _ -> sprintf "Wrong arguments for %s." command
+
+/// What a usage error says beyond the usage text.
+let private problem (command: string) (args: Arguments) : string =
+    let extras = not args.Targets.IsEmpty || args.Templates.IsSome || not args.Archives
+
+    match command, args.Positional with
+    | "new", ([] | [ _ ]) -> "new needs a template and a folder (farmc new starter my-farm)."
+    | "new", [ template; _ ] when not (Seq.contains template ProjectCatalog.All) ->
+        sprintf "Unknown template %s (one of %s)." template (String.Join(", ", ProjectCatalog.All))
+    | "new", [ _; _ ] -> "new takes no options."
+    | "new", _ -> "new takes a template and one folder."
+    | "check", [] -> "check needs a project file."
+    | "check", _ :: _ :: _ -> "check takes one project file."
+    | "check", _ when args.Out.IsSome -> "check takes no --out."
+    | "check", _ when extras -> "check takes no --target, --templates or --no-archive."
+    | _ when command <> "check" && args.Json -> sprintf "%s takes no --json (only check does)." command
+    | _ -> problemFor command args
 
 /// farmc with its output streams: the exit code (0 done, 1 failed, 2 usage). Never throws.
 let run (argv: string[]) (out: TextWriter) (err: TextWriter) : int =
@@ -219,7 +389,7 @@ let run (argv: string[]) (out: TextWriter) (err: TextWriter) : int =
         | [ "help" ] ->
             out.WriteLine usageText
             0
-        | ("compile" | "export" as command) :: rest ->
+        | ("new" | "check" | "convert" | "compile" | "export" as command) :: rest ->
             match parseArguments rest emptyArguments with
             | Error message -> usageError message
             | Ok args when args.Help ->
@@ -227,10 +397,13 @@ let run (argv: string[]) (out: TextWriter) (err: TextWriter) : int =
                 0
             | Ok args ->
                 let code =
-                    if command = "compile" then
-                        compile args out err
-                    else
-                        export args out err
+                    match command with
+                    | "new" -> newProject args out err
+                    | "check" -> check args out err
+                    | "convert" -> convert args out err
+                    | "compile" when not args.Json -> compile args out err
+                    | "export" when not args.Json -> export args out err
+                    | _ -> 2
 
                 if code = 2 then usageError (problem command args) else code
         | [] -> usageError ""

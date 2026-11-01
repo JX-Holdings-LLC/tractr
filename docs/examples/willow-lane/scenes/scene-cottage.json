@@ -1,0 +1,56 @@
+{
+  "id": "scene-cottage",
+  "name": "Hazel's Cottage",
+  "width": 7,
+  "height": 5,
+  "tileGrid": {
+    "palette": [
+      {
+        "type": "wall",
+        "background": "grass",
+        "overlay": null,
+        "object": "wall",
+        "collision": true,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      },
+      {
+        "type": "floor",
+        "background": "floor",
+        "overlay": null,
+        "object": null,
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      },
+      {
+        "type": "door",
+        "background": "grass",
+        "overlay": null,
+        "object": "door",
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      }
+    ],
+    "rows": [
+      "7*0",
+      "0 5*1 0",
+      "0 5*1 0",
+      "0 5*1 0",
+      "3*0 2 3*0"
+    ]
+  },
+  "transitions": [
+    {
+      "fromX": 3,
+      "fromY": 4,
+      "toSceneId": "scene-lane",
+      "toX": 4,
+      "toY": 4
+    }
+  ],
+  "npcs": [],
+  "events": [],
+  "indoor": true
+}

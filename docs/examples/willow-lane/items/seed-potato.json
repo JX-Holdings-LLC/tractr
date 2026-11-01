@@ -1,0 +1,10 @@
+{
+  "id": "seed-potato",
+  "name": "Potato Seeds",
+  "description": "Plant these to grow potato",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 12,
+  "cropType": "potato"
+}

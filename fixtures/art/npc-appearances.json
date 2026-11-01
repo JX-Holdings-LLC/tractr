@@ -1,0 +1,17 @@
+{
+  "about": "Which built-in sheet an NPC without its own art is drawn with, by appearance. Rust (BuiltinArt::npc_entry, crates/farm-render/tests/npc_appearances.rs) and F# (BuiltinLooks.npcSheet, tests/FarmEngine.Authoring.Tests) both check every case. exact: the appearance names the sheet; otherwise Problems reports npc.appearanceFallback.",
+  "cases": [
+    { "appearance": "", "sheet": "npc-villager", "exact": false },
+    { "appearance": "farmer", "sheet": "npc-farmer", "exact": true },
+    { "appearance": "merchant", "sheet": "npc-merchant", "exact": true },
+    { "appearance": "villager", "sheet": "npc-villager", "exact": true },
+    { "appearance": "npc-farmer", "sheet": "npc-farmer", "exact": true },
+    { "appearance": "char-player", "sheet": "char-player", "exact": true },
+    { "appearance": "elder", "sheet": "npc-farmer", "exact": false },
+    { "appearance": "Farmhand", "sheet": "npc-farmer", "exact": false },
+    { "appearance": "shopkeeper", "sheet": "npc-merchant", "exact": false },
+    { "appearance": "fish-vendor", "sheet": "npc-merchant", "exact": false },
+    { "appearance": "wizard", "sheet": "npc-villager", "exact": false },
+    { "appearance": "Farmer", "sheet": "npc-farmer", "exact": false }
+  ]
+}

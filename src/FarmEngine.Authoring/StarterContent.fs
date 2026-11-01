@@ -197,8 +197,13 @@ module StarterContent =
         [
             item "machine-kitchen" "Kitchen" "A cooking station — place it, then cook nearby" "material" 9.0 180.0
             item "machine-workbench" "Workbench" "A carpentry station — place it, then build nearby" "material" 9.0 150.0
-            item "food-veggie-soup" "Veggie Soup" "A hearty soup simmered from garden vegetables" "crop" 99.0 140.0
-            item "food-fruit-tart" "Fruit Tart" "A sweet baked tart bursting with fruit" "crop" 99.0 220.0
+            // Cooked food is eaten for its own energy.
+            { item "food-veggie-soup" "Veggie Soup" "A hearty soup simmered from garden vegetables" ItemTypes.Food 99.0 140.0 with
+                Energy = Some 40.0
+            }
+            { item "food-fruit-tart" "Fruit Tart" "A sweet baked tart bursting with fruit" ItemTypes.Food 99.0 220.0 with
+                Energy = Some 60.0
+            }
             item "furniture-tool-rack" "Tool Rack" "A sturdy wooden rack for hanging tools" "material" 9.0 90.0
             item "furniture-planter-box" "Planter Box" "A handmade wooden planter box" "material" 9.0 140.0
             { item "snack-trail-mix" "Trail Mix" "A foraged snack. Use it for a quick pick-me-up." "material" 20.0 8.0 with

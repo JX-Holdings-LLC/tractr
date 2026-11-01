@@ -1,0 +1,9 @@
+{
+  "id": "ore-iron",
+  "name": "Iron Ore",
+  "description": "Raw iron, ready for smelting",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 20
+}

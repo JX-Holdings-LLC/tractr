@@ -14,6 +14,12 @@ type LoadResult<'T> =
 /// (`SchemaJson`) and the schema checks (`SchemaChecks`, at most 20 errors, like zod's
 /// `safeParse` shown in the editor). Classic version 2 and additive version 3 load without changing
 /// their values. Never throws.
+///
+/// **The entry point for project text:** `ProjectLoad.loadProjectText` here, in
+/// `FarmEngine.Authoring.dll`, is the one function every caller uses to read project JSON
+/// (`ProjectJson.loadProjectText` in `FarmEngine.Authoring.Net` is the same function, for
+/// callers that already open that namespace). A project folder goes through `ProjectFolder.load`;
+/// reading one from disk (and writing it) is `ProjectFiles` in `FarmEngine.Authoring.Net`.
 module ProjectLoad =
     let private failed (errors: string list) : LoadResult<'T> =
         {

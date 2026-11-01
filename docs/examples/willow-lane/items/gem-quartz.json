@@ -1,0 +1,9 @@
+{
+  "id": "gem-quartz",
+  "name": "Quartz",
+  "description": "A translucent crystal",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 40
+}

@@ -1,0 +1,10 @@
+{
+  "id": "seed-cauliflower",
+  "name": "Cauliflower Seeds",
+  "description": "Plant these to grow cauliflower",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 40,
+  "cropType": "cauliflower"
+}

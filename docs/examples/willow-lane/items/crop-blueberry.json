@@ -1,0 +1,10 @@
+{
+  "id": "crop-blueberry",
+  "name": "Blueberry",
+  "description": "Fresh blueberry",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 70,
+  "cropType": "blueberry"
+}

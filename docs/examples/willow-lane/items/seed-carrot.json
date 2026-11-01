@@ -1,0 +1,10 @@
+{
+  "id": "seed-carrot",
+  "name": "Carrot Seeds",
+  "description": "Plant these to grow carrot",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 8,
+  "cropType": "carrot"
+}

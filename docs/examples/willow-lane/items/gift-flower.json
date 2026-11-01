@@ -1,0 +1,9 @@
+{
+  "id": "gift-flower",
+  "name": "Flower",
+  "description": "A beautiful flower that makes a nice gift",
+  "type": "gift",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 20
+}

@@ -234,7 +234,12 @@ module ItemTypes =
     [<Literal>]
     let Fish = "fish"
 
-    let All: string list = [ Seed; Tool; Crop; Gift; Quest; Fertilizer; Material; Fish ]
+    /// Cooked food: eaten for the item's own `energy`.
+    [<Literal>]
+    let Food = "food"
+
+    let All: string list =
+        [ Seed; Tool; Crop; Gift; Quest; Fertilizer; Material; Fish; Food ]
 
 /// TS `ToolTypeSchema`.
 [<RequireQualifiedAccess>]

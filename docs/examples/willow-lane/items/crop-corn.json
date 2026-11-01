@@ -1,0 +1,10 @@
+{
+  "id": "crop-corn",
+  "name": "Corn",
+  "description": "Fresh corn",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 40,
+  "cropType": "corn"
+}

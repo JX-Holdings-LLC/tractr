@@ -18,6 +18,7 @@
     <Compile Include="AuthoringTiles.fs" />
     <Compile Include="PackRules.fs" />
     <Compile Include="Builtin.fs" />
+    <Compile Include="BuiltinLooks.fs" />
     <Compile Include="PackMerge.fs" />
     <Compile Include="ContentCompiler.fs" />
     <Compile Include="StarterContent.fs" />

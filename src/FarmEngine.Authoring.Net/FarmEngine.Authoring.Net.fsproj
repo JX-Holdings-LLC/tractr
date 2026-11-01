@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="JsonInterop.fs" />
     <Compile Include="ProjectJson.fs" />
+    <Compile Include="ProjectFiles.fs" />
     <Compile Include="RecordJson.fs" />
     <Compile Include="RecordWith.fs" />
   </ItemGroup>

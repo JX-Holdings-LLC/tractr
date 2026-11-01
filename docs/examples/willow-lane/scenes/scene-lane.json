@@ -1,0 +1,69 @@
+{
+  "id": "scene-lane",
+  "name": "Willow Lane",
+  "width": 12,
+  "height": 10,
+  "tileGrid": {
+    "palette": [
+      {
+        "type": "grass",
+        "background": "grass",
+        "overlay": null,
+        "object": null,
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      },
+      {
+        "type": "wall",
+        "background": "grass",
+        "overlay": null,
+        "object": "wall",
+        "collision": true,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      },
+      {
+        "type": "door",
+        "background": "grass",
+        "overlay": null,
+        "object": "door",
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      },
+      {
+        "type": "path",
+        "background": "grass",
+        "overlay": "path",
+        "object": null,
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      }
+    ],
+    "rows": [
+      "12*0",
+      "0 0 5*1 5*0",
+      "0 0 5*1 5*0",
+      "0 0 1 1 2 1 1 5*0",
+      "4*0 3 7*0",
+      "4*0 6*3 0 0",
+      "9*0 3 0 0",
+      "9*0 3 0 0",
+      "12*0",
+      "12*0"
+    ]
+  },
+  "transitions": [
+    {
+      "fromX": 4,
+      "fromY": 3,
+      "toSceneId": "scene-cottage",
+      "toX": 3,
+      "toY": 3
+    }
+  ],
+  "npcs": [],
+  "events": []
+}

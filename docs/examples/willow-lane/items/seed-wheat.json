@@ -1,0 +1,10 @@
+{
+  "id": "seed-wheat",
+  "name": "Wheat Seeds",
+  "description": "Plant these to grow wheat",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 10,
+  "cropType": "wheat"
+}

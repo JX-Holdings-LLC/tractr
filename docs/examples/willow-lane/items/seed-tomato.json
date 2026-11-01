@@ -1,0 +1,10 @@
+{
+  "id": "seed-tomato",
+  "name": "Tomato Seeds",
+  "description": "Plant these to grow tomato",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 20,
+  "cropType": "tomato"
+}

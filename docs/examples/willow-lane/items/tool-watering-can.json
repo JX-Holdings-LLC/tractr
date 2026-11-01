@@ -1,0 +1,13 @@
+{
+  "id": "tool-watering-can",
+  "name": "Watering Can",
+  "description": "Water your crops to help them grow",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 50,
+  "toolType": "watering-can",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

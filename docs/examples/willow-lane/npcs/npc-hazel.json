@@ -1,0 +1,99 @@
+{
+  "id": "npc-hazel",
+  "name": "Hazel",
+  "x": 7,
+  "y": 6,
+  "sceneId": "scene-lane",
+  "dialogue": [
+    {
+      "id": "dialogue-hazel-hello",
+      "npcId": "npc-hazel",
+      "text": "Morning! The lanterns need lighting tonight.",
+      "options": [
+        {
+          "text": "I'll help.",
+          "eventFlag": "offered-help"
+        },
+        {
+          "text": "What do you sell?",
+          "openShopId": "shop-general"
+        },
+        {
+          "text": "Maybe later."
+        }
+      ],
+      "expression": "happy"
+    }
+  ],
+  "canMove": true,
+  "movePattern": "stationary",
+  "schedule": [
+    {
+      "minute": 360,
+      "sceneId": "scene-cottage",
+      "x": 3,
+      "y": 2
+    },
+    {
+      "minute": 540,
+      "sceneId": "scene-lane",
+      "x": 7,
+      "y": 6
+    },
+    {
+      "minute": 1200,
+      "sceneId": "scene-cottage",
+      "x": 3,
+      "y": 2
+    }
+  ],
+  "giftTastes": {
+    "loved": [
+      "gift-flower"
+    ],
+    "liked": [
+      "crop-carrot"
+    ],
+    "disliked": [],
+    "hated": []
+  },
+  "birthday": {
+    "season": "spring",
+    "day": 12
+  },
+  "appearance": "villager",
+  "lines": [
+    {
+      "text": "Spring air! Perfect for planting.",
+      "conditions": [
+        {
+          "type": "season",
+          "seasons": [
+            "spring"
+          ]
+        }
+      ],
+      "expression": "happy"
+    },
+    {
+      "text": "Rain again. Good for the garden.",
+      "conditions": [
+        {
+          "type": "weather",
+          "weatherIds": [
+            "rain"
+          ]
+        }
+      ],
+      "weight": 2
+    }
+  ],
+  "portraits": [
+    {
+      "expression": "happy",
+      "visual": {
+        "assetId": "asset-hazel-happy"
+      }
+    }
+  ]
+}

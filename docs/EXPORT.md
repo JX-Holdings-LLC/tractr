@@ -180,6 +180,29 @@ anything failed, so a CI job fails with it. `farmc compile <project> --out
 game.cart` builds only the cartridge. The templates must be the ones of the
 same Tractr version: export refuses others.
 
+farmc also makes, checks and converts projects, so a game can live in version
+control and be checked on every change:
+
+```sh
+dotnet run --project src/FarmEngine.Cli -- new starter path/to/WillowCreek      # starter, cozy, quest or blank
+dotnet run --project src/FarmEngine.Cli -- check path/to/WillowCreek            # the Problems tab, as text
+dotnet run --project src/FarmEngine.Cli -- check path/to/WillowCreek --json     # … or as JSON
+dotnet run --project src/FarmEngine.Cli -- convert path/to/WillowCreek --out WillowCreek.json
+```
+
+| Command | What it does |
+|---|---|
+| `farmc new <template> <folder>` | Creates a project from a template (`starter`, `cozy`, `quest` or `blank`) in a new or empty folder, named after the folder. A path ending in `.json` is written as a single file. |
+| `farmc check <project> [--json]` | Lists the project's Problems, one per line (`warning event.noOutcomes \| events[2].outcomes \| Event "Gate" does nothing (no outcomes)`), then the counts. It exits with 1 when any is an error, or when the project does not load. `--json` prints `{ ok, errors, warnings, infos, problems: [{ severity, code, path, message, target }] }` instead. |
+| `farmc convert <project> --out <path>` | Turns a project folder into a single-file project, or a single file into a folder ([the two layouts](PROJECT-FILES.md)). `--out` must not exist yet (or be an empty folder). |
+| `farmc compile <project> --out <game.cart>` | Builds only the cartridge. |
+| `farmc export <project> …` | Exports, as above. |
+
+Exit codes: 0 done, 1 the command failed (or `check` found errors), 2 the
+command line is wrong. farmc is not shipped as a program of its own yet; run
+it from a copy of the source as above (`dotnet publish src/FarmEngine.Cli`
+builds one for your machine).
+
 ## When export fails
 
 | Message | What to do |

@@ -11,7 +11,10 @@ open FarmEngine.Schemas
 /// same project with everything inline) stays the format for sharing and for older projects.
 ///
 /// No I/O here: `toFiles` gives the files' paths (relative, `/`-separated) and bytes, and
-/// `load` reads a folder that was read into a map of the same shape. Paths in `project.json`
+/// `load` reads a folder that was read into a map of the same shape (`ofList` turns the one
+/// into the other; `loadList` and `joinListText` take the list directly, and
+/// `toSingleFileText` is a project's single-file text). `ProjectFiles` in
+/// `FarmEngine.Authoring.Net` reads and writes folders on disk. Paths in `project.json`
 /// are looked up in that map only, so a project file cannot reach outside its folder.
 ///
 /// The layout:
@@ -464,3 +467,25 @@ module ProjectFolder =
     /// `join` as indented single-file project JSON text.
     let joinText (files: IReadOnlyDictionary<string, byte[]>) : Result<string, string list> =
         join files |> Result.map Json.stringifyIndented
+
+    // ── Lists of files ─────────────────────────────────────────────────────
+
+    /// `toFiles`' list as the map `join`, `joinText` and `load` read (a later file of the same
+    /// path replaces an earlier one).
+    let ofList (files: (string * byte[]) list) : IReadOnlyDictionary<string, byte[]> =
+        let map = Dictionary<string, byte[]>(StringComparer.Ordinal)
+
+        for path, bytes in files do
+            map.[path] <- bytes
+
+        map :> IReadOnlyDictionary<string, byte[]>
+
+    /// `load` over a list of files (`toFiles`' shape).
+    let loadList (files: (string * byte[]) list) : LoadResult<GameProject> = load (ofList files)
+
+    /// `joinText` over a list of files (`toFiles`' shape).
+    let joinListText (files: (string * byte[]) list) : Result<string, string list> = joinText (ofList files)
+
+    /// `project` as indented single-file project JSON text: what joining its folder
+    /// (`toFiles`, then `joinText`) gives, without writing the folder first.
+    let toSingleFileText (project: GameProject) : string = ProjectLoad.toText project
