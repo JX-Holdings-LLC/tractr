@@ -73,7 +73,7 @@ pub fn active(ctx: &EngineContext, state: &GameState, id: &str) -> bool {
 
 pub fn max_energy(ctx: &EngineContext, state: &GameState) -> i32 {
     let bonus = crate::skills::stat_bonus(ctx, state, "maxEnergy");
-    state.player.max_energy.saturating_add(bonus.saturating_mul(units::ENERGY_POINT)).max(1)
+    state.player.max_energy.saturating_add(bonus.saturating_mul(units::ENERGY_POINT)).max(0)
 }
 
 /// Adjust weighted rewards without drawing randomness. Positive luck flattens relative
