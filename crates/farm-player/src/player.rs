@@ -312,6 +312,8 @@ pub struct Player {
     title_state: Option<(GameState, GraphicsSource)>,
     /// The game's own sounds and music, decoded when it loaded (M2).
     audio: AudioAssets,
+    /// The interface skin's fonts, registered when the game loaded: font asset id → font.
+    skin_fonts: Vec<(String, farm_render::FontId)>,
     sounds: Vec<SoundRequest>,
     requests: Vec<PlayerRequest>,
     poisoned: Option<String>,
@@ -413,12 +415,18 @@ impl Player {
             settings.display.integer_scaling = def.info.pixel_scale.as_deref() != Some("fit");
             settings
         });
-        let mut ui = Ui::new(options.theme);
+        // The skin's palette over the host's theme (#236).
+        let theme = match &def.presentation.ui_skin {
+            Some(skin) => farm_ui::skin::apply_palette(options.theme, skin),
+            None => options.theme,
+        };
+        let mut ui = Ui::new(theme);
         ui.set_reduced_motion(settings.accessibility.reduced_motion);
         ui.set_readable_font(settings.accessibility.readable_font);
         ui.set_lang(Lang::resolve(&settings.language, options.system_locale.as_deref(), &def.content.settings.locale));
         let assets = Arc::new(assets);
         let audio = AudioAssets::load(&def.presentation.custom_assets, &assets);
+        let skin_fonts = skin_fonts(&def.presentation, &assets);
         let mut player = Self {
             mode: options.mode,
             def,
@@ -440,6 +448,7 @@ impl Player {
             router: InputRouter::new(),
             host_view: HostView::default(),
             audio,
+            skin_fonts,
             renderer: FrameRenderer::new(assets),
             ui_list: DrawList::new(),
             world: None,
@@ -908,7 +917,15 @@ impl Player {
         // The title screen shows the start of the game behind the menu.
         if self.screens.first() == Some(&Screen::Title) {
             let (state, graphics) = self.title_state.get_or_insert_with(|| {
-                let state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
+                let mut state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
+                // The skin's title scene, seen from its middle.
+                let title_scene = self.def.presentation.ui_skin.as_ref().and_then(|skin| skin.title.as_ref()?.scene.clone());
+                if let Some(scene) = title_scene.and_then(|id| state.world.scenes.iter().find(|scene| scene.id == id)) {
+                    let (id, w, h) = (scene.id.clone(), scene.width, scene.height);
+                    state.player.scene_id = id;
+                    state.player.x = (i32::try_from(w).unwrap_or(0) / 2).saturating_mul(units::TILE);
+                    state.player.y = (i32::try_from(h).unwrap_or(0) / 2).saturating_mul(units::TILE);
+                }
                 let graphics = GraphicsSource::from_state(&self.def.presentation, &self.def.content, &state);
                 (state, graphics)
             });
@@ -1009,6 +1026,15 @@ impl Player {
             self.settings.accessibility.text_size,
             self.time,
         );
+        // The skin, resolved against this frame's images (an evicted image is fetched again).
+        if let Some(skin) = &self.def.presentation.ui_skin {
+            let pixel_art = self.def.presentation.graphics.as_ref().is_none_or(|graphics| graphics.pixel_art);
+            let fonts = &self.skin_fonts;
+            let resolved = farm_ui::Skin::resolve(skin, &self.def.art, &mut self.renderer.ui_images, pixel_art, |id| {
+                fonts.iter().find(|(asset, _)| asset == id).map(|(_, font)| *font)
+            });
+            self.ui.set_skin(resolved);
+        }
 
         // The game and its HUD (under any shell screen).
         let mut game_actions = Vec::new();
@@ -1835,6 +1861,30 @@ fn confirm_view(kind: Confirmation, lang: Lang) -> ConfirmView {
         }
     };
     ConfirmView { title: lang.tr(title).to_owned(), message, confirm: lang.tr(confirm).to_owned() }
+}
+
+
+/// Registers the fonts an interface skin names (#236): each `font` asset's file, from the
+/// cartridge's asset table or a `data:` URL, as a font `farm_render::text` draws with. A file
+/// that is not a font is left out (the skin then draws that text in the built-in font).
+fn skin_fonts(presentation: &Presentation, assets: &AssetTable) -> Vec<(String, farm_render::FontId)> {
+    let Some(skin) = &presentation.ui_skin else { return Vec::new() };
+    let wanted = [&skin.heading_font, &skin.body_font, &skin.number_font];
+    let mut fonts = Vec::new();
+    for id in wanted.into_iter().flatten() {
+        if fonts.iter().any(|(known, _)| known == id) {
+            continue;
+        }
+        let Some(asset) = presentation.custom_assets.iter().find(|asset| asset.id == *id) else { continue };
+        let bytes = match assets.resolve(&asset.data_url) {
+            Some(asset) => Some(asset.data.clone()),
+            None => farm_render::images::data_url_bytes(&asset.data_url),
+        };
+        if let Some(font) = bytes.and_then(|bytes| farm_render::text::register_font(&bytes)) {
+            fonts.push((id.clone(), font));
+        }
+    }
+    fonts
 }
 
 #[cfg(test)]

@@ -9,6 +9,7 @@ use crate::i18n::Lang;
 use crate::icons::Icon;
 use crate::input::{GamepadButton, InputDevice};
 use crate::layout::{Align, Flow, RectExt};
+use crate::skin::Part;
 use crate::settings::BindAction;
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
@@ -48,10 +49,25 @@ enum StatValue {
 struct Stat {
     label: String,
     value: StatValue,
+    /// The skin icon (`UiSkinIcons`) that stands in for the label.
+    icon: Option<&'static str>,
+}
+
+/// Side of a skin icon in the HUD.
+const STAT_ICON: f32 = 20.0;
+
+fn stat_icon(ui: &Ui, stat: &Stat) -> bool {
+    stat.icon.is_some_and(|name| ui.skin().icon(name).is_some())
 }
 
 fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
-    let label = if stat.label.is_empty() { 0.0 } else { ui.measure(&stat.label, 13.0, FontId::Regular) + 6.0 };
+    let label = if stat_icon(ui, stat) {
+        STAT_ICON + 6.0
+    } else if stat.label.is_empty() {
+        0.0
+    } else {
+        ui.measure(&stat.label, 13.0, FontId::Regular) + 6.0
+    };
     let value = match &stat.value {
         StatValue::Chip(text) => ui.measure(text, 15.0, FontId::Bold) + 14.0,
         StatValue::Primary(text) | StatValue::Secondary(text) | StatValue::Plain(text) => {
@@ -70,7 +86,11 @@ fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
 fn draw_stat(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, rect: Rect, stat: &Stat) {
     let colors = ui.theme().colors;
     let mut area = rect;
-    if !stat.label.is_empty() {
+    if stat_icon(ui, stat) {
+        let slot = area.cut_left(STAT_ICON + 6.0);
+        let square = Rect::new(slot.x, rect.y + (rect.height - STAT_ICON) / 2.0, STAT_ICON, STAT_ICON);
+        ui.skin_icon(stat.icon.unwrap_or_default(), square);
+    } else if !stat.label.is_empty() {
         let label_width = ui.measure(&stat.label, 13.0, FontId::Regular);
         let label = area.cut_left(label_width + 6.0);
         ui.label(label, &stat.label, 13.0, FontId::Regular, colors.muted, Align::Start);
@@ -156,7 +176,7 @@ struct Tool {
 
 /// The toolbar buttons, left to right: Inventory, Quests, Craft, then Goals and Mail when the
 /// game has them (M6), Sleep and Menu.
-fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang) -> Vec<Tool> {
+fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang, shown: bool) -> Vec<Tool> {
     let player = &view.state.player;
     let inventory = lang.format("toolbar.inventory", &[&player.inventory.len(), &num(player.max_inventory_size)]);
     let with_key = |key: &'static str, action: BindAction| {
@@ -167,6 +187,9 @@ fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang) 
             lang.format("toolbar.withKey", &[&lang.tr(key), &prompt(view, device, action, lang)])
         }
     };
+    if !shown {
+        return Vec::new();
+    }
     let tool = |key, icon, label| Tool { key, icon, label };
     let mut tools = vec![
         tool("inventory", Icon::Package, inventory),
@@ -192,7 +215,21 @@ fn energy_label(view: &GameView<'_>, lang: Lang) -> String {
     }
 }
 
-fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
+/// The time as the skin's clock style shows it; `None` hides the clock.
+fn time_text(view: &GameView<'_>, clock: crate::skin::ClockStyle) -> Option<String> {
+    match clock {
+        crate::skin::ClockStyle::Hidden => None,
+        crate::skin::ClockStyle::TwentyFourHour
+            if view.content.settings.time.minutes_per_day() == farm_sim::units::MINUTES_PER_DAY =>
+        {
+            let total = farm_sim::units::whole_minute(view.state.clock.time_minutes) % farm_sim::units::MINUTES_PER_DAY;
+            Some(format!("{:0>2}:{:0>2}", total / 60, total % 60))
+        }
+        _ => Some(view.calendar.time_text.clone()),
+    }
+}
+
+fn stats(view: &GameView<'_>, compact: bool, lang: Lang, clock_style: crate::skin::ClockStyle) -> Vec<Stat> {
     let state = view.state;
     let content = view.content;
     let clock = &state.clock;
@@ -201,10 +238,12 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         Stat {
             label: if compact { String::new() } else { lang.tr("hud.money").to_owned() },
             value: StatValue::Chip(view.money(lang, state.player.money)),
+            icon: Some("money"),
         },
         Stat {
             label: lang.tr("hud.season").to_owned(),
             value: StatValue::Primary(calendar.season_name.clone().unwrap_or_else(|| season_name(&clock.season, lang))),
+            icon: Some("season"),
         },
         Stat {
             label: lang.tr("hud.day").to_owned(),
@@ -214,8 +253,9 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
                 num(calendar.day_of_season),
                 num(calendar.season_days)
             )),
+            icon: Some("day"),
         },
-        Stat { label: lang.tr("hud.year").to_owned(), value: StatValue::Secondary(num(clock.year)) },
+        Stat { label: lang.tr("hud.year").to_owned(), value: StatValue::Secondary(num(clock.year)), icon: None },
         Stat {
             label: lang.tr("hud.weather").to_owned(),
             value: StatValue::Plain(
@@ -226,9 +266,12 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
                     .find(|weather| weather.id == clock.weather_id)
                     .map_or_else(|| lang.tr("hud.sunny").to_owned(), |weather| weather.name.clone()),
             ),
+            icon: Some("weather"),
         },
-        Stat { label: lang.tr("hud.time").to_owned(), value: StatValue::Plain(calendar.time_text.clone()) },
     ];
+    if let Some(time) = time_text(view, clock_style) {
+        stats.push(Stat { label: lang.tr("hud.time").to_owned(), value: StatValue::Plain(time), icon: Some("time") });
+    }
     if content.settings.energy_enabled {
         let max = if state.player.max_energy > 0 { state.player.max_energy } else { content.settings.max_energy };
         let max = max
@@ -245,7 +288,7 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
         } else {
             format!("{} / {}", num(state.player.energy.div_euclid(point)), crate::format::energy(max))
         };
-        stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text } });
+        stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text }, icon: Some("energy") });
     }
     // Health beside energy (M7, with combat on).
     if let (Some(health), Some(max)) = (
@@ -261,7 +304,11 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
     ) {
         let ratio = (f64::from(health.max(0)) / f64::from(max.max(1))).min(1.0) as f32;
         let text = if compact { String::new() } else { format!("{} / {}", num(health.max(0)), num(max)) };
-        stats.push(Stat { label: lang.tr("hud.health").to_owned(), value: StatValue::Health { ratio, text } });
+        stats.push(Stat {
+            label: lang.tr("hud.health").to_owned(),
+            value: StatValue::Health { ratio, text },
+            icon: Some("health"),
+        });
     }
     let now = farm_sim::crafting::absolute_minute_in(content.settings.time.minutes_per_day(), state);
     for buff in state.player.buffs.iter().filter(|buff| buff.expires_at_minute > now) {
@@ -273,6 +320,7 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang) -> Vec<Stat> {
                 icon: buff.definition.icon.clone().filter(|icon| !icon.is_empty()),
                 text: lang.format("hud.buffMinutes", &[&minutes]),
             },
+            icon: None,
         });
     }
     stats
@@ -293,14 +341,14 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     let button_height = ui.button_height(13.0).min(ROW);
     let mut layout = None;
     for compact in [false, true] {
-        let stats = stats(view, compact, lang);
+        let stats = stats(view, compact, lang, ui.skin().layout.clock);
         let stat_sizes: Vec<(f32, f32)> = stats.iter().map(|stat| (stat_width(ui, stat), ROW)).collect();
-        let labels = toolbar(view, device, compact, lang);
+        let labels = toolbar(view, device, compact, lang, ui.skin().layout.toolbar);
         let widths: Vec<f32> =
             labels.iter().map(|tool| ui.button_width(&Button::new(&tool.label).icon(tool.icon))).collect();
-        let toolbar_width = widths.iter().sum::<f32>() + 6.0 * (widths.len() - 1) as f32;
+        let toolbar_width = widths.iter().sum::<f32>() + 6.0 * widths.len().saturating_sub(1) as f32;
         let stats_width: f32 =
-            stat_sizes.iter().map(|(w, _)| w).sum::<f32>() + STAT_GAP * (stat_sizes.len() - 1) as f32;
+            stat_sizes.iter().map(|(w, _)| w).sum::<f32>() + STAT_GAP * stat_sizes.len().saturating_sub(1) as f32;
         let one_row = stats_width + 24.0 + toolbar_width <= inner_width;
         if one_row || compact {
             layout = Some((stats, stat_sizes, labels, widths, toolbar_width, one_row));
@@ -320,10 +368,14 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     // Two rows: stats first, the toolbar under them.
     let wrapped_toolbar = Flow::layout(Rect::new(0.0, 0.0, inner_width, 0.0), &sizes, 6.0, 4.0, Align::End);
     let content_height = if one_row { flow.height.max(ROW) } else { flow.height + 6.0 + wrapped_toolbar.height };
-    let bar = Rect::new(bar_outer.x, bar_outer.y, bar_outer.width, content_height + 16.0);
-    ui.panel(bar, colors.hud, colors.hud_border, 10.0, true);
+    // The skin can put the HUD at the bottom, above the host's on-screen controls.
+    let hud_bottom = ui.skin().layout.hud_bottom;
+    let bar_y = if hud_bottom { (ui.safe_area().bottom() - 10.0 - content_height - 16.0).max(10.0) } else { bar_outer.y };
+    let shift = bar_y - bar_outer.y;
+    let bar = Rect::new(bar_outer.x, bar_y, bar_outer.width, content_height + 16.0);
+    ui.skinned_panel(Part::Hud, bar, colors.hud, colors.hud_border, 10.0, true);
     for (stat, rect) in stats.iter().zip(&flow.items) {
-        draw_stat(ui, view, images, *rect, stat);
+        draw_stat(ui, view, images, rect.offset(0.0, shift), stat);
     }
     let toolbar_origin = if one_row {
         Rect::new(
@@ -337,7 +389,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     };
     let toolbar = Flow::layout(toolbar_origin, &sizes, 6.0, 4.0, Align::End);
     for (tool, rect) in labels.iter().zip(&toolbar.items) {
-        let button = Button::new(&tool.label).icon(tool.icon).focusable(false);
+        let button = Button::new(&tool.label).icon(tool.icon).skin_icon(tool.key).focusable(false);
         if ui.button(WidgetId::new("hud").with(tool.key), *rect, button) {
             actions.push(match tool.key {
                 "inventory" => GameAction::TogglePanel(Panel::Inventory),
@@ -360,12 +412,13 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         }
     }
 
-    // Everything below sits above the host's on-screen controls.
+    // Everything below sits above the host's on-screen controls (and above a bottom HUD).
     let safe = ui.safe_area();
+    let floor = if hud_bottom { bar.y - 8.0 } else { safe.bottom() - 10.0 };
     // ── Controls hint row ── (not on touch screens: their controls are on screen)
-    let mut above_hints = safe.bottom() - 10.0;
+    let mut above_hints = floor;
     if device != InputDevice::Touch {
-        above_hints = hint_row(ui, view, device, lang, safe);
+        above_hints = hint_row(ui, view, device, lang, safe, floor);
     }
 
     // ── Creator game panels ──
@@ -406,7 +459,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         let top = above_hints - flow.height;
         for ((panel, (_, entries)), rect) in visible.iter().zip(&cards).zip(&flow.items) {
             let rect = rect.offset(0.0, top);
-            ui.panel(rect, colors.panel, colors.panel_border, 8.0, false);
+            ui.skinned_panel(Part::Panel, rect, colors.panel, colors.panel_border, 8.0, false);
             let mut inner = rect.inset_xy(10.0, 0.0);
             let title_width = ui.measure(&panel.title, 13.5, FontId::Bold);
             let title = inner.cut_left(title_width);
@@ -432,6 +485,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         }
         above_hints = top - 8.0;
     }
+    // A bottom HUD leaves the top of the screen to the toasts.
+    let top_edge = if hud_bottom { 0.0 } else { bar.bottom() };
 
     // ── "Made with" credit ──
     if view.show_made_with {
@@ -441,11 +496,11 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
         ui.list_mut().fill_round_rect(rect, 5.0, fade(colors.hud, 0.75));
         ui.label(rect, text, 11.0, FontId::Regular, colors.muted, Align::Center);
     }
-    bar.bottom()
+    top_edge
 }
 
-/// The controls hint row along the bottom of `safe`; returns the y just above it.
-fn hint_row(ui: &mut Ui, view: &GameView<'_>, device: InputDevice, lang: Lang, safe: Rect) -> f32 {
+/// The controls hint row with its bottom at `floor`; returns the y just above it.
+fn hint_row(ui: &mut Ui, view: &GameView<'_>, device: InputDevice, lang: Lang, safe: Rect, floor: f32) -> f32 {
     let colors = ui.theme().colors;
     let hints: Vec<(String, &str)> = [
         BindAction::MoveUp,
@@ -473,11 +528,13 @@ fn hint_row(ui: &mut Ui, view: &GameView<'_>, device: InputDevice, lang: Lang, s
         Flow::layout(Rect::new(0.0, 0.0, max_hint_width - 24.0, 0.0), &hint_sizes, 14.0, 4.0, Align::Center);
     let pill = Rect::new(
         (safe.width - hint_flow.width - 24.0) / 2.0,
-        safe.bottom() - 10.0 - hint_flow.height - 12.0,
+        floor - hint_flow.height - 12.0,
         hint_flow.width + 24.0,
         hint_flow.height + 12.0,
     );
-    ui.panel(pill, fade(colors.hud, 0.9), colors.hud_border, 8.0, false);
+    if !ui.skin_part(Part::Hud, pill) {
+        ui.panel(pill, fade(colors.hud, 0.9), colors.hud_border, 8.0, false);
+    }
     let origin_x = pill.x + 12.0 - (max_hint_width - 24.0 - hint_flow.width) / 2.0;
     for ((key, label), item) in hints.iter().zip(&hint_flow.items) {
         let item = item.offset(origin_x, pill.y + 6.0);

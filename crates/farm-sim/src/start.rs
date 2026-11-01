@@ -163,6 +163,9 @@ pub struct Presentation {
     pub game_panels: Vec<GamePanel>,
     /// Show "Made with Tractr" (project setting `showMadeWithCredit`).
     pub show_made_with_credit: bool,
+    /// The look of the game's interface (`farm-ui` reads it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ui_skin: Option<crate::schema::UiSkin>,
 }
 
 impl Presentation {
@@ -183,6 +186,7 @@ impl Presentation {
                 .chain(crate::packs::pack_game_panels(&project.content_packs))
                 .collect(),
             show_made_with_credit: project.settings.show_made_with_credit,
+            ui_skin: project.ui_skin.clone(),
         }
     }
 }

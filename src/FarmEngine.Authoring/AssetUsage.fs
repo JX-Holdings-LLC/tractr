@@ -68,6 +68,8 @@ module AssetUsage =
             SchemaJson.encodeGameProject project
             |> Json.remove "customAssets"
             |> Json.remove "selectedTileVisual"
+            // Where art was imported from is no use of it (#232).
+            |> Json.remove "imports"
 
         let values = HashSet<string>()
         strings values json

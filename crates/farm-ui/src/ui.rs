@@ -16,6 +16,7 @@
 use crate::i18n::Lang;
 use crate::input::{InputDevice, NavAction, UiInput};
 use crate::layout::RectExt;
+use crate::skin::{self, Part, Skin};
 use crate::theme::Theme;
 use farm_render::text;
 use farm_render::{Color, DrawCmd, DrawList, FontId, Rect, TextAlign};
@@ -190,6 +191,8 @@ pub struct Ui {
     tints: Vec<(Color, Color)>,
     /// Physical pixels at the bottom the host covers (on-screen touch controls).
     bottom_inset: f32,
+    /// The game's interface skin, resolved for this frame's images.
+    skin: Skin,
 }
 
 impl Default for Ui {
@@ -232,6 +235,7 @@ impl Ui {
             time: 0.0,
             tints: Vec::new(),
             bottom_inset: 0.0,
+            skin: Skin::default(),
         }
     }
 
@@ -241,6 +245,45 @@ impl Ui {
 
     pub fn set_theme(&mut self, theme: Theme) {
         self.theme = theme;
+    }
+
+    /// The game's interface skin (resolved against the image store the frame's list is drawn
+    /// with); the default is the built-in look.
+    pub fn skin(&self) -> &Skin {
+        &self.skin
+    }
+
+    pub fn set_skin(&mut self, skin: Skin) {
+        self.skin = skin;
+    }
+
+    /// Draws the skin's art for `part` over `rect`; false (nothing drawn) without it.
+    pub fn skin_part(&mut self, part: Part, rect: Rect) -> bool {
+        match self.skin.part(part).copied() {
+            Some(slice) => {
+                skin::draw_nine_slice(&mut self.list, &slice, rect);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// A panel for `part`: the skin's art when it has some, else [`Ui::panel`] in the theme.
+    pub fn skinned_panel(&mut self, part: Part, rect: Rect, fill: Color, border: Color, radius: f32, shadow: bool) {
+        if !self.skin_part(part, rect) {
+            self.panel(rect, fill, border, radius, shadow);
+        }
+    }
+
+    /// Draws the skin's icon `name` fitted into `rect`; false without one.
+    pub fn skin_icon(&mut self, name: &str, rect: Rect) -> bool {
+        match self.skin.icon(name).copied() {
+            Some(icon) => {
+                skin::draw_icon(&mut self.list, &icon, rect);
+                true
+            }
+            None => false,
+        }
     }
 
     /// Starts a frame of `physical` pixels. `scale` maps logical units to pixels (UI scale ×
@@ -542,9 +585,25 @@ impl Ui {
     /// The face `font` stands for when drawing `content`: its readable face with the readable
     /// font setting, unless that face lacks a character of `content` (then Inter, which has
     /// more). Measuring and drawing go through here, so layouts match what is drawn.
+    ///
+    /// Without the readable font, the skin's fonts stand in: its number font for text that is
+    /// a number (money, the clock, quantities), its heading font for bold text, its body font
+    /// for the rest; each only when it has every character of `content`.
     pub fn face(&self, font: FontId, content: &str) -> FontId {
         if !self.readable_font {
-            return font;
+            let fonts = self.skin.fonts;
+            let numeric = content.chars().any(|c| c.is_ascii_digit())
+                && content.chars().all(|c| c.is_ascii_digit() || " .,:/%+-$×x".contains(c));
+            let skinned = match font {
+                _ if numeric && fonts.number.is_some() => fonts.number,
+                FontId::Bold => fonts.heading,
+                FontId::Regular => fonts.body,
+                _ => None,
+            };
+            return match skinned {
+                Some(custom) if text::font(custom).covers(content) => custom,
+                _ => font,
+            };
         }
         let readable = font.readable();
         if text::font(readable).covers(content) {

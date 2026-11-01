@@ -9,7 +9,7 @@
 //! laid out from glyph advances without kerning or shaping.
 
 use crate::draw::FontId;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 use ttf_parser::Face;
 /// A glyph of an embedded font ([`Font::glyph`], [`Font::layout`]).
 pub use ttf_parser::GlyphId;
@@ -35,8 +35,46 @@ impl std::fmt::Debug for Font {
     }
 }
 
-/// The embedded font for `id` (parsed on first use).
+/// Most game fonts one process registers ([`register_font`]); each stays loaded for good.
+pub const MAX_CUSTOM_FONTS: usize = 64;
+
+/// The registered game fonts by slot, with the bytes each was parsed from.
+static CUSTOM: RwLock<Vec<(&'static [u8], &'static Font)>> = RwLock::new(Vec::new());
+
+/// Registers a game's own TrueType or OpenType font (an interface skin's) and returns the id
+/// to draw with; the same bytes give the same id again. `None` when the bytes are not a font
+/// `ttf-parser` reads, or [`MAX_CUSTOM_FONTS`] are already registered. Fonts stay registered for
+/// the process: the editor plays and previews several games, and drawing never waits on a lock
+/// held for long.
+pub fn register_font(bytes: &[u8]) -> Option<FontId> {
+    let mut fonts = CUSTOM.write().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(slot) = fonts.iter().position(|(known, _)| *known == bytes) {
+        return u16::try_from(slot).ok().map(FontId::Custom);
+    }
+    if fonts.len() >= MAX_CUSTOM_FONTS {
+        return None;
+    }
+    let units_per_em = Face::parse(bytes, 0).ok()?.units_per_em();
+    if units_per_em == 0 {
+        return None;
+    }
+    let id = FontId::Custom(u16::try_from(fonts.len()).ok()?);
+    let leaked: &'static [u8] = Box::leak(bytes.to_vec().into_boxed_slice());
+    let face = Face::parse(leaked, 0).ok()?;
+    let font: &'static Font = Box::leak(Box::new(Font { id, face, units_per_em: f32::from(units_per_em) }));
+    fonts.push((leaked, font));
+    Some(id)
+}
+
+/// The font for `id`: an embedded one (parsed on first use) or a registered game font.
 pub fn font(id: FontId) -> &'static Font {
+    if let FontId::Custom(slot) = id {
+        let fonts = CUSTOM.read().unwrap_or_else(std::sync::PoisonError::into_inner);
+        return match fonts.get(usize::from(slot)) {
+            Some((_, font)) => font,
+            None => font(FontId::Regular),
+        };
+    }
     static REGULAR: OnceLock<Font> = OnceLock::new();
     static BOLD: OnceLock<Font> = OnceLock::new();
     static READABLE_REGULAR: OnceLock<Font> = OnceLock::new();
@@ -46,6 +84,7 @@ pub fn font(id: FontId) -> &'static Font {
         FontId::Bold => (&BOLD, INTER_BOLD),
         FontId::ReadableRegular => (&READABLE_REGULAR, ATKINSON_REGULAR),
         FontId::ReadableBold => (&READABLE_BOLD, ATKINSON_BOLD),
+        FontId::Custom(_) => (&REGULAR, INTER_REGULAR),
     };
     cell.get_or_init(|| {
         let face = Face::parse(bytes, 0).expect("the embedded fonts are valid TrueType");
@@ -211,6 +250,18 @@ pub fn ellipsize(font_id: FontId, size: f32, text: &str, max_width: f32) -> Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn game_fonts_register_once_and_draw_like_their_file() {
+        let id = register_font(ATKINSON_BOLD).expect("a TrueType font registers");
+        assert!(matches!(id, FontId::Custom(_)));
+        assert_eq!(register_font(ATKINSON_BOLD), Some(id), "the same bytes, the same slot");
+        assert_eq!(font(id).id(), id);
+        assert_eq!(measure(id, 20.0, "Harvest"), measure(FontId::ReadableBold, 20.0, "Harvest"));
+        assert_eq!(register_font(b"not a font"), None);
+        // An unknown slot falls back to Inter instead of failing to draw.
+        assert_eq!(font(FontId::Custom(u16::MAX)).id(), FontId::Regular);
+    }
 
     #[test]
     fn fonts_load_with_sane_metrics() {

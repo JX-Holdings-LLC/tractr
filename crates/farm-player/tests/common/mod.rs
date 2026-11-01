@@ -138,6 +138,19 @@ pub fn scene(name: &str) -> Player {
             player
         }
         "hud" => new_game(&stores),
+        "skinned-title" => stores.standalone(&skinned()),
+        "skinned-hud" => new_game_of(&stores, &skinned()),
+        "skinned-dialogue" => {
+            let mut player = new_game_of(&stores, &skinned());
+            let mut state = player.state().unwrap().clone();
+            state.dialogue = Some(DialogueState {
+                npc_id: "npc-merchant".into(),
+                dialogue_id: "dialogue-merchant-greeting".into(),
+                line: None,
+            });
+            player.replace_state(state).unwrap();
+            player
+        }
         "dialogue" => {
             let mut player = new_game(&stores);
             let mut state = player.state().unwrap().clone();
@@ -190,4 +203,92 @@ pub fn scene(name: &str) -> Player {
         }
         other => panic!("unknown scene {other}"),
     }
+}
+
+/// Standard base64 of `bytes` (data URLs of the skin fixtures).
+pub fn base64(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
+        for i in 0..4 {
+            if i <= chunk.len() {
+                out.push(ALPHABET[((n >> (18 - 6 * i)) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+/// A 12×12 PNG: a `border` frame 3 pixels wide around a `fill` middle (9-slice panel art).
+pub fn panel_png(border: [u8; 4], fill: [u8; 4]) -> String {
+    let mut pixmap = farm_render::tiny_skia::Pixmap::new(12, 12).unwrap();
+    for (i, pixel) in pixmap.data_mut().chunks_exact_mut(4).enumerate() {
+        let (x, y) = (i % 12, i / 12);
+        let edge = !(3..9).contains(&x) || !(3..9).contains(&y);
+        pixel.copy_from_slice(if edge { &border } else { &fill });
+    }
+    format!("data:image/png;base64,{}", base64(&farm_render::encode_png(&pixmap)))
+}
+
+/// The starter farm with an interface skin (#236): a palette, 9-slice panels and buttons, a
+/// money icon, the Atkinson Hyperlegible files as the game's fonts, the HUD at the bottom
+/// without a clock, the dialogue box at the top with a large portrait, the menu on the left.
+pub fn skinned() -> GameProject {
+    use farm_sim::schema::{CustomAsset, UiLayout, UiNineSlice, UiSkin, UiTitleScreen, VisualRef};
+    let mut project = starter();
+    let asset = |id: &str, kind: &str, url: String| CustomAsset {
+        id: id.into(),
+        name: id.into(),
+        r#type: kind.into(),
+        data_url: url,
+        ..CustomAsset::default()
+    };
+    let font = |file: &str| {
+        let bytes = std::fs::read(root().join("assets").join("fonts").join(file)).unwrap();
+        format!("data:font/ttf;base64,{}", base64(&bytes))
+    };
+    project.custom_assets.push(asset("skin-panel", "art", panel_png([90, 50, 20, 255], [240, 220, 180, 255])));
+    project.custom_assets.push(asset("skin-button", "art", panel_png([40, 90, 40, 255], [120, 200, 120, 255])));
+    project.custom_assets.push(asset("skin-coin", "art", panel_png([200, 160, 0, 255], [255, 220, 0, 255])));
+    project.custom_assets.push(asset("font-body", "font", font("AtkinsonHyperlegible-Regular.ttf")));
+    project.custom_assets.push(asset("font-heading", "font", font("AtkinsonHyperlegible-Bold.ttf")));
+    let slice = |id: &str| UiNineSlice {
+        visual: VisualRef { asset_id: id.into(), ..VisualRef::default() },
+        left: 3.0,
+        top: 3.0,
+        right: 3.0,
+        bottom: 3.0,
+        scale: Some(2.0),
+    };
+    let mut panels = indexmap::IndexMap::new();
+    for part in ["panel", "hud", "dialogue", "slot", "tooltip"] {
+        panels.insert(part.to_owned(), slice("skin-panel"));
+    }
+    panels.insert("button".to_owned(), slice("skin-button"));
+    let mut icons = indexmap::IndexMap::new();
+    icons.insert("money".to_owned(), VisualRef { asset_id: "skin-coin".into(), ..VisualRef::default() });
+    let mut colors = indexmap::IndexMap::new();
+    colors.insert("text".to_owned(), "#2a1a0a".to_owned());
+    colors.insert("muted".to_owned(), "#5a4020".to_owned());
+    project.ui_skin = Some(UiSkin {
+        heading_font: Some("font-heading".into()),
+        body_font: Some("font-body".into()),
+        colors: Some(colors),
+        panels: Some(panels),
+        icons: Some(icons),
+        layout: Some(UiLayout {
+            hud_position: Some("bottom".into()),
+            toolbar: Some(true),
+            clock_style: Some("hidden".into()),
+            dialogue_position: Some("top".into()),
+            portrait_size: Some(72.0),
+        }),
+        title: Some(UiTitleScreen { menu_position: Some("left".into()), ..UiTitleScreen::default() }),
+        ..UiSkin::default()
+    });
+    project
 }
