@@ -46,7 +46,7 @@ Wheel turns, stones don't. The axle on my grindstone cracked clean through.
 | `@extra {…}` | keys Tractr does not know, kept as JSON |
 | text lines | the dialogue's text; several lines are joined with line breaks |
 | `* [GROUPS] TEXT -> TARGETS` | an answer |
-| `  ~ EFFECT` | what the answer above does |
+| `~ EFFECT`, indented under an answer | what the answer above does |
 
 An answer's groups are `[if CONDITIONS]` and `[once]` (`[once off]` keeps a
 paying answer repeatable). Its conditions can check one flag (`flag F`), one
