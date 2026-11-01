@@ -82,6 +82,7 @@ type RecordJson =
         add SchemaJson.encodeGridPoint SchemaJson.decodeGridPoint
         add SchemaJson.encodeGrowthRequirements SchemaJson.decodeGrowthRequirements
         add SchemaJson.encodeHeartEvent SchemaJson.decodeHeartEvent
+        add SchemaJson.encodeImportSource SchemaJson.decodeImportSource
         add SchemaJson.encodeInventorySlot SchemaJson.decodeInventorySlot
         add SchemaJson.encodeItem SchemaJson.decodeItem
         add SchemaJson.encodeItemCategoryDefinition SchemaJson.decodeItemCategoryDefinition
@@ -173,6 +174,10 @@ type RecordJson =
         add SchemaJson.encodeToolArea SchemaJson.decodeToolArea
         add SchemaJson.encodeToolDefinition SchemaJson.decodeToolDefinition
         add SchemaJson.encodeToolUpgrade SchemaJson.decodeToolUpgrade
+        add SchemaJson.encodeUiLayout SchemaJson.decodeUiLayout
+        add SchemaJson.encodeUiNineSlice SchemaJson.decodeUiNineSlice
+        add SchemaJson.encodeUiSkin SchemaJson.decodeUiSkin
+        add SchemaJson.encodeUiTitleScreen SchemaJson.decodeUiTitleScreen
         add SchemaJson.encodeVisualRef SchemaJson.decodeVisualRef
         add SchemaJson.encodeWearDefinition SchemaJson.decodeWearDefinition
         add SchemaJson.encodeWeatherConfig SchemaJson.decodeWeatherConfig
@@ -284,13 +289,14 @@ type RecordJson =
         add typeof<GameEvent> [ "Id", "id"; "Name", "name"; "SceneId", "sceneId"; "Trigger", "trigger"; "Conditions", "conditions"; "Outcomes", "outcomes"; "Active", "active"; "Repeatable", "repeatable"; "Subject", "subject"; "Minute", "minute" ]
         add typeof<GamePanel> [ "Id", "id"; "Title", "title"; "VisibleFlag", "visibleFlag"; "Entries", "entries" ]
         add typeof<GamePanelEntry> [ "Label", "label"; "Kind", "kind"; "Value", "value" ]
-        add typeof<GameProject> [ "SchemaVersion", "schemaVersion"; "Id", "id"; "Name", "name"; "Version", "version"; "Scenes", "scenes"; "Npcs", "npcs"; "Items", "items"; "Events", "events"; "Dialogues", "dialogues"; "Quests", "quests"; "RequestBoards", "requestBoards"; "Player", "player"; "EventFlags", "eventFlags"; "StartSceneId", "startSceneId"; "Mode", "mode"; "SelectedTileType", "selectedTileType"; "SelectedTileVisual", "selectedTileVisual"; "SelectedNpcId", "selectedNPCId"; "SelectedItemId", "selectedItemId"; "CustomAssets", "customAssets"; "CustomCrops", "customCrops"; "PlayerVisual", "playerVisual"; "PlayerLayers", "playerLayers"; "Graphics", "graphics"; "GamePanels", "gamePanels"; "CurrentSeason", "currentSeason"; "CurrentDay", "currentDay"; "CurrentDayOfSeason", "currentDayOfSeason"; "CurrentTimeMinutes", "currentTimeMinutes"; "CurrentYear", "currentYear"; "GameStartTime", "gameStartTime"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "Animals", "animals"; "FishTables", "fishTables"; "Mine", "mine"; "Mines", "mines"; "Actions", "actions"; "Minigames", "minigames"; "ContentPacks", "contentPacks"; "Scripts", "scripts"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Buildings", "buildings"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "SaveMigrations", "saveMigrations"; "TestStates", "testStates"; "Export", "export"; "RngState", "rngState"; "CurrentWeatherId", "currentWeatherId"; "SocialState", "socialState"; "MineDeepestFloor", "mineDeepestFloor"; "QuarantinedItems", "quarantinedItems"; "KeptState", "keptState" ]
+        add typeof<GameProject> [ "SchemaVersion", "schemaVersion"; "Id", "id"; "Name", "name"; "Version", "version"; "Scenes", "scenes"; "Npcs", "npcs"; "Items", "items"; "Events", "events"; "Dialogues", "dialogues"; "Quests", "quests"; "RequestBoards", "requestBoards"; "Player", "player"; "EventFlags", "eventFlags"; "StartSceneId", "startSceneId"; "Mode", "mode"; "SelectedTileType", "selectedTileType"; "SelectedTileVisual", "selectedTileVisual"; "SelectedNpcId", "selectedNPCId"; "SelectedItemId", "selectedItemId"; "CustomAssets", "customAssets"; "CustomCrops", "customCrops"; "PlayerVisual", "playerVisual"; "PlayerLayers", "playerLayers"; "Graphics", "graphics"; "GamePanels", "gamePanels"; "UiSkin", "uiSkin"; "CurrentSeason", "currentSeason"; "CurrentDay", "currentDay"; "CurrentDayOfSeason", "currentDayOfSeason"; "CurrentTimeMinutes", "currentTimeMinutes"; "CurrentYear", "currentYear"; "GameStartTime", "gameStartTime"; "Shops", "shops"; "NodeTypes", "nodeTypes"; "Settings", "settings"; "Recipes", "recipes"; "MachineTypes", "machineTypes"; "Weather", "weather"; "AnimalSpecies", "animalSpecies"; "Animals", "animals"; "FishTables", "fishTables"; "Mine", "mine"; "Mines", "mines"; "Actions", "actions"; "Minigames", "minigames"; "ContentPacks", "contentPacks"; "Scripts", "scripts"; "Terrains", "terrains"; "Tools", "tools"; "ItemCategories", "itemCategories"; "CropQualities", "cropQualities"; "CropMutations", "cropMutations"; "Cutscenes", "cutscenes"; "HeartEvents", "heartEvents"; "BuildingTypes", "buildingTypes"; "Buildings", "buildings"; "Collections", "collections"; "Bundles", "bundles"; "Achievements", "achievements"; "Mail", "mail"; "Monsters", "monsters"; "SaveMigrations", "saveMigrations"; "TestStates", "testStates"; "Imports", "imports"; "Export", "export"; "RngState", "rngState"; "CurrentWeatherId", "currentWeatherId"; "SocialState", "socialState"; "MineDeepestFloor", "mineDeepestFloor"; "QuarantinedItems", "quarantinedItems"; "KeptState", "keptState" ]
         add typeof<GameWords> [ "Money", "money"; "Energy", "energy"; "Skills", "skills"; "Locales", "locales" ]
         add typeof<GiftTastes> [ "Loved", "loved"; "Liked", "liked"; "Disliked", "disliked"; "Hated", "hated" ]
         add typeof<GraphicsSettings> [ "PixelArt", "pixelArt" ]
         add typeof<GridPoint> [ "X", "x"; "Y", "y" ]
         add typeof<GrowthRequirements> [ "Terrains", "terrains"; "Light", "light"; "MinTemperature", "minTemperature"; "MaxTemperature", "maxTemperature"; "SceneTags", "sceneTags"; "Fertilizers", "fertilizers"; "Neighbors", "neighbors" ]
         add typeof<HeartEvent> [ "Id", "id"; "Name", "name"; "NpcId", "npcId"; "Hearts", "hearts"; "CutsceneId", "cutsceneId"; "SceneId", "sceneId"; "Conditions", "conditions" ]
+        add typeof<ImportSource> [ "Kind", "kind"; "TargetId", "targetId"; "Path", "path"; "Level", "level"; "Names", "names" ]
         add typeof<InventorySlot> [ "Item", "item"; "Quantity", "quantity"; "Quality", "quality" ]
         add typeof<Item> [ "Id", "id"; "Name", "name"; "Visual", "visual"; "Description", "description"; "Type", "type"; "Stackable", "stackable"; "MaxStack", "maxStack"; "Value", "value"; "CropType", "cropType"; "ToolType", "toolType"; "ToolPower", "toolPower"; "ToolTier", "toolTier"; "Durability", "durability"; "MaxDurability", "maxDurability"; "UseActionId", "useActionId"; "ConsumeOnUse", "consumeOnUse"; "Energy", "energy"; "Buffs", "buffs"; "Wear", "wear"; "Health", "health"; "FishingGear", "fishingGear" ]
         add typeof<ItemCategoryDefinition> [ "Id", "id"; "Name", "name"; "Plantable", "plantable"; "Fertilizer", "fertilizer"; "Equippable", "equippable"; "Edible", "edible"; "Energy", "energy"; "Placeable", "placeable"; "Giftable", "giftable"; "Sellable", "sellable" ]
@@ -382,6 +388,10 @@ type RecordJson =
         add typeof<ToolArea> [ "Width", "width"; "Length", "length" ]
         add typeof<ToolDefinition> [ "Id", "id"; "Name", "name"; "Description", "description"; "Action", "action"; "Key", "key"; "EnergyCost", "energyCost"; "Area", "area"; "Skill", "skill"; "PlaceTerrain", "placeTerrain" ]
         add typeof<ToolUpgrade> [ "FromItemId", "fromItemId"; "ToItemId", "toItemId"; "Cost", "cost"; "Materials", "materials"; "Nights", "nights" ]
+        add typeof<UiLayout> [ "HudPosition", "hudPosition"; "Toolbar", "toolbar"; "ClockStyle", "clockStyle"; "DialoguePosition", "dialoguePosition"; "PortraitSize", "portraitSize" ]
+        add typeof<UiNineSlice> [ "Visual", "visual"; "Left", "left"; "Top", "top"; "Right", "right"; "Bottom", "bottom"; "Scale", "scale" ]
+        add typeof<UiSkin> [ "HeadingFont", "headingFont"; "BodyFont", "bodyFont"; "NumberFont", "numberFont"; "Colors", "colors"; "Panels", "panels"; "Icons", "icons"; "Layout", "layout"; "Title", "title" ]
+        add typeof<UiTitleScreen> [ "Background", "background"; "Scene", "scene"; "Logo", "logo"; "MenuPosition", "menuPosition" ]
         add typeof<VisualRef> [ "AssetId", "assetId"; "Animation", "animation"; "Frame", "frame" ]
         add typeof<WearDefinition> [ "Slot", "slot"; "Color", "color"; "Visual", "visual"; "Layer", "layer" ]
         add typeof<WeatherConfig> [ "Types", "types"; "Table", "table"; "Overlays", "overlays" ]

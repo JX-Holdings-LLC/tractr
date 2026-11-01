@@ -1,0 +1,73 @@
+{
+  "jsonVersion": "1.5.3",
+  "defs": {
+    "layers": [
+      {
+        "identifier": "Collisions",
+        "type": "IntGrid",
+        "uid": 10,
+        "gridSize": 16,
+        "intGridValues": [ { "value": 1, "identifier": "wall" }, { "value": 2, "identifier": "water" } ]
+      }
+    ],
+    "tilesets": [
+      {
+        "identifier": "Farm",
+        "uid": 20,
+        "relPath": "farm.png",
+        "pxWid": 32,
+        "pxHei": 32,
+        "tileGridSize": 16,
+        "spacing": 0,
+        "padding": 0,
+        "enumTags": [ { "enumValueId": "Soil", "tileIds": [ 1 ] } ],
+        "customData": [ { "tileId": 2, "data": "walkable=false\nname=Fence" } ]
+      }
+    ]
+  },
+  "levels": [
+    {
+      "identifier": "Level_0",
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "__cWid": 3,
+          "__cHei": 2,
+          "__gridSize": 16,
+          "entityInstances": [
+            { "__identifier": "Player", "__grid": [ 1, 1 ], "iid": "p1", "width": 16, "height": 16, "fieldInstances": [] },
+            {
+              "__identifier": "Machine",
+              "__grid": [ 2, 1 ],
+              "iid": "m1",
+              "width": 16,
+              "height": 16,
+              "fieldInstances": [ { "__identifier": "machine", "__value": "nothing-like-this" } ]
+            }
+          ]
+        },
+        {
+          "__identifier": "Collisions",
+          "__type": "IntGrid",
+          "__cWid": 3,
+          "__cHei": 2,
+          "__gridSize": 16,
+          "layerDefUid": 10,
+          "intGridCsv": [ 0, 0, 1, 0, 2, 0 ],
+          "autoLayerTiles": []
+        },
+        {
+          "__identifier": "Ground",
+          "__type": "Tiles",
+          "__cWid": 3,
+          "__cHei": 2,
+          "__gridSize": 16,
+          "__tilesetDefUid": 20,
+          "gridTiles": [ { "px": [ 0, 0 ], "src": [ 16, 0 ], "t": 1, "f": 0 }, { "px": [ 16, 0 ], "src": [ 0, 16 ], "t": 2, "f": 0 } ]
+        }
+      ]
+    },
+    { "identifier": "Level_1", "layerInstances": [] }
+  ]
+}

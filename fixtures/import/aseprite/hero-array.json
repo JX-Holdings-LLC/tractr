@@ -1,0 +1,22 @@
+{
+  "frames": [
+    { "filename": "hero 0.aseprite", "frame": { "x": 0, "y": 0, "w": 16, "h": 16 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 }, "sourceSize": { "w": 16, "h": 16 }, "duration": 100 },
+    { "filename": "hero 1.aseprite", "frame": { "x": 16, "y": 0, "w": 16, "h": 16 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 }, "sourceSize": { "w": 16, "h": 16 }, "duration": 100 },
+    { "filename": "hero 2.aseprite", "frame": { "x": 32, "y": 0, "w": 16, "h": 16 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 }, "sourceSize": { "w": 16, "h": 16 }, "duration": 250 },
+    { "filename": "hero 3.aseprite", "frame": { "x": 48, "y": 0, "w": 16, "h": 16 }, "rotated": false, "trimmed": false, "spriteSourceSize": { "x": 0, "y": 0, "w": 16, "h": 16 }, "sourceSize": { "w": 16, "h": 16 }, "duration": 250 }
+  ],
+  "meta": {
+    "app": "https://www.aseprite.org/",
+    "version": "1.3.7",
+    "image": "hero.png",
+    "format": "RGBA8888",
+    "size": { "w": 64, "h": 16 },
+    "scale": "1",
+    "frameTags": [
+      { "name": "walk_down", "from": 0, "to": 1, "direction": "forward", "color": "#000000ff" },
+      { "name": "idleUp", "from": 2, "to": 3, "direction": "pingpong", "color": "#000000ff" }
+    ],
+    "layers": [ { "name": "Layer 1", "opacity": 255, "blendMode": "normal" } ],
+    "slices": [ { "name": "portrait", "color": "#0000ffff", "keys": [ { "frame": 0, "bounds": { "x": 4, "y": 2, "w": 8, "h": 8 } } ] } ]
+  }
+}

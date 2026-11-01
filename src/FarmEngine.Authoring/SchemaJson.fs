@@ -2572,6 +2572,7 @@ module SchemaJson =
         let mutable vPlayerLayers = None
         let mutable vGraphics = None
         let mutable vGamePanels = None
+        let mutable vUiSkin = None
         let mutable vCurrentSeason = ""
         let mutable vCurrentDay = 0.0
         let mutable vCurrentDayOfSeason = None
@@ -2609,6 +2610,7 @@ module SchemaJson =
         let mutable vMonsters = None
         let mutable vSaveMigrations = None
         let mutable vTestStates = None
+        let mutable vImports = None
         let mutable vExport = None
         let mutable vRngState = None
         let mutable vCurrentWeatherId = None
@@ -2644,6 +2646,7 @@ module SchemaJson =
             | "playerLayers" -> vPlayerLayers <- Decode.optional (Decode.list decodeCharacterLayer) (key :: path) value
             | "graphics" -> vGraphics <- Decode.optional decodeGraphicsSettings (key :: path) value
             | "gamePanels" -> vGamePanels <- Decode.optional (Decode.list decodeGamePanel) (key :: path) value
+            | "uiSkin" -> vUiSkin <- Decode.optional decodeUiSkin (key :: path) value
             | "currentSeason" -> vCurrentSeason <- Decode.string (key :: path) value
             | "currentDay" -> vCurrentDay <- Decode.number (key :: path) value
             | "currentDayOfSeason" -> vCurrentDayOfSeason <- Decode.optional Decode.number (key :: path) value
@@ -2681,6 +2684,7 @@ module SchemaJson =
             | "monsters" -> vMonsters <- Decode.optional (Decode.list decodeMonsterDefinition) (key :: path) value
             | "saveMigrations" -> vSaveMigrations <- Decode.optional (Decode.list decodeSaveMigration) (key :: path) value
             | "testStates" -> vTestStates <- Decode.optional (Decode.list decodeTestState) (key :: path) value
+            | "imports" -> vImports <- Decode.optional (Decode.list decodeImportSource) (key :: path) value
             | "export" -> vExport <- Decode.optional decodeExportSettings (key :: path) value
             | "rngState" -> vRngState <- Decode.optional decodeRngState (key :: path) value
             | "currentWeatherId" -> vCurrentWeatherId <- Decode.optional Decode.string (key :: path) value
@@ -2689,7 +2693,7 @@ module SchemaJson =
             | "quarantinedItems" -> vQuarantinedItems <- Decode.optional (Decode.list decodeInventorySlot) (key :: path) value
             | "keptState" -> vKeptState <- Decode.optional Decode.json (key :: path) value
             | _ -> extra.Add((key, value))
-        { SchemaVersion = vSchemaVersion; Id = vId; Name = vName; Version = vVersion; Scenes = vScenes; Npcs = vNpcs; Items = vItems; Events = vEvents; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Player = vPlayer; EventFlags = vEventFlags; StartSceneId = vStartSceneId; Mode = vMode; SelectedTileType = vSelectedTileType; SelectedTileVisual = vSelectedTileVisual; SelectedNpcId = vSelectedNpcId; SelectedItemId = vSelectedItemId; CustomAssets = vCustomAssets; CustomCrops = vCustomCrops; PlayerVisual = vPlayerVisual; PlayerLayers = vPlayerLayers; Graphics = vGraphics; GamePanels = vGamePanels; CurrentSeason = vCurrentSeason; CurrentDay = vCurrentDay; CurrentDayOfSeason = vCurrentDayOfSeason; CurrentTimeMinutes = vCurrentTimeMinutes; CurrentYear = vCurrentYear; GameStartTime = vGameStartTime; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; Animals = vAnimals; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; ContentPacks = vContentPacks; Scripts = vScripts; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Buildings = vBuildings; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; SaveMigrations = vSaveMigrations; TestStates = vTestStates; Export = vExport; RngState = vRngState; CurrentWeatherId = vCurrentWeatherId; SocialState = vSocialState; MineDeepestFloor = vMineDeepestFloor; QuarantinedItems = vQuarantinedItems; KeptState = vKeptState; Extra = List.ofSeq extra }
+        { SchemaVersion = vSchemaVersion; Id = vId; Name = vName; Version = vVersion; Scenes = vScenes; Npcs = vNpcs; Items = vItems; Events = vEvents; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Player = vPlayer; EventFlags = vEventFlags; StartSceneId = vStartSceneId; Mode = vMode; SelectedTileType = vSelectedTileType; SelectedTileVisual = vSelectedTileVisual; SelectedNpcId = vSelectedNpcId; SelectedItemId = vSelectedItemId; CustomAssets = vCustomAssets; CustomCrops = vCustomCrops; PlayerVisual = vPlayerVisual; PlayerLayers = vPlayerLayers; Graphics = vGraphics; GamePanels = vGamePanels; UiSkin = vUiSkin; CurrentSeason = vCurrentSeason; CurrentDay = vCurrentDay; CurrentDayOfSeason = vCurrentDayOfSeason; CurrentTimeMinutes = vCurrentTimeMinutes; CurrentYear = vCurrentYear; GameStartTime = vGameStartTime; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; Animals = vAnimals; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; ContentPacks = vContentPacks; Scripts = vScripts; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Buildings = vBuildings; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; SaveMigrations = vSaveMigrations; TestStates = vTestStates; Imports = vImports; Export = vExport; RngState = vRngState; CurrentWeatherId = vCurrentWeatherId; SocialState = vSocialState; MineDeepestFloor = vMineDeepestFloor; QuarantinedItems = vQuarantinedItems; KeptState = vKeptState; Extra = List.ofSeq extra }
 
     and encodeGameProject (value: GameProject) : Json =
         JObject(
@@ -2736,6 +2740,9 @@ module SchemaJson =
                 | None -> ()
                 match value.GamePanels with
                 | Some v -> yield "gamePanels", (Encode.list encodeGamePanel) v
+                | None -> ()
+                match value.UiSkin with
+                | Some v -> yield "uiSkin", encodeUiSkin v
                 | None -> ()
                 yield "currentSeason", JString value.CurrentSeason
                 yield "currentDay", JNumber value.CurrentDay
@@ -2811,6 +2818,9 @@ module SchemaJson =
                 | None -> ()
                 match value.TestStates with
                 | Some v -> yield "testStates", (Encode.list encodeTestState) v
+                | None -> ()
+                match value.Imports with
+                | Some v -> yield "imports", (Encode.list encodeImportSource) v
                 | None -> ()
                 match value.Export with
                 | Some v -> yield "export", encodeExportSettings v
@@ -3002,6 +3012,40 @@ module SchemaJson =
                 | Some v -> yield "sceneId", JString v
                 | None -> ()
                 yield "conditions", (Encode.list encodeEventCondition) value.Conditions
+                yield! value.Extra
+            ]
+        )
+
+    and decodeImportSource (path: Path) (json: Json) : ImportSource =
+        let members = Decode.object path json
+        let mutable vKind = ""
+        let mutable vTargetId = ""
+        let mutable vPath = ""
+        let mutable vLevel = None
+        let mutable vNames = None
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "kind" -> vKind <- Decode.string (key :: path) value
+            | "targetId" -> vTargetId <- Decode.string (key :: path) value
+            | "path" -> vPath <- Decode.string (key :: path) value
+            | "level" -> vLevel <- Decode.optional Decode.string (key :: path) value
+            | "names" -> vNames <- Decode.optional (Decode.dict Decode.string) (key :: path) value
+            | _ -> extra.Add((key, value))
+        { Kind = vKind; TargetId = vTargetId; Path = vPath; Level = vLevel; Names = vNames; Extra = List.ofSeq extra }
+
+    and encodeImportSource (value: ImportSource) : Json =
+        JObject(
+            [
+                yield "kind", JString value.Kind
+                yield "targetId", JString value.TargetId
+                yield "path", JString value.Path
+                match value.Level with
+                | Some v -> yield "level", JString v
+                | None -> ()
+                match value.Names with
+                | Some v -> yield "names", (Encode.dict JString) v
+                | None -> ()
                 yield! value.Extra
             ]
         )
@@ -6616,6 +6660,165 @@ module SchemaJson =
                 yield "cost", JNumber value.Cost
                 yield "materials", (Encode.list encodeRecipeIngredient) value.Materials
                 yield "nights", JNumber value.Nights
+            ]
+        )
+
+    and decodeUiLayout (path: Path) (json: Json) : UiLayout =
+        let members = Decode.object path json
+        let mutable vHudPosition = None
+        let mutable vToolbar = None
+        let mutable vClockStyle = None
+        let mutable vDialoguePosition = None
+        let mutable vPortraitSize = None
+        for (key, value) in members do
+            match key with
+            | "hudPosition" -> vHudPosition <- Decode.optional Decode.string (key :: path) value
+            | "toolbar" -> vToolbar <- Decode.optional Decode.boolean (key :: path) value
+            | "clockStyle" -> vClockStyle <- Decode.optional Decode.string (key :: path) value
+            | "dialoguePosition" -> vDialoguePosition <- Decode.optional Decode.string (key :: path) value
+            | "portraitSize" -> vPortraitSize <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { HudPosition = vHudPosition; Toolbar = vToolbar; ClockStyle = vClockStyle; DialoguePosition = vDialoguePosition; PortraitSize = vPortraitSize }
+
+    and encodeUiLayout (value: UiLayout) : Json =
+        JObject(
+            [
+                match value.HudPosition with
+                | Some v -> yield "hudPosition", JString v
+                | None -> ()
+                match value.Toolbar with
+                | Some v -> yield "toolbar", JBool v
+                | None -> ()
+                match value.ClockStyle with
+                | Some v -> yield "clockStyle", JString v
+                | None -> ()
+                match value.DialoguePosition with
+                | Some v -> yield "dialoguePosition", JString v
+                | None -> ()
+                match value.PortraitSize with
+                | Some v -> yield "portraitSize", JNumber v
+                | None -> ()
+            ]
+        )
+
+    and decodeUiNineSlice (path: Path) (json: Json) : UiNineSlice =
+        let members = Decode.object path json
+        let mutable vVisual = VisualRef.Default
+        let mutable vLeft = 0.0
+        let mutable vTop = 0.0
+        let mutable vRight = 0.0
+        let mutable vBottom = 0.0
+        let mutable vScale = None
+        for (key, value) in members do
+            match key with
+            | "visual" -> vVisual <- decodeVisualRef (key :: path) value
+            | "left" -> vLeft <- Decode.number (key :: path) value
+            | "top" -> vTop <- Decode.number (key :: path) value
+            | "right" -> vRight <- Decode.number (key :: path) value
+            | "bottom" -> vBottom <- Decode.number (key :: path) value
+            | "scale" -> vScale <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { Visual = vVisual; Left = vLeft; Top = vTop; Right = vRight; Bottom = vBottom; Scale = vScale }
+
+    and encodeUiNineSlice (value: UiNineSlice) : Json =
+        JObject(
+            [
+                yield "visual", encodeVisualRef value.Visual
+                yield "left", JNumber value.Left
+                yield "top", JNumber value.Top
+                yield "right", JNumber value.Right
+                yield "bottom", JNumber value.Bottom
+                match value.Scale with
+                | Some v -> yield "scale", JNumber v
+                | None -> ()
+            ]
+        )
+
+    and decodeUiSkin (path: Path) (json: Json) : UiSkin =
+        let members = Decode.object path json
+        let mutable vHeadingFont = None
+        let mutable vBodyFont = None
+        let mutable vNumberFont = None
+        let mutable vColors = None
+        let mutable vPanels = None
+        let mutable vIcons = None
+        let mutable vLayout = None
+        let mutable vTitle = None
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "headingFont" -> vHeadingFont <- Decode.optional Decode.string (key :: path) value
+            | "bodyFont" -> vBodyFont <- Decode.optional Decode.string (key :: path) value
+            | "numberFont" -> vNumberFont <- Decode.optional Decode.string (key :: path) value
+            | "colors" -> vColors <- Decode.optional (Decode.dict Decode.string) (key :: path) value
+            | "panels" -> vPanels <- Decode.optional (Decode.dict decodeUiNineSlice) (key :: path) value
+            | "icons" -> vIcons <- Decode.optional (Decode.dict decodeVisualRef) (key :: path) value
+            | "layout" -> vLayout <- Decode.optional decodeUiLayout (key :: path) value
+            | "title" -> vTitle <- Decode.optional decodeUiTitleScreen (key :: path) value
+            | _ -> extra.Add((key, value))
+        { HeadingFont = vHeadingFont; BodyFont = vBodyFont; NumberFont = vNumberFont; Colors = vColors; Panels = vPanels; Icons = vIcons; Layout = vLayout; Title = vTitle; Extra = List.ofSeq extra }
+
+    and encodeUiSkin (value: UiSkin) : Json =
+        JObject(
+            [
+                match value.HeadingFont with
+                | Some v -> yield "headingFont", JString v
+                | None -> ()
+                match value.BodyFont with
+                | Some v -> yield "bodyFont", JString v
+                | None -> ()
+                match value.NumberFont with
+                | Some v -> yield "numberFont", JString v
+                | None -> ()
+                match value.Colors with
+                | Some v -> yield "colors", (Encode.dict JString) v
+                | None -> ()
+                match value.Panels with
+                | Some v -> yield "panels", (Encode.dict encodeUiNineSlice) v
+                | None -> ()
+                match value.Icons with
+                | Some v -> yield "icons", (Encode.dict encodeVisualRef) v
+                | None -> ()
+                match value.Layout with
+                | Some v -> yield "layout", encodeUiLayout v
+                | None -> ()
+                match value.Title with
+                | Some v -> yield "title", encodeUiTitleScreen v
+                | None -> ()
+                yield! value.Extra
+            ]
+        )
+
+    and decodeUiTitleScreen (path: Path) (json: Json) : UiTitleScreen =
+        let members = Decode.object path json
+        let mutable vBackground = None
+        let mutable vScene = None
+        let mutable vLogo = None
+        let mutable vMenuPosition = None
+        for (key, value) in members do
+            match key with
+            | "background" -> vBackground <- Decode.optional decodeVisualRef (key :: path) value
+            | "scene" -> vScene <- Decode.optional Decode.string (key :: path) value
+            | "logo" -> vLogo <- Decode.optional decodeVisualRef (key :: path) value
+            | "menuPosition" -> vMenuPosition <- Decode.optional Decode.string (key :: path) value
+            | _ -> ()
+        { Background = vBackground; Scene = vScene; Logo = vLogo; MenuPosition = vMenuPosition }
+
+    and encodeUiTitleScreen (value: UiTitleScreen) : Json =
+        JObject(
+            [
+                match value.Background with
+                | Some v -> yield "background", encodeVisualRef v
+                | None -> ()
+                match value.Scene with
+                | Some v -> yield "scene", JString v
+                | None -> ()
+                match value.Logo with
+                | Some v -> yield "logo", encodeVisualRef v
+                | None -> ()
+                match value.MenuPosition with
+                | Some v -> yield "menuPosition", JString v
+                | None -> ()
             ]
         )
 

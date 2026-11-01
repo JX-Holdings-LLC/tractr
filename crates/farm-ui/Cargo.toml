@@ -16,5 +16,8 @@ farm-render = { path = "../farm-render", default-features = false }
 serde.workspace = true
 serde_json.workspace = true
 
+[dev-dependencies]
+indexmap.workspace = true
+
 [lints]
 workspace = true

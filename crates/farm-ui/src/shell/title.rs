@@ -31,15 +31,56 @@ pub fn title(ui: &mut Ui, view: &TitleView) -> Option<ShellAction> {
     let screen = ui.screen();
     // Darken the world behind, more at the bottom where the menu sits.
     ui.tint_world(fade(Color::BLACK, 0.4), fade(Color::BLACK, 0.8));
+    let skin = ui.skin().title.clone();
+    // The skin's background art covers the screen (cropped to keep its shape).
+    if let Some(background) = skin.background {
+        let src = background.src;
+        let scale = (screen.width / src.width).max(screen.height / src.height);
+        let (w, h) = (src.width * scale, src.height * scale);
+        ui.list_mut().push(DrawCmd::Image {
+            image: background.image,
+            src,
+            dst: Rect::new((screen.width - w) / 2.0, (screen.height - h) / 2.0, w, h),
+            opacity: 1.0,
+            sampling: background.sampling,
+            tint: None,
+        });
+    }
+
+    // The skin's logo, else the game's title as text.
+    let mut y = 0.0;
+    if let Some(logo) = skin.logo {
+        let room = Rect::new(48.0, screen.height * 0.06, screen.width - 96.0, screen.height * 0.32);
+        let src = logo.src;
+        let scale = (room.width / src.width).min(room.height / src.height);
+        let scale = if logo.sampling == farm_render::Sampling::Nearest && scale >= 1.0 { scale.floor() } else { scale };
+        let (w, h) = (src.width * scale, src.height * scale);
+        let dst = Rect::new(room.x + (room.width - w) / 2.0, room.y + (room.height - h) / 2.0, w, h);
+        ui.list_mut().push(DrawCmd::Image {
+            image: logo.image,
+            src,
+            dst,
+            opacity: 1.0,
+            sampling: logo.sampling,
+            tint: None,
+        });
+        y = dst.bottom();
+    }
+    let lines = if skin.logo.is_some() {
+        Vec::new()
+    } else {
+        ui.wrap(&view.title, (screen.width / 16.0).clamp(34.0, 64.0), FontId::Bold, screen.width - 96.0)
+    };
 
     // Logo text: the game's title.
     let title_size = (screen.width / 16.0).clamp(34.0, 64.0);
     let title_px = ui.font_size(title_size);
-    let lines = ui.wrap(&view.title, title_size, FontId::Bold, screen.width - 96.0);
     let title_font = ui.face(FontId::Bold, &view.title);
     let line_height = ui.line_height(title_size) * 0.92;
     let block = lines.len() as f32 * line_height;
-    let mut y = (screen.height * 0.26 - block / 2.0).max(24.0);
+    if !lines.is_empty() {
+        y = (screen.height * 0.26 - block / 2.0).max(24.0);
+    }
     for line in &lines {
         let baseline = y + (line_height + title_px * 0.727) / 2.0;
         ui.list_mut().push(DrawCmd::Text {
@@ -89,12 +130,19 @@ pub fn title(ui: &mut Ui, view: &TitleView) -> Option<ShellAction> {
     let footer_room = 48.0;
     // Above the host's on-screen controls.
     let safe = ui.safe_area();
-    let top = (y + 28.0).max((safe.height - menu_height - detail_height - footer_room) * 0.62);
+    let top = match skin.menu {
+        crate::skin::MenuPosition::Bottom => (y + 28.0).max(safe.bottom() - menu_height - detail_height - footer_room),
+        _ => (y + 28.0).max((safe.height - menu_height - detail_height - footer_room) * 0.62),
+    };
+    let menu_x = match skin.menu {
+        crate::skin::MenuPosition::Left => 48.0f32.min((screen.width - width) / 2.0),
+        crate::skin::MenuPosition::Right => (screen.width - width - 48.0).max((screen.width - width) / 2.0),
+        _ => (screen.width - width) / 2.0,
+    };
     let mut action = None;
     let default = if view.can_continue { "Continue" } else { "New Game" };
     for (index, (name, key, icon, entry, enabled)) in entries.into_iter().enumerate() {
-        let rect =
-            Rect::new((screen.width - width) / 2.0, top + index as f32 * (button_height + gap), width, button_height);
+        let rect = Rect::new(menu_x, top + index as f32 * (button_height + gap), width, button_height);
         let mut button = Button::new(ui.tr(key)).kind(ButtonKind::Menu).icon(icon).size(16.0).enabled(enabled);
         if name == default {
             button = button.default_focus();

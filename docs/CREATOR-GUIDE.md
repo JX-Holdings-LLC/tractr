@@ -122,6 +122,21 @@ The side panel holds the tools (drag its edge to make it wider):
   below shows every door of the scene; **Duplicate** starts a copy of a door
   on the next free tile, ready to adjust and save.
 
+#### Importing maps from Tiled and LDtk
+
+**Import map** in the scene panel turns a Tiled map (`.tmx`, `.tmj`, with
+its tilesets) or an LDtk level (choose it and **Import level** when the
+project has several) into a scene of up to 512 tiles a side. Tile layers fill
+the background, overlay, object and extra layers; each tile becomes a terrain
+(matched by a `terrain` property such as `terrain=soil`, else made with the
+tile's art), with `walkable`, `plantable` and `water` from its properties.
+Objects become doors, the player start, characters and their schedule
+stops, nodes, machines, lights and event tiles by their type. The message
+lists what didn't map, with the file and the tile; Problems opens the scene
+there. **Re-import map** reads the file again: tiles and markers follow the
+file, crops and soil stay. [Importing art and maps](IMPORTING.md) lists every
+property.
+
 #### Working from the keyboard
 
 Click the map or Tab to it, move the gold editing cursor with the **arrow
@@ -841,6 +856,14 @@ preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
 machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
 
+**Import Aseprite** takes a `.aseprite` file, or the JSON (and PNG) of an
+Aseprite sprite sheet export: each tag becomes a clip with its frame
+durations, each slice a single frame (icons, portraits), and tag names become
+clip names (`walk_down` is `walk-down`). Check the names in the preview, pick
+the asset's type and **Import**. When the file changes, the editor imports it
+again into the same asset, so whatever uses it keeps it; clips you added by
+hand stay ([Importing art and maps](IMPORTING.md)).
+
 Art for the player or an NPC turns and walks when its clips are named by
 direction (`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle`
 and `walk` for any direction): walking, a schedule and a cutscene's **face**
@@ -951,6 +974,25 @@ it shows, and entries: a label, what it shows (text, money, energy, day, an
 item count, a flag or an action button), and for items and actions a pick
 from your game's list. Installed packs with the UI panels permission add
 theirs after yours (see [Mods](#mods)).
+
+The interface skin gives the game its own look. **Import font** adds a
+TrueType or OpenType file; pick it as the heading, body or number font
+(numbers: money, the clock, quantities). Colours replace the theme's (text,
+accent, warning, panel and the rest), as `#rrggbb` or `#rrggbbaa`. Panel art
+is an image drawn in nine parts, its corners kept at their size and its edges
+stretched: one for panels, the HUD, buttons (and their hover, pressed and
+disabled looks), slots, tooltips, the dialogue box and the portrait frame,
+with the edge width in the image's pixels and a scale. Icons replace the
+HUD's money, energy, season, weather and time labels and the toolbar's
+buttons. Layout puts the HUD at the top or bottom, hides the toolbar or the
+clock (or shows a 24-hour one), moves the dialogue box to the top and sets
+the portrait size. The title screen can have background art or a scene of
+the game behind it, a logo in place of the name, and its menu on the left,
+right or at the bottom. **Save skin** applies it; **Reset to built-in look**
+removes it. The player's text size and readable font still apply on top.
+Problems lists a skin part that would keep the built-in look (missing art, a
+file that is not a font, a colour that doesn't read), and checks the game's
+text against the skin's fonts.
 
 ### Mods
 

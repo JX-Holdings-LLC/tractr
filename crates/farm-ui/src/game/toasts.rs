@@ -155,9 +155,11 @@ impl Toasts {
                 ToastKind::Info => (colors.panel, colors.panel_border, Icon::Info, colors.muted),
             };
             if opacity >= 0.99 {
-                ui.panel(rect, fill, fade(border, 0.8), 8.0, true);
+                ui.skinned_panel(crate::skin::Part::Tooltip, rect, fill, fade(border, 0.8), 8.0, true);
             } else {
-                ui.panel(rect, fade(fill, opacity), fade(border, 0.8 * opacity), 8.0, false);
+                if !ui.skin_part(crate::skin::Part::Tooltip, rect) {
+                    ui.panel(rect, fade(fill, opacity), fade(border, 0.8 * opacity), 8.0, false);
+                }
             }
             let mut inner = rect.inset_xy(12.0, 8.0);
             let icon_rect = inner.cut_left(16.0);

@@ -187,6 +187,8 @@ type Edit =
     | SetMine of config: MineConfig
     /// InterfaceEditor: the creator panels shown in play.
     | SetGamePanels of panels: GamePanel list
+    /// The interface skin (#236); `None` resets the built-in look.
+    | SetUiSkin of skin: UiSkin option
 
     // ---- Project (ProjectSettingsEditor.tsx, AssetManager.tsx, ArtBindings.tsx, ModsEditor.tsx) ----
     | SetProjectInfo of name: string * version: string

@@ -911,6 +911,7 @@ dependencies = [
  "farm-render",
  "farm-runtime",
  "farm-sim",
+ "indexmap",
  "serde",
  "serde_json",
 ]

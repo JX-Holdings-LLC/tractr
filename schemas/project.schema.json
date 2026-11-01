@@ -1310,7 +1310,8 @@
                 "player",
                 "art",
                 "sound",
-                "music"
+                "music",
+                "font"
               ]
             },
             {
@@ -2912,6 +2913,10 @@
             "$ref": "#/$defs/GamePanel"
           }
         },
+        "uiSkin": {
+          "description": "The look of the game's interface (`UiSkin`); absent: the built-in look.",
+          "$ref": "#/$defs/UiSkin"
+        },
         "currentSeason": {
           "type": "string",
           "default": ""
@@ -3131,6 +3136,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/TestState"
+          }
+        },
+        "imports": {
+          "description": "The files art and scenes were imported from (Aseprite, Tiled, LDtk), for re-import.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ImportSource"
           }
         },
         "export": {
@@ -3389,6 +3401,50 @@
         "type"
       ],
       "additionalProperties": false
+    },
+    "ImportSource": {
+      "description": "Where an art asset or a scene was imported from (Aseprite, Tiled, LDtk), so importing the file again updates it in place. Only the editor reads it; no game does.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "One of `ImportKinds`.",
+          "anyOf": [
+            {
+              "enum": [
+                "aseprite",
+                "tiled",
+                "ldtk"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": ""
+        },
+        "targetId": {
+          "description": "The asset id (Aseprite) or scene id (Tiled, LDtk) the import made.",
+          "type": "string",
+          "default": ""
+        },
+        "path": {
+          "description": "The file, as the creator picked it.",
+          "type": "string",
+          "default": ""
+        },
+        "level": {
+          "description": "LDtk: the level's identifier.",
+          "type": "string"
+        },
+        "names": {
+          "description": "Aseprite: each tag or slice name and the clip it became.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
     },
     "InteractTileCondition": {
       "description": "Player interacted while facing a tile (or region).",
@@ -7230,6 +7286,180 @@
         "nights": {
           "type": "number",
           "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "UiLayout": {
+      "description": "Where the interface puts things.",
+      "type": "object",
+      "properties": {
+        "hudPosition": {
+          "description": "One of `UiHudPositions`; absent: top.",
+          "anyOf": [
+            {
+              "enum": [
+                "top",
+                "bottom"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "toolbar": {
+          "description": "Show the toolbar buttons (bag, quests, crafting, menu); absent: shown.",
+          "type": "boolean"
+        },
+        "clockStyle": {
+          "description": "One of `UiClockStyles`; absent: `12h`.",
+          "anyOf": [
+            {
+              "enum": [
+                "12h",
+                "24h",
+                "hidden"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "dialoguePosition": {
+          "description": "One of `UiDialoguePositions`; absent: bottom.",
+          "anyOf": [
+            {
+              "enum": [
+                "bottom",
+                "top"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "portraitSize": {
+          "description": "The side of a portrait in the dialogue box, in UI pixels. int, 32..160; absent: 48.",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UiNineSlice": {
+      "description": "A piece of panel art drawn in nine parts: the corners keep their size, the edges stretch along one side and the middle both ways.",
+      "type": "object",
+      "properties": {
+        "visual": {
+          "description": "The image (an asset, and a frame of it for a part of a sheet).",
+          "$ref": "#/$defs/VisualRef"
+        },
+        "left": {
+          "description": "Source pixels of each edge that do not stretch. int, nonnegative.",
+          "type": "number",
+          "default": 0
+        },
+        "top": {
+          "description": "int, nonnegative.",
+          "type": "number",
+          "default": 0
+        },
+        "right": {
+          "description": "int, nonnegative.",
+          "type": "number",
+          "default": 0
+        },
+        "bottom": {
+          "description": "int, nonnegative.",
+          "type": "number",
+          "default": 0
+        },
+        "scale": {
+          "description": "UI pixels per source pixel of the edges. 1..8.",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UiSkin": {
+      "description": "The look of a game's interface: its fonts, panel art, icons, colours, layout and title screen. Absent parts keep the built-in look; the player's text size and readable-font settings apply on top.",
+      "type": "object",
+      "properties": {
+        "headingFont": {
+          "description": "A `font` asset for headings, titles and buttons; absent: the built-in font.",
+          "type": "string"
+        },
+        "bodyFont": {
+          "description": "A `font` asset for body text.",
+          "type": "string"
+        },
+        "numberFont": {
+          "description": "A `font` asset for numbers (money, the clock, quantities).",
+          "type": "string"
+        },
+        "colors": {
+          "description": "Colours by palette role (`UiPaletteRoles`): `#rrggbb` or `#rrggbbaa`.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "panels": {
+          "description": "9-slice art by part (`UiSkinParts`).",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/UiNineSlice"
+          }
+        },
+        "icons": {
+          "description": "Icons by name (`UiSkinIcons`).",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/VisualRef"
+          }
+        },
+        "layout": {
+          "$ref": "#/$defs/UiLayout"
+        },
+        "title": {
+          "$ref": "#/$defs/UiTitleScreen"
+        }
+      },
+      "additionalProperties": true
+    },
+    "UiTitleScreen": {
+      "description": "The title screen: what is behind it, the logo and where the menu sits.",
+      "type": "object",
+      "properties": {
+        "background": {
+          "description": "Art covering the screen; absent: the game's start scene.",
+          "$ref": "#/$defs/VisualRef"
+        },
+        "scene": {
+          "description": "A scene drawn behind the menu instead of the start scene.",
+          "type": "string"
+        },
+        "logo": {
+          "description": "Art drawn in place of the game's name.",
+          "$ref": "#/$defs/VisualRef"
+        },
+        "menuPosition": {
+          "description": "One of `UiMenuPositions`; absent: center.",
+          "anyOf": [
+            {
+              "enum": [
+                "center",
+                "left",
+                "right",
+                "bottom"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "additionalProperties": false

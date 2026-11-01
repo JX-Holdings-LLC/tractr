@@ -133,6 +133,11 @@ module Document =
         | SetWeatherWeight(seasonId, weatherId, weight) -> EditContent.setWeatherWeight seasonId weatherId weight project
         | SetMine config -> EditContent.setMine config project
         | SetGamePanels panels -> EditContent.setGamePanels panels project
+        | SetUiSkin skin ->
+            if project.UiSkin = skin then
+                project
+            else
+                { project with UiSkin = skin }
         | SetProjectInfo(name, version) -> EditProject.setProjectInfo name version project
         | SetSettings settings -> EditProject.setSettings settings project
         | SetExportSettings settings -> EditProject.setExportSettings settings project

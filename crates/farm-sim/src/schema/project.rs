@@ -13,7 +13,7 @@ use super::farm::{BuildingDefinition, BuildingState};
 use super::fishing::FishTable;
 use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
 use super::graphics::{GraphicsSettings, VisualRef};
-use super::interface::GamePanel;
+use super::interface::{GamePanel, UiSkin};
 use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::packs::PackInstallation;
@@ -77,6 +77,9 @@ pub struct GameProject {
     pub graphics: Option<GraphicsSettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_panels: Option<Vec<GamePanel>>,
+    /// The look of the game's interface; absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ui_skin: Option<UiSkin>,
     pub current_season: String,
     #[serde(with = "crate::units::count")]
     pub current_day: u32,

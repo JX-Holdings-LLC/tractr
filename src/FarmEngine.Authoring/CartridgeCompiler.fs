@@ -109,6 +109,8 @@ type CartridgeCompiler =
                 // The game's own panels, then those its packs add (M9).
                 yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [] @ PackMerge.gamePanels project.ContentPacks)
                 yield "showMadeWithCredit", JBool project.Settings.ShowMadeWithCredit
+                // The interface skin (#236): farm-ui draws with it.
+                yield! optional "uiSkin" project.UiSkin SchemaJson.encodeUiSkin
             ]
 
     /// Moves every base64 `data:` URL string inside `json` into `assets` (id → mime, bytes) and

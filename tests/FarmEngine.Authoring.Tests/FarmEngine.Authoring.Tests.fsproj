@@ -42,6 +42,8 @@
     <Compile Include="CharacterArtTests.fs" />
     <Compile Include="PluginSystemsTests.fs" />
     <Compile Include="UpkeepTests.fs" />
+    <Compile Include="ImportTests.fs" />
+    <Compile Include="SkinTests.fs" />
     <Compile Include="ParityTests.fs" />
     <Compile Include="AuthoringEdgesTests.fs" />
     <Compile Include="ProjectSchemaTests.fs" />

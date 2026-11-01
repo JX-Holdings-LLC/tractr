@@ -1,6 +1,6 @@
 //! The desktop GPU renderer against the CPU renderer on the screenshot goldens' screens (title,
 //! settings, gameplay HUD, dialogue, shop at 1280×800 and 1920×1080; a pack minigame, the samples,
-//! a walk with the camera between pixels, Spanish with the readable font): each frame is composed
+//! a walk with the camera between pixels, Spanish with the readable font, a skinned interface): each frame is composed
 //! once ([`Player::frame_composition`]), drawn offscreen by farm-gpu, then rasterized on the CPU
 //! ([`Player::compose_pixels`]), and the two must agree within a small tolerance.
 //!
@@ -81,6 +81,10 @@ fn the_gpu_renderer_draws_the_screenshot_screens_like_the_cpu() {
         for (width, height) in [(1280, 800), (1920, 1080)] {
             failures.extend(compare_scene(&mut gpu, name, width, height));
         }
+    }
+    // An interface skin (#236): 9-slice panels, icons and the game's own fonts.
+    for name in ["skinned-title", "skinned-hud", "skinned-dialogue"] {
+        failures.extend(compare_scene(&mut gpu, name, 1280, 800));
     }
     for name in ["pack-minigame", "sample-cozy", "sample-quest"] {
         failures.extend(compare_scene(&mut gpu, name, 1280, 800));
