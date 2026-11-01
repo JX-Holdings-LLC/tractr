@@ -5,7 +5,6 @@ open FarmEngine.Schemas
 
 /// The result of reading text a creator wrote (a script, a CSV, a bulk edit): the edit to apply,
 /// or what is wrong, each with its line or row.
-[<AllowNullLiteral>]
 type ToolResult(edit: Edit option, errors: string list) =
     /// The edit (one undo step), or null when there are errors.
     member _.Edit: Edit | null =
