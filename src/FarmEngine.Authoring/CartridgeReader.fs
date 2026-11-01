@@ -35,6 +35,8 @@ type CartPlugin =
         GrantedMutations: string list option
         /// The minigame kinds (`packId:name`) the plugin defines that the manifest allows.
         GrantedMinigames: string list
+        /// The pack manifest's `permissions.read` (#237).
+        GrantedReads: string list
     }
 
 /// A cartridge read back: the `Cartridge` table of schemas/cart.fbs with its JSON sections as text.
@@ -199,6 +201,7 @@ module CartridgeReader =
                             GrantedHooks = strings b plugin 3
                             GrantedMutations = field b plugin 4 |> Option.map (fun _ -> strings b plugin 4)
                             GrantedMinigames = strings b plugin 5
+                            GrantedReads = strings b plugin 6
                         }
                 ]
         }

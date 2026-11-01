@@ -49,6 +49,12 @@ module PackRules =
             "addMaxHealth"
             "applyBuff"
             "modifyHealth"
+            // Entities and timers (#238).
+            "spawnEntity"
+            "updateEntity"
+            "removeEntity"
+            "startTimer"
+            "cancelTimer"
         ]
 
     /// What a pack's plugins may answer when its manifest declares no `permissions.mutations`

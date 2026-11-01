@@ -697,6 +697,16 @@ and SlainCondition =
     static member Default: SlainCondition = { MonsterId = ""; Min = 1.0 }
 
 /// Today is an NPC's birthday; an empty `NpcId`: anyone's (M6).
+/// A plugin condition (#239): what the pack plugin that defines `Condition` (`packId:name`, or a project
+/// script's plain name) answers for `Args`. False without that plugin.
+and PluginCondition =
+    {
+        Condition: string
+        Args: Json option
+    }
+
+    static member Default: PluginCondition = { Condition = ""; Args = None }
+
 and BirthdayCondition =
     {
         NpcId: string
@@ -1947,6 +1957,8 @@ and GameProject =
         Minigames: MinigameDef list
         /// Installed content packs (M5). Array order = load order.
         ContentPacks: PackInstallation list
+        /// The creator's own scripts (#241): trusted plugins of the game itself, which use the game's ids as written.
+        Scripts: (ProjectScript list) option
         /// The project's terrains (M1), beside and over the built-in ones.
         Terrains: (TerrainDefinition list) option
         /// The project's tools (M1), beside and over the built-in ones.
@@ -2044,6 +2056,7 @@ and GameProject =
             Actions = []
             Minigames = []
             ContentPacks = []
+            Scripts = None
             Terrains = None
             Tools = None
             ItemCategories = None
@@ -2891,6 +2904,15 @@ and PackPermissions =
         /// (`lantern-catch`); minigame defs play one as `packId:name` (docs/PLUGINS.md). None and
         /// empty both allow none.
         Minigames: (string list) option
+        /// What the pack's plugins may read of the game (#237): `player`, `world`, `people`,
+        /// `content`, and `any` for the game's and other packs' flags. None and empty allow no reads.
+        Read: (string list) option
+        /// Entity types the pack's plugins may define (#238), by local name.
+        Entities: (string list) option
+        /// Item-use handlers the pack's plugins may define (#238), by local name.
+        ItemUses: (string list) option
+        /// Game screens the pack's plugins may add (#240), by local name.
+        Screens: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2903,6 +2925,10 @@ and PackPermissions =
             UiPanels = false
             Mutations = None
             Minigames = None
+            Read = None
+            Entities = None
+            ItemUses = None
+            Screens = None
             Extra = []
         }
 
@@ -2942,6 +2968,19 @@ and PackPlugin =
         /// set = intersection with manifest permissions.minigames.
         Minigames: (string list) option
         Source: string
+        /// Conditions this plugin defines (`api.condition(name, …)`, #239), with their argument forms.
+        Conditions: (PluginFunction list) option
+        /// Outcomes this plugin defines (`api.outcome(name, …)`, #239).
+        Outcomes: (PluginFunction list) option
+        /// Entity types this plugin defines (`api.entity`, #238); effective set = intersection with
+        /// manifest permissions.entities.
+        Entities: (string list) option
+        /// Item-use handlers this plugin defines (`api.itemUse`, #238); effective set =
+        /// intersection with manifest permissions.itemUses.
+        ItemUses: (string list) option
+        /// Game screens this plugin adds (`api.screen`, #240); effective set = intersection with
+        /// manifest permissions.screens.
+        Screens: (PluginScreen list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2954,6 +2993,77 @@ and PackPlugin =
             Hooks = []
             Minigames = None
             Source = ""
+            Conditions = None
+            Outcomes = None
+            Entities = None
+            ItemUses = None
+            Screens = None
+            Extra = []
+        }
+
+/// A condition or outcome a plugin defines (#239): its local name, how the editor shows it, and its arguments.
+and PluginFunction =
+    {
+        Name: string
+        Label: string option
+        Description: string option
+        Args: PluginArgument list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginFunction` with every field at its schema default.
+    static member Default: PluginFunction =
+        {
+            Name = ""
+            Label = None
+            Description = None
+            Args = []
+            Extra = []
+        }
+
+/// One argument of a plugin condition or outcome (#239).
+and PluginArgument =
+    {
+        Name: string
+        Label: string option
+        /// `text`, `number`, `integer`, `bool` or `id` (`PluginArgumentTypes`).
+        Type: string
+        /// For an `id`: the content it names (`item`, `npc`, `quest`, …).
+        Kind: string option
+        /// May be left out.
+        Optional: bool
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginArgument` with every field at its schema default.
+    static member Default: PluginArgument =
+        {
+            Name = ""
+            Label = None
+            Type = ""
+            Kind = None
+            Optional = false
+            Extra = []
+        }
+
+/// A game screen a plugin adds (#240): its local name, its title, and an optional hotkey.
+and PluginScreen =
+    {
+        Name: string
+        Title: string option
+        Hotkey: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginScreen` with every field at its schema default.
+    static member Default: PluginScreen =
+        {
+            Name = ""
+            Title = None
+            Hotkey = None
             Extra = []
         }
 
@@ -3194,6 +3304,43 @@ and ProgressionSettings =
 
     static member Default: ProgressionSettings = { Limits = None; Skills = None }
 
+/// A project script (#241): JavaScript of the game itself (one `scripts/<id>.js` file in a project folder),
+/// with a pack plugin's API but trusted. Its plugin id is `script/<id>`.
+and ProjectScript =
+    {
+        Id: string
+        Name: string option
+        /// The body of `function (api) { … }`.
+        Source: string
+        /// Off: the script does not run.
+        Disabled: bool
+    }
+
+    /// A `ProjectScript` with every field at its schema default.
+    static member Default: ProjectScript =
+        {
+            Id = ""
+            Name = None
+            Source = ""
+            Disabled = false
+        }
+
+/// Budgets of a project's scripts (#241), in fuel (docs/PLUGINS.md "Limits"); None keeps the pack plugin default.
+and ScriptSettings =
+    {
+        FuelPerCall: float option
+        FuelPerSecond: float option
+        InitFuel: float option
+    }
+
+    /// A `ScriptSettings` with every field at its schema default.
+    static member Default: ScriptSettings =
+        {
+            FuelPerCall = None
+            FuelPerSecond = None
+            InitFuel = None
+        }
+
 and ProjectSettings =
     {
         Movement: MovementConfig
@@ -3230,6 +3377,8 @@ and ProjectSettings =
         /// Limits for permanent player upgrades.
         Progression: ProgressionLimits option
         SkillDefinitions: (SkillDefinition list) option
+        /// Budgets of the project's own scripts (#241); None: the pack plugin defaults.
+        Scripts: ScriptSettings option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
@@ -3254,6 +3403,7 @@ and ProjectSettings =
             Combat = None
             Progression = None
             SkillDefinitions = None
+            Scripts = None
         }
 
 and RequestBoard =
@@ -4618,6 +4768,7 @@ and [<RequireQualifiedAccess>] EventCondition =
     | Slain of SlainCondition
     | Birthday of BirthdayCondition
     | Weekday of WeekdayCondition
+    | Plugin of PluginCondition
 
     /// The `type` discriminator.
     member this.Type =
@@ -4657,6 +4808,7 @@ and [<RequireQualifiedAccess>] EventCondition =
         | Slain _ -> "slain"
         | Birthday _ -> "birthday"
         | Weekday _ -> "weekday"
+        | Plugin _ -> "plugin"
 
 
 and ForageSpawnTable =

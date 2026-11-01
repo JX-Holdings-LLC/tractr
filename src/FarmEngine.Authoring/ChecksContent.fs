@@ -326,6 +326,32 @@ module internal ChecksContent =
                 | QuestObjectiveTypes.Bundle when not (hasValue objective.TargetBundleId) -> noTarget "targetBundleId"
                 | _ -> ()))
 
+    /// Whether content of `kind` (a plugin argument's `kind`) has `id`; `None` for kinds that are not checked.
+    let private pluginIdExists (context: Context) (kind: string) (id: string) : bool option =
+        let has (ids: System.Collections.Generic.HashSet<string>) = Some(ids.Contains id)
+
+        match kind with
+        | "item" -> has context.ItemIds
+        | "npc" -> has context.NpcIds
+        | "quest" -> has context.QuestIds
+        | "shop" -> has context.ShopIds
+        | "action" -> has context.ActionIds
+        | "minigame" -> has context.MinigameIds
+        | "machineType" -> has context.MachineTypeIds
+        | "nodeType" -> has context.NodeTypeIds
+        | "crop" -> has context.CropIds
+        | "animalSpecies" -> has context.SpeciesIds
+        | "scene" -> Some(context.Scenes.ContainsKey id)
+        | "weather" -> has context.WeatherIds
+        | "building" -> has context.BuildingIds
+        | "monster" -> has context.MonsterIds
+        | "collection" -> has context.CollectionIds
+        | "bundle" -> has context.BundleIds
+        | "achievement" -> has context.AchievementIds
+        | "mail" -> has context.MailIds
+        | "cutscene" -> has context.CutsceneIds
+        | _ -> None
+
     /// The condition/outcome vocabulary shared by events, actions and minigame tiers (event-forms.tsx).
     /// `sceneId` is the scene tile conditions and tile outcomes are checked against (empty = any).
     let rec private conditions
@@ -553,6 +579,21 @@ module internal ChecksContent =
                         sprintf "%s counts slain missing monster \"%s\"" label s.MonsterId,
                         target
                     )
+            // Plugin conditions (#239): like built-ins, their arguments must fit their form.
+            | EventCondition.Plugin p ->
+                for problem in PluginExtensions.checkUse context.Project "condition" p.Condition p.Args (pluginIdExists context) do
+                    let at =
+                        if problem.Path = "" then
+                            cpath + ".condition"
+                        else
+                            cpath + "." + problem.Path
+
+                    let message = label + ": " + problem.Message
+
+                    if problem.IsError then
+                        sink.Error(sprintf "%s.%s" family problem.Code, at, message, target)
+                    else
+                        sink.Warning(sprintf "%s.%s" family problem.Code, at, message, target)
             | _ -> ())
 
     let private outcomes
@@ -862,6 +903,30 @@ module internal ChecksContent =
             | EventOutcomeTypes.AddMaxHealth -> needs "amount" outcome.Amount.IsSome
             | EventOutcomeTypes.ApplyBuff -> needs "buff" outcome.Buff.IsSome
             | EventOutcomeTypes.ModifyHealth -> needs "amount" outcome.Amount.IsSome
+            // Plugin outcomes (#239).
+            | EventOutcomeTypes.Plugin ->
+                let name =
+                    outcome.Extra
+                    |> List.tryFind (fun (key, _) -> key = "pluginOutcome")
+                    |> Option.bind (snd >> Json.asString)
+                    |> Option.defaultValue ""
+
+                let args =
+                    outcome.Extra |> List.tryFind (fun (key, _) -> key = "args") |> Option.map snd
+
+                for problem in PluginExtensions.checkUse context.Project "outcome" name args (pluginIdExists context) do
+                    let at =
+                        if problem.Path = "" then
+                            opath + ".pluginOutcome"
+                        else
+                            opath + "." + problem.Path
+
+                    let message = label + ": " + problem.Message
+
+                    if problem.IsError then
+                        sink.Error(sprintf "%s.%s" family problem.Code, at, message, target)
+                    else
+                        sink.Warning(sprintf "%s.%s" family problem.Code, at, message, target)
             | _ -> ())
 
     let private events (context: Context) (sink: Sink) =
@@ -2287,6 +2352,20 @@ module internal ChecksContent =
                         "pack.unknownMutation",
                         sprintf "%s.pack.manifest.permissions.mutations[%d]" path k,
                         sprintf "Pack \"%s\" asks for plugin capability \"%s\", which this engine does not know (it is ignored)" manifest.Name entry,
+                        target
+                    ))
+            // Reads (#237): the scopes the read API knows.
+            manifest.Permissions.Read
+            |> Option.defaultValue []
+            |> List.iteri (fun k entry ->
+                if not (List.contains (entry.Trim()) PluginExtensions.ReadScopes) then
+                    sink.Warning(
+                        "pack.unknownRead",
+                        sprintf "%s.pack.manifest.permissions.read[%d]" path k,
+                        sprintf
+                            "Pack \"%s\" asks to read \"%s\", which this engine does not know (it is ignored; use player, world, people, content or any)"
+                            manifest.Name
+                            entry,
                         target
                     ))
             // Minigame kinds: names like pack ids; a plugin defines only what the manifest allows.

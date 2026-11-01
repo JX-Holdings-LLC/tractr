@@ -25,6 +25,8 @@ open FarmEngine.Schemas
 ///   run of `n` tiles of index `i` (`"3*0 1 2*0"`).
 /// - `npcs/<id>.json`, `dialogue/<id>.json`, `items/<id>.json`: one definition each.
 /// - `assets/<id>.<extension>`: the asset's bytes.
+/// - `scripts/<id>.js`: a project script's source (#241); its entry in `project.json` has a
+///   `sourceFile` in place of the `source`.
 module ProjectFolder =
     /// The project's own file in the folder.
     [<Literal>]
@@ -40,7 +42,8 @@ module ProjectFolder =
         ]
 
     /// The folders a project file may name.
-    let private folders = Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets" ]
+    let private folders =
+        Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets"; "scripts" ]
 
     /// Device names Windows refuses as a file name, with or without an extension.
     let private reservedNames =
@@ -336,6 +339,26 @@ module ProjectFolder =
 
                         key, JArray assets
                     | other -> key, other
+                | _, JArray scripts when key = "scripts" ->
+                    // Project scripts (#241): each source in its own `.js` file.
+                    let taken = HashSet<string>()
+
+                    let entries =
+                        scripts
+                        |> List.map (fun script ->
+                            match script, Json.get "source" script with
+                            | JObject scriptMembers, JString source ->
+                                let id = Json.get "id" script |> Json.asString |> Option.defaultValue ""
+                                let path = sprintf "scripts/%s.js" (fileStem taken id)
+                                files.Add(path, Encoding.UTF8.GetBytes source)
+
+                                JObject(
+                                    scriptMembers
+                                    |> List.map (fun (k, v) -> if k = "source" then "sourceFile", JString path else k, v)
+                                )
+                            | other, _ -> other)
+
+                    key, JArray entries
                 | _ -> key, value)
 
         (MainFile, text (JObject members)) :: List.ofSeq files
@@ -428,6 +451,26 @@ module ProjectFolder =
 
                             key, JArray assets
                         | other -> key, other
+                    | _, JArray scripts when key = "scripts" ->
+                        let scripts =
+                            scripts
+                            |> List.map (fun script ->
+                                match Json.get "sourceFile" script, script with
+                                | JString path, JObject scriptMembers ->
+                                    match read path with
+                                    | Ok bytes ->
+                                        let source = JString(Encoding.UTF8.GetString bytes)
+
+                                        JObject(
+                                            scriptMembers
+                                            |> List.map (fun (k, v) -> if k = "sourceFile" then "source", source else k, v)
+                                        )
+                                    | Error error ->
+                                        errors.Add error
+                                        script
+                                | _ -> script)
+
+                        key, JArray scripts
                     | _ -> key, value)
 
             if errors.Count > 0 then

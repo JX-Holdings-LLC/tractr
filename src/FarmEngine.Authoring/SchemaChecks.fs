@@ -181,6 +181,7 @@ module SchemaChecks =
             | EventCondition.Building _
             | EventCondition.Slain _
             | EventCondition.Birthday _
+            | EventCondition.Plugin _
             | EventCondition.Scene _
             | EventCondition.Season _
             | EventCondition.Weather _ -> [])
