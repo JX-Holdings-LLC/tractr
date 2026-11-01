@@ -873,7 +873,7 @@ machines, animals and walking characters, and any art you assign wins.
 
 #### Art sizes
 
-The built-in pack is drawn at **32 pixels per tile**, and creator art that
+The built-in pack is drawn at 32 pixels per tile, and creator art that
 stands on the map follows the same rule, so a frame drawn at the same pixel
 size as the built-in art comes out the same size:
 
@@ -910,10 +910,10 @@ character in those colours, the same colours the player's character
 creator picks, over its appearance's colours: so two NPCs with the same
 appearance can still look different.
 
-A **layered character** is a stack of layer sheets drawn in order, for
+A *layered character* is a stack of layer sheets drawn in order, for
 example body, eyes, hair, top, bottom, shoes, hat and accessory. Every layer
 is an artwork with the same clip names and frame layout (all `walk-left`
-clips have the same frames), and each layer can have a **colour** it is
+clips have the same frames), and each layer can have a colour it is
 multiplied with: draw a layer in light greys and colour it per character.
 An NPC's `layers` and the project's `playerLayers` replace their art when
 not empty. A piece of clothing's **Wear → Layer** (`wear.layer`, an artwork
@@ -926,8 +926,8 @@ many layers costs no more to draw than one with a single sprite.
 
 #### Action animations
 
-The player's art (its first layer, for a layered player) can have **action
-clips** the game plays by itself:
+The player's art (its first layer, for a layered player) can have *action
+clips* the game plays by itself:
 
 - Using a tool plays `use-<action>-<direction>` (`use-till-down`,
   `use-water-left`, `use-break-up`…, the action being the tool's), else

@@ -40,6 +40,12 @@ public sealed class SkinEditorPanel : StackPanel
         Name = "SkinEditor";
         Spacing = 8;
         _message.Name = "SkinMessage";
+        AutomationProperties.SetName(_edge, "Panel edge (pixels)");
+        AutomationProperties.SetName(_scale, "Panel scale");
+        AutomationProperties.SetName(_portrait, "Portrait size");
+        AutomationProperties.SetName(_titleBackground, "Title background art");
+        AutomationProperties.SetName(_titleLogo, "Title logo");
+        AutomationProperties.SetName(_titleScene, "Title scene");
         Children.Add(Ui.Text("INTERFACE SKIN", "section"));
         Children.Add(Ui.Wrapped("Your game's own look: fonts, colours, panel art (drawn in nine parts so corners keep their size), icons and layout. Empty fields keep the built-in look; the player's text size and readable font still apply.", "muted", "small"));
 
