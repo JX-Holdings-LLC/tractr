@@ -160,17 +160,34 @@ are tiles (0 to 511); a `sceneId` left out means the scene the NPC is in
 | `addMaxEnergy`, `addMaxHealth` | `amount`: -1000 to 1000 points, within the game's progression limits |
 | `applyBuff` | `buff`: `id`, `stat`, `amount` (-1000 to 1000), `durationMinutes` (1 to 525,600), and optionally `icon`, `persistsAfterSleep` and `additive`; at most 2048 bytes. Reusing an id restarts that buff. At most 64 buffs are active. |
 
+Entities and timers ([Entities, timers and item use](#entities-timers-and-item-use)):
+
+| Mutation | Fields |
+|---|---|
+| `spawnEntity` | `entityType` (one of the pack's entity types), `sceneId` (optional), `x`, `y`, `art` (optional: an item id, whose kind's art draws the entity), `state` (optional, any JSON, at most 4 KiB) |
+| `updateEntity` | `entityId`, and any of `sceneId`, `x`, `y`, `art`, `state` |
+| `removeEntity` | `entityId` |
+| `startTimer` | `timer` (a name), `minutes` (0 to 525,600) and/or `days` (0 to 3650), at least one minute in all; `data` (optional, any JSON, at most 4 KiB). The same name restarts the timer. |
+| `cancelTimer` | `timer` |
+
 Variables count toward the plugin's 256 different flags per session.
 
 ## Permissions
 
 The manifest's `permissions` are what the player approves when installing
 the pack ([Permissions](PACKS.md#permissions) has the whole list). For
-plugins, three matter:
+plugins, these matter:
 
 - `hooks`: the hooks the pack's plugins may hear.
 - `mutations`: the changes they may answer with (below).
 - `minigames`: the minigame kinds they may define ([Minigames](#minigames)).
+- `read`: what they may read of the game ([Reading the game](#reading-the-game)).
+- `entities`, `itemUses`: the entity types and item-use handlers they may define
+  ([Entities, timers and item use](#entities-timers-and-item-use)).
+- `screens`: the game screens they may add ([Screens](#screens)).
+
+The install review lists all of them, and the plugins' conditions and outcomes
+([Conditions and outcomes](#conditions-and-outcomes)).
 
 ### Mutation capabilities
 
@@ -180,7 +197,8 @@ Each entry of `permissions.mutations` allows one mutation type:
 |---|---|
 | `"message"`, `"playSound"` | Messages and sounds. |
 | `"giveMoney"`, `"takeMoney"`, `"modifyEnergy"`, `"grantXp"`, `"setWeather"`, `"modifyHealth"`, `"setInventorySize"`, `"addInventorySize"`, `"addMaxEnergy"`, `"addMaxHealth"` | That change, with any value its fields allow. |
-| `"setFlag"`, `"giveItem"`, `"takeItem"`, `"modifyFriendship"`, `"startQuest"`, `"warpPlayer"`, `"startDialogue"`, `"performAction"`, `"startMinigame"`, `"moveNpc"`, `"startCutscene"`, `"setVariable"`, `"addVariable"`, `"addShopStock"`, `"removeShopStock"`, `"placeNode"`, `"removeNode"`, `"placeMachine"`, `"removeMachine"`, `"setRelationship"`, `"sendMail"`, `"applyBuff"` | That change, for the pack's **own** content only (below). `"giveItem:own"` means the same. |
+| `"setFlag"`, `"giveItem"`, `"takeItem"`, `"modifyFriendship"`, `"startQuest"`, `"warpPlayer"`, `"startDialogue"`, `"performAction"`, `"startMinigame"`, `"moveNpc"`, `"startCutscene"`, `"setVariable"`, `"addVariable"`, `"addShopStock"`, `"removeShopStock"`, `"placeNode"`, `"removeNode"`, `"placeMachine"`, `"removeMachine"`, `"setRelationship"`, `"sendMail"`, `"applyBuff"`, `"spawnEntity"` | That change, for the pack's **own** content only (below). `"giveItem:own"` means the same. |
+| `"updateEntity"`, `"removeEntity"`, `"startTimer"`, `"cancelTimer"` | That change. Entities can only be changed by plugins of the pack whose type they are, and timers belong to the plugin that started them. |
 | `"giveItem:any"` (any of the types above with `:any`) | That change for any id: the game's content, base content and other packs. |
 | `"*"` | Everything, with any ids. |
 
@@ -264,6 +282,209 @@ a plugin's own flags are `packId:flag`, so a panel can show what the pack's
 plugins keep there. The game shows the panels of its enabled packs, in load
 order, after its own. [county-fair-mod.json](../fixtures/projects/county-fair-mod.json)
 is an example pack with a panel.
+
+## Reading the game
+
+A handler can look at the game while it runs: `api.state` answers read-only
+queries about the state at the step its hook fired at (after that step, before
+any answer applies). Answers are plain JSON in the units the editor shows
+(tiles, whole gold, energy points, game minutes).
+
+```js
+api.on('onTimeOfDay', p => {
+  var me = api.state.player();
+  var here = api.state.tile(me.tileX, me.tileY);
+  if (here && here.crop && !here.crop.watered && api.state.date().weather !== 'rain') {
+    return [{ type: 'message', text: 'Your ' + here.crop.type + ' looks thirsty.' }];
+  }
+  return [];
+});
+```
+
+The manifest's `permissions.read` says what the pack's plugins may read; the
+install review shows it. A query outside it throws in the handler with a "not
+permitted" message (catch it, or let the handler fail without a strike).
+
+| `permissions.read` | Queries |
+|---|---|
+| `player` | `player()`: `sceneId`, `x`/`y` (tiles), `tileX`/`tileY`, `facing`, `money`, `energy`, `maxEnergy`, `health`, `maxHealth`, `equippedTool`, `skills` (level, xp, effective level), `worn`, `buffs`; `inventory()` (`itemId`, `quantity`, `quality`); `itemCount(itemId)` |
+| `world` | `date()`: `day`, `season`, `dayOfSeason`, `year`, `minute`, `weather`, `weekday`, `festival`; `tile(x, y, sceneId?)`: `terrain`, `overlay`, `object`, `collision`, `soil`, `crop` (type, stage, watered, …), `node`, `machine` (type, processing, ready), `entities`; `animals()`; `buildings()`; `entities({ typeId?, sceneId? })`; `timers()` (the pack's own) |
+| `people` | `npc(id)`: `sceneId`, `x`, `y`, `friendship`, `hearts`, `relationship`; `npcs()`; `quest(id)`: `status`, `objectives`, `deadlineDay`; `quests()`; `flag(name)`; `variable(name)` |
+| `content` | `item(id)` (value, type, category, energy, …), `crop(id)` (growth days, stages, seasons, …), `definition(kind, id)` for `item`, `crop`, `npc`, `quest`, `shop`, `recipe`, `machineType`, `nodeType`, `animalSpecies`, `buildingType`, `monster` |
+| `any` | Flags and variables of the game and other packs. Without it `flag('met')` reads the pack's own `packId:met`, like `setFlag` writes it. |
+
+Content ids look for the pack's own definition first (`item('seed')` finds
+`glow-farm:seed`), then the id as written. A missing thing reads as `null`.
+
+- **Deterministic.** The same step gives the same answers on every machine;
+  nothing reads the clock or the frame.
+- **Counted.** Each query costs fuel (10,000 plus 16 per byte of its answer)
+  from the handler's budget, and a handler may make at most 2000.
+- `onLoad` handlers can read too; a plugin's top-level code cannot (there is
+  no game yet), and neither can minigame frames.
+
+## Conditions and outcomes
+
+A plugin can add conditions and outcomes of its own, which events, dialogue
+options, NPC lines, quests, mail, schedules, actions and minigame tiers use
+like the built-in ones:
+
+```js
+api.condition('hasCompanion', (args, state) => state.flag('companion') === args.name);
+api.outcome('rerollRareStock', (args, state) => [
+  { type: 'addShopStock', shopId: args.shopId, itemId: state.date().day % 2 ? 'gem' : 'pearl' },
+]);
+```
+
+Declare them in the plugin, with the argument form the editor shows:
+
+```json
+{
+  "id": "companions",
+  "source": "…",
+  "conditions": [{
+    "name": "hasCompanion", "label": "Has a companion",
+    "args": [{ "name": "name", "label": "Companion", "type": "text" }]
+  }],
+  "outcomes": [{
+    "name": "rerollRareStock", "label": "Reroll rare stock",
+    "args": [{ "name": "shopId", "label": "Shop", "type": "id", "kind": "shop" }]
+  }]
+}
+```
+
+An argument's `type` is `text`, `number`, `integer`, `bool` or `id`; an `id`
+names content of its `kind` (`item`, `npc`, `quest`, `shop`, `scene`, …), and
+`optional: true` lets it be left out. A use is a condition
+`{ "type": "plugin", "condition": "companions:hasCompanion", "args": { "name": "Rex" } }`
+or an outcome
+`{ "type": "plugin", "pluginOutcome": "companions:rerollRareStock", "args": { "shopId": "general" } }`.
+The Problems panel checks the arguments like a built-in's (types, missing
+ids), and reports uses of conditions and outcomes no installed pack defines,
+or whose pack is turned off.
+
+- **Conditions are pure.** A condition answers `true` or `false` and nothing
+  else; it runs in a sandbox instance of its own (apart from the plugin's
+  handlers) with 10 million fuel per call, and reads the game like a handler
+  (`args`, `state`, and a `context` with the speaking NPC and the tile, when
+  there is one). A condition that throws, runs out of fuel or answers
+  something else is **false**, and the debug drawer notes why (once per
+  message). Keep conditions free of variables kept between calls: the
+  instance starts over when the game loads.
+- **Outcomes answer mutations.** An outcome's mutations go through the same
+  checks and queue as a handler's answer, so they apply right before the next
+  tick, and the command log replays them without the plugin.
+- **Replays.** The command log replays plugin outcomes without plugins; a
+  plugin condition is asked again during a replay, so a replay of a game that
+  uses plugin conditions needs its plugins (the player and Play Mode always
+  have them).
+
+## Entities, timers and item use
+
+Plugins can put things in the world that the engine draws and saves.
+
+```js
+api.entity('lantern', {
+  onTick: (lantern, state) => lantern.state.fuel > 0
+    ? [{ type: 'updateEntity', entityId: lantern.id, state: { fuel: lantern.state.fuel - 1 } }]
+    : [{ type: 'updateEntity', entityId: lantern.id, art: 'lantern-dark' }],
+  onInteract: (lantern) => [{ type: 'updateEntity', entityId: lantern.id, art: 'lantern', state: { fuel: 60 } }],
+  onDayStart: (lantern) => [],
+});
+api.itemUse('lantern-kit', (use) => [{ type: 'spawnEntity', entityType: 'lantern', x: use.x, y: use.y, art: 'lantern', state: { fuel: 60 } }]);
+api.timer('festival', (timer, state) => [{ type: 'message', text: 'The festival begins!' }]);
+api.on('onDayStart', () => [{ type: 'startTimer', timer: 'festival', minutes: 120 }]);
+```
+
+- **Entity types** are declared in the plugin's `entities` and the manifest's
+  `permissions.entities` (local names; the type is `packId:name`). An entity
+  has an id (`entity-N`), its type, a tile, an `art` (an item id: the entity
+  is drawn with the art of that item's kind) and a `state` of the plugin's own.
+  The engine saves entities with the game and draws them on their tile (a
+  plain marker without `art`; an item lying on the tile is drawn instead). Its
+  type's plugin hears `onTick` once per game minute, `onDayStart` each
+  morning, and `onInteract` when the player interacts with its tile.
+- **Timers** need `startTimer` in `permissions.mutations`. A timer runs the
+  plugin's `api.timer(name, fn)` handler (`'*'` catches any name) once the
+  clock reaches it, with the `data` it was started with. Timers are saved
+  with the game and fire once.
+- **Item use**: an item whose `useActionId` is `plugin:packId:name` (a plain
+  `plugin:name` means the item's own pack) runs the item-use handler `name`
+  instead of an action, with `{ itemId, sceneId, x, y }`: the tile the
+  player faces. The handler needs `itemUses` in the plugin and in the
+  manifest's permissions. An item with `consumeOnUse` is used up.
+
+Everything above enters the command log as plugin mutations and clock
+steps, so replays reach the same entities and timers without plugins.
+
+## Screens
+
+A plugin can add a screen of its own to the game, built from the game
+interface's widgets so it looks like the rest of the game and follows the
+player's accessibility settings (text size, contrast, focus, keyboard and
+gamepad navigation):
+
+```js
+api.screen('ledger', {
+  title: 'Ledger',
+  hotkey: 'l',
+  draw: (state) => ({ type: 'column', children: [
+    { type: 'heading', text: 'This week' },
+    { type: 'list', items: [{ text: 'Money', detail: String(state.player().money) }] },
+    { type: 'button', label: 'Tip the mayor', action: 'tip', primary: true },
+  ] }),
+  action: (action, state) => action === 'tip' ? [{ type: 'takeMoney', amount: 10 }] : [],
+});
+```
+
+The screen needs `screens` in the plugin (`[{ "name": "ledger", "title": "Ledger", "hotkey": "l" }]`)
+and in the manifest's permissions. Its hotkey opens and closes it while the
+game shows nothing else; the game clock stops while it is open when the
+game's "pauses while a menu is open" setting is on, like any menu. `draw`
+answers one widget each frame the screen is open; `action` answers mutations
+when the player chooses a button, list row, slot or tab (`tab:<id>`), which
+apply at the next tick.
+
+| Widget | Fields |
+|---|---|
+| `text` | `text`, `muted`, `size` (`small`, `normal`, `large`) |
+| `heading` | `text` |
+| `column`, `row` | `children` |
+| `list` | `items`: `text`, `detail`, `icon` (an item), `action` |
+| `slots` | `slots`: `itemId`, `quantity`, `action`; `columns` |
+| `tabs` | `tabs`: `id`, `label`; `selected` |
+| `button` | `label`, `action`, `primary`, `enabled` |
+| `item` | `itemId`, `quantity` |
+| `portrait` | `npcId` |
+| `progress` | `value` (0 to 1), `label` |
+
+A screen whose `draw` fails or answers a malformed tree shows the error in
+its place.
+
+## Project scripts
+
+A creator's own game code does not need a pack: **project scripts** live in
+the project (`scripts`, one `scripts/<id>.js` file each in a project folder)
+and use the same API in the same sandbox, but they are trusted:
+
+- they hear every hook, may answer every mutation and read everything;
+- ids are the game's own, as written: `giveItem` with `itemId: 'turnip'`
+  gives the game's turnip, and a condition, outcome, entity type, item use or
+  screen a script defines has the plain name it gives
+  (`{ "type": "plugin", "condition": "hasCompanion" }`);
+- budgets come from the project's `settings.scripts` (`fuelPerCall`,
+  `fuelPerSecond`, `initFuel`; absent: the pack plugin defaults);
+- an overrun is never a strike: the script restarts and keeps running, and
+  each overrun is an error. Play Mode shows it in the debug drawer with the
+  script's stack for throws (line numbers are the script's own plus one); an
+  exported game logs it.
+
+```json
+"scripts": [{ "id": "economy", "source": "api.on('onDayStart', p => [{ type: 'giveMoney', amount: 5 }]);" }],
+"settings": { "scripts": { "fuelPerCall": 100000000 } }
+```
+
+Player-installed mods stay in the pack tier; only the project holds scripts.
 
 ## Timing
 
@@ -437,6 +658,12 @@ build). They never depend on the machine.
 | Text per draw command / per frame | 200 / 4000 characters | The minigame fails. |
 | Minigame answer (`update` and `draw` together) | 1 MiB | The minigame fails. |
 | Sounds per `update` | 8, each id at most 256 characters | The minigame fails. |
+| Reads per handler call | 2000; each costs 10,000 fuel plus 16 per byte of its answer | Further reads throw. |
+| A read request | 64 KiB | The read throws. |
+| Fuel per condition call | 10 million | The condition is false. |
+| Plugin entities in a game / timers per plugin | 512 / 64 | The mutation is refused. |
+| An entity's state, a timer's data | 4 KiB as JSON | The mutation is refused. |
+| A screen's widgets / nesting / text | 512 widgets, 8 deep, 2000 characters per text | The screen shows the error instead. |
 
 A handler that throws gives no mutations and is not a strike, but the fuel it
 burned counts toward its per-second budget. After a strike the plugin is
@@ -501,3 +728,12 @@ Common causes:
 
 How the sandbox is built and hardened is in
 [Plugin sandbox internals](dev/PLUGIN-SANDBOX.md).
+
+## TypeScript typings
+
+[plugin-api/tractr-plugins.d.ts](plugin-api/tractr-plugins.d.ts) types the whole API: hooks and
+their payloads, mutations, `api.state`, minigames, conditions, outcomes, entities, timers,
+item uses and screens. Start a `.js` or `.ts` file with
+`/// <reference path="tractr-plugins.d.ts" />` (next to a copy of the file) to get completion
+and checks in your editor while you write a plugin or a project script. A test keeps the file
+in step with the engine.
