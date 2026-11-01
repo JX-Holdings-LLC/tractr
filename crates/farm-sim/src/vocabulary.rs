@@ -104,7 +104,7 @@ mod tests {
         let content = GameContent::default();
         assert_eq!(terrains(&content).len(), tile_types::ALL.len());
         assert_eq!(tools(&content).len(), tool_types::ALL.len());
-        assert_eq!(item_categories(&content).len(), 8);
+        assert_eq!(item_categories(&content).len(), crate::schema::item_types::ALL.len());
         assert_eq!(crop_qualities(&content)[0].id, "normal");
         assert_eq!(crop_mutations(&content)[0].id, "ancient");
     }

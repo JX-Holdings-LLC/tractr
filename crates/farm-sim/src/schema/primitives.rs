@@ -37,8 +37,10 @@ pub mod item_types {
     pub const FERTILIZER: &str = "fertilizer";
     pub const MATERIAL: &str = "material";
     pub const FISH: &str = "fish";
+    /// Cooked food: eaten for the item's own `energy`.
+    pub const FOOD: &str = "food";
 
-    pub const ALL: &[&str] = &[SEED, TOOL, CROP, GIFT, QUEST, FERTILIZER, MATERIAL, FISH];
+    pub const ALL: &[&str] = &[SEED, TOOL, CROP, GIFT, QUEST, FERTILIZER, MATERIAL, FISH, FOOD];
 }
 
 /// TS `ToolTypeSchema`.
