@@ -80,6 +80,7 @@ fn creator_art_npcs_turn_and_walk_like_the_player() {
         name: name.into(),
         r#loop: true,
         frames: vec![ArtFrame { asset_id: None, x, y: 0.0, width: 16.0, height: 16.0, ticks: 1.0 }],
+        ..AnimationClip::default()
     };
     let mut project = starter();
     project.custom_assets.push(CustomAsset {

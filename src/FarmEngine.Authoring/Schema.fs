@@ -808,10 +808,28 @@ and AnimationClip =
         Loop: bool
         /// 1..1024 frames.
         Frames: ArtFrame list
+        /// An action clip (#235: `use-till-down`, `eat`, …) keeps the player in place until it ends.
+        LockMovement: bool option
+        /// An action clip's impact frame (0 = the first): the tool's effect applies when it shows;
+        /// absent: at once. int, nonnegative.
+        ImpactFrame: float option
+        /// A drawing effect while the clip plays: one of `ClipEffects`.
+        Effect: string option
+        /// The item the action is about (eaten, held up) is drawn over the character.
+        HoldItem: bool option
     }
 
     /// A `AnimationClip` with every field at its schema default.
-    static member Default: AnimationClip = { Name = ""; Loop = true; Frames = [] }
+    static member Default: AnimationClip =
+        {
+            Name = ""
+            Loop = true
+            Frames = []
+            LockMovement = None
+            ImpactFrame = None
+            Effect = None
+            HoldItem = None
+        }
 
 /// Rectangles are in source pixels; display size remains independent of art resolution.
 and ArtFrame =
@@ -1270,6 +1288,9 @@ and CustomAsset =
         TileType: string option
         /// Present when the image is an animated sprite sheet (M7).
         Sheet: SpriteSheet option
+        /// How many of the image's pixels make one tile when it stands on the map (#215); absent:
+        /// frames up to 32×32 fill the tile, larger ones are drawn at 32 pixels per tile. int, positive.
+        PixelsPerTile: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1286,6 +1307,7 @@ and CustomAsset =
             DataUrl = ""
             TileType = None
             Sheet = None
+            PixelsPerTile = None
             Extra = []
         }
 
@@ -1433,6 +1455,8 @@ and CutsceneStep =
         Outcomes: EventOutcome list
         /// A move waits for the actor to arrive before the next step (absent: it waits).
         Wait: bool option
+        /// The clip an `animate` step plays on its actor (#235).
+        Animation: string option
     }
 
     /// A `CutsceneStep` with every field at its schema default.
@@ -1457,6 +1481,7 @@ and CutsceneStep =
             SoundId = None
             Outcomes = []
             Wait = None
+            Animation = None
         }
 
 and Dialogue =
@@ -1919,6 +1944,8 @@ and GameProject =
         CustomAssets: CustomAsset list
         CustomCrops: (CustomCropDefinition list) option
         PlayerVisual: VisualRef option
+        /// The player as a stack of layer sheets (#234), replacing `playerVisual` when not empty.
+        PlayerLayers: (CharacterLayer list) option
         Graphics: GraphicsSettings option
         GamePanels: (GamePanel list) option
         CurrentSeason: string
@@ -2022,6 +2049,7 @@ and GameProject =
             CustomAssets = []
             CustomCrops = None
             PlayerVisual = None
+            PlayerLayers = None
             Graphics = None
             GamePanels = None
             CurrentSeason = ""
@@ -2616,6 +2644,12 @@ and Npc =
         Portraits: (NpcPortrait list) option
         /// The NPC can be dated and married, when the game allows it (M4).
         Romanceable: bool option
+        /// Colours for the built-in base character (#216): an NPC with a look and no art of its
+        /// own is drawn as the base character in these colours.
+        Look: PlayerLook option
+        /// The NPC as a stack of layer sheets (#234), drawn in order; replaces its visual and
+        /// built-in art when not empty.
+        Layers: (CharacterLayer list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2642,8 +2676,23 @@ and Npc =
             Lines = None
             Portraits = None
             Romanceable = None
+            Look = None
+            Layers = None
             Extra = []
         }
+
+/// One layer of a layered character (#234): a custom asset whose clips have the same names and
+/// frame layout as the character's other layers, optionally tinted.
+and CharacterLayer =
+    {
+        /// The layer's art (a custom asset id).
+        AssetId: string
+        /// A `#rrggbb` the layer is multiplied with.
+        Color: string option
+    }
+
+    /// A `CharacterLayer` with every field at its schema default.
+    static member Default: CharacterLayer = { AssetId = ""; Color = None }
 
 /// TS `NPCSchema.birthday` (inline object).
 and NpcBirthday =
@@ -4351,6 +4400,9 @@ and WearDefinition =
         Color: string option
         /// Art drawn over the player (a hat), facing like the player.
         Visual: VisualRef option
+        /// A layer sheet (a custom asset id, #234) drawn over the character while worn, with the
+        /// same clips and frame layout as the character's art; tinted with `color` when set.
+        Layer: string option
     }
 
     /// A `WearDefinition` with every field at its schema default.
@@ -4359,6 +4411,7 @@ and WearDefinition =
             Slot = ""
             Color = None
             Visual = None
+            Layer = None
         }
 
 /// Player entered a tile (or region when x2/y2 present).

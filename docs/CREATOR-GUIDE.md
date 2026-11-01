@@ -439,7 +439,9 @@ until it ends, and the clock follows the pause in modals setting.
 - **move**: walks the player or an NPC to a tile (waiting for them to arrive,
   unless told not to); **face** turns them; **emote** shows a bubble over them
   (`exclaim`, `question`, `heart`, `music`, `anger`, `sweat`, `sleep`,
-  `idea`).
+  `idea`); **animate** plays a named clip of their art (an action clip
+  such as `hold-up`, or any clip) for some seconds (1 by default), waiting
+  for it unless told not to.
 - **wait**: pauses for some seconds.
 - **camera**: pans to a tile or follows a character; a camera step with
   neither returns to the player. **fade**: fades the screen out to a colour,
@@ -820,6 +822,90 @@ and `walk` for any direction): walking, a schedule and a cutscene's **face**
 and **move** steps pick the clip. A game without art of its own still looks
 like a game: Tractr's built-in pixel-art pack draws tiles, crops, trees,
 machines, animals and walking characters, and any art you assign wins.
+
+#### Art sizes
+
+The built-in pack is drawn at **32 pixels per tile**, and creator art that
+stands on the map follows the same rule, so a frame drawn at the same pixel
+size as the built-in art comes out the same size:
+
+- Art for something standing on a tile (the player, NPCs, animals,
+  monsters, crops, dropped items, nodes and machines): a frame up to 32×32
+  pixels is scaled to fill the tile. A larger frame is drawn at 32 pixels
+  per tile, centred on the tile and standing on its bottom edge: a 32×48
+  character stands a tile and a half tall, like the built-in ones, and a
+  64×64 frame covers 2×2 tiles. For high-resolution art set the asset's
+  **pixels per tile** (`pixelsPerTile`, for example 64 for art drawn at
+  twice the size): every frame of that asset is then drawn at that scale.
+- Ground tiles, overlays and extra layers fill their tile. Buildings fit
+  their footprint plus one tile above it.
+
+| What | Size | Notes |
+|---|---|---|
+| Ground tile, overlay | 32×32 | Scaled to fill the tile. Terrains that join up use an `autotile` clip of 16 frames. |
+| Player, NPC | 32×48 | The built-in characters' size: 1.5 tiles tall. Clips by direction: `idle-down`, `idle-left`, `idle-right`, `idle-up`, `walk-down`, … (`idle` and `walk` for any direction). |
+| Crop | 32×48 (up to 32×32 fills the tile) | A clip named `growth` with one frame per growth stage, in order: a newly planted crop shows the first frame, and the last frame stays for any later stage. |
+| Item, node, machine, animal, monster | 32×32 (larger: 32 pixels per tile) | Built-in crops, machines and animals are 32×48, trees 32×64. |
+| Tall object (a terrain with **Tall**) | 32 × (32 + 32 × tall) | Tall is a whole number of tiles, 0 to 8. The art fits a box one tile wide and 1 + tall tiles high, standing on the tile's bottom edge, so a 1.5-tile prop (32×48) uses tall 1; pad it to 32×64 only if you want it to fill the box when the art is resized. |
+| Dialogue portrait | square, 48×48 | The portrait (or, without one, the NPC's art) is fitted into 48×48 inside a circle of 25 pixels radius: keep the face in the centre. Whole-number scales keep pixel art crisp. |
+| Export icon | PNG, at least 256×256 | Settings → Export. |
+
+#### Character looks and layers
+
+An NPC without art of its own uses the built-in art of its **Appearance**:
+the hand-drawn `farmer`, `merchant` and `villager`, or one of the base
+characters in built-in colours, `fisher`, `miner`, `baker`, `doctor`,
+`blacksmith`, `noble`, `gardener` and `sailor` (an appearance that contains
+one of these names picks it). An NPC's **Look** (`look`: `skin`, `hair`,
+`shirt`, `pants` and `accent`, each `#rrggbb`) draws it as the base
+character in those colours, the same colours the player's character
+creator picks, over its appearance's colours: so two NPCs with the same
+appearance can still look different.
+
+A **layered character** is a stack of layer sheets drawn in order, for
+example body, eyes, hair, top, bottom, shoes, hat and accessory. Every layer
+is an artwork with the same clip names and frame layout (all `walk-left`
+clips have the same frames), and each layer can have a **colour** it is
+multiplied with: draw a layer in light greys and colour it per character.
+An NPC's `layers` and the project's `playerLayers` replace their art when
+not empty. A piece of clothing's **Wear → Layer** (`wear.layer`, an artwork
+id) is drawn over the player while worn, trousers first, then the shirt,
+then the hat, tinted with the item's wear colour; it works over the
+built-in player too when it has the built-in sheet's layout (32×48 frames).
+Layers of different sizes stand on the same bottom edge, centred. The game
+composes each frame of a character once and reuses it, so a character with
+many layers costs no more to draw than one with a single sprite.
+
+#### Action animations
+
+The player's art (its first layer, for a layered player) can have **action
+clips** the game plays by itself:
+
+- Using a tool plays `use-<action>-<direction>` (`use-till-down`,
+  `use-water-left`, `use-break-up`…, the action being the tool's), else
+  `use-<action>`, else `use-<direction>` or `use`. A fishing rod tries
+  `fish-cast-<direction>` and `fish-cast` first.
+- Eating or using an item plays `eat-<direction>`, `eat`, then the `use`
+  clips.
+- A cutscene's **animate** step plays any named clip on the player or an
+  NPC.
+
+Without a matching clip the character keeps its walk frame and nothing
+changes. A clip's options:
+
+- **Lock movement** (`lockMovement`): the player stays in place, and further
+  tool presses wait, until the clip ends.
+- **Impact frame** (`impactFrame`, 0 for the first frame): the tool's effect
+  (tilled soil, a watered tile, a broken rock) happens when this frame
+  shows; without one it happens at once.
+- **Effect** (`effect`): `flash` (blinks), `shake` (a pixel left and right)
+  or `squash` (squashed down for a moment at the impact frame).
+- **Hold item** (`holdItem`): the item eaten is drawn over the character's
+  head.
+
+All timing comes from the frames' ticks, not from the frame rate, so a
+recorded playthrough plays back the same. The built-in characters have no
+action clips.
 
 ### Workshop
 

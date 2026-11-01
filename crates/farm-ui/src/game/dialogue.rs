@@ -27,7 +27,14 @@ pub(crate) fn portrait_sprite(view: &GameView<'_>, npc: &Npc, expression: Option
     portrait
         .and_then(|portrait| resolve_visual(view.art.assets, Some(&portrait.visual), 0.0, "down", false))
         .or_else(|| resolve_visual(view.art.assets, npc.visual.as_ref(), 0.0, "down", false))
-        .or_else(|| view.art.builtin.and_then(|art| art.npc(Some(npc.appearance.as_str()), Some("down"), 0.0, false)))
+        .or_else(|| {
+            // The built-in art, recoloured by the NPC's look (#216).
+            let appearance = Some(npc.appearance.as_str());
+            let key = farm_render::look::npc_look_key(npc.look.as_ref(), appearance);
+            view.art.builtin.and_then(|art| {
+                farm_render::look::npc_sprite(art, appearance, key.as_deref(), Some("down"), 0.0, false)
+            })
+        })
 }
 
 pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {

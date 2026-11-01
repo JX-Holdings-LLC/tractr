@@ -349,6 +349,27 @@ impl ImageStore {
         ImageId(id)
     }
 
+    /// The image cached under `source`, else the one `make` builds (from the images already in
+    /// the store), cached under it; a `None` from `make` is cached as missing too. Generated
+    /// images (composed character layers, #234) use it.
+    pub fn get_or_insert_with(
+        &mut self,
+        source: &str,
+        make: impl FnOnce(&ImageStore) -> Option<Image>,
+    ) -> Option<ImageId> {
+        if let Some(&id) = self.by_content.get(source) {
+            return self.touch(id);
+        }
+        let image = make(self);
+        let id = self.next_id;
+        self.next_id = self.next_id.wrapping_add(1).max(1);
+        let source: Arc<str> = Arc::from(source);
+        self.by_content.insert(Arc::clone(&source), id);
+        self.entries.insert(id, Entry { source, image, last_used: self.clock + 1 });
+        self.evict();
+        self.touch(id)
+    }
+
     /// Drops the image cached under `source` (one the host inserted, or a decoded source).
     /// Returns whether there was one.
     pub fn remove_source(&mut self, source: &str) -> bool {

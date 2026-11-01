@@ -158,6 +158,9 @@ pub struct Presentation {
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
+    /// The player's layer sheets (#234).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub player_layers: Option<Vec<crate::schema::CharacterLayer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
     pub game_panels: Vec<GamePanel>,
@@ -173,6 +176,7 @@ impl Presentation {
             custom_assets: project.custom_assets.clone(),
             custom_crops: project.custom_crops.clone(),
             player_visual: project.player_visual.clone(),
+            player_layers: project.player_layers.clone(),
             graphics: project.graphics.clone(),
             // The game's own panels, then those its packs add (M9).
             game_panels: project

@@ -888,6 +888,7 @@ impl Player {
         game.graphics.refresh_live_state(content, state);
         // Walking on its own or in a cutscene (`shell_snapshot` knows both).
         let moving = snapshot.player.moving;
+        snapshot.player.action = session.action_view();
         apply_graphics(&mut snapshot, &game.graphics, scene, state.clock.tick as f64, moving);
         Some((snapshot, world, target))
     }
@@ -1342,6 +1343,7 @@ impl Player {
         session.set_plugins(plugins);
         session.set_reduced_motion(self.settings.accessibility.reduced_motion);
         let graphics = GraphicsSource::from_state(&self.def.presentation, session.content(), session.state());
+        session.set_action_art(farm_render::actions::player_asset(&graphics).cloned());
         for error in session.plugin_errors() {
             self.plugin_error_toast(&error);
         }

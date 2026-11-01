@@ -254,7 +254,12 @@ fn an_autotiled_terrain_with_art_picks_the_frame_for_its_neighbours() {
         name: "Water".into(),
         r#type: "tile".into(),
         data_url: "data:image/png;base64,AAAA".into(),
-        animations: Some(vec![AnimationClip { name: "autotile".into(), r#loop: false, frames: frames.collect() }]),
+        animations: Some(vec![AnimationClip {
+            name: "autotile".into(),
+            r#loop: false,
+            frames: frames.collect(),
+            ..AnimationClip::default()
+        }]),
         ..CustomAsset::default()
     });
     project.terrains = Some(vec![TerrainDefinition {

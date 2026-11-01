@@ -104,6 +104,7 @@ type CartridgeCompiler =
                 yield "customAssets", Encode.list SchemaJson.encodeCustomAsset (AssetUsage.used project)
                 yield! optional "customCrops" project.CustomCrops (Encode.list SchemaJson.encodeCustomCropDefinition)
                 yield! optional "playerVisual" project.PlayerVisual SchemaJson.encodeVisualRef
+                yield! optional "playerLayers" project.PlayerLayers (Encode.list SchemaJson.encodeCharacterLayer)
                 yield! optional "graphics" project.Graphics SchemaJson.encodeGraphicsSettings
                 // The game's own panels, then those its packs add (M9).
                 yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [] @ PackMerge.gamePanels project.ContentPacks)
