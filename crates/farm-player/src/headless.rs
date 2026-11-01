@@ -560,12 +560,13 @@ mod tests {
         let cart = farm_cart::load_cartridge(CART).unwrap();
         let item = cart.content.items[0].id.clone();
         let scene = cart.content.scenes[0].id.clone();
+        let (x, y) = ((cart.content.scenes[0].width - 1).min(1), (cart.content.scenes[0].height - 1).min(2));
         let json = format!(
             r#"{{"seed":"x","inputs":[
                 {{"kind":"debug","action":{{"type":"giveItem","itemId":"{item}","quantity":3}}}},
                 {{"kind":"debug","action":{{"type":"skipDay","days":3}}}},
-                {{"kind":"debug","action":{{"type":"teleport","sceneId":"{scene}","x":1,"y":2,"facing":"up"}}}},
-                {{"kind":"tick","ticks":10}}],
+                {{"kind":"debug","action":{{"type":"teleport","sceneId":"{scene}","x":{x},"y":{y},"facing":"up"}}}},
+                {{"kind":"debug","action":{{"type":"addMoney","amount":5}}}}],
               "expect":[{{"item":"{item}","quantity":3}},{{"scene":"{scene}"}}]}}"#
         );
         let replay = ReplayFile::parse(&json).unwrap();
@@ -573,6 +574,7 @@ mod tests {
         let second = run_cartridge(CART, &replay, None).unwrap();
         assert_eq!(first.report.state_hash, second.report.state_hash);
         assert_eq!(first.report.clock.day, 4);
-        assert_eq!((first.report.clock.x, first.report.clock.y), (1, 2));
+        assert_eq!((first.report.clock.x, first.report.clock.y), (x, y));
+        assert!(first.report.notes.is_empty(), "{:?}", first.report.notes);
     }
 }
