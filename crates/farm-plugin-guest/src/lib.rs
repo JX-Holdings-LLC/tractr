@@ -12,7 +12,7 @@
 //! |---|---|---|
 //! | `fp_buffer` | `(len: i32) -> i32` | Make the I/O buffer `len` bytes long; returns its address. |
 //! | `fp_prepare` | `(heap_limit, max_string_len: i32) -> i32` | Build the runtime, harden it and set up the bootstrap: everything plugins share. |
-//! | `fp_init` | `(granted_len, source_len: i32) -> i32` | The buffer holds the granted-hooks JSON array, then the plugin source. Compiles the plugin and runs its top level. |
+//! | `fp_init` | `(granted_len, source_len: i32) -> i32` | The buffer holds the granted-hooks JSON: an array, or (ABI 2) `{ "hooks": [...], "pack": "packId", "script": bool }`, where `"*"` grants every hook (a trusted project script); then the plugin source. Compiles the plugin and runs its top level. |
 //! | `fp_dispatch` | `(hook_len, payload_len: i32) -> i32` | The buffer holds the hook name, then the payload JSON. Calls the plugin's handler. |
 //! | `fp_output_ptr` / `fp_output_len` | `() -> i32` | The output text of the last call. |
 //! | `fp_abi_version` | `() -> i32` | [`ABI_VERSION`]: 2 since the host calls below. |
@@ -171,18 +171,30 @@ const HARDENING: &str = r#"(function harden() {
 /// null-prototype map the plugin can't reach. `dispatch` returns `undefined` when no handler is
 /// registered, else the JSON of the handler's array result (`"[]"` for anything else).
 /// `call` is the native host call ([`js_host`]); `api.host(request)` wraps it (ABI 2).
-const BOOTSTRAP: &str = r#"(function () {
+///
+/// The plugin's `api` is `extend(base, pack, script)` ([`PRELUDE`]), evaluated once with the
+/// bootstrap, so a plugin's start does not pay for compiling it. The granted JSON is an array of
+/// hooks (ABI 1) or `{ "hooks": [...], "pack": "packId", "script": true }` (ABI 2; `script`
+/// marks a trusted project script).
+const BOOTSTRAP: &str = concat!(
+    r#"(function () {
   const parse = JSON.parse, stringify = JSON.stringify, isArray = Array.isArray;
   const create = Object.create, freeze = Object.freeze, hasOwn = Object.prototype.hasOwnProperty;
   const ErrorType = Error, TypeErrorType = TypeError;
+  const extend = "#,
+    include_str!("prelude.js"),
+    r#";
   return function bootstrap(grantedJson, factory, call) {
     const granted = create(null);
-    const list = parse(grantedJson);
+    const spec = parse(grantedJson);
+    const list = isArray(spec) ? spec : spec.hooks;
+    const pack = !isArray(spec) && typeof spec.pack === 'string' ? spec.pack : '';
+    const script = !isArray(spec) && spec.script === true;
     for (let i = 0; i < list.length; i++) granted[list[i]] = true;
     const handlers = create(null);
     const api = freeze({
       on: function on(hook, fn) {
-        if (typeof hook === 'string' && granted[hook] === true) handlers[hook] = fn;
+        if (typeof hook === 'string' && (granted[hook] === true || granted['*'] === true)) handlers[hook] = fn;
       },
       host: function host(request) {
         const text = stringify(request);
@@ -194,7 +206,7 @@ const BOOTSTRAP: &str = r#"(function () {
         return answer === null || typeof answer !== 'object' ? undefined : answer.ok;
       },
     });
-    factory(api);
+    factory(extend(api, pack, script));
     return function dispatch(hook, payloadJson) {
       const handler = handlers[hook];
       if (handler === undefined) return undefined;
@@ -202,7 +214,12 @@ const BOOTSTRAP: &str = r#"(function () {
       return isArray(result) ? stringify(result) : '[]';
     };
   };
-})()"#;
+})()"#
+);
+
+/// The plugin API on top of `api.on` and `api.host` (`prelude.js`): `api.state`, minigames,
+/// conditions, outcomes, entities, item uses, timers and screens.
+pub const PRELUDE: &str = include_str!("prelude.js");
 
 const NOT_A_FUNCTION_BODY: &str = "plugin source must be a function body (unbalanced braces?)";
 

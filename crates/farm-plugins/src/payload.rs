@@ -23,6 +23,12 @@ pub fn to_engine_json<T: Serialize>(value: &T) -> String {
 /// The payload of a hook event as JSON text (`{"day":2,"season":"spring","year":1}` for
 /// `onDayStart`).
 pub fn hook_payload_json(event: &HookEvent) -> String {
+    // A plugin system's hook carries its own payload (#238, #239).
+    if let HookEvent::Extension(extension) = event {
+        let mut out = String::new();
+        write(&mut out, &extension.payload);
+        return out;
+    }
     let mut tagged = serde_json::to_value(event).expect("hook events always serialize");
     let payload = tagged.get_mut("payload").map(Value::take).unwrap_or(Value::Null);
     let mut out = String::new();

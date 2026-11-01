@@ -18,9 +18,9 @@ both crates (`--lint`).
 
 ## Recorded build
 
-- sha256: `a9ded418fc937f3d7dc40a1f4b7ae0503c85f006e548679a71e05fdb01348f27`
-- size: 736150 bytes
-- inputs sha256: `716c10b47c93b3f03fc3487b77f23a0f5f69dc0584f03a0ed8d43eba9ff600f9`
+- sha256: `206c16f38c49ff373f7664104d4097f805c2e9b46b75ade6794bf67837e33670`
+- size: 743927 bytes
+- inputs sha256: `2a75ea08e0be24ca47994870a76811ee29884ee5fa740b1286b32107db279577`
 
 The inputs hash covers the files of `crates/farm-plugin-guest` and `tools/plugin-guest/meter`
 (without `target/`) and `tools/plugin-guest/build.sh`; the script prints it and

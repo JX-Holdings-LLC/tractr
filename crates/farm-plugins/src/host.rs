@@ -1,7 +1,8 @@
 //! The plugin host: one isolated QuickJS instance per plugin (port of `JintPluginHost`).
 
 use crate::capabilities::{check_answer, KeyBudget, MutationGrants};
-use crate::minigame::{wrapped_source, MinigameLimits, PackMinigame};
+use crate::minigame::{MinigameLimits, PackMinigame};
+use crate::reads::{GameView, ReadGrants, ReadHost};
 use crate::sandbox::{self, status, EngineLimits, GuestFault, GuestInstance, Sandbox, WasmiEngine, MAX_RESULT_BYTES};
 use crate::{PluginDispatchResult, PluginError, PluginErrorKind, PluginSpec};
 use serde_json::Value;
@@ -16,9 +17,49 @@ pub trait PluginHost {
     /// returns. `payload_json` is the hook payload as JSON text.
     fn dispatch(&mut self, hook: &str, payload_json: &str) -> Vec<PluginDispatchResult>;
 
+    /// [`PluginHost::dispatch`] at a step of `game`: the handlers' reads (`api.state`, #237)
+    /// answer from it. Hosts without the read API ignore it.
+    fn dispatch_in(
+        &mut self,
+        hook: &str,
+        payload_json: &str,
+        _game: Option<GameView<'_>>,
+    ) -> Vec<PluginDispatchResult> {
+        self.dispatch(hook, payload_json)
+    }
+
+    /// [`PluginHost::dispatch_to`] at a step of `game`.
+    fn dispatch_to_in(
+        &mut self,
+        plugin_id: &str,
+        hook: &str,
+        payload_json: &str,
+        _game: Option<GameView<'_>>,
+    ) -> Option<PluginDispatchResult> {
+        self.dispatch_to(plugin_id, hook, payload_json)
+    }
+
+    /// Run the handler of `hook` (a plugin screen, #240) in the first plugin, in spec order,
+    /// that has one, and return what it answered as JSON, unchecked; `None` when no plugin
+    /// has a handler. Errors are the plugin's.
+    fn call_value(
+        &mut self,
+        _hook: &str,
+        _payload_json: &str,
+        _game: Option<GameView<'_>>,
+    ) -> Option<Result<Value, PluginError>> {
+        None
+    }
+
     /// Dispatch `hook` to the one plugin `plugin_id`, if it is granted the hook (`onLoad`, which
     /// each plugin hears with its own saved data). `None` when it has nothing to say.
     fn dispatch_to(&mut self, _plugin_id: &str, _hook: &str, _payload_json: &str) -> Option<PluginDispatchResult> {
+        None
+    }
+
+    /// Check `raw`, mutations a plugin granted `hook` answered outside a dispatch (a screen
+    /// action, #240), against that plugin's capabilities. `None` when no plugin has the hook.
+    fn check_answer_for(&mut self, _hook: &str, _raw: &Value) -> Option<PluginDispatchResult> {
         None
     }
 
@@ -91,6 +132,8 @@ pub struct PluginHostOptions {
     pub max_rebuilds: u32,
     /// Budgets and bounds of pack-defined minigame sessions ([`WasmPluginHost::start_minigame`]).
     pub minigame: MinigameLimits,
+    /// Budgets of project scripts (#241, [`PluginSpec::trusted`]); `None`: the budgets above.
+    pub script_budgets: Option<crate::ScriptBudgets>,
 }
 
 impl Default for PluginHostOptions {
@@ -110,6 +153,7 @@ impl Default for PluginHostOptions {
             strike_window: 100,
             max_rebuilds: 10,
             minigame: MinigameLimits::default(),
+            script_budgets: None,
         }
     }
 }
@@ -120,6 +164,7 @@ const REBUILD_FUEL_FLOOR: u64 = 10_000_000;
 struct Entry {
     spec: PluginSpec,
     granted_json: String,
+    reads: ReadGrants,
     grants: MutationGrants,
     keys: KeyBudget,
     instance: Option<Box<dyn GuestInstance>>,
@@ -196,8 +241,13 @@ impl WasmPluginHost {
         let mut entries: Vec<Entry> = specs
             .into_iter()
             .map(|spec| Entry {
-                granted_json: serde_json::to_string(&spec.granted_hooks).expect("strings serialize"),
-                grants: MutationGrants::new(spec.granted_mutations.as_deref()),
+                granted_json: spec.granted_json(),
+                reads: if spec.trusted { ReadGrants::trusted() } else { ReadGrants::new(&spec.granted_reads) },
+                grants: if spec.trusted {
+                    MutationGrants::all()
+                } else {
+                    MutationGrants::new(spec.granted_mutations.as_deref())
+                },
                 keys: KeyBudget::default(),
                 spec,
                 instance: None,
@@ -252,12 +302,13 @@ impl WasmPluginHost {
                 host.disable_at_start(index, &reason);
                 continue;
             }
-            let fuel = host.options.init_fuel.min(host.options.init_fuel_total - init_fuel_used);
+            let own_init = host.budget(index, |b| b.init_fuel, host.options.init_fuel);
+            let fuel = own_init.min(host.options.init_fuel_total - init_fuel_used);
             let result = host.initialize(index, fuel);
             let entry = &mut host.entries[index];
             let used = entry.last_fuel_used.unwrap_or(0);
             init_fuel_used = init_fuel_used.saturating_add(used);
-            entry.rebuild_fuel = used.saturating_mul(2).max(REBUILD_FUEL_FLOOR).min(host.options.init_fuel);
+            entry.rebuild_fuel = used.saturating_mul(2).max(REBUILD_FUEL_FLOOR).min(own_init);
             match result {
                 Err(error) => {
                     entry.disabled = true;
@@ -285,6 +336,14 @@ impl WasmPluginHost {
         entry.instance = None;
         let id = &entry.spec.id;
         self.init_errors.push(init_error(id, &format!("plugin {id} failed to initialize — disabled: {reason}")));
+    }
+
+    /// A budget of plugin `index`: from the script budgets for a project script, else `default`.
+    fn budget(&self, index: usize, pick: impl Fn(&crate::ScriptBudgets) -> u64, default: u64) -> u64 {
+        match &self.options.script_budgets {
+            Some(budgets) if self.entries[index].spec.trusted => pick(budgets),
+            _ => default,
+        }
     }
 
     /// The budgets this host runs with.
@@ -349,7 +408,11 @@ impl WasmPluginHost {
         };
         let mut instance = sandbox.instance().map_err(|fault| failed(&describe_fault(&fault)))?;
         instance.set_fuel(fuel);
-        let reply = sandbox::init(instance.as_mut(), &entry.granted_json, &wrapped_source(&entry.spec.source));
+        let reply = sandbox::init(
+            instance.as_mut(),
+            &entry.granted_json,
+            &entry.spec.source,
+        );
         entry.last_fuel_used = Some(instance.fuel_used(fuel));
         let reply = reply.map_err(|fault| failed(&describe_fault(&fault)))?;
         match reply.status {
@@ -365,7 +428,13 @@ impl WasmPluginHost {
     }
 
     /// Run one plugin's handler. `None` when the plugin has nothing to say.
-    fn call(&mut self, index: usize, hook: &str, payload_json: &str) -> Option<PluginDispatchResult> {
+    fn call(
+        &mut self,
+        index: usize,
+        hook: &str,
+        payload_json: &str,
+        game: Option<GameView<'_>>,
+    ) -> Option<PluginDispatchResult> {
         let entry = &mut self.entries[index];
         if entry.disabled || entry.window_exhausted || !entry.spec.is_granted(hook) {
             return None;
@@ -373,9 +442,14 @@ impl WasmPluginHost {
         let id = entry.spec.id.clone();
         let instance = entry.instance.as_mut()?;
         entry.calls += 1;
-        instance.set_fuel(self.options.fuel_per_call);
-        let reply = sandbox::dispatch(instance.as_mut(), hook, payload_json);
-        let used = instance.fuel_used(self.options.fuel_per_call);
+        let (call_fuel, window_fuel) = match (&self.options.script_budgets, entry.spec.trusted) {
+            (Some(budgets), true) => (budgets.fuel_per_call, budgets.fuel_per_window),
+            _ => (self.options.fuel_per_call, self.options.fuel_per_window),
+        };
+        instance.set_fuel(call_fuel);
+        let mut reads = ReadHost::new(game, &entry.spec.pack_id, entry.reads);
+        let reply = sandbox::dispatch_with(instance.as_mut(), hook, payload_json, &mut reads);
+        let used = instance.fuel_used(call_fuel);
         entry.last_fuel_used = Some(used);
         entry.window_fuel = entry.window_fuel.saturating_add(used);
         let threw = |message: String| PluginDispatchResult {
@@ -425,14 +499,14 @@ impl WasmPluginHost {
             },
         };
         let entry = &mut self.entries[index];
-        if !entry.disabled && !entry.window_exhausted && entry.window_fuel > self.options.fuel_per_window {
+        if !entry.disabled && !entry.window_exhausted && entry.window_fuel > window_fuel {
             entry.window_exhausted = true;
             result.errors.push(PluginError {
                 plugin_id: id.clone(),
                 kind: PluginErrorKind::Budget,
                 message: format!(
                     "used more than its fuel budget for this second ({} fuel) in {hook}; skipped until the next",
-                    self.options.fuel_per_window
+                    window_fuel
                 ),
                 hook: Some(hook.to_owned()),
             });
@@ -447,6 +521,10 @@ impl WasmPluginHost {
     /// so, when it has [`PluginHostOptions::max_strikes`] strikes within the strike window.
     fn count_strike(&mut self, index: usize, hook: &str) -> Option<PluginError> {
         let entry = &mut self.entries[index];
+        // A project script is never switched off: each overrun is an error of its own (#241).
+        if entry.spec.trusted {
+            return None;
+        }
         let window = u64::from(self.options.strike_window.max(1));
         entry.strikes.push_back(entry.calls);
         while entry.strikes.front().is_some_and(|&call| entry.calls - call >= window) {
@@ -481,7 +559,7 @@ impl WasmPluginHost {
         }];
         if let Some(disabled) = self.count_strike(index, hook) {
             errors.push(disabled);
-        } else if self.entries[index].rebuilds >= self.options.max_rebuilds {
+        } else if self.entries[index].rebuilds >= self.options.max_rebuilds && !self.entries[index].spec.trusted {
             let entry = &mut self.entries[index];
             entry.disabled = true;
             errors.push(PluginError {
@@ -508,6 +586,10 @@ impl WasmPluginHost {
 
 impl PluginHost for WasmPluginHost {
     fn dispatch(&mut self, hook: &str, payload_json: &str) -> Vec<PluginDispatchResult> {
+        self.dispatch_in(hook, payload_json, None)
+    }
+
+    fn dispatch_in(&mut self, hook: &str, payload_json: &str, game: Option<GameView<'_>>) -> Vec<PluginDispatchResult> {
         let callers: Vec<usize> = (0..self.entries.len())
             .filter(|&index| {
                 let entry = &self.entries[index];
@@ -537,18 +619,45 @@ impl PluginHost for WasmPluginHost {
         }
         callers
             .into_iter()
-            .filter_map(|index| self.call(index, hook, payload_json))
+            .filter_map(|index| self.call(index, hook, payload_json, game))
             .filter(|result| !result.mutations.is_empty() || !result.errors.is_empty())
             .collect()
     }
 
     fn dispatch_to(&mut self, plugin_id: &str, hook: &str, payload_json: &str) -> Option<PluginDispatchResult> {
+        self.dispatch_to_in(plugin_id, hook, payload_json, None)
+    }
+
+    fn dispatch_to_in(
+        &mut self,
+        plugin_id: &str,
+        hook: &str,
+        payload_json: &str,
+        game: Option<GameView<'_>>,
+    ) -> Option<PluginDispatchResult> {
         let index = self.entries.iter().position(|entry| entry.spec.id == plugin_id)?;
-        self.call(index, hook, payload_json).filter(|result| !result.mutations.is_empty() || !result.errors.is_empty())
+        self.call(index, hook, payload_json, game)
+            .filter(|result| !result.mutations.is_empty() || !result.errors.is_empty())
+    }
+
+    fn call_value(
+        &mut self,
+        hook: &str,
+        payload_json: &str,
+        game: Option<GameView<'_>>,
+    ) -> Option<Result<Value, PluginError>> {
+        WasmPluginHost::call_value(self, hook, payload_json, game, None)
     }
 
     fn init_errors(&self) -> &[PluginError] {
         &self.init_errors
+    }
+
+    fn check_answer_for(&mut self, hook: &str, raw: &Value) -> Option<PluginDispatchResult> {
+        let entry = self.entries.iter_mut().find(|entry| !entry.disabled && entry.spec.is_granted(hook))?;
+        let (mutations, errors) =
+            check_answer(&entry.spec.id, &entry.spec.pack_id, &entry.grants, &mut entry.keys, raw, hook);
+        Some(PluginDispatchResult { plugin_id: entry.spec.id.clone(), mutations, errors })
     }
 
     fn take_rebuilt(&mut self) -> Vec<String> {
@@ -560,6 +669,73 @@ impl PluginHost for WasmPluginHost {
             entry.window_fuel = 0;
             entry.window_exhausted = false;
         }
+    }
+}
+
+impl WasmPluginHost {
+    /// Run the handler of `hook` in the first enabled plugin granted it that has one, with
+    /// `fuel` (default: [`PluginHostOptions::fuel_per_call`]), and return its answer as JSON,
+    /// unchecked (conditions answer `[bool]`, screens a widget tree). `None` when no plugin
+    /// has a handler. A throw is an error; an overrun is an error and a strike, as for hooks.
+    pub fn call_value(
+        &mut self,
+        hook: &str,
+        payload_json: &str,
+        game: Option<GameView<'_>>,
+        fuel: Option<u64>,
+    ) -> Option<Result<Value, PluginError>> {
+        let fuel = fuel.unwrap_or(self.options.fuel_per_call);
+        for index in 0..self.entries.len() {
+            let entry = &mut self.entries[index];
+            if entry.disabled || !entry.spec.is_granted(hook) {
+                continue;
+            }
+            let Some(instance) = entry.instance.as_mut() else { continue };
+            let id = entry.spec.id.clone();
+            entry.calls += 1;
+            instance.set_fuel(fuel);
+            let mut reads = ReadHost::new(game, &entry.spec.pack_id, entry.reads);
+            let reply = sandbox::dispatch_with(instance.as_mut(), hook, payload_json, &mut reads);
+            entry.last_fuel_used = Some(instance.fuel_used(fuel));
+            let error = |kind: PluginErrorKind, message: String| PluginError {
+                plugin_id: id.clone(),
+                kind,
+                message,
+                hook: Some(hook.to_owned()),
+            };
+            return Some(match reply {
+                Err(fault) => {
+                    let kind =
+                        if fault == GuestFault::OutOfFuel { PluginErrorKind::Timeout } else { PluginErrorKind::Budget };
+                    let struck = self.strike(index, hook, kind, &describe_fault(&fault));
+                    Err(struck.errors.into_iter().next().unwrap_or_else(|| error(kind, describe_fault(&fault))))
+                }
+                Ok(reply) => match reply.status {
+                    status::NO_HANDLER => continue,
+                    status::OK if reply.oversized => {
+                        Err(error(PluginErrorKind::Threw, format!("answer is larger than {MAX_RESULT_BYTES} bytes")))
+                    }
+                    status::OK => serde_json::from_str::<Value>(&reply.output)
+                        .map_err(|_| error(PluginErrorKind::Threw, "answer could not be serialized".to_owned())),
+                    status::THREW => Err(error(PluginErrorKind::Threw, format!("threw in {hook}: {}", reply.output))),
+                    status::OUT_OF_MEMORY => {
+                        let struck = self.strike(index, hook, PluginErrorKind::Budget, "exceeded its memory budget");
+                        Err(struck
+                            .errors
+                            .into_iter()
+                            .next()
+                            .unwrap_or_else(|| error(PluginErrorKind::Budget, "exceeded its memory budget".to_owned())))
+                    }
+                    other => Err(error(PluginErrorKind::Threw, format!("failed (guest status {other})"))),
+                },
+            });
+        }
+        None
+    }
+
+    /// Whether some enabled plugin is granted `hook` (it may still have no handler).
+    pub fn grants(&self, hook: &str) -> bool {
+        self.entries.iter().any(|entry| !entry.disabled && entry.spec.is_granted(hook))
     }
 }
 
