@@ -170,6 +170,12 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("AnimationClip", "effect" | "holdItem" | "impactFrame" | "lockMovement")
             | ("CutsceneStep", "animation")
             | ("CutsceneState", "animations")
+            // Plugin systems (#238).
+            | ("GameState", "pluginEntities" | "nextPluginEntity" | "pluginTimers")
+            | ("GameProject", "scripts")
+            | ("ProjectSettings", "scripts")
+            | ("PackPermissions", "entities" | "itemUses" | "read" | "screens")
+            | ("PackPlugin", "conditions" | "entities" | "itemUses" | "outcomes" | "screens")
     )
 }
 

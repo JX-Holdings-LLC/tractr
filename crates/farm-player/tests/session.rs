@@ -148,7 +148,7 @@ struct FakePlugins {
 }
 
 impl SessionPlugins for FakePlugins {
-    fn dispatch(&mut self, events: &[HookEvent], _depth: u32) {
+    fn dispatch(&mut self, events: &[HookEvent], _depth: u32, _game: farm_plugins::GameView<'_>) {
         for event in events {
             self.seen.lock().unwrap().push(event.hook().to_owned());
             if event.hook() == "onDayStart" {
@@ -205,10 +205,11 @@ fn the_wasm_sandbox_runs_pack_plugins_in_a_session() {
             granted_hooks: spec.granted_hooks.clone(),
             granted_mutations: spec.granted_mutations.clone(),
             granted_minigames: spec.granted_minigames.clone(),
+            granted_reads: spec.granted_reads.clone(),
         })
         .collect();
     let mut session = session_for(&project);
-    session.set_plugins(farm_player::plugins::for_cartridge(&cart_plugins, Default::default()));
+    session.set_plugins(farm_player::plugins::for_cartridge(&cart_plugins, Default::default(), None));
     assert!(session.has_plugins());
     assert!(session.plugin_errors().is_empty(), "{:?}", session.plugin_errors());
     session.run_command(&Command::Sleep);

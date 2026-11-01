@@ -17,6 +17,7 @@
     <Compile Include="ProjectVersion.fs" />
     <Compile Include="AuthoringTiles.fs" />
     <Compile Include="PackRules.fs" />
+    <Compile Include="PluginExtensions.fs" />
     <Compile Include="Builtin.fs" />
     <Compile Include="BuiltinLooks.fs" />
     <Compile Include="PackMerge.fs" />

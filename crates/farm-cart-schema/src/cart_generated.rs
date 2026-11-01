@@ -462,6 +462,7 @@ impl<'a> Plugin<'a> {
   pub const VT_GRANTED_HOOKS: flatbuffers::VOffsetT = 10;
   pub const VT_GRANTED_MUTATIONS: flatbuffers::VOffsetT = 12;
   pub const VT_GRANTED_MINIGAMES: flatbuffers::VOffsetT = 14;
+  pub const VT_GRANTED_READS: flatbuffers::VOffsetT = 16;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -473,6 +474,7 @@ impl<'a> Plugin<'a> {
     args: &'args PluginArgs<'args>
   ) -> flatbuffers::WIPOffset<Plugin<'bldr>> {
     let mut builder = PluginBuilder::new(_fbb);
+    if let Some(x) = args.granted_reads { builder.add_granted_reads(x); }
     if let Some(x) = args.granted_minigames { builder.add_granted_minigames(x); }
     if let Some(x) = args.granted_mutations { builder.add_granted_mutations(x); }
     if let Some(x) = args.granted_hooks { builder.add_granted_hooks(x); }
@@ -525,6 +527,13 @@ impl<'a> Plugin<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(Plugin::VT_GRANTED_MINIGAMES, None)}
   }
+  #[inline]
+  pub fn granted_reads(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(Plugin::VT_GRANTED_READS, None)}
+  }
 }
 
 impl flatbuffers::Verifiable for Plugin<'_> {
@@ -540,6 +549,7 @@ impl flatbuffers::Verifiable for Plugin<'_> {
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_hooks", Self::VT_GRANTED_HOOKS, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_mutations", Self::VT_GRANTED_MUTATIONS, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_minigames", Self::VT_GRANTED_MINIGAMES, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("granted_reads", Self::VT_GRANTED_READS, false)?
      .finish();
     Ok(())
   }
@@ -551,6 +561,7 @@ pub struct PluginArgs<'a> {
     pub granted_hooks: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
     pub granted_mutations: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
     pub granted_minigames: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
+    pub granted_reads: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
 }
 impl<'a> Default for PluginArgs<'a> {
   #[inline]
@@ -562,6 +573,7 @@ impl<'a> Default for PluginArgs<'a> {
       granted_hooks: None,
       granted_mutations: None,
       granted_minigames: None,
+      granted_reads: None,
     }
   }
 }
@@ -596,6 +608,10 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> PluginBuilder<'a, 'b, A> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Plugin::VT_GRANTED_MINIGAMES, granted_minigames);
   }
   #[inline]
+  pub fn add_granted_reads(&mut self, granted_reads: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Plugin::VT_GRANTED_READS, granted_reads);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> PluginBuilder<'a, 'b, A> {
     let start = _fbb.start_table();
     PluginBuilder {
@@ -622,6 +638,7 @@ impl core::fmt::Debug for Plugin<'_> {
       ds.field("granted_hooks", &self.granted_hooks());
       ds.field("granted_mutations", &self.granted_mutations());
       ds.field("granted_minigames", &self.granted_minigames());
+      ds.field("granted_reads", &self.granted_reads());
       ds.finish()
   }
 }

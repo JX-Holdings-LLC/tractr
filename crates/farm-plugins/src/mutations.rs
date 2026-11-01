@@ -190,6 +190,37 @@ pub fn parse_mutation(entry: &Value) -> Result<PluginMutation, String> {
         }
         "modifyHealth" => PluginMutation::ModifyHealth { delta: fields.int("delta", -1000.0, 1000.0) as i32 },
         "saveData" => PluginMutation::SaveData { data: fields.saved_data() },
+        // Entities and timers (#238).
+        "spawnEntity" => {
+            let entity_type = fields.id("entityType");
+            let scene_id = fields.optional_id("sceneId");
+            let x = fields.int("x", 0.0, MAX_TILE) as i32;
+            let y = fields.int("y", 0.0, MAX_TILE) as i32;
+            let art = fields.optional_id("art");
+            let state = fields.small_json("state");
+            PluginMutation::SpawnEntity { entity_type, scene_id, x, y, art, state }
+        }
+        "updateEntity" => {
+            let entity_id = fields.id("entityId");
+            let scene_id = fields.optional_id("sceneId");
+            let x = fields.optional_int("x", 0.0, MAX_TILE).map(|x| x as i32);
+            let y = fields.optional_int("y", 0.0, MAX_TILE).map(|y| y as i32);
+            let art = fields.optional_id("art");
+            let state = fields.object.contains_key("state").then(|| fields.small_json("state"));
+            PluginMutation::UpdateEntity { entity_id, scene_id, x, y, art, state }
+        }
+        "removeEntity" => PluginMutation::RemoveEntity { entity_id: fields.id("entityId") },
+        "startTimer" => {
+            let timer = fields.id("timer");
+            let minutes = fields.optional_int("minutes", 0.0, 525_600.0).unwrap_or(0.0) as u32;
+            let days = fields.optional_int("days", 0.0, 3_650.0).unwrap_or(0.0) as u32;
+            if minutes == 0 && days == 0 && fields.failures.is_empty() {
+                fields.failures.push("minutes or days: at least one game minute".to_owned());
+            }
+            let data = fields.small_json("data");
+            PluginMutation::StartTimer { timer, minutes, days, data }
+        }
+        "cancelTimer" => PluginMutation::CancelTimer { timer: fields.id("timer") },
         other => {
             return Err(format!("invalid discriminator value (type '{}')", crate::clip(other, MAX_QUOTED_TYPE_LENGTH)))
         }
@@ -296,6 +327,19 @@ impl Fields<'_> {
         let size = serde_json::to_string(&data).map_or(usize::MAX, |text| text.len());
         if size > MAX_SAVED_DATA_BYTES {
             self.failures.push(format!("data: at most {MAX_SAVED_DATA_BYTES} bytes as JSON ({size} given)"));
+            return Value::Null;
+        }
+        data
+    }
+
+    /// An entity's state or a timer's data: any JSON (absent: `null`), at most
+    /// [`farm_sim::schema::MAX_PLUGIN_STATE_BYTES`] as compact text.
+    fn small_json(&mut self, key: &str) -> Value {
+        let data = self.object.get(key).cloned().unwrap_or(Value::Null);
+        let max = farm_sim::schema::MAX_PLUGIN_STATE_BYTES;
+        let size = serde_json::to_string(&data).map_or(usize::MAX, |text| text.len());
+        if size > max {
+            self.failures.push(format!("{key}: at most {max} bytes as JSON ({size} given)"));
             return Value::Null;
         }
         data

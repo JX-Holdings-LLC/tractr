@@ -1,8 +1,10 @@
 //! Wiring a plugin host to an engine session (port of the C# `PluginBridge`).
 
+use crate::conditions::PluginConditionHost;
 use crate::host::{PluginHost, PluginHostOptions, WasmPluginHost};
 use crate::payload::{effect_events, hook_payload_json};
 use crate::queue::{PluginMutationQueue, QueuedPluginMutation};
+use crate::reads::GameView;
 use crate::spec::{plugin_specs_from_project, PluginSpec};
 use crate::{PluginError, PluginErrorKind};
 use farm_sim::effects::Effect;
@@ -52,6 +54,12 @@ pub struct PluginRuntime<H: PluginHost = WasmPluginHost> {
     queue: PluginMutationQueue,
     recent_errors: VecDeque<PluginError>,
     window: Option<u64>,
+    /// A project script hears every hook (#241).
+    any_trusted: bool,
+    /// Failures of plugin conditions, drained into the recent errors (#239).
+    condition_errors: Option<std::sync::Arc<std::sync::Mutex<Vec<PluginError>>>>,
+    /// The specs the host was built from (to build a condition host).
+    specs: Vec<PluginSpec>,
 }
 
 impl PluginRuntime<WasmPluginHost> {
@@ -62,8 +70,21 @@ impl PluginRuntime<WasmPluginHost> {
         if specs.is_empty() {
             return None;
         }
+        let options = PluginHostOptions {
+            script_budgets: Some(crate::ScriptBudgets::from_settings(project.settings.scripts.as_ref(), &options)),
+            ..options
+        };
         let host = WasmPluginHost::new(specs.clone(), options);
         Some(Self::new(host, &specs))
+    }
+
+    /// A condition host for this runtime's plugins (#239), to install as the engine's
+    /// `plugin_conditions`; its failures join this runtime's recent errors. `None` when no
+    /// plugin defines conditions.
+    pub fn condition_host(&mut self) -> Option<PluginConditionHost> {
+        let host = PluginConditionHost::new(&self.specs, self.host.options())?;
+        self.condition_errors = Some(host.errors());
+        Some(host)
     }
 }
 
@@ -92,6 +113,9 @@ impl<H: PluginHost> PluginRuntime<H> {
             queue: PluginMutationQueue::new(),
             recent_errors: VecDeque::new(),
             window: None,
+            any_trusted: specs.iter().any(|spec| spec.trusted),
+            condition_errors: None,
+            specs: specs.to_vec(),
         };
         let init_errors = runtime.host.init_errors().to_vec();
         runtime.record(&init_errors);
@@ -105,7 +129,24 @@ impl<H: PluginHost> PluginRuntime<H> {
 
     /// Whether some plugin is granted `hook`.
     pub fn listens_to(&self, hook: &str) -> bool {
-        self.hook_names.iter().any(|name| name == hook)
+        self.any_trusted
+            || hook == farm_sim::hooks::extension_hooks::TIMER
+            || self.hook_names.iter().any(|name| name == hook)
+    }
+
+    /// Keep the failures of a condition host (built elsewhere) in the recent errors.
+    pub fn attach_condition_errors(&mut self, errors: std::sync::Arc<std::sync::Mutex<Vec<PluginError>>>) {
+        self.condition_errors = Some(errors);
+    }
+
+    /// Move the condition failures noted since the last call into the recent errors.
+    pub fn collect_condition_errors(&mut self) -> Vec<PluginError> {
+        let errors = match &self.condition_errors {
+            Some(shared) => shared.lock().map(|mut errors| std::mem::take(&mut *errors)).unwrap_or_default(),
+            None => Vec::new(),
+        };
+        self.record(&errors);
+        errors
     }
 
     /// The underlying host.
@@ -132,6 +173,7 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// Tell the runtime the game is about to run tick `tick` (the clock's tick before it
     /// advances). Starts a new budget window every [`BUDGET_WINDOW_TICKS`] ticks.
     pub fn begin_tick(&mut self, tick: u64) {
+        self.collect_condition_errors();
         let window = tick / BUDGET_WINDOW_TICKS;
         if self.window != Some(window) {
             self.window = Some(window);
@@ -150,10 +192,26 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// (`depth > 0`) does not dispatch `onCommand` or `onEffect`, and its answers are queued
     /// at `depth`, or dropped at [`PluginRuntime::MAX_MUTATION_DEPTH`].
     pub fn dispatch_at(&mut self, hook: &str, payload_json: &str, depth: u32) -> Vec<PluginError> {
+        self.dispatch_in(hook, payload_json, depth, None, None)
+    }
+
+    /// [`PluginRuntime::dispatch_at`] at a step of `game` (the handlers' reads answer from it),
+    /// to the one plugin `only` when given (a timer's owner).
+    pub fn dispatch_in(
+        &mut self,
+        hook: &str,
+        payload_json: &str,
+        depth: u32,
+        game: Option<GameView<'_>>,
+        only: Option<&str>,
+    ) -> Vec<PluginError> {
         if !self.listens_to(hook) || (depth > 0 && (hook == hook_names::ON_COMMAND || hook == hook_names::ON_EFFECT)) {
             return Vec::new();
         }
-        let mut results = self.host.dispatch(hook, payload_json);
+        let mut results = match only {
+            Some(plugin_id) => self.host.dispatch_to_in(plugin_id, hook, payload_json, game).into_iter().collect(),
+            None => self.host.dispatch_in(hook, payload_json, game),
+        };
         if depth >= Self::MAX_MUTATION_DEPTH {
             for result in &mut results {
                 if !result.mutations.is_empty() {
@@ -180,10 +238,19 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// saved (`saveData`) as `{"data": …}` (`null` when it saved nothing). Answers are queued
     /// like a game step's (M9).
     pub fn restore(&mut self, saved: &indexmap::IndexMap<String, serde_json::Value>) -> Vec<PluginError> {
+        self.restore_in(saved, None)
+    }
+
+    /// [`PluginRuntime::restore`] with the game the plugins may read.
+    pub fn restore_in(
+        &mut self,
+        saved: &indexmap::IndexMap<String, serde_json::Value>,
+        game: Option<GameView<'_>>,
+    ) -> Vec<PluginError> {
         // Rebuilds before the game starts or loads hear this `onLoad` anyway.
         self.host.take_rebuilt();
         let listeners = self.load_listeners.clone();
-        self.load(&listeners, saved)
+        self.load(&listeners, saved, game)
     }
 
     /// The plugins the host rebuilt after an overrun since the last call start over with fresh
@@ -192,24 +259,36 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// point before each tick, after the queued mutations ran, so a plugin's own `saveData`
     /// answers are in `saved`; the `onLoad` answers apply at the next fixed point.
     pub fn restore_rebuilt(&mut self, saved: &indexmap::IndexMap<String, serde_json::Value>) -> Vec<PluginError> {
+        self.restore_rebuilt_in(saved, None)
+    }
+
+    /// [`PluginRuntime::restore_rebuilt`] with the game the plugins may read.
+    pub fn restore_rebuilt_in(
+        &mut self,
+        saved: &indexmap::IndexMap<String, serde_json::Value>,
+        game: Option<GameView<'_>>,
+    ) -> Vec<PluginError> {
         let rebuilt = self.host.take_rebuilt();
         if rebuilt.is_empty() {
             return Vec::new();
         }
         let listeners: Vec<String> = self.load_listeners.iter().filter(|id| rebuilt.contains(id)).cloned().collect();
-        self.load(&listeners, saved)
+        self.load(&listeners, saved, game)
     }
 
     fn load(
         &mut self,
         plugin_ids: &[String],
         saved: &indexmap::IndexMap<String, serde_json::Value>,
+        game: Option<GameView<'_>>,
     ) -> Vec<PluginError> {
         let mut errors = Vec::new();
         for plugin_id in plugin_ids {
             let data = saved.get(plugin_id).cloned().unwrap_or(serde_json::Value::Null);
             let payload = crate::payload::to_engine_json(&serde_json::json!({ "data": data }));
-            let Some(result) = self.host.dispatch_to(plugin_id, hook_names::ON_LOAD, &payload) else { continue };
+            let Some(result) = self.host.dispatch_to_in(plugin_id, hook_names::ON_LOAD, &payload, game) else {
+                continue;
+            };
             self.queue.enqueue_at(std::slice::from_ref(&result), 0);
             errors.extend(result.errors);
         }
@@ -225,10 +304,27 @@ impl<H: PluginHost> PluginRuntime<H> {
 
     /// [`PluginRuntime::dispatch_events`] for a step at `depth`.
     pub fn dispatch_events_at(&mut self, events: &[HookEvent], depth: u32) -> Vec<PluginError> {
+        self.dispatch_events_in(events, depth, None)
+    }
+
+    /// [`PluginRuntime::dispatch_events_at`] at a step of `game`: the handlers read the game as
+    /// that step left it (#237). A plugin system's event for one plugin (a timer) goes to that
+    /// plugin alone.
+    pub fn dispatch_events_in(
+        &mut self,
+        events: &[HookEvent],
+        depth: u32,
+        game: Option<GameView<'_>>,
+    ) -> Vec<PluginError> {
         let mut errors = Vec::new();
         for event in events {
-            if self.listens_to(event.hook()) {
-                errors.extend(self.dispatch_at(event.hook(), &hook_payload_json(event), depth));
+            let hook = event.hook_name();
+            if self.listens_to(hook) {
+                let only = match event {
+                    HookEvent::Extension(extension) => extension.plugin_id.as_deref(),
+                    _ => None,
+                };
+                errors.extend(self.dispatch_in(hook, &hook_payload_json(event), depth, game, only));
             }
         }
         errors
@@ -242,9 +338,21 @@ impl<H: PluginHost> PluginRuntime<H> {
 
     /// [`PluginRuntime::handle_step`] for a step at `depth` (see [`PluginRuntime::dispatch_at`]).
     pub fn handle_step_at(&mut self, events: &[HookEvent], effects: &[Effect], depth: u32) -> Vec<PluginError> {
-        let mut errors = self.dispatch_events_at(events, depth);
+        self.handle_step_in(events, effects, depth, None)
+    }
+
+    /// [`PluginRuntime::handle_step_at`] at a step of `game` (see
+    /// [`PluginRuntime::dispatch_events_in`]).
+    pub fn handle_step_in(
+        &mut self,
+        events: &[HookEvent],
+        effects: &[Effect],
+        depth: u32,
+        game: Option<GameView<'_>>,
+    ) -> Vec<PluginError> {
+        let mut errors = self.dispatch_events_in(events, depth, game);
         if depth == 0 && self.listens_to(hook_names::ON_EFFECT) {
-            errors.extend(self.dispatch_events_at(&effect_events(effects), depth));
+            errors.extend(self.dispatch_events_in(&effect_events(effects), depth, game));
         }
         errors
     }
@@ -260,6 +368,20 @@ impl<H: PluginHost> PluginRuntime<H> {
     /// depth (every step they cause is then a game step for [`PluginRuntime::handle_step`]).
     pub fn drain_commands(&mut self) -> Vec<Command> {
         self.queue.drain().into_iter().map(|queued| queued.into_command()).collect()
+    }
+
+    /// Queue mutations a plugin granted `hook` answered outside a dispatch (a screen action,
+    /// #240) as a game step's answers, after checking them like any answer.
+    pub fn queue_answer(
+        &mut self,
+        hook: &str,
+        raw: &serde_json::Value,
+        _game: Option<GameView<'_>>,
+    ) -> Vec<PluginError> {
+        let Some(result) = self.host.check_answer_for(hook, raw) else { return Vec::new() };
+        self.queue.enqueue_at(std::slice::from_ref(&result), 0);
+        self.record(&result.errors);
+        result.errors
     }
 
     /// Keep `error` in the recent errors (a pack minigame's failure, for instance), like the

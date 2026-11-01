@@ -713,7 +713,7 @@ impl Player {
             Panel::Inventory => Some(BindAction::Inventory.canonical_key()),
             Panel::Quests => Some(BindAction::Quests.canonical_key()),
             Panel::Crafting => Some(BindAction::Craft.canonical_key()),
-            Panel::Goals | Panel::Mail => None,
+            Panel::Goals | Panel::Mail | Panel::Plugin => None,
         });
         let close_own = own_key.is_some_and(|key| input.game_pressed.iter().any(|pressed| pressed == key));
         // The goals and mail panels open from the game (no engine modal over it) in games that
@@ -730,6 +730,15 @@ impl Player {
             })
             .filter(|panel| self.game_ui.panel == Some(*panel) || (self.game_ui.panel.is_none() && free))
             .collect();
+        // A plugin screen's hotkey opens it (or closes it again) when nothing else is open (#240).
+        let plugin_screen = session
+            .plugin_screens()
+            .iter()
+            .find(|screen| {
+                screen.hotkey.as_ref().is_some_and(|key| input.game_pressed.iter().any(|pressed| pressed == key))
+            })
+            .cloned()
+            .filter(|_| self.game_ui.panel.is_none() && free || self.game_ui.panel == Some(Panel::Plugin));
         // Interact presses carry what the player holds for planting.
         let planting = &self.game_ui.planting;
         session.set_planting(Some((planting.seed.clone(), planting.fertilizer.clone())));
@@ -751,6 +760,15 @@ impl Player {
         for panel in host_panels {
             self.toggle_panel(panel);
         }
+        if let Some(screen) = plugin_screen {
+            let same = self.game_ui.plugin_screen.as_ref().is_some_and(|open| open.hook == screen.hook);
+            if self.game_ui.panel == Some(Panel::Plugin) && same {
+                self.game_ui.panel = None;
+            } else {
+                self.open_plugin_screen(&screen.hook, &screen.title);
+            }
+        }
+        self.refresh_plugin_screen();
         for (toggle, panel) in [
             (toggles.inventory, Panel::Inventory),
             (toggles.quests, Panel::Quests),
@@ -761,6 +779,29 @@ impl Player {
             }
         }
         self.drain_session_events();
+    }
+
+    /// Open the plugin screen of `hook` (#240).
+    pub fn open_plugin_screen(&mut self, hook: &str, title: &str) {
+        self.game_ui.plugin_screen = Some(farm_ui::game::PluginScreenView {
+            hook: hook.to_owned(),
+            title: title.to_owned(),
+            content: Err(String::new()),
+        });
+        self.game_ui.panel = Some(Panel::Plugin);
+        if let Some(game) = self.game.as_mut() {
+            game.session.release_input();
+        }
+        self.refresh_plugin_screen();
+    }
+
+    /// While a plugin screen is open, ask its `draw` for what it shows now.
+    fn refresh_plugin_screen(&mut self) {
+        if self.game_ui.panel != Some(Panel::Plugin) {
+            return;
+        }
+        let (Some(game), Some(screen)) = (self.game.as_mut(), self.game_ui.plugin_screen.as_mut()) else { return };
+        screen.content = game.session.draw_plugin_screen(&screen.hook);
     }
 
     fn toggle_panel(&mut self, panel: Panel) {
@@ -1137,6 +1178,14 @@ impl Player {
                     self.game_ui.planting.toggle(game.session.content(), &item_id);
                 }
             }
+            GameAction::PluginScreen { hook, action } => {
+                self.ui_sound();
+                if let Some(game) = self.game.as_mut() {
+                    game.session.plugin_screen_action(&hook, &action);
+                }
+                self.refresh_plugin_screen();
+                self.drain_session_events();
+            }
         }
     }
 
@@ -1338,7 +1387,11 @@ impl Player {
     fn attach(&mut self, mut session: PlaySession, slot: u32, play_seconds: f64) {
         let plugins = match &self.def.project {
             Some(project) => crate::plugins::for_project(project, self.plugin_options.clone()),
-            None => crate::plugins::for_cartridge(&self.def.plugins, self.plugin_options.clone()),
+            None => crate::plugins::for_cartridge(
+                &self.def.plugins,
+                self.plugin_options.clone(),
+                session.content().settings.scripts.as_ref(),
+            ),
         };
         session.set_plugins(plugins);
         session.set_reduced_motion(self.settings.accessibility.reduced_motion);

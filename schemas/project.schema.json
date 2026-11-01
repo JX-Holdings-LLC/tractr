@@ -321,6 +321,22 @@
           "items": {
             "$ref": "#/$defs/ArtFrame"
           }
+        },
+        "lockMovement": {
+          "description": "An action clip (#235: `use-till-down`, `eat`, …) keeps the player in place until it ends.",
+          "type": "boolean"
+        },
+        "impactFrame": {
+          "description": "An action clip's impact frame (0 = the first): the tool's effect applies when it shows; absent: at once. int, nonnegative.",
+          "type": "number"
+        },
+        "effect": {
+          "description": "A drawing effect while the clip plays: one of `ClipEffects`.",
+          "type": "string"
+        },
+        "holdItem": {
+          "description": "The item the action is about (eaten, held up) is drawn over the character.",
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -443,7 +459,6 @@
       "additionalProperties": false
     },
     "BirthdayCondition": {
-      "description": "Today is an NPC's birthday; an empty `NpcId`: anyone's (M6).",
       "type": "object",
       "properties": {
         "type": {
@@ -866,6 +881,22 @@
       "required": [
         "type"
       ],
+      "additionalProperties": false
+    },
+    "CharacterLayer": {
+      "description": "One layer of a layered character (#234): a custom asset whose clips have the same names and frame layout as the character's other layers, optionally tinted.",
+      "type": "object",
+      "properties": {
+        "assetId": {
+          "description": "The layer's art (a custom asset id).",
+          "type": "string",
+          "default": ""
+        },
+        "color": {
+          "description": "A `#rrggbb` the layer is multiplied with.",
+          "type": "string"
+        }
+      },
       "additionalProperties": false
     },
     "CollectionCondition": {
@@ -1312,6 +1343,10 @@
         "sheet": {
           "description": "Present when the image is an animated sprite sheet (M7).",
           "$ref": "#/$defs/SpriteSheet"
+        },
+        "pixelsPerTile": {
+          "description": "How many of the image's pixels make one tile when it stands on the map (#215); absent: frames up to 32×32 fill the tile, larger ones are drawn at 32 pixels per tile. int, positive.",
+          "type": "number"
         }
       },
       "additionalProperties": true
@@ -1452,7 +1487,8 @@
             "music",
             "sound",
             "outcomes",
-            "end"
+            "end",
+            "animate"
           ],
           "default": ""
         },
@@ -1550,6 +1586,10 @@
         "wait": {
           "description": "A move waits for the actor to arrive before the next step (absent: it waits).",
           "type": "boolean"
+        },
+        "animation": {
+          "description": "The clip an `animate` step plays on its actor (#235).",
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -1828,6 +1868,9 @@
         },
         {
           "$ref": "#/$defs/WeekdayCondition"
+        },
+        {
+          "$ref": "#/$defs/PluginCondition"
         }
       ]
     },
@@ -1882,7 +1925,8 @@
                 "addMaxEnergy",
                 "addMaxHealth",
                 "applyBuff",
-                "modifyHealth"
+                "modifyHealth",
+                "plugin"
               ]
             },
             {
@@ -2824,6 +2868,13 @@
         "playerVisual": {
           "$ref": "#/$defs/VisualRef"
         },
+        "playerLayers": {
+          "description": "The player as a stack of layer sheets (#234), replacing `playerVisual` when not empty.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CharacterLayer"
+          }
+        },
         "graphics": {
           "$ref": "#/$defs/GraphicsSettings"
         },
@@ -2933,6 +2984,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/PackInstallation"
+          }
+        },
+        "scripts": {
+          "description": "The creator's own scripts (#241): trusted plugins of the game itself, which use the game's ids as written.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProjectScript"
           }
         },
         "terrains": {
@@ -4335,6 +4393,17 @@
         "romanceable": {
           "description": "The NPC can be dated and married, when the game allows it (M4).",
           "type": "boolean"
+        },
+        "look": {
+          "description": "Colours for the built-in base character (#216): an NPC with a look and no art of its own is drawn as the base character in these colours.",
+          "$ref": "#/$defs/PlayerLook"
+        },
+        "layers": {
+          "description": "The NPC as a stack of layer sheets (#234), drawn in order; replaces its visual and built-in art when not empty.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CharacterLayer"
+          }
         }
       },
       "additionalProperties": true
@@ -4810,6 +4879,34 @@
           "items": {
             "type": "string"
           }
+        },
+        "read": {
+          "description": "What the pack's plugins may read of the game (#237): `player`, `world`, `people`, `content`, and `any` for the game's and other packs' flags. None and empty allow no reads.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entities": {
+          "description": "Entity types the pack's plugins may define (#238), by local name.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "itemUses": {
+          "description": "Item-use handlers the pack's plugins may define (#238), by local name.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "screens": {
+          "description": "Game screens the pack's plugins may add (#240), by local name.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -4869,6 +4966,41 @@
         "source": {
           "type": "string",
           "default": ""
+        },
+        "conditions": {
+          "description": "Conditions this plugin defines (`api.condition(name, …)`, #239), with their argument forms.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PluginFunction"
+          }
+        },
+        "outcomes": {
+          "description": "Outcomes this plugin defines (`api.outcome(name, …)`, #239).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PluginFunction"
+          }
+        },
+        "entities": {
+          "description": "Entity types this plugin defines (`api.entity`, #238); effective set = intersection with manifest permissions.entities.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "itemUses": {
+          "description": "Item-use handlers this plugin defines (`api.itemUse`, #238); effective set = intersection with manifest permissions.itemUses.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "screens": {
+          "description": "Game screens this plugin adds (`api.screen`, #240); effective set = intersection with manifest permissions.screens.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PluginScreen"
+          }
         }
       },
       "additionalProperties": true
@@ -5049,6 +5181,92 @@
       },
       "additionalProperties": false
     },
+    "PluginArgument": {
+      "description": "One argument of a plugin condition or outcome (#239).",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "description": "`text`, `number`, `integer`, `bool` or `id` (`PluginArgumentTypes`).",
+          "type": "string",
+          "default": ""
+        },
+        "kind": {
+          "description": "For an `id`: the content it names (`item`, `npc`, `quest`, …).",
+          "type": "string"
+        },
+        "optional": {
+          "description": "May be left out.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "PluginCondition": {
+      "description": "Today is an NPC's birthday; an empty `NpcId`: anyone's (M6). A plugin condition (#239): what the pack plugin that defines `Condition` (`packId:name`, or a project script's plain name) answers for `Args`. False without that plugin.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "plugin"
+        },
+        "condition": {
+          "type": "string",
+          "default": ""
+        },
+        "args": {}
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "PluginFunction": {
+      "description": "A condition or outcome a plugin defines (#239): its local name, how the editor shows it, and its arguments.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PluginArgument"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "PluginScreen": {
+      "description": "A game screen a plugin adds (#240): its local name, its title, and an optional hotkey.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "title": {
+          "type": "string"
+        },
+        "hotkey": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
     "ProductProgress": {
       "description": "Progress toward one of `AnimalSpeciesDefinition.Products` (M5).",
       "type": "object",
@@ -5079,6 +5297,30 @@
         "maxHealth": {
           "type": "number",
           "default": 1000
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProjectScript": {
+      "description": "A project script (#241): JavaScript of the game itself (one `scripts/<id>.js` file in a project folder), with a pack plugin's API but trusted. Its plugin id is `script/<id>`.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "description": "The body of `function (api) { … }`.",
+          "type": "string",
+          "default": ""
+        },
+        "disabled": {
+          "description": "Off: the script does not run.",
+          "type": "boolean",
+          "default": false
         }
       },
       "additionalProperties": false
@@ -5170,6 +5412,10 @@
           "items": {
             "$ref": "#/$defs/SkillDefinition"
           }
+        },
+        "scripts": {
+          "description": "Budgets of the project's own scripts (#241); None: the pack plugin defaults.",
+          "$ref": "#/$defs/ScriptSettings"
         }
       },
       "additionalProperties": false
@@ -5860,6 +6106,22 @@
         }
       },
       "additionalProperties": true
+    },
+    "ScriptSettings": {
+      "description": "Budgets of a project's scripts (#241), in fuel (docs/PLUGINS.md \"Limits\"); None keeps the pack plugin default.",
+      "type": "object",
+      "properties": {
+        "fuelPerCall": {
+          "type": "number"
+        },
+        "fuelPerSecond": {
+          "type": "number"
+        },
+        "initFuel": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
     },
     "SeasonCondition": {
       "type": "object",
@@ -6855,6 +7117,10 @@
         "visual": {
           "description": "Art drawn over the player (a hat), facing like the player.",
           "$ref": "#/$defs/VisualRef"
+        },
+        "layer": {
+          "description": "A layer sheet (a custom asset id, #234) drawn over the character while worn, with the same clips and frame layout as the character's art; tinted with `color` when set.",
+          "type": "string"
         }
       },
       "additionalProperties": false

@@ -389,6 +389,15 @@ pub struct GameState {
     pub plugin_data: IndexMap<String, Value>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub fish_catches: Vec<super::FishCatchRecord>,
+    /// Entities plugins spawned (#238), in spawn order.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugin_entities: Vec<super::PluginEntity>,
+    /// The number the next plugin entity's id gets (`entity-N`).
+    #[serde(skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+    pub next_plugin_entity: u32,
+    /// Running plugin timers (#238), in the order they were started.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub plugin_timers: Vec<super::PluginTimer>,
 }
 
 /// What events changed in a shop's stock (M3).

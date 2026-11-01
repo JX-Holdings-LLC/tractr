@@ -96,6 +96,8 @@ public sealed class ModsEditorView : UserControl, IRetirable
         _review.Children.Add(Ui.Wrapped(review.Permissions, "small"));
         if (review.PluginPermissions is { } plugins) _review.Children.Add(Ui.Wrapped(plugins, "small"));
         if (review.Minigames is { } minigames) _review.Children.Add(Ui.Wrapped(minigames, "small"));
+        if (review.Reads is { } reads) _review.Children.Add(Ui.Wrapped(reads, "small"));
+        if (review.Systems is { } systems) _review.Children.Add(Ui.Wrapped(systems, "small"));
         if (review.Dependencies is { } dependencies) _review.Children.Add(Ui.Wrapped(dependencies, "muted", "small"));
         if (review.Overrides is { } overrides) _review.Children.Add(Ui.Wrapped(overrides, "muted", "small"));
         _review.Children.Add(Ui.Wrapped(review.Content, "small"));

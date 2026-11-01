@@ -19,7 +19,7 @@
 //!   like a `playSound` outcome's. One that fails (a limit, a throw, a malformed answer)
 //!   resolves with score 0 and reports the error like any plugin error.
 
-use farm_plugins::{MinigameControls, MinigameFrame, PackMinigame, PluginError};
+use farm_plugins::{GameView, MinigameControls, MinigameFrame, PackMinigame, PluginError};
 use farm_runtime::canvas::CanvasPointer;
 use farm_runtime::host::{HostedMinigame, MinigameInput, MinigameView};
 use farm_runtime::input::{self, InputManager, Modifiers, MoveVector};
@@ -116,17 +116,32 @@ pub trait SessionPlugins: Send {
     /// The hook events of one engine step, in order. `depth` is 0 for ticks and the player's
     /// commands, and a plugin mutation's depth + 1 for the step that ran it (plugins do not
     /// hear `onCommand` / `onEffect` from such steps, and deep chains are cut off).
-    fn dispatch(&mut self, events: &[HookEvent], depth: u32);
+    fn dispatch(&mut self, events: &[HookEvent], depth: u32, game: GameView<'_>);
     /// Plugin mutations to run now, as `pluginMutation` commands with their depth, in arrival
     /// order.
     fn drain_commands(&mut self) -> Vec<(Command, u32)>;
     /// The game is about to run tick `tick` (plugin budgets follow the game clock).
     fn begin_tick(&mut self, _tick: u64) {}
     /// The game started or loaded: each plugin hears `onLoad` with the data it saved (M9).
-    fn restore(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
+    fn restore(&mut self, _saved: &indexmap::IndexMap<String, Value>, _game: GameView<'_>) {}
     /// Plugins rebuilt after an overrun since the last call hear `onLoad` again with what they
     /// have saved so far (`saved`).
-    fn restore_rebuilt(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
+    fn restore_rebuilt(&mut self, _saved: &indexmap::IndexMap<String, Value>, _game: GameView<'_>) {}
+    /// The engine's answer to plugin conditions (#239), for the plugins that define some.
+    fn condition_host(&mut self) -> Option<Box<dyn farm_sim::PluginConditions>> {
+        None
+    }
+    /// Run a plugin screen's handler (#240): `payload` is `{ op: 'draw' }` or
+    /// `{ op: 'action', action }`. `None` when no plugin has the screen.
+    fn call_screen(&mut self, _hook: &str, _payload: &str, _game: GameView<'_>) -> Option<Result<Value, PluginError>> {
+        None
+    }
+    /// Queue mutations a screen's action answered, as a game step's answers.
+    fn queue_screen_answer(&mut self, _plugin_hook: &str, _answer: &Value, _game: GameView<'_>) {}
+    /// The hooks of the plugin screens the plugins may add (`screen:packId:name`, #240).
+    fn screen_hooks(&self) -> Vec<String> {
+        Vec::new()
+    }
     /// The most recent plugin errors (init failures, throws, overruns), oldest first.
     fn recent_errors(&self) -> Vec<String> {
         Vec::new()
@@ -144,6 +159,16 @@ pub trait SessionPlugins: Send {
     }
     /// Keep a pack minigame's failure in the recent errors.
     fn report_error(&mut self, _error: PluginError) {}
+}
+
+/// A plugin screen the game can open (#240): what its `describe` answered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginScreenEntry {
+    /// `screen:packId:name`.
+    pub hook: String,
+    pub title: String,
+    /// The key that opens it (`farm_runtime` key names), if any.
+    pub hotkey: Option<String>,
 }
 
 /// A plugin error as [`SessionPlugins::recent_errors`] lists it.
@@ -252,6 +277,8 @@ pub struct PlaySession {
     /// The player's art whose action clips play (#235), and the clip playing.
     action_art: Option<farm_render::graphics::ArtAsset>,
     action: Option<crate::actions::Playback>,
+    /// The plugin screens the game can open (#240).
+    plugin_screens: Vec<PluginScreenEntry>,
 }
 
 /// Commands kept for crash reports.
@@ -298,6 +325,7 @@ impl PlaySession {
             pointer: None,
             action_art: None,
             action: None,
+            plugin_screens: Vec::new(),
         }
     }
 
@@ -383,10 +411,73 @@ impl PlaySession {
     /// auto-started quests) go to it; then it sees every later step.
     pub fn set_plugins(&mut self, plugins: Option<Box<dyn SessionPlugins>>) {
         self.plugins = plugins;
+        // Plugin conditions answer from their own sandbox instances (#239).
+        self.ctx.plugin_conditions = self.plugins.as_mut().and_then(|plugins| plugins.condition_host());
         if let Some(plugins) = self.plugins.as_mut() {
-            plugins.restore(&self.state.plugin_data);
+            plugins.restore(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
         }
+        self.plugin_screens = self.describe_plugin_screens();
         self.dispatch_hooks(&[], 0);
+    }
+
+    /// Ask every plugin screen for its title and hotkey.
+    fn describe_plugin_screens(&mut self) -> Vec<PluginScreenEntry> {
+        let Some(plugins) = self.plugins.as_mut() else { return Vec::new() };
+        let mut entries = Vec::new();
+        for hook in plugins.screen_hooks() {
+            let game = GameView { ctx: &self.ctx, state: &self.state };
+            let name = hook.rsplit(':').next().unwrap_or(&hook).to_owned();
+            let described = plugins.call_screen(&hook, r#"{"op":"describe"}"#, game);
+            let (title, hotkey) = match described {
+                Some(Ok(Value::Array(items))) => {
+                    let first = items.first().cloned().unwrap_or(Value::Null);
+                    let text = |key: &str| {
+                        first.get(key).and_then(Value::as_str).filter(|text| !text.is_empty() && text.len() <= 64)
+                    };
+                    (text("title").unwrap_or(&name).to_owned(), text("hotkey").map(|key| key.to_lowercase()))
+                }
+                // A plugin that has no handler for it adds no screen.
+                None => continue,
+                Some(_) => (name, None),
+            };
+            entries.push(PluginScreenEntry { hook, title, hotkey });
+        }
+        entries
+    }
+
+    /// The plugin screens the game can open (#240), in spec order.
+    pub fn plugin_screens(&self) -> &[PluginScreenEntry] {
+        &self.plugin_screens
+    }
+
+    /// What the plugin screen of `hook` shows now: its `draw` answer, checked, or why there is
+    /// none (the error is also reported like any plugin error, once per message).
+    pub fn draw_plugin_screen(&mut self, hook: &str) -> Result<farm_runtime::screens::ScreenWidget, String> {
+        let Some(plugins) = self.plugins.as_mut() else { return Err("no plugins are running".to_owned()) };
+        let game = GameView { ctx: &self.ctx, state: &self.state };
+        let answer = match plugins.call_screen(hook, r#"{"op":"draw"}"#, game) {
+            None => return Err(format!("no plugin draws {hook}")),
+            Some(Err(error)) => return Err(describe_plugin_error(&error)),
+            Some(Ok(answer)) => answer,
+        };
+        let tree = answer.as_array().and_then(|items| items.first()).cloned().unwrap_or(Value::Null);
+        farm_runtime::screens::parse_screen(&tree, farm_runtime::screens::ScreenLimits::default())
+    }
+
+    /// The player chose `action` on the plugin screen of `hook`: the screen's `action` answers
+    /// mutations, which apply at the next tick like any plugin answer.
+    pub fn plugin_screen_action(&mut self, hook: &str, action: &str) {
+        let Some(plugins) = self.plugins.as_mut() else { return };
+        let payload = serde_json::json!({ "op": "action", "action": action }).to_string();
+        let game = GameView { ctx: &self.ctx, state: &self.state };
+        match plugins.call_screen(hook, &payload, game) {
+            Some(Ok(answer)) => {
+                let game = GameView { ctx: &self.ctx, state: &self.state };
+                plugins.queue_screen_answer(hook, &answer, game);
+            }
+            Some(Err(error)) => self.report_plugin_error(error),
+            None => {}
+        }
     }
 
     pub fn has_plugins(&self) -> bool {
@@ -513,7 +604,7 @@ impl PlaySession {
             self.run_step(&command, depth.saturating_add(1));
         }
         if let Some(plugins) = self.plugins.as_mut() {
-            plugins.restore_rebuilt(&self.state.plugin_data);
+            plugins.restore_rebuilt(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
         }
     }
 
@@ -819,7 +910,7 @@ impl PlaySession {
             effects.iter().map(|e| HookEvent::Effect(EffectHookPayload { effect_type: e.type_name().to_owned() })),
         );
         if !events.is_empty() {
-            plugins.dispatch(&events, depth);
+            plugins.dispatch(&events, depth, GameView { ctx: &self.ctx, state: &self.state });
         }
     }
 

@@ -231,15 +231,32 @@ type CartridgeCompiler =
         // (Rust `farm_plugins::plugin_specs_from_project`).
         let pluginOffsets =
             [|
+                // The project's own scripts first (#241): trusted, ids `script/<id>`, no pack.
+                for script in project.Scripts |> Option.defaultValue [] do
+                    if not script.Disabled && not (String.IsNullOrWhiteSpace script.Id) then
+                        let hooksOffset = builder.CreateOffsetVector [||]
+                        let mutationsOffset = builder.CreateOffsetVector [| builder.CreateString "*" |]
+
+                        let idOffset =
+                            builder.CreateString(PluginExtensions.ProjectScriptPrefix + script.Id)
+
+                        let packOffset = builder.CreateString ""
+                        let sourceOffset = builder.CreateString script.Source
+                        builder.StartTable 5
+                        builder.AddOffsetField(4, mutationsOffset)
+                        builder.AddOffsetField(3, hooksOffset)
+                        builder.AddOffsetField(2, sourceOffset)
+                        builder.AddOffsetField(1, packOffset)
+                        builder.AddOffsetField(0, idOffset)
+                        yield builder.EndTable()
                 for install in project.ContentPacks do
                     if install.Enabled then
                         let pack = install.Pack
-                        let granted = HashSet<string>(pack.Manifest.Permissions.Hooks)
 
                         for plugin in pack.Plugins do
+                            // Its granted hooks and its systems' hooks (Rust `farm_plugins::plugin_spec`).
                             let hooks =
-                                plugin.Hooks
-                                |> List.filter granted.Contains
+                                PluginExtensions.grantedHooks pack plugin
                                 |> List.map builder.CreateString
                                 |> Array.ofList
 
@@ -255,10 +272,17 @@ type CartridgeCompiler =
                                 | [] -> None
                                 | kinds -> Some(builder.CreateOffsetVector(kinds |> List.map builder.CreateString |> Array.ofList))
 
+                            // Absent when the manifest reads nothing (#237).
+                            let readsOffset =
+                                match pack.Manifest.Permissions.Read |> Option.defaultValue [] with
+                                | [] -> None
+                                | reads -> Some(builder.CreateOffsetVector(reads |> List.map builder.CreateString |> Array.ofList))
+
                             let idOffset = builder.CreateString(pack.Manifest.Id + ":" + plugin.Id)
                             let packOffset = builder.CreateString pack.Manifest.Id
                             let sourceOffset = builder.CreateString plugin.Source
-                            builder.StartTable 6
+                            builder.StartTable(if readsOffset.IsSome then 7 else 6)
+                            readsOffset |> Option.iter (fun offset -> builder.AddOffsetField(6, offset))
                             minigamesOffset |> Option.iter (fun offset -> builder.AddOffsetField(5, offset))
                             mutationsOffset |> Option.iter (fun offset -> builder.AddOffsetField(4, offset))
                             builder.AddOffsetField(3, hooksOffset)

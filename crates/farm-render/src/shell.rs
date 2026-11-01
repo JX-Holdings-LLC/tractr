@@ -359,6 +359,25 @@ fn build_tiles(
     rows
 }
 
+/// Plugin entities (#238) on the tiles of `scene` they stand on: drawn like an item lying there,
+/// with the art of their `art` item's kind (a plain marker without one). A tile's own item
+/// stays on top of an entity.
+fn plugin_entities(tiles: &mut [Vec<SnapshotTile>], content: &GameContent, state: &GameState, scene: &Scene) {
+    for entity in state.plugin_entities.iter().filter(|entity| entity.scene_id == scene.id) {
+        let (Ok(x), Ok(y)) = (usize::try_from(entity.x), usize::try_from(entity.y)) else { continue };
+        let Some(tile) = tiles.get_mut(y).and_then(|row| row.get_mut(x)) else { continue };
+        if tile.item.is_some() {
+            continue;
+        }
+        let kind = entity
+            .art
+            .as_deref()
+            .and_then(|art| last_by_id(&content.items, art, |item| &item.id))
+            .map_or_else(|| "material".to_owned(), |item| item.r#type.clone());
+        tile.item = Some(SnapshotItem { sprite: None, item_type: Some(kind) });
+    }
+}
+
 /// Port of `ShellSnapshot.BuildShellSnapshot`: the play-mode world of `scene` from content and
 /// live state, with a contiguous world (no editor seams) and the clock's atmosphere. With
 /// [`SnapshotOptions::tile_window`] only those tiles are built.
@@ -371,7 +390,8 @@ pub fn shell_snapshot(
     // A tall terrain (M8) below the view reaches into it: its rows are built too.
     let tallest = vocabulary::terrains(content).iter().filter_map(|terrain| terrain.tall).max().unwrap_or(0);
     let window = options.tile_window.map(|window| window.with_tall(tallest));
-    let tiles = build_tiles(scene, content, |_, _| false, window);
+    let mut tiles = build_tiles(scene, content, |_, _| false, window);
+    plugin_entities(&mut tiles, content, state, scene);
     // A cutscene (M2) turns and walks characters and shows emotes over them.
     let cutscene = (scene.id == state.player.scene_id).then(|| cutscenes::view(content, state)).flatten();
     let directed = |actor: &str| cutscene_actor(cutscene.as_ref(), actor);

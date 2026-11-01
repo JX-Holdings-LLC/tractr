@@ -18,9 +18,9 @@ both crates (`--lint`).
 
 ## Recorded build
 
-- sha256: `242be296213dc7fed61e6e0fa1489b4b373482d0b22b120e6457db4d5510d106`
-- size: 734586 bytes
-- inputs sha256: `17bbdc7e782073bc1401c4ba17aedf3d7d8bccb75daca00830749b56e6f07afe`
+- sha256: `206c16f38c49ff373f7664104d4097f805c2e9b46b75ade6794bf67837e33670`
+- size: 743927 bytes
+- inputs sha256: `2a75ea08e0be24ca47994870a76811ee29884ee5fa740b1286b32107db279577`
 
 The inputs hash covers the files of `crates/farm-plugin-guest` and `tools/plugin-guest/meter`
 (without `target/`) and `tools/plugin-guest/build.sh`; the script prints it and
@@ -55,8 +55,10 @@ environment and maps the C source paths to relative ones.
 
 ## Interface
 
-Exports: `memory`, `fp_buffer`, `fp_prepare`, `fp_init`, `fp_dispatch`, `fp_output_ptr`,
-`fp_output_len` and the `fp_fuel` global. Imports: a few `wasi_snapshot_preview1`
-functions, which the host provides as inert stubs (no files, no environment, a constant
-clock, deterministic random bytes). `crates/farm-plugin-guest/src/lib.rs` documents the ABI
+ABI version 2 (`fp_abi_version`). Exports: `memory`, `fp_buffer`, `fp_prepare`, `fp_init`,
+`fp_dispatch`, `fp_output_ptr`, `fp_output_len`, `fp_abi_version` and the `fp_fuel` global.
+Imports: a few `wasi_snapshot_preview1` functions, which the host provides as inert stubs (no
+files, no environment, a constant clock, deterministic random bytes), and `farm.host_call` /
+`farm.host_answer`, the synchronous host calls behind `api.host` (the read API; version 1 had
+no host calls). `crates/farm-plugin-guest/src/lib.rs` documents the ABI
 and the sandbox rules; `tools/plugin-guest/meter/src/main.rs` documents the metering.

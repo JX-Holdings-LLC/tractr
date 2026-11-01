@@ -19,9 +19,9 @@
 //!   something malformed fails: [`PackMinigame::frame`] returns the error, and the host ends the
 //!   minigame as failed (score 0).
 //!
-//! The guest is unchanged: the minigame API is a few lines of JavaScript ([`PRELUDE`]) run
-//! before every plugin's source, on top of the guest's `api.on`. Each minigame is the handler of
-//! the hook `minigame:<name>`, which only a minigame session's instance is granted.
+//! The minigame API is part of the guest's prelude ([`crate::PRELUDE`]), on top of its `api.on`.
+//! Each minigame is the handler of the hook `minigame:<name>`, which only a minigame session's
+//! instance is granted.
 
 use crate::sandbox::{self, status, GuestFault, GuestInstance, Sandbox, MAX_RESULT_BYTES};
 use crate::{PluginError, PluginErrorKind, PluginSpec};
@@ -35,32 +35,6 @@ pub const MINIGAME_HOOK_PREFIX: &str = "minigame:";
 
 /// Longest frame time an `update` is told about, in seconds (a stalled frame is not a jump).
 pub const MAX_FRAME_SECONDS: f64 = 0.25;
-
-/// Run before every plugin's source (inside its `function (api) { … }`): replaces `api` by one
-/// that also has `api.minigame(name, game)`, which registers `game` as the handler of
-/// `minigame:<name>`. The guest's `api.on` ignores hooks the instance is not granted, so in the
-/// hook handlers' instance a minigame registers nothing, and in a minigame session's instance
-/// only that minigame registers.
-///
-/// The handler takes `{ op: 'start', config, info }` and answers `[state, drawList]`, or
-/// `{ op: 'frame', state, input, dt }` and answers `[updateAnswer, drawList]`; `draw` gets the
-/// state `update` answered (the old one when it answered none). Errors name the function they
-/// came from (`update: …`). One line, so it moves the plugin's line numbers by one.
-pub const PRELUDE: &str = "api = (function (base) { var freeze = Object.freeze; return freeze({ on: base.on, \
-minigame: function minigame(name, game) { if (typeof name !== 'string' || game === null || typeof game !== 'object') \
-throw new TypeError('api.minigame(name, { start, update, draw })'); \
-var run = function (op, a, b, c) { var fn = game[op]; if (typeof fn !== 'function') { if (op === 'start') return null; \
-throw new TypeError(op + ': minigame ' + name + ' has no ' + op + ' function'); } \
-try { return fn.call(game, a, b, c); } catch (e) { throw new Error(op + ': ' + (e instanceof Error ? e.message : String(e))); } }; \
-base.on('minigame:' + name, function (call) { if (call.op === 'start') { var first = run('start', call.config, call.info); \
-return [first, run('draw', first)]; } var answer = run('update', call.state, call.input, call.dt); \
-var next = answer !== null && typeof answer === 'object' && answer.state !== undefined ? answer.state : call.state; \
-return [answer, run('draw', next)]; }); } }); })(api);";
-
-/// The source a plugin's instances run: [`PRELUDE`], then the plugin's own source.
-pub(crate) fn wrapped_source(source: &str) -> String {
-    format!("{PRELUDE}\n{source}")
-}
 
 /// Budgets and bounds of pack minigame sessions. Fuel is the same deterministic unit as the
 /// hook budgets ([`crate::PluginHostOptions`]).
@@ -204,8 +178,8 @@ impl PackMinigame {
         let mut instance =
             sandbox.instance().map_err(|fault| session.fail_with(PluginErrorKind::Init, &describe(&fault)))?;
         instance.set_fuel(fuel);
-        let granted = serde_json::to_string(&[&hook]).expect("strings serialize");
-        let reply = sandbox::init(instance.as_mut(), &granted, &wrapped_source(&spec.source));
+        let granted = crate::prelude::granted_json(&[hook.as_str()], &spec.pack_id, false);
+        let reply = sandbox::init(instance.as_mut(), &granted, &spec.source);
         session.last_fuel_used = instance.fuel_used(fuel);
         let reply = match reply {
             Err(fault) => return Err(session.fault(Phase::Start, &fault)),

@@ -109,6 +109,10 @@ pub struct GameProject {
     pub minigames: Vec<MinigameDef>,
     /// Installed content packs (M5). Array order = load order.
     pub content_packs: Vec<PackInstallation>,
+    /// The creator's own scripts (#241): trusted plugins of the game itself, which use the
+    /// game's ids as written.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scripts: Option<Vec<super::ProjectScript>>,
     /// The project's terrains (M1), beside and over the built-in ones.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terrains: Option<Vec<TerrainDefinition>>,

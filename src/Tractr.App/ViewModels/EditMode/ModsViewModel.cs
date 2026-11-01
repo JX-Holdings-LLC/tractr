@@ -38,7 +38,14 @@ public sealed record PackReview(
     string Content,
     string? Art,
     string? ArtConflicts,
-    IReadOnlyList<PluginReviewRow> Plugins);
+    IReadOnlyList<PluginReviewRow> Plugins)
+{
+    /// <summary>What the plugins may read of the game (#237); null when nothing.</summary>
+    public string? Reads { get; init; }
+
+    /// <summary>The systems the plugins add: entities, item uses, screens, conditions, outcomes, timers (#238–#240).</summary>
+    public string? Systems { get; init; }
+}
 
 /// <summary>
 /// The Mods tab: installed pack order, an explicit manifest and permission review before
@@ -210,7 +217,11 @@ public sealed class ModsViewModel : ObservableObject
             $"Content: {content.Items.Length} items, {content.Npcs.Length} NPCs, {content.Scenes.Length} scenes, {content.Recipes.Length} recipes, {content.Quests.Length} quests, {pack.Plugins.Length} plugins",
             art,
             artConflicts,
-            [.. pack.Plugins.Select(plugin => new PluginReviewRow(plugin.Id, $"Plugin: {plugin.Name.OrNull() ?? plugin.Id} · hooks {string.Join(", ", plugin.Hooks)}", plugin.Source))]);
+            [.. pack.Plugins.Select(plugin => new PluginReviewRow(plugin.Id, $"Plugin: {plugin.Name.OrNull() ?? plugin.Id} · hooks {string.Join(", ", plugin.Hooks)}", plugin.Source))])
+        {
+            Reads = PluginExtensions.describeReads(permissions).OrNull() is { } reads ? $"Reads: {reads}" : null,
+            Systems = PluginExtensions.describeSystems(pack).OrNull() is { } systems ? $"Adds: {systems}" : null,
+        };
         InstallCommand.NotifyCanExecuteChanged();
     }
 

@@ -48,6 +48,24 @@ pub enum CommandRules {
     Scripted,
 }
 
+/// Answers plugin conditions (`EventCondition::Plugin`, #239) synchronously while the engine
+/// evaluates conditions. The plugin host implements it with sandboxed instances that only run
+/// conditions; a game without one treats every plugin condition as false. Implementations must
+/// be deterministic: the answer may depend only on the condition, its arguments, the content
+/// and the state.
+pub trait PluginConditions: Send + std::fmt::Debug {
+    /// Whether the plugin condition `condition` (`packId:name`) holds for `args` now; `scope`
+    /// is what the engine checks it against besides the state (the speaker, the tile).
+    fn holds(
+        &self,
+        ctx: &EngineContext,
+        state: &crate::schema::GameState,
+        condition: &str,
+        args: &serde_json::Value,
+        scope: &crate::events::ConditionScope<'_>,
+    ) -> bool;
+}
+
 /// EngineContext bundles immutable content with the hook bus (state.ts). GameContent never
 /// changes during play. The bus sits in a `RefCell` so handlers can emit through a shared
 /// `&EngineContext` while holding references into `content` (single-threaded by design).
@@ -65,6 +83,8 @@ pub struct EngineContext {
     pub(crate) trigger_depth: Cell<u32>,
     pub(crate) skill_reward_depth: Cell<u32>,
     pub(crate) skill_reward_runs: Cell<u32>,
+    /// The plugin host's answer to plugin conditions (#239); `None`: they are all false.
+    pub plugin_conditions: Option<Box<dyn PluginConditions>>,
 }
 
 impl EngineContext {
@@ -79,6 +99,7 @@ impl EngineContext {
             trigger_depth: Cell::new(0),
             skill_reward_depth: Cell::new(0),
             skill_reward_runs: Cell::new(0),
+            plugin_conditions: None,
         }
     }
 
@@ -93,6 +114,7 @@ impl EngineContext {
             trigger_depth: Cell::new(0),
             skill_reward_depth: Cell::new(0),
             skill_reward_runs: Cell::new(0),
+            plugin_conditions: None,
         }
     }
 

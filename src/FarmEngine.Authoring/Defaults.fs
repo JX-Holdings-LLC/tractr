@@ -404,6 +404,15 @@ module Defaults =
                 }
         | "slain" -> EventCondition.Slain { MonsterId = ""; Min = 10.0 }
         | "birthday" -> EventCondition.Birthday { NpcId = "" }
+        | "plugin" ->
+            EventCondition.Plugin
+                {
+                    Condition =
+                        (match PluginExtensions.conditionChoices project |> List.filter (fun c -> c.Enabled) with
+                         | c :: _ -> c.FullName
+                         | [] -> "")
+                    Args = None
+                }
         | _ -> EventCondition.Flag { Flag = ""; Value = true }
 
     /// event-forms.tsx outcome picker: an outcome of the kind with nothing filled in yet.

@@ -618,6 +618,10 @@ module EventOutcomeTypes =
     [<Literal>]
     let ModifyHealth = "modifyHealth"
 
+    /// A plugin outcome (#239): `pluginOutcome` (`packId:name`) and `args` in the outcome's extra keys.
+    [<Literal>]
+    let Plugin = "plugin"
+
     let All: string list =
         [
             Message
@@ -663,6 +667,7 @@ module EventOutcomeTypes =
             AddMaxHealth
             ApplyBuff
             ModifyHealth
+            Plugin
         ]
 
 /// TS `EventTriggerSchema`.

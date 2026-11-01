@@ -42,6 +42,8 @@
 //!     granted_hooks: vec!["onDayStart".to_owned()],
 //!     granted_mutations: Some(vec!["giveMoney".to_owned()]),
 //!     granted_minigames: Vec::new(),
+//!     granted_reads: Vec::new(),
+//!     trusted: false,
 //! };
 //! let mut host = WasmPluginHost::new(vec![spec], PluginHostOptions::default());
 //! let results = host.dispatch("onDayStart", r#"{"day":2,"season":"spring","year":1}"#);
@@ -61,31 +63,45 @@
 #![warn(missing_docs)]
 
 mod capabilities;
+mod conditions;
 mod host;
 mod minigame;
 mod mutations;
 mod payload;
+mod prelude;
 mod queue;
+mod reads;
 mod runtime;
 mod sandbox;
+mod scripts;
 mod spec;
 
 pub use capabilities::{
     MutationGrants, DEFAULT_MUTATION_CAPABILITIES, MAX_FLAG_KEYS_PER_PLUGIN, MAX_MUTATIONS_PER_CALL,
     MAX_SKILL_KEYS_PER_PLUGIN, MUTATION_TYPES, RESERVED_FLAG_PREFIX, SCOPED_MUTATION_TYPES,
 };
+pub use conditions::{PluginConditionHost, CONDITION_FUEL};
 pub use host::{PluginHost, PluginHostOptions, WasmPluginHost};
 pub use minigame::{
-    MinigameControls, MinigameFrame, MinigameLimits, PackMinigame, MAX_FRAME_SECONDS, MINIGAME_HOOK_PREFIX, PRELUDE,
+    MinigameControls, MinigameFrame, MinigameLimits, PackMinigame, MAX_FRAME_SECONDS, MINIGAME_HOOK_PREFIX,
 };
 pub use mutations::{parse_mutation, validate_mutations, MAX_FLAG_VALUE_LENGTH, MAX_ID_LENGTH, MAX_SAVED_DATA_BYTES};
 pub use payload::{effect_events, hook_payload_json, to_engine_json};
+pub use prelude::PRELUDE;
 pub use queue::{PluginMutationQueue, QueuedPluginMutation};
-pub use runtime::{PluginRuntime, BUDGET_WINDOW_TICKS, MAX_RECENT_ERRORS};
-pub use sandbox::{GUEST_WASM, MAX_ERROR_MESSAGE_BYTES, MAX_RESULT_BYTES};
-pub use spec::{
-    granted_minigame_kinds, is_valid_minigame_name, plugin_specs_from_packs, plugin_specs_from_project, PluginSpec,
+pub use reads::{
+    answer_read, read_scope, GameView, ReadGrants, MAX_READS_PER_CALL, READ_BASE_FUEL, READ_FUEL_PER_BYTE, READ_SCOPES,
 };
+pub use runtime::{PluginRuntime, BUDGET_WINDOW_TICKS, MAX_RECENT_ERRORS};
+pub use sandbox::{GUEST_WASM, MAX_ERROR_MESSAGE_BYTES, MAX_HOST_REQUEST_BYTES, MAX_RESULT_BYTES};
+pub use scripts::{is_project_script, project_script_specs, script_spec, ScriptBudgets, PROJECT_SCRIPT_PREFIX};
+pub use spec::{
+    granted_extension_hooks, granted_minigame_kinds, is_valid_minigame_name, local_names, plugin_spec,
+    plugin_specs_from_packs, plugin_specs_from_project, PluginSpec,
+};
+
+/// Hook name prefix of plugin screens (`screen:<packId>:<name>`, #240).
+pub const SCREEN_HOOK_PREFIX: &str = "screen:";
 
 use farm_sim::schema::PluginMutation;
 use serde::{Deserialize, Serialize};

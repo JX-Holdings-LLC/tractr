@@ -209,6 +209,10 @@ fn apply_plugin_mutation(
     // Mutations sharing the event-outcome executor (identical semantics to the equivalent
     // event/action outcome, including soft failure).
     let run_outcome = |state: &mut GameState, outcome: EventOutcome| events::apply_outcomes(ctx, state, &[outcome], 0);
+    // Entities and timers (#238).
+    if let Some(effects) = crate::plugin_world::apply_mutation(ctx, state, plugin_id, mutation) {
+        return effects;
+    }
 
     match mutation {
         PluginMutation::GiveItem { item_id, quantity } => {
@@ -415,6 +419,12 @@ fn apply_plugin_mutation(
             state.plugin_data.insert(plugin_id.to_owned(), units::canonical_json(data.clone()));
             vec![]
         }
+        // Handled by `plugin_world::apply_mutation` above.
+        PluginMutation::SpawnEntity { .. }
+        | PluginMutation::UpdateEntity { .. }
+        | PluginMutation::RemoveEntity { .. }
+        | PluginMutation::StartTimer { .. }
+        | PluginMutation::CancelTimer { .. } => vec![],
     }
 }
 
@@ -524,6 +534,8 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
             ctx.emit(HookEvent::TimeOfDay(TimeOfDayHookPayload { hour, day: state.clock.day }));
         }
         crafting::settle_machines(ctx, state);
+        // Plugin timers and entity ticks (#238).
+        crate::plugin_world::advance_minute(ctx, state);
         effects.extend(events::evaluate_events(ctx, state, "tick", None));
         // `time` events whose minute the clock just reached (M3).
         let span = (before_minute.saturating_mul(units::MINUTE), after_minute.saturating_mul(units::MINUTE));
