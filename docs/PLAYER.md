@@ -117,6 +117,11 @@ copy on a USB stick, say).
   in a newer one; anything the newer version no longer has is kept aside,
   not lost. A save from a newer version loads with a warning. A save from
   another game is refused.
+- **Updates can rename things in old saves.** When the creator renamed,
+  replaced or removed an item or a place, the update carries a rule for it,
+  and the first load of an older save applies it and says so once ("Your old
+  Copper Watering Can is now Watering Can.", "Your old Moon Dust (3) left the
+  game; you received $30 for it.").
 
 ## Screenshots
 
@@ -160,6 +165,9 @@ an exported game.
 | `--script <file>` | Scripted input for the screenshot run (below). |
 | `--headless` | No window: load, replay, report (below). |
 | `--replay <file>`, `--load <save>`, `--save <save>` | The replay to run, a save to start from, and where to save at the end. |
+| `--test-state <file>` | Headless and screenshot runs: start from a test state (below). |
+| `--start-scene <id>`, `--start-at <x>,<y>` | Headless and screenshot runs: start in this scene, on this tile (the scene's centre without `--start-at`). |
+| `--facing up\|down\|left\|right`, `--time <minute>\|<hh:mm>`, `--day <n>` | Headless and screenshot runs: the player's facing, the time of day and the day (1 is the first day of the first year). |
 
 ### Store pictures with `--screenshot`
 
@@ -184,29 +192,102 @@ WillowCreek --screenshot field.png --script walk.json --frames 120
 
 `press`, `button` and `click` go down on their frame and up on the next.
 
+A screenshot of a place later in the game starts there: with a start option
+the run skips the title screen, starts a new game and moves it, the way Play
+Mode's debug teleport does:
+
+```sh
+WillowCreek --screenshot square.png --start-scene scene-square --start-at 12,8 --facing up --time 18:30 --day 40
+WillowCreek --screenshot festival.png --test-state festival-day.json
+```
+
+### Test states
+
+A test state is a JSON file (or a test state of the project, which the
+editor's **States** menu saves; see the [Creator guide](CREATOR-GUIDE.md#test-states))
+that puts a new game somewhere. Every field is optional; what a state leaves
+out stays as New Game made it:
+
+```json
+{
+  "id": "late-summer", "name": "Late summer",
+  "day": 50, "season": "summer", "dayOfSeason": 22, "year": 1, "time": 600, "weather": "rain",
+  "sceneId": "scene-square", "x": 12, "y": 8, "facing": "up",
+  "flags": { "mill-fixed": true }, "variables": { "bridges": 2 },
+  "quests": { "quest-roots": "completed", "quest-mill": "active" },
+  "friendship": { "npc-mira": 500 },
+  "inventory": [ { "itemId": "wood", "quantity": 20 } ],
+  "money": 1500
+}
+```
+
+`day` sets the date by itself (season, day of the season and year follow from
+it); `season`, `dayOfSeason` and `year` set it too. Quest statuses
+(`not-started`, `active`, `completed`, `failed`) are set as they are: rewards
+and outcomes do not run, so list what they would have given. Friendship is in
+points, 125 a heart. `inventory` replaces the starting inventory. Content the
+game no longer has is skipped and the report's `notes` say what; the
+`--start-*` options go over `--test-state`, which goes over the replay's own
+`testState`.
+
 ### Checking a game with `--headless`
 
 `--headless` plays a recorded list of inputs without a window and prints a
-JSON report with the game id, version, content and state hashes. The same
-game and the same inputs always end in the same state, on every machine, so
-a build server can check that an exported game still plays the same:
+JSON report: the game id, version, content and state hashes, where the game
+ended (`clock`: day, season, year, minute, scene and tile), every quest with
+its status, the flags (`true` or `false`), the variables (numbers and texts)
+and the money. The same game and the same inputs always end in the same
+state, on every machine, so a build server can check that an exported game
+still plays the same:
 
 ```json
 {
   "seed": "optional-seed",
   "autoStartQuests": false,
+  "testState": { "id": "start", "sceneId": "scene-farm", "x": 5, "y": 5 },
   "inputs": [
     { "kind": "tick", "ticks": 20 },
-    { "kind": "command", "command": { "type": "sleep" } }
+    { "kind": "command", "command": { "type": "sleep" } },
+    { "kind": "debug", "action": { "type": "giveItem", "itemId": "wood", "quantity": 10 } },
+    { "kind": "debug", "action": { "type": "skipDay", "days": 3 } }
+  ],
+  "expect": [
+    { "quest": "quest-roots", "status": "completed" },
+    { "flag": "mill-fixed", "value": true }
   ],
   "expectedHash": "optional-16-character-hash"
 }
 ```
 
-The player exits with an error for a broken cartridge, a save it can't load
-or a hash that doesn't match `expectedHash`. `--save` writes a save at the
-end (a path ending in `.json` writes it as JSON), and `--load` starts from
-one.
+Debug shortcuts reach a late state quickly and stay deterministic:
+
+| Action | What it does |
+|---|---|
+| `{"type":"giveItem","itemId":…,"quantity":1,"quality":…}` | Adds items (stack sizes and the inventory limit hold). |
+| `{"type":"skipDay","days":1}` | Sleeps through the nights, wherever the player is. |
+| `{"type":"setMoney","amount":…}`, `{"type":"addMoney","amount":…}` | Sets or adds money. |
+| `{"type":"setFlag","flag":…,"value":true}` | Sets a flag or a variable (`false` clears it). |
+| `{"type":"setQuest","questId":…,"status":…}` | Sets a quest's status, without rewards. |
+| `{"type":"setFriendship","npcId":…,"points":…}` | Sets friendship points. |
+| `{"type":"teleport","sceneId":…,"x":…,"y":…,"facing":…}` | Moves the player. |
+| `{"type":"applyTestState","state":{…}}` | Applies a whole test state. |
+
+Each `expect` entry must hold at the end: `{"quest": id, "status": s}`,
+`{"flag": name, "value": true}` (any value; `true` and `false` compare as
+set and unset), `{"variable": name, "value": 2}`, `{"money": n}`,
+`{"minMoney": n}`, `{"item": id, "quantity": n}` (at least `n`) and
+`{"scene": id}`. A run that misses one fails with what was found:
+
+```text
+2 of 3 expectations failed:
+  expect[1]: flag 'mill-fixed' is unset, expected true
+  expect[2]: money is 480, expected 500
+```
+
+The player exits with an error for a broken cartridge, a save it can't load,
+a hash that doesn't match `expectedHash` or a missed expectation. `--save`
+writes a save at the end (a path ending in `.json` writes it as JSON), and
+`--load` starts from one.
 
 How the player works inside (embedding, renderers, audio, performance) is in
 [Player internals](dev/PLAYER-INTERNALS.md).
