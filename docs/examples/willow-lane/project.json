@@ -762,6 +762,16 @@
           "outcomes": []
         },
         {
+          "type": "animate",
+          "actor": "npc-hazel",
+          "animation": "wave",
+          "seconds": 1,
+          "wait": true,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
           "type": "emote",
           "actor": "npc-hazel",
           "emote": "heart",

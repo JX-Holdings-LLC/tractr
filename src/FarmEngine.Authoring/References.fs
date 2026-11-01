@@ -668,6 +668,13 @@ module References =
             plain "PackPermissions" "Minigames" "minigame kinds the pack's plugins may define (docs/PLUGINS.md)"
             plain "PackPlugin" "Hooks" "plugin hook names the plugin handles"
             plain "PackPlugin" "Minigames" "minigame kinds the plugin defines with api.minigame"
+            plain "PackPermissions" "Read" "read API scopes the pack's plugins may query (docs/PLUGINS.md)"
+            plain "PackPermissions" "Entities" "entity types the pack's plugins may place (docs/PLUGINS.md)"
+            plain "PackPermissions" "ItemUses" "item use handlers the pack's plugins may define (docs/PLUGINS.md)"
+            plain "PackPermissions" "Screens" "screens the pack's plugins may add (docs/PLUGINS.md)"
+            plain "PackPlugin" "Entities" "entity types the plugin defines"
+            plain "PackPlugin" "ItemUses" "item use handlers the plugin defines"
+            plain "PluginArgument" "Type" "the argument's value type (PluginArgumentTypes)"
             plain "PackContent" "Strings" "locale string tables keyed by locale code"
             optional "PackPlayerStart" "SceneId" ReferenceKind.Scene
             reference "PackStartItem" "ItemId" ReferenceKind.Item
