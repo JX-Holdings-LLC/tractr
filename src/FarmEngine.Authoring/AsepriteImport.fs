@@ -938,7 +938,7 @@ module AsepriteImport =
             chosen
             |> List.map (fun (_, name, _, frames, loops) ->
                 name,
-                {
+                { AnimationClip.Default with
                     Name = name
                     Loop = loops
                     Frames = frames
@@ -954,7 +954,8 @@ module AsepriteImport =
             oldClips
             |> List.choose (fun clip ->
                 match imported |> List.tryFind (fun (name, _) -> name = clip.Name) with
-                | Some(_, fresh) -> Some { fresh with Loop = clip.Loop }
+                // Keep what the creator set on the clip (loop, action options); take the new frames.
+                | Some(_, fresh) -> Some { clip with Frames = fresh.Frames }
                 | None when previousClips.Contains clip.Name -> None
                 | None -> Some clip)
 
