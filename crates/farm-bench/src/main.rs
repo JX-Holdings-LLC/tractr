@@ -19,7 +19,66 @@
 use farm_bench::{scenarios, Measurement};
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: farm-bench [--budget] [--factor F] [--scale S] [FILTER]...";
+const USAGE: &str = "usage: farm-bench [--budget] [--factor F] [--scale S] [FILTER]...
+       farm-bench lab --cart game.cart [--strategy S]... [--season | --year | --days N] [--seeds N] [--csv DIR]
+         strategies: crop:<id>, best-crop, process, raw (default: every crop:<id>, best-crop, process, raw)";
+
+/// `farm-bench lab`: the balancing lab (#230).
+fn lab(args: &[String]) -> Result<(), String> {
+    use farm_bench::lab::{period_days, run_lab, Strategy};
+    let mut cart = None;
+    let mut strategies = Vec::new();
+    let mut days = None;
+    let mut year = false;
+    let mut seeds = 5_u32;
+    let mut csv = None;
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        let mut value = |flag: &str| iter.next().cloned().ok_or_else(|| format!("{flag} needs a value"));
+        match arg.as_str() {
+            "--cart" => cart = Some(value("--cart")?),
+            "--strategy" => strategies.push(Strategy::parse(&value("--strategy")?)?),
+            "--season" => year = false,
+            "--year" => year = true,
+            "--days" => days = Some(value("--days")?.parse::<u32>().map_err(|_| "--days needs a number")?),
+            "--seeds" => seeds = value("--seeds")?.parse::<u32>().map_err(|_| "--seeds needs a number")?.max(1),
+            "--csv" => csv = Some(std::path::PathBuf::from(value("--csv")?)),
+            other => return Err(format!("unknown lab option {other}")),
+        }
+    }
+    let path = cart.ok_or("lab needs --cart game.cart")?;
+    let bytes = std::fs::read(&path).map_err(|error| format!("read {path}: {error}"))?;
+    let cart = farm_cart::load_cartridge(&bytes)?;
+    if strategies.is_empty() {
+        let mut crops: Vec<&String> = cart
+            .content
+            .crops
+            .keys()
+            .filter(|id| {
+                cart.content
+                    .items
+                    .iter()
+                    .any(|item| item.r#type == "seed" && item.crop_type.as_deref() == Some(id.as_str()))
+            })
+            .collect();
+        crops.sort();
+        strategies.extend(crops.into_iter().map(|id| Strategy::Crop(id.clone())));
+        strategies.extend([Strategy::BestCrop, Strategy::Process, Strategy::Raw]);
+    }
+    let days = days.unwrap_or_else(|| period_days(&cart, year));
+    let seeds: Vec<String> = (1..=seeds).map(|n| format!("lab-{n}")).collect();
+    let report = run_lab(&cart, &strategies, &seeds, days);
+    print!("{}", report.summary());
+    if let Some(dir) = csv {
+        std::fs::create_dir_all(&dir).map_err(|error| format!("create {}: {error}", dir.display()))?;
+        for (name, text) in report.csv() {
+            let file = dir.join(name);
+            std::fs::write(&file, text).map_err(|error| format!("write {}: {error}", file.display()))?;
+        }
+        println!("wrote {}", dir.display());
+    }
+    Ok(())
+}
 
 #[derive(Debug)]
 struct Args {
@@ -52,6 +111,16 @@ fn parse_args() -> Result<Args, String> {
 }
 
 fn main() -> ExitCode {
+    let all: Vec<String> = std::env::args().skip(1).collect();
+    if all.first().map(String::as_str) == Some("lab") {
+        return match lab(&all[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => {
+                eprintln!("{message}\n{USAGE}");
+                ExitCode::from(2)
+            }
+        };
+    }
     let args = match parse_args() {
         Ok(args) => args,
         Err(message) => {

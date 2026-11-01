@@ -81,6 +81,19 @@ or renders screenshots ([The game player](docs/PLAYER.md#command-line-options)):
 cargo run -p farm-player -- --cart game.cart
 ```
 
+The balancing lab plays scripted strategies on the real engine over many
+seeds (one crop only, the best crop each season, processing through machines,
+shipping raw) and prints gold per day and per energy point, per crop and per
+recipe chain, when each tool upgrade, building and quest is reached, and its
+findings (dominant crops and recipes, recipes that lose money, items with no
+buyer, milestones a season does not reach); `--csv` writes the tables
+(`crates/farm-bench/src/lab.rs`):
+
+```sh
+cargo run -p farm-bench -- lab --cart game.cart --year --seeds 10 --csv lab-out
+cargo run -p farm-bench -- lab --cart game.cart --strategy crop:wheat --strategy process --days 28
+```
+
 The build puts a player template for your platform (Windows or Linux x64) in
 `players/` next to the app and `farmc`, so Export Game works from a source
 build; the web template is built separately ([Export internals](docs/dev/EXPORT-INTERNALS.md#player-templates)).
