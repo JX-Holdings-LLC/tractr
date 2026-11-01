@@ -334,7 +334,8 @@ module ContentGraph =
         for event in content.Events do
             source flag (EventsSchema.EventFiredFlag event.Id) (link "outcome" event.Id (sprintf "Set when %s fires" event.Name) [] [])
 
-        for fields in objects (SchemaJson.encodeGameContent content) do
+        // Scenes hold tiles, not outcomes: left out, so a large map costs nothing here.
+        for fields in objects (SchemaJson.encodeGameContent { content with Scenes = [] }) do
             match text "type" fields with
             | Some t when t = EventOutcomeTypes.GiveItem ->
                 text "itemId" fields

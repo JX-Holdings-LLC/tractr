@@ -5,7 +5,17 @@
     "json": "fba62d262e258029",
     "stable": "1c1aec7e27ba7df6",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "7b16c1e22c80636b",
     "cartridge": "faed86a9b9a66d54"
@@ -16,7 +26,9 @@
     "json": "623587a048644d89",
     "stable": "81cbaa6aa243f0bd",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d0bd4d4b871d05d3",
     "cartridge": "3a8162d82b348fd9"
@@ -27,7 +39,8 @@
     "json": "1b874f3967e3fa3c",
     "stable": "1f5379318a171c9a",
     "problems": [
-      "warning|machineType.noItem|machineTypes[0].itemId|Machine \"Mill\" has no item, so players cannot place it|machineType"
+      "warning|machineType.noItem|machineTypes[0].itemId|Machine \"Mill\" has no item, so players cannot place it|machineType",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Glowshroom\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "8e1043d611693a17",
     "cartridge": "106967558471d1e6"
@@ -38,7 +51,48 @@
     "json": "b7b5c8fb10deac3b",
     "stable": "c8ab68a4a08d4b3d",
     "problems": [
-      "warning|weather.tableUnknownSeason|weather.table.spring|The weather table has a row for unknown season \"spring\"|settings"
+      "warning|weather.tableUnknownSeason|weather.table.spring|The weather table has a row for unknown season \"spring\"|settings",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "103b90eda60043a6",
     "cartridge": "6ee699688e1b4144"
@@ -50,7 +104,9 @@
     "stable": "ebd1a631a065c080",
     "problems": [
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c17bfb3a01eb3196",
     "cartridge": "2f0f00028f55af94"
@@ -63,7 +119,17 @@
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Baguette\" (no shop, crop, recipe, drop, reward or event) yet it is needed (ingredient of jam (recipe)).|item",
+      "info|graph.itemUnobtainable|items|\"Jam\" can never be had: every way to get it needs item \"lang-pack:baguette\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Glowshroom Spores\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Glowshroom\" can never be had: every way to get it needs item \"demo-glow-farm:seed-glowshroom\", which the game never gives.|item",
+      "info|graph.itemUnobtainable|items|\"Glow Jelly\" can never be had: every way to get it needs item \"demo-glow-farm:crop-glowshroom\", which the game never gives.|item",
+      "info|graph.recipeGated|recipes.inputs|Recipe \"Jam\" can never be made: nothing gives its ingredient \"lang-pack:baguette\".|recipe",
+      "info|graph.questNeverStarts|quests|Nothing starts quest \"Bonus Bread\": it does not start on its own and no conversation, event or board offers it.|quest",
+      "info|graph.questGated|quests.objectives|Quest \"Bonus Bread\" asks for \"lang-pack:baguette\", which nothing in the game gives.|quest"
     ],
     "content": "f0d2283414f3acf4",
     "cartridge": "92f4d8cdc3d775e9"
@@ -76,7 +142,17 @@
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Baguette française\" (no shop, crop, recipe, drop, reward or event) yet it is needed (ingredient of jam (recipe)).|item",
+      "info|graph.itemUnobtainable|items|\"Jam\" can never be had: every way to get it needs item \"lang-pack:baguette\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Glowshroom Spores\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Glowshroom\" can never be had: every way to get it needs item \"demo-glow-farm:seed-glowshroom\", which the game never gives.|item",
+      "info|graph.itemUnobtainable|items|\"Glow Jelly\" can never be had: every way to get it needs item \"demo-glow-farm:crop-glowshroom\", which the game never gives.|item",
+      "info|graph.recipeGated|recipes.inputs|Recipe \"Jam\" can never be made: nothing gives its ingredient \"lang-pack:baguette\".|recipe",
+      "info|graph.questNeverStarts|quests|Nothing starts quest \"Quête bonus\": it does not start on its own and no conversation, event or board offers it.|quest",
+      "info|graph.questGated|quests.objectives|Quest \"Quête bonus\" asks for \"lang-pack:baguette\", which nothing in the game gives.|quest"
     ],
     "content": "f7c1e722d4e9b9b3",
     "cartridge": "f6f714dbd81b3fcc"
@@ -87,7 +163,9 @@
     "json": "fe4d9a139234bd65",
     "stable": "87b302230ccf0adc",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "cf36c5fd96550ebc",
     "cartridge": "dc5fca5737c6da0a"
@@ -98,7 +176,8 @@
     "json": "f19101833083b372",
     "stable": "771a441d2d6b8c53",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "62f66ac5aacc23ad",
     "cartridge": "61a233fd0655edee"
@@ -108,7 +187,51 @@
     "errors": [],
     "json": "b555b0c4eb9d7890",
     "stable": "f06b444c25082ceb",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "a462148f65b16580",
     "cartridge": "3f126cb6584e6e39"
   },
@@ -118,7 +241,9 @@
     "json": "19ec37b368795dac",
     "stable": "901bf365cdf2cf06",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "f8ffc610ec336c7e",
     "cartridge": "384978dfbbb87672"
@@ -131,7 +256,47 @@
     "problems": [
       "warning|action.cycle|actions[3].outcomes|Action \"Loop\" ends up performing itself again; the game stops such a chain after 4 levels or 256 actions|action",
       "warning|minigame.unknownKind|minigames[0].kind|Minigame \"Orb\" uses kind \"orb-dance\", which the game doesn't have: it plays as a single \"Go!\" button that always scores 0.5. Pick one of the built-in kinds|minigame",
-      "warning|minigame.noTiers|minigames[1].resultTiers|Minigame \"Empty\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[1].resultTiers|Minigame \"Empty\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "848dc38c13596888",
     "cartridge": "9442a382d6a24b17"
@@ -142,7 +307,47 @@
     "json": "443d6b3cdaa71faf",
     "stable": "4a0a692f9cda8ed7",
     "problems": [
-      "error|animal.unknownSpecies|animals[3].speciesId|Animal \"Ghosty\" is of missing species \"animal-dragon\"|animalSpecies"
+      "error|animal.unknownSpecies|animals[3].speciesId|Animal \"Ghosty\" is of missing species \"animal-dragon\"|animalSpecies",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "49e40995ac9399ff",
     "cartridge": "throws InvalidOperationException: animals[3].speciesId: Animal \"Ghosty\" is of missing species \"animal-dragon\""
@@ -153,7 +358,17 @@
     "json": "fba62d262e258029",
     "stable": "1c1aec7e27ba7df6",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "7b16c1e22c80636b",
     "cartridge": "faed86a9b9a66d54"
@@ -164,7 +379,48 @@
     "json": "b7b5c8fb10deac3b",
     "stable": "c8ab68a4a08d4b3d",
     "problems": [
-      "warning|weather.tableUnknownSeason|weather.table.spring|The weather table has a row for unknown season \"spring\"|settings"
+      "warning|weather.tableUnknownSeason|weather.table.spring|The weather table has a row for unknown season \"spring\"|settings",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "103b90eda60043a6",
     "cartridge": "6ee699688e1b4144"
@@ -177,7 +433,17 @@
     "problems": [
       "warning|content.packs|contentPacks[3]|Pack 'rebalance' redefines item 'crop-carrot' without declaring it in manifest.overrides — keeping the earlier definition|pack",
       "warning|project.currentDayOutsideSeason|currentDay|Day 1 of the calendar is day 1 of Spring, not in the starting season Fall; the game starts on day 1 of Fall|settings",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Baguette française\" (no shop, crop, recipe, drop, reward or event) yet it is needed (ingredient of jam (recipe)).|item",
+      "info|graph.itemUnobtainable|items|\"Jam\" can never be had: every way to get it needs item \"lang-pack:baguette\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Glowshroom Spores\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Glowshroom\" can never be had: every way to get it needs item \"demo-glow-farm:seed-glowshroom\", which the game never gives.|item",
+      "info|graph.itemUnobtainable|items|\"Glow Jelly\" can never be had: every way to get it needs item \"demo-glow-farm:crop-glowshroom\", which the game never gives.|item",
+      "info|graph.recipeGated|recipes.inputs|Recipe \"Jam\" can never be made: nothing gives its ingredient \"lang-pack:baguette\".|recipe",
+      "info|graph.questNeverStarts|quests|Nothing starts quest \"Quête bonus\": it does not start on its own and no conversation, event or board offers it.|quest",
+      "info|graph.questGated|quests.objectives|Quest \"Quête bonus\" asks for \"lang-pack:baguette\", which nothing in the game gives.|quest"
     ],
     "content": "f7c1e722d4e9b9b3",
     "cartridge": "f6f714dbd81b3fcc"
@@ -188,7 +454,9 @@
     "json": "a5520c79d1ce0cf0",
     "stable": "dab9b264280d8b3f",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "5a65c60b9954f7ec",
     "cartridge": "ca2722ec8f52509b"
@@ -200,7 +468,8 @@
     "stable": "cfb07193c21b6e1b",
     "problems": [
       "error|content.quests|quests[2]|Quest \"Bale Some Hay\" objective targets missing item \"recipe-craft-hay\"|quest",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "990a9ca5bcbc5f9c",
     "cartridge": "throws InvalidOperationException: quests[2]: Quest \"Bale Some Hay\" objective targets missing item \"recipe-craft-hay\""
@@ -216,7 +485,46 @@
       "warning|dialogue.repeatableReward|npcs[0].dialogue[0].options[2].once|Dialogue \"dlg-ann-1\" option \"Spare some coin?\" gives its reward every time it is chosen; make it once-only or hide it behind a flag|npc",
       "warning|dialogue.repeatableReward|npcs[0].dialogue[0].options[3].once|Dialogue \"dlg-ann-1\" option \"Secret\" gives its reward every time it is chosen; make it once-only or hide it behind a flag|npc",
       "warning|dialogue.notOnNpc|dialogues[2]|Dialogue \"dlg-ann-3\" is in the project list but not on NPC \"npc-ann\"|npc",
-      "warning|quest.objectiveNoTarget|quests[0].objectives[0].targetItemId|Quest \"Ann's Gifts\" objective 1 (gift) has no target yet|quest"
+      "warning|quest.objectiveNoTarget|quests[0].objectives[0].targetItemId|Quest \"Ann's Gifts\" objective 1 (gift) has no target yet|quest",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "439a47f2c169968f",
     "cartridge": "throws InvalidOperationException: npcs[0].dialogue: Dialogue \"dlg-ann-3\" links to missing dialogue \"dlg-missing\""
@@ -226,7 +534,48 @@
     "errors": [],
     "json": "bab6ff03a6a62f41",
     "stable": "1980c8541aec9288",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "e89b3c73018243f5",
     "cartridge": "dfdda87e7f770505"
   },
@@ -235,7 +584,37 @@
     "errors": [],
     "json": "3162b993854c79fd",
     "stable": "a90d45077018d6e9",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "07f9623eec19bae1",
     "cartridge": "34377eae23a4a1a7"
   },
@@ -245,7 +624,46 @@
     "json": "5416f4ce35496a3c",
     "stable": "7567b7d5ad6f1b65",
     "problems": [
-      "warning|fishTable.noEntries|fishTables[0].entries|Fish table \"Empty\" has no fish|fishTable"
+      "warning|fishTable.noEntries|fishTables[0].entries|Fish table \"Empty\" has no fish|fishTable",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[49]|Nothing in the game gives \"Pro Rod\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "f7e8ad7ce2d4ccdf",
     "cartridge": "75b918f94b5e1818"
@@ -256,7 +674,46 @@
     "json": "043d834073847ef2",
     "stable": "f51d6c04c74fff21",
     "problems": [
-      "warning|fishTable.noEntries|fishTables[0].entries|Fish table \"Empty\" has no fish|fishTable"
+      "warning|fishTable.noEntries|fishTables[0].entries|Fish table \"Empty\" has no fish|fishTable",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c0464adfdad7b4c2",
     "cartridge": "f98a32033d272bd8"
@@ -266,7 +723,44 @@
     "errors": [],
     "json": "1e36451457fb5d87",
     "stable": "872e031f0bb88924",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "fec2cf88739f4764",
     "cartridge": "9159cfaacd3f39ba"
   },
@@ -276,7 +770,17 @@
     "json": "9bdc9c85847e8f79",
     "stable": "138ed23594ffb5b2",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "e1f35f8ca7793dbf",
     "cartridge": "a676136d51713e5f"
@@ -287,7 +791,46 @@
     "json": "e5d1c5de743237ba",
     "stable": "84ff31194d0a98c3",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"Smithy\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"Smithy\"|shop",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "654f444a5629b93d",
     "cartridge": "6be687db3f203705"
@@ -297,7 +840,50 @@
     "errors": [],
     "json": "0aa84da5dc155e0a",
     "stable": "5004a3b8ccffad13",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "5f616a61bece072c",
     "cartridge": "912e4025e12ce3ff"
   },
@@ -307,7 +893,50 @@
     "json": "2f85ffd565dc3b4b",
     "stable": "7ad5320a9d81c77a",
     "problems": [
-      "warning|content.scenes|scenes[1]|Scene \"Annex\" is unreachable (no transition leads to it)|scene"
+      "warning|content.scenes|scenes[1]|Scene \"Annex\" is unreachable (no transition leads to it)|scene",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[2]|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[3]|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[4]|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[5]|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[6]|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[7]|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[8]|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[9]|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[10]|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[11]|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[12]|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[13]|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[14]|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[15]|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[16]|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[17]|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[18]|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[19]|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[20]|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[21]|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[22]|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[23]|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[24]|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[25]|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[26]|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[30]|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[31]|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[33]|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[38]|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[46]|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[47]|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "1deaa268fb748c9a",
     "cartridge": "0ffe19a0540eb744"
@@ -318,7 +947,8 @@
     "json": "a671100c4c94bc70",
     "stable": "8fdaf55cb5a870b5",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "aa1bd325dfe8c708",
     "cartridge": "9062c40d674b9db1"
@@ -329,7 +959,17 @@
     "json": "9bdc9c85847e8f79",
     "stable": "138ed23594ffb5b2",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "e1f35f8ca7793dbf",
     "cartridge": "a676136d51713e5f"
@@ -344,7 +984,15 @@
       "error|content.shops|shops[1]|Shop \"Picky Shop\" stocks missing item \"ghost-item\"|shop",
       "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
       "info|shop.noStock|shops[2].stock|Shop \"Museum\" sells nothing|shop",
-      "info|shop.unreachable|shops[2]|No dialogue option opens shop \"Museum\"|shop"
+      "info|shop.unreachable|shops[2]|No dialogue option opens shop \"Museum\"|shop",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "70a72fdacc85d211",
     "cartridge": "throws InvalidOperationException: npcs[0].dialogue: Dialogue \"dlg-vendor\" opens missing shop \"shop-nope\"\nshops[1]: Shop \"Picky Shop\" stocks missing item \"ghost-item\""
@@ -354,7 +1002,51 @@
     "errors": [],
     "json": "b555b0c4eb9d7890",
     "stable": "f06b444c25082ceb",
-    "problems": [],
+    "problems": [
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Wheat\" can never be had: every way to get it needs item \"seed-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Corn Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Corn\" can never be had: every way to get it needs item \"seed-corn\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Tomato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Tomato\" can never be had: every way to get it needs item \"seed-tomato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Carrot Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Carrot\" can never be had: every way to get it needs item \"seed-carrot\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Potato Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Potato\" can never be had: every way to get it needs item \"seed-potato\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Strawberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Strawberry\" can never be had: every way to get it needs item \"seed-strawberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pumpkin Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Pumpkin\" can never be had: every way to get it needs item \"seed-pumpkin\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Cauliflower Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Cauliflower\" can never be had: every way to get it needs item \"seed-cauliflower\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Blueberry Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items|\"Blueberry\" can never be had: every way to get it needs item \"seed-blueberry\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Scythe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Hoe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Watering Can\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Axe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Pickaxe\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Basic Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Quality Fertilizer\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Fishing Rod\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Hay\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Furnace\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Preserves Jar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
+    ],
     "content": "a462148f65b16580",
     "cartridge": "3f126cb6584e6e39"
   },
@@ -364,7 +1056,9 @@
     "json": "19ec37b368795dac",
     "stable": "901bf365cdf2cf06",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "f8ffc610ec336c7e",
     "cartridge": "384978dfbbb87672"
@@ -375,7 +1069,9 @@
     "json": "d13a1f35278ac81d",
     "stable": "ac1645346e013467",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "dbfc4758d202d270",
     "cartridge": "840b5caf6a9decce"
@@ -398,7 +1094,8 @@
     "json": "1b874f3967e3fa3c",
     "stable": "1f5379318a171c9a",
     "problems": [
-      "warning|machineType.noItem|machineTypes[0].itemId|Machine \"Mill\" has no item, so players cannot place it|machineType"
+      "warning|machineType.noItem|machineTypes[0].itemId|Machine \"Mill\" has no item, so players cannot place it|machineType",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Glowshroom\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "8e1043d611693a17",
     "cartridge": "106967558471d1e6"
@@ -430,7 +1127,15 @@
       "warning|crop.noSeedItem|customCrops[0]|Crop \"Glowcorn\" has no seed item, so nobody can plant it|crop",
       "warning|crop.noHarvestItem|customCrops[0].harvestItemId|Crop \"Glowcorn\" has no harvest item (no \"crop-glowcorn\" and no harvest item set), so harvesting it gives nothing|crop",
       "warning|machineType.noItem|machineTypes[0].itemId|Machine \"Mill\" has no item, so players cannot place it|machineType",
-      "warning|pack.incompatible|contentPacks[0].pack.manifest.engineCompatibility|Pack \"PACK-B\" wants engine ^9.0.0, this is 0.5.0|pack"
+      "warning|pack.incompatible|contentPacks[0].pack.manifest.engineCompatibility|Pack \"PACK-B\" wants engine ^9.0.0, this is 0.5.0|pack",
+      "info|graph.itemUnobtainable|items|\"Baie\" can never be had: every way to get it needs quest \"pack-a:jam-quest\", which the game never gives.|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pack Wheat\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items|Nothing in the game gives \"Pack Flour\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.questNeverStarts|quests[0]|Nothing starts quest \"Base Quest\": it does not start on its own and no conversation, event or board offers it.|quest",
+      "info|graph.questNeverStarts|quests|Nothing starts quest \"Jam time\": it does not start on its own and no conversation, event or board offers it.|quest",
+      "warning|graph.questDeadEnd|quests.prerequisites|Quest \"Jam time\" waits for \"pack-a:intro\", which nothing starts, so it can never start.|quest",
+      "warning|graph.questDeadEnd|quests.prerequisites|Quest \"Jam time\" waits for \"q-base\", which nothing starts, so it can never start.|quest",
+      "info|graph.questNeverStarts|quests|Nothing starts quest \"Intro FR\": it does not start on its own and no conversation, event or board offers it.|quest"
     ],
     "content": "3e0968a80d5e6a6f",
     "cartridge": "throws InvalidOperationException: contentPacks[3]: Pack 'pack-d' depends on 'missing-pack' which is not installed/enabled\ncontentPacks[3]: Dependency cycle involving pack 'pack-d'\nplayer.x: The player starts at (2,0.25), outside \"Farm\" (2×1)"
@@ -508,7 +1213,9 @@
     "stable": "390832b635b8f1d3",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|scene.unknownTerrain|scenes[0].tiles[1][1]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 1,1)|scene"
+      "error|scene.unknownTerrain|scenes[0].tiles[1][1]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 1,1)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d06b99d08bd9ed44",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][1]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 1,1)"
@@ -526,7 +1233,9 @@
     "stable": "c4a4b79d6de35286",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|scene.unknownTerrain|scenes[0].tiles[1][2]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 2,1)|scene"
+      "error|scene.unknownTerrain|scenes[0].tiles[1][2]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 2,1)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "76a3cd699b59b3b5",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][2]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 2,1)"
@@ -544,7 +1253,9 @@
     "stable": "50c10f4b7b929a63",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|scene.unknownTerrain|scenes[0].tiles[1][3]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 3,1)|scene"
+      "error|scene.unknownTerrain|scenes[0].tiles[1][3]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 3,1)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "1608becacf59a8ac",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][3]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 3,1)"
@@ -556,7 +1267,9 @@
     "stable": "c4c24b45ef271c8a",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|scene.unknownTerrain|scenes[0].tiles[1][4]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 4,1)|scene"
+      "error|scene.unknownTerrain|scenes[0].tiles[1][4]|Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 4,1)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "afceb1d085893b6a",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][4]: Scene \"Farm\" has tiles of missing terrain \"lava\" (first at 4,1)"
@@ -569,7 +1282,9 @@
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownTerrain|scenes[0].tiles[1][6]|Scene \"Farm\" has tiles of missing terrain \"leaves\" (first at 6,1)|scene",
-      "error|scene.unknownLayer|scenes[0].tiles[1][6]|Scene \"Farm\" has tiles of missing layer \"canopy\" (first at 6,1)|scene"
+      "error|scene.unknownLayer|scenes[0].tiles[1][6]|Scene \"Farm\" has tiles of missing layer \"canopy\" (first at 6,1)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9f5274576f4fccfc",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[1][6]: Scene \"Farm\" has tiles of missing terrain \"leaves\" (first at 6,1)\nscenes[0].tiles[1][6]: Scene \"Farm\" has tiles of missing layer \"canopy\" (first at 6,1)"
@@ -582,7 +1297,9 @@
     "problems": [
       "warning|lint.nodeTypes|nodeTypes[0].light.radius|Expected a whole number from 1 to 16, received 40|nodeType",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "warning|nodeType.noDrops|nodeTypes[0].drops|Node type \"Lamp\" drops nothing|nodeType"
+      "warning|nodeType.noDrops|nodeTypes[0].drops|Node type \"Lamp\" drops nothing|nodeType",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "919f5b260ecb30ef",
     "cartridge": "490eeab52b9ba7c4"
@@ -601,7 +1318,9 @@
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
       "error|scene.unknownQuality|scenes[0].tiles[2][2]|Scene \"Farm\" has tiles of missing crop quality \"legendary\" (first at 2,2)|scene",
-      "error|scene.unknownMutation|scenes[0].tiles[2][2]|Scene \"Farm\" has tiles of missing crop mutation \"weird\" (first at 2,2)|scene"
+      "error|scene.unknownMutation|scenes[0].tiles[2][2]|Scene \"Farm\" has tiles of missing crop mutation \"weird\" (first at 2,2)|scene",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "96ce964df4a7be24",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[2][2]: Scene \"Farm\" has tiles of missing crop quality \"legendary\" (first at 2,2)\nscenes[0].tiles[2][2]: Scene \"Farm\" has tiles of missing crop mutation \"weird\" (first at 2,2)"
@@ -626,7 +1345,14 @@
     "problems": [
       "warning|crop.noSeedItem|customCrops[0]|Crop \"Wheat\" has no seed item, so nobody can plant it|crop",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|item.unknownCategory|items[0].type|Item \"Wheat Seeds\" is of missing kind \"weapon\"|item"
+      "error|item.unknownCategory|items[0].type|Item \"Wheat Seeds\" is of missing kind \"weapon\"|item",
+      "warning|graph.itemNoSource|items[1]|Nothing in the game gives \"Wheat\" (no shop, crop, recipe, drop, reward or event) yet it is needed (ingredient of wheat preserves (machine recipe)).|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[48]|\"Preserves\" can never be had: every way to get it needs item \"crop-wheat\", which the game never gives.|item",
+      "info|graph.itemUnobtainable|items[52]|\"Fruit Tart\" can never be had: every way to get it needs item \"crop-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "warning|graph.recipeGated|recipes[5].inputs|Recipe \"Wheat Preserves\" can never be made: nothing gives its ingredient \"crop-wheat\".|recipe",
+      "warning|graph.recipeGated|recipes[9].inputs|Recipe \"Fruit Tart\" can never be made: nothing gives its ingredient \"crop-wheat\".|recipe"
     ],
     "content": "d771e7dec1687b25",
     "cartridge": "throws InvalidOperationException: items[0].type: Item \"Wheat Seeds\" is of missing kind \"weapon\""
@@ -638,7 +1364,9 @@
     "stable": "84aeca03178108c0",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|item.unknownTool|items[0].toolType|Item \"Wheat Seeds\" is missing tool \"laser\"|item"
+      "error|item.unknownTool|items[0].toolType|Item \"Wheat Seeds\" is missing tool \"laser\"|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "e371a49dc1b972fd",
     "cartridge": "throws InvalidOperationException: items[0].toolType: Item \"Wheat Seeds\" is missing tool \"laser\""
@@ -757,7 +1485,9 @@
     "problems": [
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|outcome.unknownTerrain|events[0].outcomes[0].newTileType|Event \"Broken ev-broken\" changes a tile to missing terrain \"lava\"|event"
+      "error|outcome.unknownTerrain|events[0].outcomes[0].newTileType|Event \"Broken ev-broken\" changes a tile to missing terrain \"lava\"|event",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "834ff5542bfabfd0",
     "cartridge": "throws InvalidOperationException: events[0].outcomes[0].newTileType: Event \"Broken ev-broken\" changes a tile to missing terrain \"lava\""
@@ -769,7 +1499,9 @@
     "stable": "d6c6b5573c4d458c",
     "problems": [
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "f5b679258802aec9",
     "cartridge": "89ddec84bf9f8cab"
@@ -826,7 +1558,9 @@
     "stable": "3484b5d2e19e5803",
     "problems": [
       "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
-      "error|nodeType.unknownTool|nodeTypes[0].requiredTool|Node type \"Tree\" needs missing tool \"spoon\"|nodeType"
+      "error|nodeType.unknownTool|nodeTypes[0].requiredTool|Node type \"Tree\" needs missing tool \"spoon\"|nodeType",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d5ff96d64c88abc6",
     "cartridge": "throws InvalidOperationException: nodeTypes[0].requiredTool: Node type \"Tree\" needs missing tool \"spoon\""
@@ -923,7 +1657,9 @@
     "stable": "e30b02f13a58d805",
     "problems": [
       "warning|lint.id|id|Required id must be a non-empty string|settings",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "03ec997c8c931560"
@@ -940,7 +1676,9 @@
       "error|content.npcs|npcs[0]|NPC \"Old Farmer\" is placed in missing scene \"scene-farm\"|npc",
       "error|content.npcs|npcs[1]|NPC \"Merchant Mia\" is placed in missing scene \"scene-farm\"|npc",
       "error|player.sceneMissing|player.sceneId|The player starts in missing scene \"scene-farm\"|",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9923a1a71f9183dc",
     "cartridge": "throws InvalidOperationException: startSceneId: Start scene \"scene-farm\" does not exist\nnpcs[0]: NPC \"Old Farmer\" is placed in missing scene \"scene-farm\"\nnpcs[1]: NPC \"Merchant Mia\" is placed in missing scene \"scene-farm\"\nplayer.sceneId: The player starts in missing scene \"scene-farm\""
@@ -952,7 +1690,9 @@
     "stable": "23a9a27527567631",
     "problems": [
       "error|duplicate.scene|scenes[1].id|Duplicate scene id \"scene-farm\"|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c0be6905fa8dcbb9",
     "cartridge": "throws InvalidOperationException: scenes[1].id: Duplicate scene id \"scene-farm\""
@@ -964,7 +1704,9 @@
     "stable": "1f84eb4f9c76111b",
     "problems": [
       "error|scene.gridRows|scenes[0].tiles|Scene \"Farm\" is 12 tiles high but its map has 11 rows|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9e5951068e3ad91b",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles: Scene \"Farm\" is 12 tiles high but its map has 11 rows"
@@ -976,7 +1718,9 @@
     "stable": "f8c7ae900022635a",
     "problems": [
       "error|scene.gridWidth|scenes[0].tiles[4]|Scene \"Farm\" is 16 tiles wide but row 4 of its map has 15 tiles|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "10350b9e635fc7b8",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles[4]: Scene \"Farm\" is 16 tiles wide but row 4 of its map has 15 tiles"
@@ -988,7 +1732,9 @@
     "stable": "1e9883f15c9528f0",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" at (0,0) leads to missing scene \"\"|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d00618ec155d0b10",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" at (0,0) leads to missing scene \"\""
@@ -1001,7 +1747,9 @@
     "problems": [
       "error|content.scenes|startSceneId|Start scene \"nowhere\" does not exist|settings",
       "warning|content.scenes|scenes[0]|Scene \"Farm\" is unreachable (no transition leads to it)|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "bb0b3807cfe4500c",
     "cartridge": "throws InvalidOperationException: startSceneId: Start scene \"nowhere\" does not exist"
@@ -1013,7 +1761,9 @@
     "stable": "74ddb85624704f24",
     "problems": [
       "error|player.sceneMissing|player.sceneId|The player starts in missing scene \"\"|",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "throws InvalidOperationException: player.sceneId: The player starts in missing scene \"\""
@@ -1025,7 +1775,9 @@
     "stable": "9418538b5e95cc76",
     "problems": [
       "warning|lint.player|player.inventory[0].item.id|Required id must be a non-empty string|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "88bb0da8e2df710d"
@@ -1038,7 +1790,13 @@
     "problems": [
       "warning|lint.items|items[0].id|Required id must be a non-empty string|item",
       "error|content.shops|shops[0]|Shop \"General Store\" stocks missing item \"seed-wheat\"|shop",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[0]|Nothing in the game gives \"Wheat Seeds\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[1]|\"Wheat\" can never be had: every way to get it needs item \"\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemUnobtainable|items[48]|\"Preserves\" can never be had: every way to get it needs item \"crop-wheat\", which the game never gives.|item",
+      "info|graph.itemUnobtainable|items[52]|\"Fruit Tart\" can never be had: every way to get it needs item \"crop-wheat\", which the game never gives.|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d4768e662ed45f12",
     "cartridge": "throws InvalidOperationException: shops[0]: Shop \"General Store\" stocks missing item \"seed-wheat\""
@@ -1057,7 +1815,9 @@
       "error|dialogue.npcMissing|dialogues[3].npcId|Dialogue \"\" belongs to missing NPC \"npc-farmer\"|",
       "error|quest.giverMissing|quests[0].giver|Quest \"First Harvest\" is given by missing NPC \"npc-farmer\"|quest",
       "error|quest.giverMissing|quests[1].giver|Quest \"Supply Run\" is given by missing NPC \"npc-farmer\"|quest",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d317325daf08c020",
     "cartridge": "throws InvalidOperationException: dialogues[0].npcId: Dialogue \"dialogue-farmer-greeting\" belongs to missing NPC \"npc-farmer\"\ndialogues[1].npcId: Dialogue \"dialogue-farmer-crops\" belongs to missing NPC \"npc-farmer\"\ndialogues[3].npcId: Dialogue \"\" belongs to missing NPC \"npc-farmer\"\nquests[0].giver: Quest \"First Harvest\" is given by missing NPC \"npc-farmer\"\nquests[1].giver: Quest \"Supply Run\" is given by missing NPC \"npc-farmer\""
@@ -1070,7 +1830,9 @@
     "problems": [
       "warning|lint.dialogues|dialogues[0].id|Required id must be a non-empty string|",
       "warning|dialogue.notOnNpc|dialogues[0]|Dialogue \"\" is in the project list but not on NPC \"npc-farmer\"|npc",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "3d3894ef1eb239ff",
     "cartridge": "ad5805a915e48273"
@@ -1084,7 +1846,9 @@
       "warning|lint.quests|quests[0].id|Required id must be a non-empty string|quest",
       "warning|lint.quests|quests[0].objectives[0].id|Required id must be a non-empty string|quest",
       "error|content.quests|quests[1]|Quest \"Supply Run\" requires missing quest \"quest-first-harvest\"|quest",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "345bce0a24530b32",
     "cartridge": "throws InvalidOperationException: quests[1]: Quest \"Supply Run\" requires missing quest \"quest-first-harvest\""
@@ -1098,7 +1862,9 @@
       "warning|lint.events|events[0].id|Required id must be a non-empty string|event",
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "e47285abb7b19498",
     "cartridge": "fb57596bcaccff1a"
@@ -1114,7 +1880,9 @@
       "warning|lint.events|events[0].conditions[1].x2|x2 must be >= x|event",
       "warning|lint.events|events[0].conditions[1].y2|y2 must be >= y|event",
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "3d6056b06f97e46c",
     "cartridge": "8e32af2ee72fcfce"
@@ -1135,7 +1903,9 @@
       "error|content.events|events[0]|Event \"Broken ev-broken\" checks missing quest \"\"|event",
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "6dd0a6b19cff1851",
     "cartridge": "throws InvalidOperationException: events[0]: Event \"Broken ev-broken\" checks missing item \"\"\nevents[0]: Event \"Broken ev-broken\" checks missing quest \"\""
@@ -1150,7 +1920,9 @@
       "warning|lint.events|events[0].conditions[1]|minYear is greater than maxYear|event",
       "warning|event.noOutcomes|events[0].outcomes|Event \"Broken ev-broken\" does nothing (no outcomes)|event",
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c8c18356d32c0bde",
     "cartridge": "f412e34e5db65978"
@@ -1164,7 +1936,9 @@
       "warning|lint.actions|actions[0].id|Required id must be a non-empty string|action",
       "warning|lint.minigames|minigames[0].id|Required id must be a non-empty string|minigame",
       "error|item.useActionMissing|items[57].useActionId|Item \"Growth Charm\" uses missing action \"action-growth-blessing\"|item",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9f88fc40d5c4c08e",
     "cartridge": "throws InvalidOperationException: items[57].useActionId: Item \"Growth Charm\" uses missing action \"action-growth-blessing\""
@@ -1192,7 +1966,9 @@
       "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
       "error|recipe.unknownMachine|recipes[3].machineTypeId|Recipe \"Copper Bar\" needs missing machine \"machine-furnace\"|recipe",
       "error|recipe.unknownMachine|recipes[4].machineTypeId|Recipe \"Iron Bar\" needs missing machine \"machine-furnace\"|recipe",
-      "error|animal.unknownSpecies|animals[0].speciesId|Animal \"Hen\" is of missing species \"animal-chicken\"|animalSpecies"
+      "error|animal.unknownSpecies|animals[0].speciesId|Animal \"Hen\" is of missing species \"animal-chicken\"|animalSpecies",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "d05d74c2d73ede13",
     "cartridge": "throws InvalidOperationException: npcs[1].dialogue: Dialogue \"dialogue-merchant-greeting\" opens missing shop \"shop-general\"\nweather.table.spring[0].weatherId: The spring weather table rolls missing weather \"sun\"\nweather.table.summer[0].weatherId: The summer weather table rolls missing weather \"sun\"\nweather.table.fall[0].weatherId: The fall weather table rolls missing weather \"sun\"\nweather.table.winter[0].weatherId: The winter weather table rolls missing weather \"sun\"\nrecipes[3].machineTypeId: Recipe \"Copper Bar\" needs missing machine \"machine-furnace\"\nrecipes[4].machineTypeId: Recipe \"Iron Bar\" needs missing machine \"machine-furnace\"\nanimals[0].speciesId: Animal \"Hen\" is of missing species \"animal-chicken\""
@@ -1217,7 +1993,9 @@
       "warning|shop.unknownSeason|shops[0].stock[3].seasons[0]|Shop \"General Store\" sells \"seed-carrot\" in season \"spring\", which is not in the calendar|shop",
       "warning|shop.unknownSeason|shops[0].stock[4].seasons[0]|Shop \"General Store\" sells \"seed-potato\" in season \"spring\", which is not in the calendar|shop",
       "warning|shop.unknownSeason|shops[0].stock[5].seasons[0]|Shop \"General Store\" sells \"seed-strawberry\" in season \"spring\", which is not in the calendar|shop",
-      "warning|shop.unknownSeason|shops[0].stock[7].seasons[0]|Shop \"General Store\" sells \"seed-cauliflower\" in season \"spring\", which is not in the calendar|shop"
+      "warning|shop.unknownSeason|shops[0].stock[7].seasons[0]|Shop \"General Store\" sells \"seed-cauliflower\" in season \"spring\", which is not in the calendar|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "1f070f5a63f71b26",
     "cartridge": "e70305e9bbabd3d3"
@@ -1229,7 +2007,9 @@
     "stable": "60a6d51d8e5aba93",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" at (0,0) leads to missing scene \"ghost-scene\"|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "78e06c42a92ef168",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" at (0,0) leads to missing scene \"ghost-scene\""
@@ -1241,7 +2021,9 @@
     "stable": "af44837f11dbd8f1",
     "problems": [
       "error|content.transitions|scenes[0].transitions|Transition in \"Farm\" lands out of bounds at (99,-1) in \"Farm\"|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c7fcce83d71f909c",
     "cartridge": "throws InvalidOperationException: scenes[0].transitions: Transition in \"Farm\" lands out of bounds at (99,-1) in \"Farm\""
@@ -1253,7 +2035,9 @@
     "stable": "6789cf9a7ca9499b",
     "problems": [
       "warning|content.scenes|scenes[1]|Scene \"Island\" is unreachable (no transition leads to it)|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "80d50df21a363f51",
     "cartridge": "c1575cc15439481a"
@@ -1266,7 +2050,9 @@
     "problems": [
       "error|content.dialogue|npcs[0].dialogue|Dialogue \"dialogue-farmer-greeting\" opens missing shop \"shop-ghost\"|npc",
       "error|content.dialogue|npcs[0].dialogue|Dialogue \"dialogue-farmer-greeting\" offers missing quest \"quest-ghost\"|npc",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "14ead94d1055331a",
     "cartridge": "throws InvalidOperationException: npcs[0].dialogue: Dialogue \"dialogue-farmer-greeting\" opens missing shop \"shop-ghost\"\nnpcs[0].dialogue: Dialogue \"dialogue-farmer-greeting\" offers missing quest \"quest-ghost\""
@@ -1279,7 +2065,9 @@
     "problems": [
       "error|content.npcs|npcs[0]|NPC \"Old Farmer\" is placed in missing scene \"scene-ghost\"|npc",
       "error|content.npcs|npcs[1]|NPC \"Merchant Mia\" schedule targets missing scene \"scene-ghost-2\"|npc",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "848c47e9207f884f",
     "cartridge": "throws InvalidOperationException: npcs[0]: NPC \"Old Farmer\" is placed in missing scene \"scene-ghost\"\nnpcs[1]: NPC \"Merchant Mia\" schedule targets missing scene \"scene-ghost-2\""
@@ -1296,7 +2084,9 @@
       "error|content.quests|quests[0]|Quest \"First Harvest\" objective targets missing scene \"scene-ghost\"|quest",
       "error|content.quests|quests[0]|Quest \"First Harvest\" objective targets missing crop \"crop-ghost\"|quest",
       "error|content.quests|quests[0]|Quest \"First Harvest\" rewards missing item \"reward-ghost\"|quest",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "ce0f32a4a399a403",
     "cartridge": "throws InvalidOperationException: quests[0]: Quest \"First Harvest\" requires missing quest \"quest-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing item \"item-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing NPC \"npc-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing scene \"scene-ghost\"\nquests[0]: Quest \"First Harvest\" objective targets missing crop \"crop-ghost\"\nquests[0]: Quest \"First Harvest\" rewards missing item \"reward-ghost\""
@@ -1316,7 +2106,9 @@
       "error|content.events|events[0]|Event \"Broken ev-broken\" warps to missing scene \"scene-ghost-2\"|event",
       "warning|event.enterWithoutTile|events[0].conditions|Event \"Broken ev-broken\" fires on enter but has no tile or region condition, so it fires on every step|event",
       "error|event.outcomeMissingField|events[0].outcomes[4].itemId|Event \"Broken ev-broken\" has a giveItem outcome with no itemId|event",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a55f62da3104effd",
     "cartridge": "throws InvalidOperationException: events[0]: Event \"Broken ev-broken\" belongs to missing scene \"scene-ghost\"\nevents[0]: Event \"Broken ev-broken\" checks missing item \"item-ghost\"\nevents[0]: Event \"Broken ev-broken\" checks missing quest \"quest-ghost\"\nevents[0]: Event \"Broken ev-broken\" references missing item \"item-ghost-2\"\nevents[0]: Event \"Broken ev-broken\" references missing quest \"quest-ghost-2\"\nevents[0]: Event \"Broken ev-broken\" references missing NPC \"npc-ghost\"\nevents[0]: Event \"Broken ev-broken\" warps to missing scene \"scene-ghost-2\"\nevents[0].outcomes[4].itemId: Event \"Broken ev-broken\" has a giveItem outcome with no itemId"
@@ -1328,7 +2120,9 @@
     "stable": "2da6e7e72d012e99",
     "problems": [
       "error|content.shops|shops[0]|Shop \"General Store\" stocks missing item \"item-ghost\"|shop",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "62d950379762b7cf",
     "cartridge": "throws InvalidOperationException: shops[0]: Shop \"General Store\" stocks missing item \"item-ghost\""
@@ -1340,7 +2134,9 @@
     "stable": "7c6b414a0b0a9911",
     "problems": [
       "error|content.nodes|nodeTypes[0].drops|Node type \"Tree\" drops missing item \"item-ghost\"|nodeType",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "1375a42fd57ebff9",
     "cartridge": "throws InvalidOperationException: nodeTypes[0].drops: Node type \"Tree\" drops missing item \"item-ghost\""
@@ -1352,7 +2148,9 @@
     "stable": "c8463b93ebe910f8",
     "problems": [
       "error|content.nodes|scenes[0].tiles|Scene \"Farm\" has a placed node of missing type \"node-ghost\" at (3,2)|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "7bcdcde7009a9ca5",
     "cartridge": "throws InvalidOperationException: scenes[0].tiles: Scene \"Farm\" has a placed node of missing type \"node-ghost\" at (3,2)"
@@ -1364,7 +2162,9 @@
     "stable": "7fb51426e3022366",
     "problems": [
       "warning|content.crops|scenes[0].tiles|Scene \"Farm\" has a planted crop of missing type \"crop-ghost\" at (4,2)|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "7f80d2db39af08d7",
     "cartridge": "8686fab34657e2b4"
@@ -1376,7 +2176,9 @@
     "stable": "a01397f19ad9b126",
     "problems": [
       "warning|content.crops|scenes[0].tiles|Scene \"Farm\": Pumpkin at (5,2) cannot grow in the starting season (spring)|scene",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "3150bb0f1238c7b7",
     "cartridge": "a37c78342c506ea2"
@@ -1388,7 +2190,10 @@
     "stable": "0adc8c30c6509193",
     "problems": [
       "error|content.items|items[58]|Seed \"Ghost Seeds\" references missing crop \"crop-ghost\"|item",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[58]|Nothing in the game gives \"Ghost Seeds\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "c5d9720d49d12860",
     "cartridge": "throws InvalidOperationException: items[58]: Seed \"Ghost Seeds\" references missing crop \"crop-ghost\""
@@ -1400,7 +2205,9 @@
     "stable": "bc32134b233a759a",
     "problems": [
       "error|content.packs|contentPacks[0]|Pack 'lonely' depends on 'pack-ghost' which is not installed/enabled|pack",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "throws InvalidOperationException: contentPacks[0]: Pack 'lonely' depends on 'pack-ghost' which is not installed/enabled"
@@ -1412,7 +2219,9 @@
     "stable": "d352aaa0ae3d5d85",
     "problems": [
       "warning|content.packs|contentPacks[0]|Pack 'no-inject' ships content but does not have the contentInject permission — its content is not loaded|pack",
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "163abaacf9154cb7"
@@ -1550,7 +2359,9 @@
     "json": "99bd0c5e105722f7",
     "stable": "9d6adeff7b8aa8a3",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "be84e789c46bcad5"
@@ -1561,7 +2372,17 @@
     "json": "dd9cee95280c23c3",
     "stable": "af2e4104d938e61c",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9a5a311da4eaf6a9",
     "cartridge": "a2ca9d463426c402"
@@ -1572,7 +2393,9 @@
     "json": "4e30df8fb42e8011",
     "stable": "44b9cd61918fb8ff",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "8a11cabf057313a8",
     "cartridge": "1e4d0051ec753d97"
@@ -1583,7 +2406,8 @@
     "json": "130c76ad16171a21",
     "stable": "7ef47eaac08f907b",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9adce41fa3f9f0f3",
     "cartridge": "22df7cf6d3701160"
@@ -1594,7 +2418,9 @@
     "json": "99bd0c5e105722f7",
     "stable": "9d6adeff7b8aa8a3",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "a01ad6c3a036d7f5",
     "cartridge": "be84e789c46bcad5"
@@ -1605,7 +2431,17 @@
     "json": "dd9cee95280c23c3",
     "stable": "af2e4104d938e61c",
     "problems": [
-      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop"
+      "info|shop.unreachable|shops[0]|No dialogue option opens shop \"General Store\"|shop",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[34]|Nothing in the game gives \"Carp\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[35]|Nothing in the game gives \"Perch\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[36]|Nothing in the game gives \"Catfish\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[37]|Nothing in the game gives \"Old Boot\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[39]|Nothing in the game gives \"Egg\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[40]|Nothing in the game gives \"Milk\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[44]|Nothing in the game gives \"Copper Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[45]|Nothing in the game gives \"Iron Bar\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[48]|Nothing in the game gives \"Preserves\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9a5a311da4eaf6a9",
     "cartridge": "a2ca9d463426c402"
@@ -1616,7 +2452,9 @@
     "json": "4e30df8fb42e8011",
     "stable": "44b9cd61918fb8ff",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[32]|Nothing in the game gives \"Flower\" (no shop, crop, recipe, drop, reward or event).|item",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "8a11cabf057313a8",
     "cartridge": "1e4d0051ec753d97"
@@ -1627,7 +2465,8 @@
     "json": "130c76ad16171a21",
     "stable": "7ef47eaac08f907b",
     "problems": [
-      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame"
+      "warning|minigame.noTiers|minigames[0].resultTiers|Minigame \"Fishing\" has no result tiers, so its score changes nothing|minigame",
+      "info|graph.itemNoSource|items[56]|Nothing in the game gives \"Enchanter's Altar\" (no shop, crop, recipe, drop, reward or event).|item"
     ],
     "content": "9adce41fa3f9f0f3",
     "cartridge": "22df7cf6d3701160"
