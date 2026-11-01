@@ -53,11 +53,13 @@ the player your exported game ships.
 
 ## Get started
 
-1. **Install** Tractr from the
-   [latest release](https://github.com/JX-Holdings-LLC/tractr/releases/latest):
-   `Tractr-win-Setup.exe` on Windows, the AppImage on Linux, or the zip for
-   your Mac ([install guide](docs/INSTALL.md)). It updates itself through
-   **Help → Update Center**.
+1. **Install** Tractr. Download one file, the one for your computer:
+   [Windows](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-win-Setup.exe) (`Tractr-win-Setup.exe`),
+   [Mac with Apple silicon](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-arm64-Portable.zip),
+   [Intel Mac](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-x64-Portable.zip) or
+   [Linux](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-linux-x64.AppImage) (AppImage). The
+   [install guide](docs/INSTALL.md) covers the first launch. Tractr updates
+   itself after that, through **Help → Update Center**.
 2. **Create a project** with **File → New Project** and the Starter Farm
    template.
 3. **Play it**: press **F5**, walk with WASD, till with T, water with Q,

@@ -129,9 +129,10 @@ Export looks for templates in `--templates` (farmc) or
   the Windows runner, Linux in the Steam Runtime 3 "sniper" SDK container so
   it runs on older distributions and the Steam Deck, web with
   `tools/wasm/build.sh`), ships them in the app's `players/` folder through
-  `-p:FarmPlayerTemplatesDir`, and attaches them to the release as
-  `player-windows-x64.zip`, `player-linux-x64.tar.gz` and `player-web.tar.gz`
-  (`tools/player-templates/package.sh` stages them and hashes every file).
+  `-p:FarmPlayerTemplatesDir` (`tools/player-templates/package.sh` stages
+  them and hashes every file). They are not separate release files: every
+  editor package carries all three, and the workflow keeps them as `player-*`
+  artifacts of its run for 7 days.
 - **Development builds** get the host's template from the
   `FarmPlayerTemplates` target in `src/FarmEngine.Export/FarmEngine.Export.fsproj`,
   which runs `cargo build -p farm-player` and writes `template.json` with the

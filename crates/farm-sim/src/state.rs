@@ -285,7 +285,7 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
 fn settle_new_player(state: &mut GameState) {
     let player = &mut state.player;
     player.money = player.money.max(0);
-    player.max_energy = player.max_energy.max(0);
+    player.max_energy = player.max_energy.max(1);
     player.energy = player.energy.clamp(0, player.max_energy);
 
     let mut kept = Vec::with_capacity(player.inventory.len());
