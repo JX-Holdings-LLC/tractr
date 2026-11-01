@@ -138,7 +138,7 @@ fn handlers_read_the_state_of_the_step_their_hook_fired_at() {
     assert_eq!(parts[0], "1234", "{seen}");
     assert_eq!(parts[2], "2", "sleeping started day 2: {seen}");
     assert_eq!(parts[4], "null", "its own flag was not set yet: {seen}");
-    assert!(parts[5].contains("not permitted") && parts[5].contains("content"), "{seen}");
+    assert!(seen.contains("reading item is not permitted") && seen.ends_with("does not list \"content\""), "{seen}");
     assert!(session.errors.is_empty(), "{:?}", session.errors);
 }
 

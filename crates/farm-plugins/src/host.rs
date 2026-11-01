@@ -408,11 +408,7 @@ impl WasmPluginHost {
         };
         let mut instance = sandbox.instance().map_err(|fault| failed(&describe_fault(&fault)))?;
         instance.set_fuel(fuel);
-        let reply = sandbox::init(
-            instance.as_mut(),
-            &entry.granted_json,
-            &entry.spec.source,
-        );
+        let reply = sandbox::init(instance.as_mut(), &entry.granted_json, &entry.spec.source);
         entry.last_fuel_used = Some(instance.fuel_used(fuel));
         let reply = reply.map_err(|fault| failed(&describe_fault(&fault)))?;
         match reply.status {

@@ -208,7 +208,7 @@ pub fn day_started(ctx: &EngineContext, state: &GameState) {
 }
 
 /// The plugin entity on tile `(x, y)` of the player's scene, if any (the last spawned wins).
-pub fn entity_at<'a>(state: &'a GameState, x: i32, y: i32) -> Option<&'a PluginEntity> {
+pub fn entity_at(state: &GameState, x: i32, y: i32) -> Option<&PluginEntity> {
     state
         .plugin_entities
         .iter()
