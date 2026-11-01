@@ -271,6 +271,12 @@ public sealed class ExportGameViewModel : ObservableObject
             {
                 _workspace.Apply(edit);
             }
+
+            // What this version shipped, so Problems can tell which removed ids old saves hold (#242).
+            if (!report.Blocked && _workspace.Current is { } exported && FarmEngine.Authoring.SaveMigrationsApi.TryRemember(exported, out var remember))
+            {
+                _workspace.Apply(remember);
+            }
         }
         finally
         {

@@ -31,6 +31,7 @@ public sealed class PlayModeView : UserControl
     private readonly ToggleButton _keepChanges;
     private readonly Button _restart;
     private readonly Button _debug;
+    private readonly Button _states;
     private readonly TextBlock _playHint;
     private readonly List<PlayerInput> _pending = [];
     private RustPlayer _player;
@@ -73,6 +74,7 @@ public sealed class PlayModeView : UserControl
                 : new ToastMessage(EditorStrings.Get("toolbar.keepOff"), ToastKind.Info));
         };
         toolbar.Children.Add(_keepChanges);
+        _states = Tool("TestStatesButton", "States", OpenStates, "Play from a test state, or save this moment as one");
         _debug = Tool("DebugButton", EditorStrings.Get("toolbar.debug"), ToggleDebug, EditorStrings.Get("toolbar.debugTip") + EditorShortcuts.Display(" (Ctrl+D)"));
         Avalonia.Automation.AutomationProperties.SetAcceleratorKey(_debug, EditorShortcuts.Display("Ctrl+D"));
 
@@ -128,6 +130,41 @@ public sealed class PlayModeView : UserControl
 
     /// <summary>The user asked to restart the playtest from the pre-play snapshot.</summary>
     public event EventHandler? RestartRequested;
+
+    /// <summary>"Play from state": restart, then put the new game in the test state with this id (#229).</summary>
+    public event EventHandler<string>? PlayFromStateRequested;
+
+    /// <summary>"Save this state": keep the running game as a test state of the project (#229).</summary>
+    public event EventHandler? SaveStateRequested;
+
+    /// <summary>The project's test states (id, name) the States menu lists.</summary>
+    public Func<IReadOnlyList<(string Id, string Name)>>? TestStates { get; set; }
+
+    /// <summary>The menu of the toolbar's States button (opened by it; tests open it directly).</summary>
+    public MenuFlyout BuildStatesMenu()
+    {
+        var menu = new MenuFlyout();
+        var states = TestStates?.Invoke() ?? Array.Empty<(string Id, string Name)>();
+        foreach (var (id, name) in states)
+        {
+            var item = new MenuItem { Header = $"Play from \"{name}\"", Name = "PlayFromState_" + id };
+            item.Click += (_, _) => PlayFromStateRequested?.Invoke(this, id);
+            menu.Items.Add(item);
+        }
+
+        if (states.Count == 0)
+        {
+            menu.Items.Add(new MenuItem { Header = "No test states yet", IsEnabled = false });
+        }
+
+        menu.Items.Add(new Separator());
+        var save = new MenuItem { Header = "Save this state…", Name = "SaveTestState" };
+        save.Click += (_, _) => SaveStateRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(save);
+        return menu;
+    }
+
+    private void OpenStates() => BuildStatesMenu().ShowAt(_states);
 
     /// <summary>
     /// The game stopped (an engine or plugin failure). The loop has stopped; the host ends the

@@ -176,6 +176,34 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public void Playtest_SavesAStateAndPlaysFromIt()
+    {
+        using var host = new GameTestHost();
+        host.EnterPlay();
+        host.Play.Use(player => player.RunCommands("""[{"type":"sleep"}, {"type":"sleep"}]"""));
+        host.Play.Use(player => player.Debug(new { type = "addMoney", amount = 321 }));
+        var money = host.Play.Use(player => player.State())["player"]!["money"]!.GetValue<double>();
+
+        Assert.NotNull(FindByName<Button>(host.Window, "TestStatesButton"));
+        var menu = host.Play.BuildStatesMenu();
+        var save = menu.Items.OfType<MenuItem>().Single(item => item.Name == "SaveTestState");
+        save.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        var state = Assert.Single(TestStatesApi.All(host.Workspace.Current!));
+        Assert.Equal("Playtest state 1", state.Name);
+
+        // Play from it: a new game of the snapshot, moved to day 3 with the money.
+        var play = host.Play.BuildStatesMenu().Items.OfType<MenuItem>().Single(item => item.Name == "PlayFromState_" + state.Id);
+        play.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Assert.Equal(3, Day(host));
+        Assert.Equal(money, host.Play.Use(player => player.State())["player"]!["money"]!.GetValue<double>());
+        Assert.Contains("Playing from \"Playtest state 1\"", host.Play.Toasts.History.Select(t => t.Text));
+
+        // Kept when the playtest ends without keeping its changes.
+        host.Surface.EndPlaytest();
+        Assert.Single(TestStatesApi.All(host.Workspace.Current!));
+    }
+
+    [AvaloniaFact]
     public void EditMode_ShowsSceneInfoAndInspectsTiles()
     {
         using var host = new GameTestHost();

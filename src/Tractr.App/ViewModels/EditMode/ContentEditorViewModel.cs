@@ -704,6 +704,18 @@ public sealed class ContentEditorViewModel : ObservableObject
         }
 
         SelectedId = null;
+        // An item the last exported version shipped: players' saves may hold it, so the delete
+        // records a save migration that pays them its value (#242); Problems lists the rule.
+        if (_editing is Item && _workspace.Current is { } current && SaveMigrationsApi.ItemRemovalNeedsRule(current, id))
+        {
+            if (_workspace.Apply(SaveMigrationsApi.RemoveItemAtValue(current, id)))
+            {
+                Message = $"Removed {id}. Saves from the exported version will pay its value for it (a save migration; change it in Settings).";
+            }
+
+            return;
+        }
+
         _workspace.Apply(_category.Remove(id));
     }
 
