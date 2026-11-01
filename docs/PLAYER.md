@@ -82,7 +82,10 @@ The first time a game runs, fullscreen and scaling come from the game's
 export settings. The language starts as the system's language when the game
 has it, else the game's own; English and Spanish are built in, and cover
 the game's menus and messages. Text you wrote in the game shows as you wrote
-it.
+it, or in the player's language when you translated it
+([Authoring at scale](AUTHORING-AT-SCALE.md#translations)): the language
+picker lists the languages the game is translated into as well, and the
+game's text changes at once, in a running game too.
 
 **Music and sound.** Every game has Tractr's own day and night music,
 birdsong, crickets and rain, plus the sounds and music the game brings. Music

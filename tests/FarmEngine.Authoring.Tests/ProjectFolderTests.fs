@@ -97,7 +97,12 @@ let ``the folder has one file per scene npc dialogue item and asset`` () =
             |> List.length
         | Error e -> failwith e
 
-    Assert.Equal(project.Dialogues.Length, scripted + (paths |> List.filter (fun p -> p.StartsWith "dialogue/") |> List.length))
+    Assert.Equal(
+        project.Dialogues.Length,
+        scripted
+        + (paths |> List.filter (fun p -> p.StartsWith "dialogue/") |> List.length)
+    )
+
     Assert.Equal<string list>([ "assets/hero.png"; "assets/Hero~2.png" ], paths |> List.filter (fun p -> p.StartsWith "assets/"))
     Assert.Equal<byte[]>(png, files |> List.find (fun (p, _) -> p = "assets/hero.png") |> snd)
     // The project file lists the files in order and keeps no art inline.

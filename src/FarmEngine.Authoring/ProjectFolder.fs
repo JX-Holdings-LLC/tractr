@@ -28,6 +28,7 @@ open FarmEngine.Schemas
 ///   (`DialogueScript`, #225), when the script reads back exactly as the records are. The NPC's
 ///   file then names it in `dialogueScript` instead of holding `dialogue` and `lines`, and the
 ///   project's `dialogues` list names each of its dialogues as `scripts/<npc id>.dialogue#<id>`.
+/// - `strings/<locale>.json`: the game's text in one language (`Translations`, #228).
 /// - `assets/<id>.<extension>`: the asset's bytes.
 module ProjectFolder =
     /// The project's own file in the folder.
@@ -41,11 +42,12 @@ module ProjectFolder =
             "npcs", "npcs"
             "dialogues", "dialogue"
             "items", "items"
+            "translations", "strings"
         ]
 
     /// The folders a project file may name.
     let private folders =
-        Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets"; "scripts" ]
+        Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets"; "scripts"; "strings" ]
 
     /// The NPC key that names its script (in place of `dialogue` and `lines`).
     [<Literal>]
@@ -309,16 +311,19 @@ module ProjectFolder =
 
         for npc in project.Npcs do
             for dialogue in npc.Dialogue do
-                carriers.[dialogue.Id] <- (match carriers.TryGetValue dialogue.Id with
-                                           | true, n -> n + 1
-                                           | _ -> 1)
+                carriers.[dialogue.Id] <-
+                    (match carriers.TryGetValue dialogue.Id with
+                     | true, n -> n + 1
+                     | _ -> 1)
 
         let listed = Dictionary<string, Dialogue list>()
 
         for dialogue in project.Dialogues do
-            listed.[dialogue.Id] <- dialogue :: (match listed.TryGetValue dialogue.Id with
-                                                 | true, copies -> copies
-                                                 | _ -> [])
+            listed.[dialogue.Id] <-
+                dialogue
+                :: (match listed.TryGetValue dialogue.Id with
+                    | true, copies -> copies
+                    | _ -> [])
 
         for npc in project.Npcs do
             let hasDialogue = not npc.Dialogue.IsEmpty || npc.Lines.IsSome
@@ -331,8 +336,15 @@ module ProjectFolder =
                         | true, copies -> copies |> List.forall ((=) d)
                         | _ -> true))
 
-            if hasDialogue && not (scripts.ContainsKey npc.Id) && copiesAgree && DialogueScript.isLossless npc then
-                let path = sprintf "scripts/%s%s" (fileStem scriptTaken npc.Id) DialogueScript.Extension
+            if
+                hasDialogue
+                && not (scripts.ContainsKey npc.Id)
+                && copiesAgree
+                && DialogueScript.isLossless npc
+            then
+                let path =
+                    sprintf "scripts/%s%s" (fileStem scriptTaken npc.Id) DialogueScript.Extension
+
                 scripts.[npc.Id] <- path
                 files.Add(path, Encoding.UTF8.GetBytes(DialogueScript.printNpc npc))
 
@@ -349,7 +361,10 @@ module ProjectFolder =
                     let paths =
                         entries
                         |> List.map (fun entry ->
-                            let id = Json.get "id" entry |> Json.asString |> Option.defaultValue ""
+                            let id =
+                                Json.get (if key = "translations" then "locale" else "id") entry
+                                |> Json.asString
+                                |> Option.defaultValue ""
 
                             match key, scriptedDialogues.TryGetValue id with
                             | "dialogues", (true, script) -> JString(script + "#" + id)

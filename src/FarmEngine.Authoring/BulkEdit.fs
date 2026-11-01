@@ -85,13 +85,14 @@ module BulkEdit =
             && (String.IsNullOrWhiteSpace selection.Text
                 || columns
                    |> List.exists (fun col ->
-                       (ContentTables.cellText category project rowId json col)
-                           .Contains(selection.Text.Trim(), StringComparison.OrdinalIgnoreCase))))
+                       (ContentTables.cellText category project rowId json col).Contains(selection.Text.Trim(), StringComparison.OrdinalIgnoreCase))))
         |> List.map fst
 
     /// Every tag the category's entries carry, in order of first use.
     let tags (category: string) (project: GameProject) : string list =
-        ContentTables.rowJson category project |> List.collect (snd >> tagsOf) |> List.distinct
+        ContentTables.rowJson category project
+        |> List.collect (snd >> tagsOf)
+        |> List.distinct
 
     let private apply1 (column: TableColumn) (operation: BulkOperation) (before: string) : Result<string, string> =
         let number () =
@@ -129,13 +130,27 @@ module BulkEdit =
         | None ->
             {
                 Changes = []
-                Invalid = [ { Row = 0; Column = columnKey; Message = "there is no such column" } ]
+                Invalid =
+                    [
+                        {
+                            Row = 0
+                            Column = columnKey
+                            Message = "there is no such column"
+                        }
+                    ]
                 Rows = rows
             }
         | Some column when column.ReadOnly ->
             {
                 Changes = []
-                Invalid = [ { Row = 0; Column = column.Header; Message = "this column cannot be changed" } ]
+                Invalid =
+                    [
+                        {
+                            Row = 0
+                            Column = column.Header
+                            Message = "this column cannot be changed"
+                        }
+                    ]
                 Rows = rows
             }
         | Some column ->
@@ -150,7 +165,10 @@ module BulkEdit =
                     else
                         let before = ContentTables.cellText category project rowId json column
 
-                        match apply1 column operation before |> Result.bind (fun text -> ContentTables.write column text json) with
+                        match
+                            apply1 column operation before
+                            |> Result.bind (fun text -> ContentTables.write column text json)
+                        with
                         | Ok after ->
                             let afterText = ContentTables.cellText category project rowId after column
 
@@ -158,12 +176,25 @@ module BulkEdit =
                                 changes.Add
                                     {
                                         Id = rowId
-                                        Changes = [ { Column = column.Header; Before = before; After = afterText } ]
+                                        Changes =
+                                            [
+                                                {
+                                                    Column = column.Header
+                                                    Before = before
+                                                    After = afterText
+                                                }
+                                            ]
                                     }
 
                             rowId, after
                         | Error message ->
-                            invalid.Add { Row = index + 1; Column = column.Header; Message = sprintf "%s: %s" rowId message }
+                            invalid.Add
+                                {
+                                    Row = index + 1
+                                    Column = column.Header
+                                    Message = sprintf "%s: %s" rowId message
+                                }
+
                             rowId, json)
 
             {
@@ -182,7 +213,10 @@ module BulkEdit =
     /// The edit that adds `tag` to (or with `remove`, takes it from) the rows `ids`.
     let tag (category: string) (project: GameProject) (ids: string list) (tag: string) (remove: bool) : Result<Edit, CellError list> =
         let operation =
-            if remove then BulkOperation.RemoveWord tag else BulkOperation.AddWord tag
+            if remove then
+                BulkOperation.RemoveWord tag
+            else
+                BulkOperation.AddWord tag
 
         apply category project (preview category project ids "tags" operation)
 
@@ -197,11 +231,19 @@ module ContentTemplates =
         let found =
             entries
             |> List.map (fun (category, entryId) ->
-                match ContentTables.rowJson category project |> List.tryFind (fun (rowId, _) -> rowId = entryId) with
+                match
+                    ContentTables.rowJson category project
+                    |> List.tryFind (fun (rowId, _) -> rowId = entryId)
+                with
                 | Some(_, json) -> Ok { Kind = category; Entry = Some json }
                 | None -> Error(sprintf "there is no %s %s" category entryId))
 
-        match found |> List.tryPick (function | Error e -> Some e | Ok _ -> None) with
+        match
+            found
+            |> List.tryPick (function
+                | Error e -> Some e
+                | Ok _ -> None)
+        with
         | Some e -> Error e
         | None when entries.IsEmpty -> Error "a template needs at least one entry"
         | None ->
@@ -209,16 +251,30 @@ module ContentTemplates =
                 {
                     Id = id
                     Name = name
-                    Entries = found |> List.choose (function | Ok e -> Some e | Error _ -> None)
+                    Entries =
+                        found
+                        |> List.choose (function
+                            | Ok e -> Some e
+                            | Error _ -> None)
                 }
 
             let others = templatesOf project |> List.filter (fun t -> t.Id <> id)
-            Ok(ReplaceProject { project with ContentTemplates = Some(others @ [ template ]) })
+
+            Ok(
+                ReplaceProject
+                    { project with
+                        ContentTemplates = Some(others @ [ template ])
+                    }
+            )
 
     /// The edit that removes template `id`.
     let remove (project: GameProject) (id: string) : Edit =
         let rest = templatesOf project |> List.filter (fun t -> t.Id <> id)
-        ReplaceProject { project with ContentTemplates = (if rest.IsEmpty then None else Some rest) }
+
+        ReplaceProject
+            { project with
+                ContentTemplates = (if rest.IsEmpty then None else Some rest)
+            }
 
     /// The columns of the table that makes entries from `template`: `ENTRY.KEY` for each entry
     /// (numbered from 1) and each column of its category that can be written.
@@ -264,7 +320,12 @@ module ContentTemplates =
 
             for name, _ in cells do
                 if not (cols.ContainsKey name) then
-                    errors.Add { Row = rowNumber; Column = name; Message = "there is no such column" }
+                    errors.Add
+                        {
+                            Row = rowNumber
+                            Column = name
+                            Message = "there is no such column"
+                        }
 
             // New ids first, so every entry of the group can point at the others.
             let ids =
@@ -274,7 +335,9 @@ module ContentTemplates =
                     let oldId = Json.get "id" json |> Json.asString |> Option.defaultValue ""
 
                     let given =
-                        cells |> List.tryFind (fun (name, _) -> name = sprintf "%d.id" (k + 1)) |> Option.map (snd >> fun s -> s.Trim())
+                        cells
+                        |> List.tryFind (fun (name, _) -> name = sprintf "%d.id" (k + 1))
+                        |> Option.map (snd >> fun s -> s.Trim())
 
                     let newId =
                         match given with
@@ -287,9 +350,16 @@ module ContentTemplates =
 
                             sprintf "%s-%d" oldId n
 
-                    if oldId = "" then None
+                    if oldId = "" then
+                        None
                     elif not (taken.Add(entry.Kind + "|" + newId)) then
-                        errors.Add { Row = rowNumber; Column = sprintf "%d.id" (k + 1); Message = sprintf "%s is taken" newId }
+                        errors.Add
+                            {
+                                Row = rowNumber
+                                Column = sprintf "%d.id" (k + 1)
+                                Message = sprintf "%s is taken" newId
+                            }
+
                         None
                     else
                         Some(oldId, newId))
@@ -305,7 +375,13 @@ module ContentTemplates =
                     | true, column when name.StartsWith(sprintf "%d." (k + 1)) && column.Key <> "id" ->
                         match ContentTables.write column text json with
                         | Ok next -> json <- next
-                        | Error message -> errors.Add { Row = rowNumber; Column = name; Message = message }
+                        | Error message ->
+                            errors.Add
+                                {
+                                    Row = rowNumber
+                                    Column = name
+                                    Message = message
+                                }
                     | _ -> ()
 
                 let rowId =
@@ -327,6 +403,20 @@ module ContentTemplates =
                     ContentTables.writeRows pair.Key project "Make from template" (ContentTables.rowJson pair.Key project @ List.ofSeq pair.Value))
                 |> List.ofSeq
 
-            match edits |> List.tryPick (function | Error e -> Some e | Ok _ -> None) with
+            match
+                edits
+                |> List.tryPick (function
+                    | Error e -> Some e
+                    | Ok _ -> None)
+            with
             | Some e -> Error e
-            | None -> Ok(Batch("Make from template", edits |> List.choose (function | Ok e -> Some e | Error _ -> None)))
+            | None ->
+                Ok(
+                    Batch(
+                        "Make from template",
+                        edits
+                        |> List.choose (function
+                            | Ok e -> Some e
+                            | Error _ -> None)
+                    )
+                )

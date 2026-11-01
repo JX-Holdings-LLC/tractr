@@ -32,7 +32,9 @@ let ``every category has a table of the template's content`` () =
 let ``a table written back unchanged changes nothing`` () =
     for _, project in templates () do
         for category in ContentTables.Categories do
-            let diff = ContentTables.diff category project (ContentTables.toCsv category project)
+            let diff =
+                ContentTables.diff category project (ContentTables.toCsv category project)
+
             Assert.True(diff.Invalid.IsEmpty, sprintf "%s: %A" category diff.Invalid)
             Assert.False(diff.HasChanges, sprintf "%s: %A %A" category diff.Added diff.Changed)
             let edit = ok (ContentTables.applyImport project diff true)
@@ -52,7 +54,12 @@ let ``computed columns show crop and recipe profit`` () =
 [<Fact>]
 let ``inline edits and pastes are one undo step and checked first`` () =
     let project = starter ()
-    let items = ContentTables.rows "items" project |> List.map (fun r -> r.Id) |> List.truncate 3
+
+    let items =
+        ContentTables.rows "items" project
+        |> List.map (fun r -> r.Id)
+        |> List.truncate 3
+
     let edit = ok (ContentTables.paste "items" project items "value" "11\n12\n13")
     let document = Document.apply edit (Document.create project)
     Assert.Equal(1, document.Past.Length)
@@ -78,7 +85,17 @@ let ``an import shows what it adds changes and removes before it applies`` () =
         + "\"bad, one\",Bad,cheap,true\r\n"
 
     let diff = ContentTables.diff "items" project csv
-    Assert.Equal<CellError list>([ { Row = 4; Column = "Value"; Message = "cheap is not a number" } ], diff.Invalid)
+
+    Assert.Equal<CellError list>(
+        [
+            {
+                Row = 4
+                Column = "Value"
+                Message = "cheap is not a number"
+            }
+        ],
+        diff.Invalid
+    )
 
     let diff = ContentTables.diff "items" project (csv.Replace("cheap", "3"))
     Assert.True(diff.Invalid.IsEmpty, sprintf "%A" diff.Invalid)
@@ -92,7 +109,9 @@ let ``an import shows what it adds changes and removes before it applies`` () =
     Assert.Equal(project.Items.Length + 2, kept.Items.Length)
     Assert.Equal("Renamed", (kept.Items |> List.find (fun i -> i.Id = item.Id)).Name)
 
-    let replaced = Document.run project (ok (ContentTables.applyImport project diff true))
+    let replaced =
+        Document.run project (ok (ContentTables.applyImport project diff true))
+
     Assert.Equal<string list>([ item.Id; "new-thing"; "bad, one" ], replaced.Items |> List.map (fun i -> i.Id))
 
 [<Fact>]
@@ -103,11 +122,17 @@ let ``shop stock rows are matched by shop and item`` () =
     let rowId = shop.Id + "/" + stock.ItemId
     let edit = ok (ContentTables.setCells "shopStock" project [ rowId, "price", "999" ])
     let changed = Document.run project edit
-    let after = (changed.Shops |> List.find (fun s -> s.Id = shop.Id)).Stock |> List.head
+
+    let after =
+        (changed.Shops |> List.find (fun s -> s.Id = shop.Id)).Stock |> List.head
+
     Assert.Equal(Some 999.0, after.Price)
     Assert.Equal(shop.Stock.Length, (changed.Shops |> List.find (fun s -> s.Id = shop.Id)).Stock.Length)
 
-    let csv = ContentTables.toCsv "shopStock" project + sprintf ",%s,%s,5,,\r\n" shop.Id (List.head project.Items).Id
+    let csv =
+        ContentTables.toCsv "shopStock" project
+        + sprintf ",%s,%s,5,,\r\n" shop.Id (List.head project.Items).Id
+
     let diff = ContentTables.diff "shopStock" project csv
     Assert.True(diff.Invalid.IsEmpty, sprintf "%A" diff.Invalid)
     Assert.Equal(1, diff.Added.Length)
@@ -127,10 +152,15 @@ let ``bulk edits set and adjust a field across the selection in one step`` () =
     let project = starter ()
     let ids = project.Items |> List.map (fun i -> i.Id) |> List.truncate 2
 
-    let times = ok (Result.mapError (fun e -> [ { Row = 0; Column = ""; Message = e } ]) (BulkEdit.parseOperation "× 2"))
+    let times =
+        ok (Result.mapError (fun e -> [ { Row = 0; Column = ""; Message = e } ]) (BulkEdit.parseOperation "× 2"))
+
     let preview = BulkEdit.preview "items" project ids "value" times
     Assert.True(preview.Invalid.IsEmpty)
-    let document = Document.apply (ok (BulkEdit.apply "items" project preview)) (Document.create project)
+
+    let document =
+        Document.apply (ok (BulkEdit.apply "items" project preview)) (Document.create project)
+
     Assert.Equal(1, document.Past.Length)
 
     for id in ids do
@@ -147,19 +177,36 @@ let ``tags select entries for a bulk edit`` () =
     let project = starter ()
     let crops = defaultArg project.CustomCrops [] |> List.map (fun c -> c.Id)
     Assert.NotEmpty crops
-    let tagged = Document.run project (ok (BulkEdit.tag "crops" project [ List.head crops ] "summer-crop" false))
+
+    let tagged =
+        Document.run project (ok (BulkEdit.tag "crops" project [ List.head crops ] "summer-crop" false))
+
     Assert.Equal<string list>([ "summer-crop" ], BulkEdit.tags "crops" tagged)
 
     let selected =
-        BulkEdit.select "crops" tagged { BulkSelection.All with Tags = [ "summer-crop" ] }
+        BulkEdit.select
+            "crops"
+            tagged
+            { BulkSelection.All with
+                Tags = [ "summer-crop" ]
+            }
 
     Assert.Equal<string list>([ List.head crops ], selected)
-    let preview = BulkEdit.preview "crops" tagged selected "seasons" (BulkOperation.AddWord "fall")
+
+    let preview =
+        BulkEdit.preview "crops" tagged selected "seasons" (BulkOperation.AddWord "fall")
+
     let changed = Document.run tagged (ok (BulkEdit.apply "crops" tagged preview))
-    let crop = (defaultArg changed.CustomCrops []) |> List.find (fun c -> c.Id = List.head crops)
+
+    let crop =
+        (defaultArg changed.CustomCrops [])
+        |> List.find (fun c -> c.Id = List.head crops)
+
     Assert.Contains("fall", crop.Seasons)
     // A list operation on a number is refused with the entry named.
-    let wrong = BulkEdit.preview "crops" tagged selected "seedCost" (BulkOperation.AddWord "x")
+    let wrong =
+        BulkEdit.preview "crops" tagged selected "seedCost" (BulkOperation.AddWord "x")
+
     Assert.NotEmpty wrong.Invalid
 
 // ── Templates ─────────────────────────────────────────────────────────────
@@ -177,9 +224,12 @@ let ``a crop group template makes new groups with their ids linked`` () =
     let project = Document.run project (UpsertCrop crop)
 
     let project =
-        Document.run project (ContentTemplates.save project "crop-group" "Crop group" [ "crops", crop.Id; "items", harvest ] |> function
-            | Ok e -> e
-            | Error e -> failwith e)
+        Document.run
+            project
+            (ContentTemplates.save project "crop-group" "Crop group" [ "crops", crop.Id; "items", harvest ]
+             |> function
+                 | Ok e -> e
+                 | Error e -> failwith e)
 
     let template = (defaultArg project.ContentTemplates []) |> List.exactlyOne
     let columns = ContentTemplates.columns template |> List.map fst
@@ -192,7 +242,13 @@ let ``a crop group template makes new groups with their ids linked`` () =
                 project
                 template
                 [
-                    [ "1.id", "moonberry"; "1.name", "Moonberry"; "2.id", "moonberry-fruit"; "2.name", "Moonberry"; "2.value", "80" ]
+                    [
+                        "1.id", "moonberry"
+                        "1.name", "Moonberry"
+                        "2.id", "moonberry-fruit"
+                        "2.name", "Moonberry"
+                        "2.value", "80"
+                    ]
                     [ "1.id", "sunberry"; "2.id", "sunberry-fruit"; "1.seedCost", "12" ]
                 ]
         )

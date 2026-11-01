@@ -108,6 +108,17 @@ type CartridgeCompiler =
                 // The game's own panels, then those its packs add (M9).
                 yield "gamePanels", Encode.list SchemaJson.encodeGamePanel (defaultArg project.GamePanels [] @ PackMerge.gamePanels project.ContentPacks)
                 yield "showMadeWithCredit", JBool project.Settings.ShowMadeWithCredit
+                // The game's text in other languages (#228), by locale and key; the player shows
+                // the one chosen in Settings.
+                match Translations.contentStrings project with
+                | [] -> ()
+                | tables ->
+                    yield
+                        "contentStrings",
+                        JObject(
+                            tables
+                            |> List.map (fun (locale, strings) -> locale, JObject(strings |> List.map (fun (k, v) -> k, JString v)))
+                        )
             ]
 
     /// Moves every base64 `data:` URL string inside `json` into `assets` (id → mime, bytes) and

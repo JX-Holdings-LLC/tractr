@@ -450,9 +450,22 @@ module PackMerge =
                     | true, value -> value
                     | _ -> fallback
 
+                // The keys of `Translations.catalog` (Rust `packs::localize_content`): a line,
+                // answer or step without an id is `#INDEX`.
+                let part (id: string option) (index: int) =
+                    match id with
+                    | Some id when id <> "" -> id
+                    | _ -> sprintf "#%d" index
+
                 let dialogue (d: Dialogue) =
                     { d with
                         Text = lookup "dialogue" d.Id "text" d.Text
+                        Options =
+                            d.Options
+                            |> List.mapi (fun k o ->
+                                { o with
+                                    Text = lookup "dialogue" d.Id ("option:" + part o.Id k) o.Text
+                                })
                     }
 
                 { content with
@@ -477,7 +490,43 @@ module PackMerge =
                             { n with
                                 Name = lookup "npc" n.Id "name" n.Name
                                 Dialogue = List.map dialogue n.Dialogue
+                                Lines =
+                                    n.Lines
+                                    |> Option.map (
+                                        List.mapi (fun k line ->
+                                            { line with
+                                                Text = lookup "npc" n.Id ("line:" + part line.Id k) line.Text
+                                            })
+                                    )
                             })
+                    Cutscenes =
+                        content.Cutscenes
+                        |> List.map (fun c ->
+                            { c with
+                                Steps =
+                                    c.Steps
+                                    |> List.mapi (fun k step ->
+                                        let key = "step:" + part step.Id k
+
+                                        { step with
+                                            Text = step.Text |> Option.map (lookup "cutscene" c.Id key)
+                                            Options =
+                                                step.Options
+                                                |> List.mapi (fun j choice ->
+                                                    { choice with
+                                                        Text = lookup "cutscene" c.Id (key + ":choice:" + part choice.Id j) choice.Text
+                                                    })
+                                        })
+                            })
+                    Mail =
+                        content.Mail
+                        |> Option.map (
+                            List.map (fun m ->
+                                { m with
+                                    Subject = lookup "mail" m.Id "subject" m.Subject
+                                    Text = lookup "mail" m.Id "text" m.Text
+                                })
+                        )
                 }
 
     let private customCrop (crop: CropDefinition) : CustomCropDefinition =

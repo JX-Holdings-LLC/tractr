@@ -48,13 +48,20 @@ let ``the example of the issue reads into the dialogue records`` () =
         Assert.Equal(Some "mill-fixed", fixedOption.RequiresFlag)
         Assert.Equal(Some "bram.fixed", fixedOption.NextDialogueId)
         Assert.Equal("Good luck.", bye.Text)
-        Assert.Equal({ DialogueOption.Default with Text = "Good luck." }, bye)
+
+        Assert.Equal(
+            { DialogueOption.Default with
+                Text = "Good luck."
+            },
+            bye
+        )
     | other -> failwithf "%A" other
 
     match document.Lines with
     | Some [ morning; rain; quest ] ->
         Assert.Equal<EventCondition list>([ EventCondition.TimeOfDay { MinMinute = 360.0; MaxMinute = 719.0 } ], morning.Conditions)
         Assert.Equal<EventCondition list>([ EventCondition.Weather { WeatherIds = [ "rain" ] } ], rain.Conditions)
+
         Assert.Equal<EventCondition list>(
             [
                 EventCondition.QuestStatus
@@ -65,6 +72,7 @@ let ``the example of the issue reads into the dialogue records`` () =
             ],
             quest.Conditions
         )
+
         Assert.Equal("Ten logs and five good stones.", quest.Text)
     | other -> failwithf "%A" other
 
@@ -183,7 +191,10 @@ let ``the script edit gives new lines ids and is one undo step`` () =
         Assert.True(lines |> List.forall (fun l -> l.Id.IsSome))
         Assert.Equal(2, lines |> List.choose (fun l -> l.Id) |> List.distinct |> List.length)
         // The same text gets the same ids.
-        let again = Document.run project edit |> fun p -> p.Npcs |> List.find (fun n -> n.Id = npc.Id)
+        let again =
+            Document.run project edit
+            |> fun p -> p.Npcs |> List.find (fun n -> n.Id = npc.Id)
+
         Assert.Equal<NpcLine list option>(changed.Lines, again.Lines)
 
 [<Fact>]
@@ -214,14 +225,22 @@ let ``problems inside an NPC's dialogue point at the script line`` () =
     let project = apply (UpsertNpc broken) project
     let problems = Problems.collect project
     let located = DialogueScript.npcProblems project problems npc.Id
-    let text = DialogueScript.printNpc (project.Npcs |> List.find (fun n -> n.Id = npc.Id))
+
+    let text =
+        DialogueScript.printNpc (project.Npcs |> List.find (fun n -> n.Id = npc.Id))
+
     let lines = text.Split '\n'
     Assert.NotEmpty located
 
     for line, problem in located do
         Assert.True(line >= 1 && line <= lines.Length, sprintf "%d: %s" line problem.Message)
 
-    Assert.Contains(located, fun (line, problem) -> problem.Message.Contains "missing-dialogue" && lines.[line - 1].Contains "-> missing-dialogue")
+    Assert.Contains(
+        located,
+        fun (line, problem) ->
+            problem.Message.Contains "missing-dialogue"
+            && lines.[line - 1].Contains "-> missing-dialogue"
+    )
 
 [<Fact>]
 let ``cutscenes read back with their lines choices and other steps`` () =
@@ -248,7 +267,11 @@ let ``cutscenes read back with their lines choices and other steps`` () =
                         Text = Some "Celebrate?"
                         Options =
                             [
-                                { Text = "Yes"; Goto = "party"; Id = Some "c-1" }
+                                {
+                                    Text = "Yes"
+                                    Goto = "party"
+                                    Id = Some "c-1"
+                                }
                                 { Text = "No"; Goto = ""; Id = None }
                             ]
                     }
@@ -285,9 +308,23 @@ let ``condition text reads the short forms`` () =
             "flag a off", EventCondition.Flag { Flag = "a"; Value = false }
             "item wood 10", EventCondition.HasItem { ItemId = "wood"; Quantity = 10.0 }
             "day 3..", EventCondition.DayRange { MinDay = Some 3.0; MaxDay = None }
-            "time 22:00..2:00", EventCondition.TimeOfDay { MinMinute = 1320.0; MaxMinute = 120.0 }
-            "evening", EventCondition.TimeOfDay { MinMinute = 1080.0; MaxMinute = 1439.0 }
-            "season spring \"late summer\"", EventCondition.Season { Seasons = [ "spring"; "late summer" ] }
+            "time 22:00..2:00",
+            EventCondition.TimeOfDay
+                {
+                    MinMinute = 1320.0
+                    MaxMinute = 120.0
+                }
+            "evening",
+            EventCondition.TimeOfDay
+                {
+                    MinMinute = 1080.0
+                    MaxMinute = 1439.0
+                }
+            "season spring \"late summer\"",
+            EventCondition.Season
+                {
+                    Seasons = [ "spring"; "late summer" ]
+                }
             "hearts bram 2..5",
             EventCondition.Hearts
                 {
@@ -311,7 +348,11 @@ let ``condition text reads the short forms`` () =
                     Value = None
                     Text = Some "glad"
                 }
-            "not flag met", EventCondition.Not { Conditions = [ EventCondition.Flag { Flag = "met"; Value = true } ] }
+            "not flag met",
+            EventCondition.Not
+                {
+                    Conditions = [ EventCondition.Flag { Flag = "met"; Value = true } ]
+                }
             "any(weather rain, season winter)",
             EventCondition.Any
                 {
@@ -345,7 +386,8 @@ let ``condition text explains a mistake`` () =
 
 // ── Properties ────────────────────────────────────────────────────────────
 
-let private idGen = Gen.elements [ "a"; "bram"; "quest-1"; "x.y"; "with space"; "q\"uote"; "lines"; "->" ]
+let private idGen =
+    Gen.elements [ "a"; "bram"; "quest-1"; "x.y"; "with space"; "q\"uote"; "lines"; "->" ]
 
 let private textGen =
     Gen.elements
@@ -366,7 +408,9 @@ let private textGen =
         ]
 
 let private numberGen = Gen.elements [ 0.0; 1.0; 2.5; -3.0; 250.0; 1e21; 0.1 ]
-let private optionOf (g: Gen<'T>) = Gen.oneof [ Gen.constant None; Gen.map Some g ]
+
+let private optionOf (g: Gen<'T>) =
+    Gen.oneof [ Gen.constant None; Gen.map Some g ]
 
 let rec private conditionGen (depth: int) : Gen<EventCondition> =
     let leaf =
@@ -397,14 +441,7 @@ let rec private conditionGen (depth: int) : Gen<EventCondition> =
                 Gen.map3 (fun s p c -> EventCondition.Perk { Skill = s; PerkId = p; ChoiceId = c }) idGen idGen idGen
                 Gen.map2 (fun m i -> EventCondition.MineFloor { Min = m; MineId = i }) numberGen (optionOf idGen)
                 Gen.map4
-                    (fun x y x2 y2 ->
-                        EventCondition.EnterTile
-                            {
-                                X = x
-                                Y = y
-                                X2 = x2
-                                Y2 = y2
-                            })
+                    (fun x y x2 y2 -> EventCondition.EnterTile { X = x; Y = y; X2 = x2; Y2 = y2 })
                     numberGen
                     numberGen
                     (optionOf numberGen)
@@ -471,7 +508,9 @@ let private npcGen: Gen<Npc> =
         let! dialogues =
             Gen.listOf (
                 gen {
-                    let! id = Gen.elements [ "bram.intro"; "lines"; "bram.lines"; "d 2"; "cutscene"; "x" ]
+                    let! id =
+                        Gen.elements [ "bram.intro"; "lines"; "bram.lines"; "d 2"; "cutscene"; "x" ]
+
                     let! npcId = Gen.elements [ "bram"; "bram"; "other" ]
                     let! text = textGen
                     let! options = Gen.listOf optionGen
@@ -546,12 +585,16 @@ let ``an NPC's dialogue goes to a script in a project folder and back`` () =
         Assert.StartsWith("@npc ", System.Text.Encoding.UTF8.GetString bytes)
 
     let npcFile =
-        files |> List.find (fun (p, _) -> p.StartsWith "npcs/") |> snd |> System.Text.Encoding.UTF8.GetString
+        files
+        |> List.find (fun (p, _) -> p.StartsWith "npcs/")
+        |> snd
+        |> System.Text.Encoding.UTF8.GetString
 
     Assert.Contains(ProjectFolder.ScriptKey, npcFile)
     Assert.DoesNotContain("\"lines\"", npcFile)
 
-    let folder = Dictionary<string, byte[]>(dict files) :> IReadOnlyDictionary<string, byte[]>
+    let folder =
+        Dictionary<string, byte[]>(dict files) :> IReadOnlyDictionary<string, byte[]>
 
     match ProjectFolder.load folder with
     | { Data = Some loaded } -> Assert.Equal<Npc list>(project.Npcs, loaded.Npcs)
@@ -560,7 +603,12 @@ let ``an NPC's dialogue goes to a script in a project folder and back`` () =
     // A script edited outside the editor is read; a broken one says where.
     let path, _ = List.head scripts
     let edited = Dictionary<string, byte[]>(dict files)
-    edited.[path] <- System.Text.Encoding.UTF8.GetBytes(System.Text.Encoding.UTF8.GetString edited.[path] + "\n=== new.one\nHello there.\n* [season] Bad.\n")
+
+    edited.[path] <-
+        System.Text.Encoding.UTF8.GetBytes(
+            System.Text.Encoding.UTF8.GetString edited.[path]
+            + "\n=== new.one\nHello there.\n* [season] Bad.\n"
+        )
 
     match ProjectFolder.join edited with
     | Ok _ -> failwith "expected an error"

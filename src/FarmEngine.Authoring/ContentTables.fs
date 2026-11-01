@@ -55,7 +55,8 @@ type CellChange =
     }
 
 /// A row an import or a bulk edit changes, and how.
-type RowChange = { Id: string; Changes: CellChange list }
+type RowChange =
+    { Id: string; Changes: CellChange list }
 
 /// What an import would do (#226): rows it adds, changes and (when the file lacks them) removes,
 /// and the cells it cannot read. Nothing is applied until `ContentTables.applyImport`.
@@ -70,7 +71,8 @@ type TableDiff =
         Rows: (string * Json) list
     }
 
-    member this.HasChanges = not (this.Added.IsEmpty && this.Changed.IsEmpty && this.Removed.IsEmpty)
+    member this.HasChanges =
+        not (this.Added.IsEmpty && this.Changed.IsEmpty && this.Removed.IsEmpty)
 
 /// Content as tables (#226): items, crops, recipes, shop stock, fish tables and node drops, a
 /// row per entry (or per stock entry, fish or drop) and a column per field, with computed
@@ -80,7 +82,12 @@ type TableDiff =
 module ContentTables =
     // ── Categories ─────────────────────────────────────────────────────────
 
-    let private col key header kind : TableColumn = { Key = key; Header = header; Kind = kind }
+    let private col key header kind : TableColumn =
+        {
+            Key = key
+            Header = header
+            Kind = kind
+        }
 
     /// A category: its columns, its rows as JSON (the entry, or a parent's id plus a child), and
     /// how rows go back into the project.
@@ -245,7 +252,8 @@ module ContentTables =
 
     let private noComputed (_: GameProject) (_: Json) (_: string) = ""
 
-    let private money (value: float) = JsNumber.format (JsNumber.roundHalfAway value)
+    let private money (value: float) =
+        JsNumber.format (JsNumber.roundHalfAway value)
 
     let private categories: Category list =
         [
@@ -385,7 +393,9 @@ module ContentTables =
                 SchemaJson.encodeFishTableEntry
                 SchemaJson.decodeFishTableEntry
                 UpsertFishTable
-                { FishTableEntry.Default with Weight = 1.0 }
+                { FishTableEntry.Default with
+                    Weight = 1.0
+                }
             children
                 "nodeDrops"
                 "Node drops"
@@ -470,7 +480,11 @@ module ContentTables =
 
         let number () =
             let n = JsNumber.parse text
-            if Double.IsNaN n || Double.IsInfinity n then Error(sprintf "%s is not a number" text) else Ok n
+
+            if Double.IsNaN n || Double.IsInfinity n then
+                Error(sprintf "%s is not a number" text)
+            else
+                Ok n
 
         let words () =
             text.Split([| ','; ';' |], StringSplitOptions.RemoveEmptyEntries ||| StringSplitOptions.TrimEntries)
@@ -482,9 +496,21 @@ module ContentTables =
         match column.Kind with
         | ColumnKind.Computed -> Error "this column is worked out and cannot be written"
         | ColumnKind.Text -> set (JString text)
-        | ColumnKind.OptionalText -> if text = "" then Ok(Json.remove column.Key json) else set (JString text)
-        | ColumnKind.Number -> if text = "" then Error "needs a number" else number () |> Result.bind (JNumber >> set)
-        | ColumnKind.OptionalNumber -> if text = "" then Ok(Json.remove column.Key json) else number () |> Result.bind (JNumber >> set)
+        | ColumnKind.OptionalText ->
+            if text = "" then
+                Ok(Json.remove column.Key json)
+            else
+                set (JString text)
+        | ColumnKind.Number ->
+            if text = "" then
+                Error "needs a number"
+            else
+                number () |> Result.bind (JNumber >> set)
+        | ColumnKind.OptionalNumber ->
+            if text = "" then
+                Ok(Json.remove column.Key json)
+            else
+                number () |> Result.bind (JNumber >> set)
         | ColumnKind.Bool ->
             match text.ToLowerInvariant() with
             | "true"
@@ -507,7 +533,10 @@ module ContentTables =
                     let space = part.IndexOf ' '
 
                     let quantity, item =
-                        if space < 0 then "1", part else part.Substring(0, space), part.Substring(space + 1).Trim()
+                        if space < 0 then
+                            "1", part
+                        else
+                            part.Substring(0, space), part.Substring(space + 1).Trim()
 
                     let n = JsNumber.parse quantity
 
@@ -516,9 +545,22 @@ module ContentTables =
                     else
                         Ok(JObject [ "itemId", JString item; "quantity", JNumber n ]))
 
-            match parts |> List.tryPick (function | Error e -> Some e | Ok _ -> None) with
+            match
+                parts
+                |> List.tryPick (function
+                    | Error e -> Some e
+                    | Ok _ -> None)
+            with
             | Some e -> Error e
-            | None -> set (JArray(parts |> List.choose (function | Ok v -> Some v | Error _ -> None)))
+            | None ->
+                set (
+                    JArray(
+                        parts
+                        |> List.choose (function
+                            | Ok v -> Some v
+                            | Error _ -> None)
+                    )
+                )
 
     /// The table of `category`: a row per entry, cells in column order.
     let rows (category: string) (project: GameProject) : TableRow list =
@@ -670,10 +712,13 @@ module ContentTables =
     let toCsv (category: string) (project: GameProject) : string =
         let c = find category
         let sb = StringBuilder()
-        sb.Append(String.Join(",", c.Columns |> List.map (fun col -> csvField col.Key))).Append("\r\n") |> ignore
+
+        sb.Append(String.Join(",", c.Columns |> List.map (fun col -> csvField col.Key))).Append("\r\n")
+        |> ignore
 
         for row in rows category project do
-            sb.Append(String.Join(",", row.Cells |> List.map csvField)).Append("\r\n") |> ignore
+            sb.Append(String.Join(",", row.Cells |> List.map csvField)).Append("\r\n")
+            |> ignore
 
         sb.ToString()
 
@@ -682,11 +727,40 @@ module ContentTables =
     /// `applyImport` is asked to.
     let diff (category: string) (project: GameProject) (csv: string) : TableDiff =
         let c = find category
-        let empty = { Category = category; Added = []; Changed = []; Removed = []; Invalid = []; Rows = [] }
+
+        let empty =
+            {
+                Category = category
+                Added = []
+                Changed = []
+                Removed = []
+                Invalid = []
+                Rows = []
+            }
 
         match parseCsv csv with
-        | Error message -> { empty with Invalid = [ { Row = 0; Column = ""; Message = message } ] }
-        | Ok [] -> { empty with Invalid = [ { Row = 1; Column = ""; Message = "the file is empty" } ] }
+        | Error message ->
+            { empty with
+                Invalid =
+                    [
+                        {
+                            Row = 0
+                            Column = ""
+                            Message = message
+                        }
+                    ]
+            }
+        | Ok [] ->
+            { empty with
+                Invalid =
+                    [
+                        {
+                            Row = 1
+                            Column = ""
+                            Message = "the file is empty"
+                        }
+                    ]
+            }
         | Ok(header :: lines) ->
             let errors = ResizeArray<CellError>()
 
@@ -698,10 +772,19 @@ module ContentTables =
                     match c.Columns |> List.tryFind (fun col -> col.Key = key || col.Header = key) with
                     | Some col -> Some col
                     | None ->
-                        errors.Add { Row = 1; Column = key; Message = "there is no such column" }
+                        errors.Add
+                            {
+                                Row = 1
+                                Column = key
+                                Message = "there is no such column"
+                            }
+
                         None)
 
-            let idIndex = header |> List.tryFindIndex (fun col -> col |> Option.exists (fun col -> col.Key = "id"))
+            let idIndex =
+                header
+                |> List.tryFindIndex (fun col -> col |> Option.exists (fun col -> col.Key = "id"))
+
             let current = c.Rows project
             let currentById = current |> dict
             let result = ResizeArray<string * Json>()
@@ -713,10 +796,15 @@ module ContentTables =
             |> List.iteri (fun index fields ->
                 let rowNumber = index + 2
                 let fields = fields @ List.replicate (max 0 (header.Length - fields.Length)) ""
-                let given = idIndex |> Option.map (fun i -> fields.[i].Trim()) |> Option.defaultValue ""
+
+                let given =
+                    idIndex |> Option.map (fun i -> fields.[i].Trim()) |> Option.defaultValue ""
 
                 let existing =
-                    if given <> "" && currentById.ContainsKey given then Some currentById.[given] else None
+                    if given <> "" && currentById.ContainsKey given then
+                        Some currentById.[given]
+                    else
+                        None
 
                 let mutable json =
                     match existing with
@@ -727,12 +815,21 @@ module ContentTables =
 
                 for k, col in List.indexed header do
                     match col with
-                    | Some col when not col.ReadOnly || (existing.IsNone && col.Key <> "id" && col.Kind <> ColumnKind.Computed) ->
+                    | Some col when
+                        not col.ReadOnly
+                        || (existing.IsNone && col.Key <> "id" && col.Kind <> ColumnKind.Computed)
+                        ->
                         match writeCell col fields.[k] json with
                         | Ok next -> json <- next
                         | Error message ->
                             ok <- false
-                            errors.Add { Row = rowNumber; Column = col.Header; Message = message }
+
+                            errors.Add
+                                {
+                                    Row = rowNumber
+                                    Column = col.Header
+                                    Message = message
+                                }
                     | _ -> ()
 
                 let rowId =
@@ -757,11 +854,22 @@ module ContentTables =
 
                 if ok then
                     if rowId = "" || rowId.EndsWith "/" then
-                        errors.Add { Row = rowNumber; Column = "id"; Message = "a new row needs an id" }
+                        errors.Add
+                            {
+                                Row = rowNumber
+                                Column = "id"
+                                Message = "a new row needs an id"
+                            }
                     elif not (seen.Add rowId) then
-                        errors.Add { Row = rowNumber; Column = "id"; Message = sprintf "%s comes twice" rowId }
+                        errors.Add
+                            {
+                                Row = rowNumber
+                                Column = "id"
+                                Message = sprintf "%s comes twice" rowId
+                            }
                     else
-                        let cells (j: Json) = c.Columns |> List.map (fun col -> col, cellOf c project rowId j col)
+                        let cells (j: Json) =
+                            c.Columns |> List.map (fun col -> col, cellOf c project rowId j col)
 
                         match existing with
                         | Some before ->
@@ -769,7 +877,12 @@ module ContentTables =
                                 List.zip (cells before) (cells json)
                                 |> List.choose (fun ((col, b), (_, a)) ->
                                     if b <> a && col.Kind <> ColumnKind.Computed then
-                                        Some { Column = col.Header; Before = b; After = a }
+                                        Some
+                                            {
+                                                Column = col.Header
+                                                Before = b
+                                                After = a
+                                            }
                                     else
                                         None)
 
@@ -782,7 +895,12 @@ module ContentTables =
                                     Changes =
                                         cells json
                                         |> List.filter (fun (col, a) -> a <> "" && col.Kind <> ColumnKind.Computed)
-                                        |> List.map (fun (col, a) -> { Column = col.Header; Before = ""; After = a })
+                                        |> List.map (fun (col, a) ->
+                                            {
+                                                Column = col.Header
+                                                Before = ""
+                                                After = a
+                                            })
                                 }
 
                         result.Add(rowId, json))
@@ -790,8 +908,15 @@ module ContentTables =
             // Check the rows decode before showing the diff as applicable.
             match c.Write project (List.ofSeq result) with
             | Error(rowId, message) ->
-                let line = result |> Seq.tryFindIndex (fun (r, _) -> r = rowId) |> Option.defaultValue -1
-                errors.Add { Row = line + 2; Column = ""; Message = message }
+                let line =
+                    result |> Seq.tryFindIndex (fun (r, _) -> r = rowId) |> Option.defaultValue -1
+
+                errors.Add
+                    {
+                        Row = line + 2
+                        Column = ""
+                        Message = message
+                    }
             | Ok _ -> ()
 
             {
@@ -824,7 +949,8 @@ module ContentTables =
                          match byId.TryGetValue rowId with
                          | true, next -> rowId, next
                          | _ -> rowId, json))
-                    @ (diff.Rows |> List.filter (fun (rowId, _) -> not ((c.Rows project) |> List.exists (fun (r, _) -> r = rowId))))
+                    @ (diff.Rows
+                       |> List.filter (fun (rowId, _) -> not ((c.Rows project) |> List.exists (fun (r, _) -> r = rowId))))
 
             toEdit c project (sprintf "Import %s" (c.Name.ToLowerInvariant())) rows (fun _ -> 0)
 

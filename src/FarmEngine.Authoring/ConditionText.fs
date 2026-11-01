@@ -32,7 +32,11 @@ open FarmEngine.Schemas
 module ConditionText =
     /// The named times of day `[morning]` stands for (inclusive minutes).
     let namedTimes =
-        [ "morning", (360.0, 719.0); "afternoon", (720.0, 1079.0); "evening", (1080.0, 1439.0) ]
+        [
+            "morning", (360.0, 719.0)
+            "afternoon", (720.0, 1079.0)
+            "evening", (1080.0, 1439.0)
+        ]
 
     let private comparisons =
         [
@@ -177,7 +181,11 @@ module ConditionText =
             None
         else
             let n = JsNumber.parse text
-            if Double.IsNaN n || Double.IsInfinity n then None else Some n
+
+            if Double.IsNaN n || Double.IsInfinity n then
+                None
+            else
+                Some n
 
     /// `6:00` or `390` as minutes.
     let private parseMinutes (text: string) : float option =
@@ -209,7 +217,8 @@ module ConditionText =
             let low, high = text.Substring(0, at), text.Substring(at + 2)
 
             let side (s: string) =
-                if s = "" then Ok None
+                if s = "" then
+                    Ok None
                 else
                     match parse s with
                     | Some v -> Ok(Some v)
@@ -229,7 +238,8 @@ module ConditionText =
 
     // ── Printing ───────────────────────────────────────────────────────────
 
-    let private words (list: string list) = list |> List.map word |> String.concat " "
+    let private words (list: string list) =
+        list |> List.map word |> String.concat " "
 
     let rec private shortText (condition: EventCondition) : string option =
         let tile name (x: float) (y: float) (x2: float option) (y2: float option) =
@@ -257,7 +267,10 @@ module ConditionText =
             | EventCondition.DayOfSeason c -> "day-of-season " + rangeText number c.MinDay c.MaxDay
             | EventCondition.YearRange c -> "year " + rangeText number c.MinYear c.MaxYear
             | EventCondition.TimeOfDay c ->
-                match namedTimes |> List.tryFind (fun (_, range) -> range = (c.MinMinute, c.MaxMinute)) with
+                match
+                    namedTimes
+                    |> List.tryFind (fun (_, range) -> range = (c.MinMinute, c.MaxMinute))
+                with
                 | Some(name, _) -> name
                 | None -> sprintf "time %s..%s" (minutesText c.MinMinute) (minutesText c.MaxMinute)
             | EventCondition.Season c -> "season " + words c.Seasons
@@ -273,7 +286,11 @@ module ConditionText =
                     sprintf "friendship %s %s" (word c.NpcId) (number c.Min)
             | EventCondition.Hearts c ->
                 let range = rangeText number c.Min c.Max
-                if c.NpcId = "" then "hearts " + range else sprintf "hearts %s %s" (word c.NpcId) range
+
+                if c.NpcId = "" then
+                    "hearts " + range
+                else
+                    sprintf "hearts %s %s" (word c.NpcId) range
             | EventCondition.Relationship c ->
                 if c.NpcId = "" then
                     "relationship " + word c.Status
@@ -315,8 +332,7 @@ module ConditionText =
 
         if text = "" then None else Some text
 
-    and private group (name: string) (conditions: EventCondition list) =
-        name + "(" + printList conditions + ")"
+    and private group (name: string) (conditions: EventCondition list) = name + "(" + printList conditions + ")"
 
     /// One condition as text: its short form when that reads back as the same condition, else its
     /// JSON.
@@ -350,7 +366,11 @@ module ConditionText =
 
         let texts (args: Token list) =
             let values = args |> List.map text
-            if values |> List.forall Option.isSome then Some(List.choose id values) else None
+
+            if values |> List.forall Option.isSome then
+                Some(List.choose id values)
+            else
+                None
 
         let num (token: Token) =
             match token with
@@ -392,9 +412,30 @@ module ConditionText =
                 ok (EventCondition.TimeOfDay { MinMinute = low; MaxMinute = high }) after
             | "flag" ->
                 match args with
-                | [ name ] when (text name).IsSome -> ok (EventCondition.Flag { Flag = (text name).Value; Value = true }) after
-                | [ name; Word "off" ] when (text name).IsSome -> ok (EventCondition.Flag { Flag = (text name).Value; Value = false }) after
-                | [ name; Word "on" ] when (text name).IsSome -> ok (EventCondition.Flag { Flag = (text name).Value; Value = true }) after
+                | [ name ] when (text name).IsSome ->
+                    ok
+                        (EventCondition.Flag
+                            {
+                                Flag = (text name).Value
+                                Value = true
+                            })
+                        after
+                | [ name; Word "off" ] when (text name).IsSome ->
+                    ok
+                        (EventCondition.Flag
+                            {
+                                Flag = (text name).Value
+                                Value = false
+                            })
+                        after
+                | [ name; Word "on" ] when (text name).IsSome ->
+                    ok
+                        (EventCondition.Flag
+                            {
+                                Flag = (text name).Value
+                                Value = true
+                            })
+                        after
                 | _ -> fail "flag NAME (or flag NAME off)"
             | "item"
             | "space" as kind ->
@@ -459,7 +500,13 @@ module ConditionText =
                 match args with
                 | [ n ] when (num n).IsSome -> ok (EventCondition.Friendship { NpcId = ""; Min = (num n).Value }) after
                 | [ npc; n ] when (text npc).IsSome && (num n).IsSome ->
-                    ok (EventCondition.Friendship { NpcId = (text npc).Value; Min = (num n).Value }) after
+                    ok
+                        (EventCondition.Friendship
+                            {
+                                NpcId = (text npc).Value
+                                Min = (num n).Value
+                            })
+                        after
                 | _ -> fail "friendship [NPC] POINTS"
             | "hearts" ->
                 let make npc range =
@@ -513,7 +560,13 @@ module ConditionText =
             | "skill" ->
                 match args with
                 | [ skill; n ] when (text skill).IsSome && (num n).IsSome ->
-                    ok (EventCondition.SkillLevel { Skill = (text skill).Value; Min = (num n).Value }) after
+                    ok
+                        (EventCondition.SkillLevel
+                            {
+                                Skill = (text skill).Value
+                                Min = (num n).Value
+                            })
+                        after
                 | _ -> fail "skill SKILL LEVEL"
             | "perk" ->
                 match texts args with
@@ -535,13 +588,32 @@ module ConditionText =
                 match args with
                 | [ n ] when (num n).IsSome -> ok (EventCondition.MineFloor { Min = (num n).Value; MineId = None }) after
                 | [ n; mine ] when (num n).IsSome && (text mine).IsSome ->
-                    ok (EventCondition.MineFloor { Min = (num n).Value; MineId = text mine }) after
+                    ok
+                        (EventCondition.MineFloor
+                            {
+                                Min = (num n).Value
+                                MineId = text mine
+                            })
+                        after
                 | _ -> fail "mine-floor FLOOR [MINE]"
             | "collection" ->
                 match args with
-                | [ id ] when (text id).IsSome -> ok (EventCondition.Collection { CollectionId = (text id).Value; Min = None }) after
+                | [ id ] when (text id).IsSome ->
+                    ok
+                        (EventCondition.Collection
+                            {
+                                CollectionId = (text id).Value
+                                Min = None
+                            })
+                        after
                 | [ id; n ] when (text id).IsSome && (num n).IsSome ->
-                    ok (EventCondition.Collection { CollectionId = (text id).Value; Min = num n }) after
+                    ok
+                        (EventCondition.Collection
+                            {
+                                CollectionId = (text id).Value
+                                Min = num n
+                            })
+                        after
                 | _ -> fail "collection ID [COUNT]"
             | "bundle" ->
                 match texts args with

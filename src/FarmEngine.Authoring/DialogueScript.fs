@@ -25,7 +25,7 @@ type ScriptDocument =
 /// Dialogue scripts (#225): an NPC's dialogue and lines, or cutscenes, as text a writer edits,
 /// read into the same records the forms edit (the engine is unchanged). The printer and the
 /// parser are inverses for everything the format covers; `isLossless` says whether an NPC is
-/// covered, and the project folder keeps any other NPC as JSON. See docs/DIALOGUE-SCRIPTS.md.
+/// covered, and the project folder keeps any other NPC as JSON. See docs/AUTHORING-AT-SCALE.md.
 ///
 /// ```text
 /// @npc bram
@@ -57,7 +57,8 @@ module DialogueScript =
 
     // ── Text ───────────────────────────────────────────────────────────────
 
-    let private tagPattern = Regex(@"(^|\s)#line:([^\s""]+)$", RegexOptions.CultureInvariant)
+    let private tagPattern =
+        Regex(@"(^|\s)#line:([^\s""]+)$", RegexOptions.CultureInvariant)
 
     let private startsStructural (text: string) =
         text.Length > 0 && "\"*~@=[?>:/\\{".IndexOf text.[0] >= 0
@@ -86,7 +87,8 @@ module DialogueScript =
     /// Whether `id` can be written as a line tag.
     let private taggable (id: string) =
         id.Length > 0
-        && id |> Seq.forall (fun c -> not (Char.IsWhiteSpace c) && c <> '"' && not (Char.IsControl c))
+        && id
+           |> Seq.forall (fun c -> not (Char.IsWhiteSpace c) && c <> '"' && not (Char.IsControl c))
 
     let private tag (id: string option) =
         match id with
@@ -102,7 +104,11 @@ module DialogueScript =
             | Some flag -> EventCondition.Flag { Flag = flag; Value = true }
             | None -> ()
             match option.HiddenIfFlag with
-            | Some flag -> EventCondition.Not { Conditions = [ EventCondition.Flag { Flag = flag; Value = true } ] }
+            | Some flag ->
+                EventCondition.Not
+                    {
+                        Conditions = [ EventCondition.Flag { Flag = flag; Value = true } ]
+                    }
             | None -> ()
             match option.RequiresItem with
             | Some item -> EventCondition.HasItem { ItemId = item; Quantity = 1.0 }
@@ -186,10 +192,7 @@ module DialogueScript =
 
     let private dialogueHeader (npcId: string) (id: string) =
         let reserved =
-            id = "lines"
-            || id = npcId + ".lines"
-            || id = "cutscene"
-            || id = "dialogue"
+            id = "lines" || id = npcId + ".lines" || id = "cutscene" || id = "dialogue"
 
         if reserved then
             "=== dialogue " + idText id
@@ -220,7 +223,12 @@ module DialogueScript =
             printOption p option)
 
     let private printLines (p: Printer) (npcId: string) (lines: NpcLine list) =
-        p.Line(if npcId = "" then "=== lines" else "=== " + idText (npcId + ".lines"))
+        p.Line(
+            if npcId = "" then
+                "=== lines"
+            else
+                "=== " + idText (npcId + ".lines")
+        )
 
         lines
         |> List.iteri (fun k line ->
@@ -242,7 +250,8 @@ module DialogueScript =
 
             p.Line(groups + textOut line.Text + tag line.Id))
 
-    let private speakerPattern = Regex(@"^[A-Za-z0-9_.\-]+$", RegexOptions.CultureInvariant)
+    let private speakerPattern =
+        Regex(@"^[A-Za-z0-9_.\-]+$", RegexOptions.CultureInvariant)
 
     /// A step the short forms cover (`SPEAKER: TEXT`, `? QUESTION` with its answers, `> jump`);
     /// others are written as JSON.
@@ -281,7 +290,12 @@ module DialogueScript =
                 Conditions = step.Conditions
             }
 
-        if step = say && step.Text.IsSome && speakerOk step.Speaker && speakerOk step.Expression then
+        if
+            step = say
+            && step.Text.IsSome
+            && speakerOk step.Speaker
+            && speakerOk step.Expression
+        then
             let speaker = defaultArg step.Speaker ""
 
             let expression =
@@ -296,7 +310,12 @@ module DialogueScript =
             | None -> p.Line("?" + tag step.Id)
 
             for choice in step.Options do
-                let goto = if choice.Goto = "" then "" else " -> " + targetText choice.Goto
+                let goto =
+                    if choice.Goto = "" then
+                        ""
+                    else
+                        " -> " + targetText choice.Goto
+
                 p.Line("* " + textOut choice.Text + goto + tag choice.Id)
         elif step = jump && step.Goto.IsSome then
             let conditions =
@@ -365,7 +384,8 @@ module DialogueScript =
         }
 
     /// An NPC's dialogues and lines as a script.
-    let printNpc (npc: Npc) : string = documentOfNpc npc |> printDocument |> fst
+    let printNpc (npc: Npc) : string =
+        documentOfNpc npc |> printDocument |> fst
 
     /// Cutscenes as a script.
     let printCutscenes (cutscenes: Cutscene list) : string =
@@ -476,7 +496,10 @@ module DialogueScript =
         | Ok(groups, rest) ->
             let mutable option = { DialogueOption.Default with Id = id }
             let mutable error = None
-            let fail (message: string) = if error.IsNone then error <- Some message
+
+            let fail (message: string) =
+                if error.IsNone then
+                    error <- Some message
 
             for group in groups do
                 match group with
@@ -500,12 +523,21 @@ module DialogueScript =
 
                             match condition, hidden with
                             | EventCondition.Flag c, _ when c.Value && option.RequiresFlag.IsNone ->
-                                option <- { option with RequiresFlag = Some c.Flag }
+                                option <-
+                                    { option with
+                                        RequiresFlag = Some c.Flag
+                                    }
                             | _, Some flag when option.HiddenIfFlag.IsNone -> option <- { option with HiddenIfFlag = Some flag }
                             | EventCondition.HasItem c, _ when c.Quantity = 1.0 && option.RequiresItem.IsNone ->
-                                option <- { option with RequiresItem = Some c.ItemId }
+                                option <-
+                                    { option with
+                                        RequiresItem = Some c.ItemId
+                                    }
                             | EventCondition.Friendship c, _ when (c.NpcId = "" || c.NpcId = npcId) && option.RequiresFriendship.IsNone ->
-                                option <- { option with RequiresFriendship = Some c.Min }
+                                option <-
+                                    { option with
+                                        RequiresFriendship = Some c.Min
+                                    }
                             | other, _ ->
                                 fail (
                                     sprintf
@@ -546,7 +578,10 @@ module DialogueScript =
                             if option.NextDialogueId.IsSome then
                                 fail "the option already goes to a dialogue"
                             else
-                                option <- { option with NextDialogueId = value id }
+                                option <-
+                                    { option with
+                                        NextDialogueId = value id
+                                    }
 
                             targetsLoop rest
                         | token :: _ ->
@@ -569,7 +604,8 @@ module DialogueScript =
             if not option.Extra.IsEmpty then
                 Error "the option already has ~ extra"
             else
-                parseExtra (body.Substring 6) |> Result.map (fun extra -> { option with Extra = extra })
+                parseExtra (body.Substring 6)
+                |> Result.map (fun extra -> { option with Extra = extra })
         else
             match wordsOf body with
             | Error e -> Error e
@@ -589,7 +625,11 @@ module DialogueScript =
                             GiveItemQuantity = Some n
                         })
                 | [ "give"; "quantity"; n ] when option.GiveItemQuantity.IsNone ->
-                    number n |> Result.map (fun n -> { option with GiveItemQuantity = Some n })
+                    number n
+                    |> Result.map (fun n ->
+                        { option with
+                            GiveItemQuantity = Some n
+                        })
                 | [ "give"; "money"; n ] when option.GiveMoney.IsNone -> number n |> Result.map (fun n -> { option with GiveMoney = Some n })
                 | [ "take"; "money"; n ] when option.TakeMoney.IsNone -> number n |> Result.map (fun n -> { option with TakeMoney = Some n })
                 | [ "set"; "flag"; flag ] when option.EventFlag.IsNone -> Ok { option with EventFlag = Some flag }
@@ -607,12 +647,19 @@ module DialogueScript =
         | Ok(groups, rest) ->
             let mutable line = { NpcLine.Default with Id = id }
             let mutable error = None
-            let fail (message: string) = if error.IsNone then error <- Some message
+
+            let fail (message: string) =
+                if error.IsNone then
+                    error <- Some message
 
             for group in groups do
                 if group.StartsWith "@" then
                     match wordsOf (group.Substring 1) with
-                    | Ok [ expression ] when line.Expression.IsNone -> line <- { line with Expression = Some expression }
+                    | Ok [ expression ] when line.Expression.IsNone ->
+                        line <-
+                            { line with
+                                Expression = Some expression
+                            }
                     | _ -> fail "write [@EXPRESSION] once"
                 elif group.StartsWith "weight " then
                     match parseNumber (group.Substring 7), line.Weight with
@@ -622,7 +669,11 @@ module DialogueScript =
                     let conditions = if group.StartsWith "if " then group.Substring 3 else group
 
                     match ConditionText.parseList conditions with
-                    | Ok conditions -> line <- { line with Conditions = line.Conditions @ conditions }
+                    | Ok conditions ->
+                        line <-
+                            { line with
+                                Conditions = line.Conditions @ conditions
+                            }
                     | Error e -> fail e
 
             match readText false rest with
@@ -651,9 +702,18 @@ module DialogueScript =
             match block with
             | DialogueBlock(dialogue, _) ->
                 let text = String.Join("\n", textLines)
-                dialogues.Add { dialogue with Text = text; Options = List.rev dialogue.Options }
+
+                dialogues.Add
+                    { dialogue with
+                        Text = text
+                        Options = List.rev dialogue.Options
+                    }
             | LinesBlock found -> lines <- Some(List.rev found)
-            | CutsceneBlock(cutscene, _) -> cutscenes.Add { cutscene with Steps = List.rev cutscene.Steps }
+            | CutsceneBlock(cutscene, _) ->
+                cutscenes.Add
+                    { cutscene with
+                        Steps = List.rev cutscene.Steps
+                    }
             | NoBlock -> ()
 
             textLines <- ResizeArray()
@@ -664,7 +724,10 @@ module DialogueScript =
         source
         |> Array.iteri (fun index raw ->
             let number = index + 1
-            let error message = errors.Add { Line = number; Message = message }
+
+            let error message =
+                errors.Add { Line = number; Message = message }
+
             let line = raw.Trim()
 
             if line = "" || line.StartsWith "//" then
@@ -743,15 +806,36 @@ module DialogueScript =
                         map.Add(sprintf "dialogue[%d].options[%d]" dialogues.Count dialogue.Options.Length, number)
 
                         match parseOption dialogue.NpcId (line.Substring 1) with
-                        | Ok option -> block <- DialogueBlock({ dialogue with Options = option :: dialogue.Options }, true)
+                        | Ok option ->
+                            block <-
+                                DialogueBlock(
+                                    { dialogue with
+                                        Options = option :: dialogue.Options
+                                    },
+                                    true
+                                )
                         | Error e ->
                             error e
-                            block <- DialogueBlock({ dialogue with Options = DialogueOption.Default :: dialogue.Options }, true)
+
+                            block <-
+                                DialogueBlock(
+                                    { dialogue with
+                                        Options = DialogueOption.Default :: dialogue.Options
+                                    },
+                                    true
+                                )
                     elif line.StartsWith "~" then
                         match dialogue.Options with
                         | last :: earlier ->
                             match applyEffect last (line.Substring 1) with
-                            | Ok option -> block <- DialogueBlock({ dialogue with Options = option :: earlier }, true)
+                            | Ok option ->
+                                block <-
+                                    DialogueBlock(
+                                        { dialogue with
+                                            Options = option :: earlier
+                                        },
+                                        true
+                                    )
                             | Error e -> error e
                         | [] -> error "an effect (~) belongs under an option (*)"
                     elif started then
@@ -774,10 +858,18 @@ module DialogueScript =
                             block <- LinesBlock(NpcLine.Default :: found)
                 | CutsceneBlock(cutscene, label) ->
                     let stepIndex = cutscene.Steps.Length
-                    let mark () = map.Add(sprintf "cutscenes[%d].steps[%d]" cutscenes.Count stepIndex, number)
+
+                    let mark () =
+                        map.Add(sprintf "cutscenes[%d].steps[%d]" cutscenes.Count stepIndex, number)
 
                     let add (step: CutsceneStep) =
-                        block <- CutsceneBlock({ cutscene with Steps = { step with Label = label } :: cutscene.Steps }, None)
+                        block <-
+                            CutsceneBlock(
+                                { cutscene with
+                                    Steps = { step with Label = label } :: cutscene.Steps
+                                },
+                                None
+                            )
 
                     if line.StartsWith "@" then
                         let space = line.IndexOf ' '
@@ -820,7 +912,10 @@ module DialogueScript =
                             let at = rest.IndexOf " if "
 
                             let target, conditions =
-                                if at < 0 then rest, "" else rest.Substring(0, at), rest.Substring(at + 4)
+                                if at < 0 then
+                                    rest, ""
+                                else
+                                    rest.Substring(0, at), rest.Substring(at + 4)
 
                             match wordsOf target, ConditionText.parseList conditions with
                             | Ok [ goto ], Ok conditions ->
@@ -867,10 +962,32 @@ module DialogueScript =
                                 match wordsOf rest with
                                 | Ok [] ->
                                     let choice: CutsceneChoice = { Text = text; Goto = ""; Id = id }
-                                    block <- CutsceneBlock({ cutscene with Steps = { last with Options = last.Options @ [ choice ] } :: earlier }, None)
+
+                                    block <-
+                                        CutsceneBlock(
+                                            { cutscene with
+                                                Steps =
+                                                    { last with
+                                                        Options = last.Options @ [ choice ]
+                                                    }
+                                                    :: earlier
+                                            },
+                                            None
+                                        )
                                 | Ok [ "->"; goto ] ->
                                     let choice: CutsceneChoice = { Text = text; Goto = goto; Id = id }
-                                    block <- CutsceneBlock({ cutscene with Steps = { last with Options = last.Options @ [ choice ] } :: earlier }, None)
+
+                                    block <-
+                                        CutsceneBlock(
+                                            { cutscene with
+                                                Steps =
+                                                    { last with
+                                                        Options = last.Options @ [ choice ]
+                                                    }
+                                                    :: earlier
+                                            },
+                                            None
+                                        )
                                 | Ok _ -> error "write * ANSWER -> LABEL"
                                 | Error e -> error e
                             | Error e -> error e
@@ -893,14 +1010,23 @@ module DialogueScript =
                                         Type = CutsceneStepTypes.Say
                                         Text = Some text
                                         Speaker = if speaker = "" then None else Some speaker
-                                        Expression = if m.Groups.[3].Success then Some m.Groups.[3].Value else None
+                                        Expression =
+                                            if m.Groups.[3].Success then
+                                                Some m.Groups.[3].Value
+                                            else
+                                                None
                                         Id = id
                                     }
                             | Ok _ -> error "unexpected text after the quoted text"
                             | Error e -> error e)
 
         match block with
-        | CutsceneBlock(_, Some _) -> errors.Add { Line = source.Length; Message = "@label needs a step after it" }
+        | CutsceneBlock(_, Some _) ->
+            errors.Add
+                {
+                    Line = source.Length
+                    Message = "@label needs a step after it"
+                }
         | _ -> ()
 
         close ()
@@ -926,9 +1052,22 @@ module DialogueScript =
         | Error errors -> Error errors
         | Ok document ->
             match document.Npc with
-            | Some id when id <> npc.Id -> Error [ { Line = 1; Message = sprintf "this script is for %s, not %s" id npc.Id } ]
+            | Some id when id <> npc.Id ->
+                Error
+                    [
+                        {
+                            Line = 1
+                            Message = sprintf "this script is for %s, not %s" id npc.Id
+                        }
+                    ]
             | _ when not document.Cutscenes.IsEmpty ->
-                Error [ { Line = 1; Message = "an NPC's script holds its dialogues and lines; put cutscenes in their own script" } ]
+                Error
+                    [
+                        {
+                            Line = 1
+                            Message = "an NPC's script holds its dialogues and lines; put cutscenes in their own script"
+                        }
+                    ]
             | _ ->
                 Ok
                     { npc with
@@ -981,7 +1120,10 @@ module DialogueScript =
                 List.mapi (fun k line ->
                     match line.Id with
                     | Some _ -> line
-                    | None -> { line with Id = Some(newId taken "l" (sprintf "%s|line|%d|%s" npc.Id k line.Text)) })
+                    | None ->
+                        { line with
+                            Id = Some(newId taken "l" (sprintf "%s|line|%d|%s" npc.Id k line.Text))
+                        })
             )
 
         let dialogue =
@@ -992,14 +1134,23 @@ module DialogueScript =
                     |> List.mapi (fun k option ->
                         match option.Id with
                         | Some _ -> option
-                        | None -> { option with Id = Some(newId taken "o" (sprintf "%s|%s|%d|%s" npc.Id d.Id k option.Text)) })
+                        | None ->
+                            { option with
+                                Id = Some(newId taken "o" (sprintf "%s|%s|%d|%s" npc.Id d.Id k option.Text))
+                            })
 
-                if options = d.Options then d else { d with Options = options })
+                if options = d.Options then
+                    d
+                else
+                    { d with Options = options })
 
         if lines = npc.Lines && dialogue = npc.Dialogue then
             npc
         else
-            { npc with Lines = lines; Dialogue = dialogue }
+            { npc with
+                Lines = lines
+                Dialogue = dialogue
+            }
 
     /// `cutscene` with an id on every line, question and answer that lacks one.
     let cutsceneWithIds (cutscene: Cutscene) : Cutscene =
@@ -1018,7 +1169,9 @@ module DialogueScript =
 
                 let step =
                     if hasText && step.Id.IsNone then
-                        { step with Id = Some(newId taken "s" (sprintf "%s|%d|%s" cutscene.Id k (defaultArg step.Text ""))) }
+                        { step with
+                            Id = Some(newId taken "s" (sprintf "%s|%d|%s" cutscene.Id k (defaultArg step.Text "")))
+                        }
                     else
                         step
 
@@ -1027,9 +1180,15 @@ module DialogueScript =
                     |> List.mapi (fun c choice ->
                         match choice.Id with
                         | Some _ -> choice
-                        | None -> { choice with Id = Some(newId taken "c" (sprintf "%s|%d|%d|%s" cutscene.Id k c choice.Text)) })
+                        | None ->
+                            { choice with
+                                Id = Some(newId taken "c" (sprintf "%s|%d|%d|%s" cutscene.Id k c choice.Text))
+                            })
 
-                if options = step.Options then step else { step with Options = options })
+                if options = step.Options then
+                    step
+                else
+                    { step with Options = options })
 
         if steps = cutscene.Steps then
             cutscene
@@ -1047,10 +1206,24 @@ module DialogueScript =
             let npcEdit =
                 match document.Npc with
                 | None when document.Dialogues.IsEmpty && document.Lines.IsNone -> Ok []
-                | None -> Error [ { Line = 1; Message = "dialogues and lines need @npc NPC-ID at the top" } ]
+                | None ->
+                    Error
+                        [
+                            {
+                                Line = 1
+                                Message = "dialogues and lines need @npc NPC-ID at the top"
+                            }
+                        ]
                 | Some id ->
                     match project.Npcs |> List.tryFind (fun n -> n.Id = id) with
-                    | None -> Error [ { Line = 1; Message = sprintf "there is no NPC %s" id } ]
+                    | None ->
+                        Error
+                            [
+                                {
+                                    Line = 1
+                                    Message = sprintf "there is no NPC %s" id
+                                }
+                            ]
                     | Some npc ->
                         let next =
                             withIds
@@ -1093,19 +1266,26 @@ module DialogueScript =
             let _, map = printDocument (documentOfNpc npc)
             let prefix = sprintf "npcs[%d]." index
 
-            let dialogueIndex =
-                npc.Dialogue |> List.mapi (fun i d -> d.Id, i) |> dict
+            let dialogueIndex = npc.Dialogue |> List.mapi (fun i d -> d.Id, i) |> dict
 
             problems
             |> List.choose (fun problem ->
-                if problem.Path.StartsWith(prefix, StringComparison.Ordinal) || problem.Path + "." = prefix then
-                    let rest = if problem.Path.Length > prefix.Length then problem.Path.Substring prefix.Length else ""
+                if
+                    problem.Path.StartsWith(prefix, StringComparison.Ordinal)
+                    || problem.Path + "." = prefix
+                then
+                    let rest =
+                        if problem.Path.Length > prefix.Length then
+                            problem.Path.Substring prefix.Length
+                        else
+                            ""
 
                     match lineOf map rest with
                     | Some line -> Some(line, problem)
                     | None when rest = "" || rest = "dialogue" || rest = "lines" ->
                         // A check that names the dialogue (and the dialogue it links to) in its message.
-                        let quoted (id: string) = problem.Message.Contains("\"" + id + "\"")
+                        let quoted (id: string) =
+                            problem.Message.Contains("\"" + id + "\"")
 
                         let found =
                             npc.Dialogue
@@ -1149,14 +1329,28 @@ module DialogueScript =
         | Error errors -> errors
         | Ok document ->
             let errors = ResizeArray<ScriptError>()
-            let lineAt path = lineOf document.Map path |> Option.defaultValue 1
-            let add path message = errors.Add { Line = lineAt path; Message = message }
+
+            let lineAt path =
+                lineOf document.Map path |> Option.defaultValue 1
+
+            let add path message =
+                errors.Add
+                    {
+                        Line = lineAt path
+                        Message = message
+                    }
 
             let npc =
-                document.Npc |> Option.bind (fun id -> project.Npcs |> List.tryFind (fun n -> n.Id = id))
+                document.Npc
+                |> Option.bind (fun id -> project.Npcs |> List.tryFind (fun n -> n.Id = id))
 
             match document.Npc, npc with
-            | Some id, None -> errors.Add { Line = 1; Message = sprintf "there is no NPC %s" id }
+            | Some id, None ->
+                errors.Add
+                    {
+                        Line = 1
+                        Message = sprintf "there is no NPC %s" id
+                    }
             | _ -> ()
 
             let dialogueIds =
@@ -1180,8 +1374,7 @@ module DialogueScript =
 
             let checkExpression path (expression: string option) =
                 match expression, npc with
-                | Some e, Some n when not (List.contains e portraits) ->
-                    add path (sprintf "%s has no portrait for the expression %s" n.Name e)
+                | Some e, Some n when not (List.contains e portraits) -> add path (sprintf "%s has no portrait for the expression %s" n.Name e)
                 | _ -> ()
 
             let seen = Collections.Generic.HashSet<string>()
