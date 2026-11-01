@@ -218,6 +218,31 @@ module internal ChecksContent =
                     )
                 | Some _ -> ())
 
+    /// An NPC without its own art is drawn with a built-in look its `appearance` names; one
+    /// that names none falls back to a guessed sheet (`BuiltinLooks.npcSheet`) without a word in
+    /// the game, so say which.
+    let private npcLooks (context: Context) (sink: Sink) =
+        context.Project.Npcs
+        |> Seq.iteri (fun i npc ->
+            if
+                npc.Visual.IsNone
+                && npc.Appearance.Length > 0
+                && (BuiltinLooks.exactNpcSheet npc.Appearance).IsNone
+            then
+                sink.Info(
+                    "npc.appearanceFallback",
+                    sprintf "npcs[%d].appearance" i,
+                    sprintf
+                        "NPC \"%s\" has appearance \"%s\", which names no built-in look, so it is drawn as %s (built-in looks: %s)"
+                        npc.Name
+                        npc.Appearance
+                        (BuiltinLooks.npcSheet npc.Appearance)
+                        (BuiltinLooks.NpcSheets
+                         |> List.map (fun s -> s.Substring 4)
+                         |> String.concat ", "),
+                    Some(NavigationTarget.Npc npc.Id)
+                ))
+
     let private quests (context: Context) (sink: Sink) =
         context.Project.Quests
         |> Seq.iteri (fun i quest ->
@@ -882,7 +907,23 @@ module internal ChecksContent =
                     | EventCondition.InteractTile _ -> true
                     | _ -> false)
 
-            if event.Trigger = EventTriggers.Enter && not hasTile then
+            // An event that fires once (not repeatable, or its outcomes set a flag its own
+            // conditions need false, or clear one they need true) runs on the first step and
+            // never again: the "first time entering a scene" pattern, not a mistake.
+            let firesOnce =
+                not event.Repeatable
+                || event.Conditions
+                   |> List.exists (fun c ->
+                       match c with
+                       | EventCondition.Flag f when f.Flag.Length > 0 ->
+                           event.Outcomes
+                           |> List.exists (fun o ->
+                               o.FlagName = Some f.Flag
+                               && ((o.Type = EventOutcomeTypes.SetFlag && not f.Value)
+                                   || (o.Type = EventOutcomeTypes.ClearFlag && f.Value)))
+                       | _ -> false)
+
+            if event.Trigger = EventTriggers.Enter && not hasTile && not firesOnce then
                 sink.Warning(
                     "event.enterWithoutTile",
                     path + ".conditions",
@@ -1522,7 +1563,12 @@ module internal ChecksContent =
                                     target
                                 )
 
-            if minigame.ResultTiers.IsEmpty then
+            // The fishing minigame's score decides the cast's catch (the engine's built-in
+            // binding), so it does something without tiers.
+            if
+                minigame.ResultTiers.IsEmpty
+                && minigame.Id <> ExtensibilitySchema.FishingMinigameId
+            then
                 sink.Warning(
                     "minigame.noTiers",
                     path + ".resultTiers",
@@ -2570,6 +2616,7 @@ module internal ChecksContent =
         items context sink
         crops context sink
         npcs context sink
+        npcLooks context sink
         quests context sink
         events context sink
         heartEvents context sink

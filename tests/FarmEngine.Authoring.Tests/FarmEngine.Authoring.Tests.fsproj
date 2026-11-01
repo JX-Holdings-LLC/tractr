@@ -40,6 +40,7 @@
     <Compile Include="ProgressionTests.fs" />
     <Compile Include="CalendarDepthTests.fs" />
     <Compile Include="ParityTests.fs" />
+    <Compile Include="AuthoringEdgesTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../fixtures/golden/content/*.json" Link="Golden/content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
