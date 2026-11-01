@@ -193,6 +193,10 @@ type Edit =
     | SetSettings of settings: ProjectSettings
     /// Native export identity and target settings; None disables standalone export metadata.
     | SetExportSettings of settings: ExportSettings option
+    /// The project's save migration rules (#242).
+    | SetSaveMigrations of rules: SaveMigration list
+    /// The project's test states (#229).
+    | SetTestStates of states: TestState list
     /// ProjectSettingsEditor `removeSeason`: also drops festivals and weather rows of that season; refused for the last season.
     | RemoveSeason of seasonId: string
     /// ProjectSettingsEditor `moveSeason`: swap a season with the one `delta` places away (±1 for

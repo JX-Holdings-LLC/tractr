@@ -1658,6 +1658,22 @@ impl Player {
         Ok(())
     }
 
+    /// Starts a new game at once, as New Game in the first free slot would but without a slot
+    /// (no autosaves): screenshot runs that start from a test state.
+    pub fn start_new_game(&mut self) -> Result<(), PlayerError> {
+        if let Some(message) = &self.poisoned {
+            return Err(PlayerError::Poisoned(message.clone()));
+        }
+        match catch_unwind(AssertUnwindSafe(|| self.start_game(0))) {
+            Ok(()) => Ok(()),
+            Err(panic) => {
+                let message = panic_message(&*panic);
+                self.poisoned = Some(message.clone());
+                Err(PlayerError::Engine(message))
+            }
+        }
+    }
+
     /// Replaces the live state (the debug drawer's write path).
     pub fn replace_state(&mut self, state: GameState) -> Result<(), PlayerError> {
         self.with_game(move |game| game.session.replace_state(state))

@@ -407,6 +407,12 @@ catalog! {
     SAVE_NEW_RNG = "msg.save.newRng" => "This save had no random number state; a new one was started.";
     SAVE_ITEM_SET_ASIDE = "msg.save.itemSetAside" => "{0} item in this save no longer exists in the game and was set aside: {1}.";
     SAVE_ITEMS_SET_ASIDE = "msg.save.itemsSetAside" => "{0} items in this save no longer exist in the game and were set aside: {1}.";
+    // Save migrations of a game update (#242).
+    SAVE_ITEM_RENAMED = "msg.save.itemRenamed" => "Your old {0} is now {1}.";
+    SAVE_ITEM_REPLACED = "msg.save.itemReplaced" => "Your old {0} ({1}) became {2} \u{d7} {3}.";
+    SAVE_ITEM_BOUGHT_BACK = "msg.save.itemBoughtBack" => "Your old {0} ({1}) left the game; you received ${2} for it.";
+    SAVE_ITEM_REMOVED = "msg.save.itemRemoved" => "Your old {0} ({1}) left the game.";
+    SAVE_SCENE_MOVED = "msg.save.sceneMoved" => "The place you saved in has moved: you are now in {0}.";
 }
 
 /// The name of a tool type as messages say it: a message for the built-in tools, else the type

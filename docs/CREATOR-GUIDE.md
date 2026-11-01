@@ -1011,6 +1011,48 @@ warnings and tips help you improve the game. **Go to** jumps to the entry or
 scene that needs a fix. `farmc check` lists the same problems from the
 command line ([Export from the command line](EXPORT.md#export-from-the-command-line)).
 
+It also follows the whole game, from what gives each item, flag, quest and
+building to what uses it (shops, crops and their seeds, recipes, drops, fish,
+animals, rewards, events, conversations; ingredients, quest objectives,
+gifts, collections, bundles, building materials):
+
+- an item nothing gives, as a warning when something needs it (a recipe, a
+  quest, a bundle, a building), and recipes and quests that can never be
+  finished because of it;
+- quest prerequisites that go round in a circle, or wait for a quest that
+  nothing starts;
+- as tips: items nothing uses and that sell for nothing, items every way to
+  get needs something the game never gives, quests nothing starts, and
+  recipes or seasonal quests whose ingredient only comes in another season.
+
+With pack plugins installed these are tips only: a plugin can give items and
+start quests in ways the checks cannot see.
+
+### Updates and old saves
+
+Players keep their saves when you ship an update. Export Game remembers which
+items and places the version it exported had; when one of them is gone from
+the project, Problems warns that saves from that version still hold it, until
+a save migration says what becomes of it. A migration renames an old id to a
+new one (an item or a scene), replaces each old item with a number of another,
+or removes it and pays the player for it. Deleting an item the last export
+shipped records a migration that pays its value; you can change it to a
+rename. The player applies the migrations when it loads an older save and
+tells the player once what changed.
+
+The project's `saveMigrations` list holds the rules:
+
+```json
+"saveMigrations": [
+  { "kind": "item", "from": "copper-can", "to": "watering-can" },
+  { "kind": "item", "from": "berry", "to": "blueberry", "quantity": 2 },
+  { "kind": "item", "from": "moon-dust", "money": 10, "name": "Moon Dust" },
+  { "kind": "scene", "from": "scene-old-mill", "to": "scene-mill", "x": 4, "y": 6 }
+]
+```
+
+A rule only applies while the game has nothing under its old id.
+
 ### If something goes wrong
 
 If the editor hits an unexpected error, it shows what happened instead of
@@ -1040,8 +1082,23 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
   NPCs, the mine floor), so the next playtest starts right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
+- **States**: play from one of the project's test states, or save the
+  running game as one.
 
 Plugins that fail show their errors in the debug drawer and as toasts.
+
+### Test states
+
+A test state is a named moment of the game to test from: a date and time,
+a scene and tile, flags and variables, quest statuses, friendship, the
+inventory and money. Save one from a playtest with **States**, then play from
+it whenever you need that moment again: it starts a new game of the project
+as it is now and puts it there, so the state keeps working while you edit the
+content. Test states stay in the project; they are never part of an exported
+game. Problems warns about a state that names a scene, item, quest or NPC the
+game no longer has. The same states run outside the editor with
+`--test-state` ([the game player](PLAYER.md#test-states)), so a build server can
+start a replay or a screenshot from them.
 
 ## 4. Share your game
 

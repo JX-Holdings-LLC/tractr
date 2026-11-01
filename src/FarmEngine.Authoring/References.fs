@@ -684,6 +684,20 @@ module References =
             optional "ExportSettings" "IconAssetId" ReferenceKind.Asset
             oneOf "ExportSettings" "PixelScale" [ "integer", "Whole-number scaling (crisp)"; "fit", "Fit the window" ]
             plain "ExportSettings" "Targets" "export target names (windows-x64, linux-x64, web)"
+            plain "ExportedIds" "Items" "the item ids an exported version had (they may be gone now)"
+            plain "ExportedIds" "Scenes" "the scene ids an exported version had (they may be gone now)"
+
+            // Save migrations (#242) and test states (#229)
+            plain "SaveMigration" "From" "an id old saves hold, which the game may no longer have"
+            plain "SaveMigration" "To" "the item or scene id (by kind) that takes the old id's place"
+            optional "TestState" "SceneId" ReferenceKind.Scene
+            optional "TestState" "Season" ReferenceKind.Season
+            plain "TestState" "Flags" flag
+            plain "TestState" "Variables" variable
+            keys "TestState" "Quests" ReferenceKind.Quest
+            keys "TestState" "Friendship" ReferenceKind.Npc
+            reference "TestStateItem" "ItemId" ReferenceKind.Item
+            optional "TestStateItem" "Quality" ReferenceKind.CropQuality
         ]
 
     let private byProperty =

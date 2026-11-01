@@ -178,6 +178,13 @@ enum Query {
     Toasts,
     /// Recent plugin errors, oldest first.
     PluginErrors,
+    /// The running game as a test state (#229): `{"type":"captureTestState","id":…,"name":…}`.
+    CaptureTestState {
+        #[serde(default)]
+        id: String,
+        #[serde(default)]
+        name: String,
+    },
     /// Panics inside the call, as an engine bug would: hosts' tests drive the boundary's
     /// poisoning path with it (the handle is poisoned afterwards).
     Panic,
@@ -415,6 +422,11 @@ impl HostPlayer {
                 Ok(view_json::to_json(&toasts))
             }
             Query::PluginErrors => Ok(view_json::to_json(&self.player.plugin_errors())),
+            Query::CaptureTestState { id, name } => {
+                let session = self.player.session().ok_or("No game is running.")?;
+                let test = session.capture_test_state(&id, &name);
+                serde_json::to_string(&test).map_err(|e| e.to_string())
+            }
             Query::Panic => panic!("A test asked the player to panic."),
         }
     }

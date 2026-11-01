@@ -2096,6 +2096,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "exportedIds": {
+          "description": "The ids the last Export Game shipped (#242): what saves of that version can hold.",
+          "$ref": "#/$defs/ExportedIds"
         }
       },
       "additionalProperties": false
@@ -2115,6 +2119,30 @@
         "fullscreen": {
           "type": "boolean",
           "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExportedIds": {
+      "description": "The ids an exported version of the game had (#242), so Problems can tell which removed ids players' saves still hold.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "The game version that was exported.",
+          "type": "string",
+          "default": ""
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -3089,6 +3117,20 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/MonsterDefinition"
+          }
+        },
+        "saveMigrations": {
+          "description": "Rules for saves written before a game update (#242), compiled into the content.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SaveMigration"
+          }
+        },
+        "testStates": {
+          "description": "Named states a playtest can start from (#229); never compiled into a cartridge.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TestState"
           }
         },
         "export": {
@@ -5931,6 +5973,45 @@
       },
       "additionalProperties": false
     },
+    "SaveMigration": {
+      "description": "A rule a game update carries for saves written before it (#242): an old item or scene id renamed (`To`), an item replaced by `Quantity` of another, or removed and paid for (`Money` a unit). Applied when such a save loads, while the game has no content under `From`.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "One of `SaveMigrationKinds`.",
+          "type": "string",
+          "default": ""
+        },
+        "from": {
+          "type": "string",
+          "default": ""
+        },
+        "to": {
+          "type": "string"
+        },
+        "quantity": {
+          "description": "Units of `To` for each unit of `From` (items). int, positive.",
+          "type": "number"
+        },
+        "money": {
+          "description": "Gold paid for each unit of a removed item (items without `To`).",
+          "type": "number"
+        },
+        "x": {
+          "description": "Where a player in a moved scene lands (scenes; their own tile when absent). int.",
+          "type": "number"
+        },
+        "y": {
+          "description": "int.",
+          "type": "number"
+        },
+        "name": {
+          "description": "The old name, for the notice players read.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "Scene": {
       "type": "object",
       "properties": {
@@ -6692,6 +6773,120 @@
           "description": "The terrain it becomes; empty removes an overlay or object.",
           "type": "string",
           "default": ""
+        }
+      },
+      "additionalProperties": false
+    },
+    "TestState": {
+      "description": "A named game state a playtest or a headless run starts from (#229), applied after New Game on the current content. Everything is optional: what a state leaves out stays as New Game made it. Quest statuses are set as they are (no rewards or outcomes run).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "description": {
+          "type": "string"
+        },
+        "day": {
+          "description": "Absolute day (1 is the first day). int, positive.",
+          "type": "number"
+        },
+        "season": {
+          "type": "string"
+        },
+        "dayOfSeason": {
+          "description": "int, positive.",
+          "type": "number"
+        },
+        "year": {
+          "description": "int, positive.",
+          "type": "number"
+        },
+        "time": {
+          "description": "Minute of the day (480 is 8:00). int.",
+          "type": "number"
+        },
+        "weather": {
+          "type": "string"
+        },
+        "sceneId": {
+          "type": "string"
+        },
+        "x": {
+          "description": "The player's tile (the scene's centre when absent). int.",
+          "type": "number"
+        },
+        "y": {
+          "description": "int.",
+          "type": "number"
+        },
+        "facing": {
+          "description": "One of `Directions`.",
+          "enum": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ]
+        },
+        "flags": {
+          "description": "Flags set (`true`) or cleared (`false`).",
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "variables": {
+          "description": "Variables: flags holding a number or a text.",
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "quests": {
+          "description": "Quest statuses by quest id (one of `QuestStatuses`).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "friendship": {
+          "description": "Friendship points by NPC id (125 a heart). int.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "inventory": {
+          "description": "The whole inventory, replacing New Game's.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TestStateItem"
+          }
+        },
+        "money": {
+          "description": "int, nonnegative.",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TestStateItem": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "default": ""
+        },
+        "quantity": {
+          "description": "int, positive.",
+          "type": "number",
+          "default": 1
+        },
+        "quality": {
+          "description": "A crop quality other than normal.",
+          "type": "string"
         }
       },
       "additionalProperties": false

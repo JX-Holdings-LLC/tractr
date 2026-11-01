@@ -155,6 +155,12 @@ pub struct GameProject {
     /// Monsters (M7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monsters: Option<Vec<MonsterDefinition>>,
+    /// Rules for saves written before a game update (#242), compiled into the content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub save_migrations: Option<Vec<super::upkeep::SaveMigration>>,
+    /// Named states a playtest can start from (#229); never part of the content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_states: Option<Vec<super::upkeep::TestState>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,

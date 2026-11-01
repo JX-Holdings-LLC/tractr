@@ -301,6 +301,8 @@ module Problems =
         ChecksContent.run context sink
         ChecksVocabulary.run context sink
         ChecksExport.run project sink
+        ChecksUpkeep.run project sink
+        ChecksGraph.run project sink
         fontCoverage project sink
         sink.ToList()
 

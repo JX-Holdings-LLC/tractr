@@ -1,5 +1,6 @@
 use farm_player::script::{run_frames, InputScript};
-use farm_player::{run_cartridge, Player, PlayerOptions, ReplayFile};
+use farm_player::{run_cartridge, DebugAction, Player, PlayerOptions, ReplayFile};
+use farm_sim::schema::TestState;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -18,6 +19,90 @@ struct Options {
     exit_after_frames: Option<u64>,
     fullscreen: Option<bool>,
     renderer: Option<farm_ui::RendererChoice>,
+    /// `--test-state` and the `--start-*` options, in that order.
+    test_state: Option<PathBuf>,
+    start: TestState,
+}
+
+impl Options {
+    fn starts_somewhere(&self) -> bool {
+        self.test_state.is_some() || self.start != TestState::default()
+    }
+
+    /// The test state to apply after New Game: `base` (a replay's own), then `--test-state`, then
+    /// the `--start-*` options, each over the one before.
+    fn test_state(&self, base: Option<TestState>) -> Result<Option<TestState>, String> {
+        if !self.starts_somewhere() {
+            return Ok(base);
+        }
+        let mut layers = Vec::new();
+        layers.extend(base);
+        if let Some(path) = &self.test_state {
+            let text = fs::read_to_string(path).map_err(|error| format!("Read {}: {error}", path.display()))?;
+            layers
+                .push(serde_json::from_str(&text).map_err(|error| format!("Test state {}: {error}", path.display()))?);
+        }
+        layers.push(self.start.clone());
+        Ok(Some(layers.into_iter().reduce(overlay).unwrap_or_default()))
+    }
+}
+
+/// `top` over `base`: every field `top` sets wins, maps merge.
+fn overlay(base: TestState, top: TestState) -> TestState {
+    let mut flags = base.flags;
+    flags.extend(top.flags);
+    let mut variables = base.variables;
+    variables.extend(top.variables);
+    let mut quests = base.quests;
+    quests.extend(top.quests);
+    let mut friendship = base.friendship;
+    friendship.extend(top.friendship);
+    TestState {
+        id: if top.id.is_empty() { base.id } else { top.id },
+        name: if top.name.is_empty() { base.name } else { top.name },
+        description: top.description.or(base.description),
+        day: top.day.or(base.day),
+        season: top.season.or(base.season),
+        day_of_season: top.day_of_season.or(base.day_of_season),
+        year: top.year.or(base.year),
+        time: top.time.or(base.time),
+        weather: top.weather.or(base.weather),
+        // A scene of its own starts on its own tile.
+        x: if top.scene_id.is_some() { top.x } else { top.x.or(base.x) },
+        y: if top.scene_id.is_some() { top.y } else { top.y.or(base.y) },
+        scene_id: top.scene_id.or(base.scene_id),
+        facing: top.facing.or(base.facing),
+        flags,
+        variables,
+        quests,
+        friendship,
+        inventory: top.inventory.or(base.inventory),
+        money: top.money.or(base.money),
+    }
+}
+
+fn parse_tile(text: &str) -> Result<(i32, i32), String> {
+    let (x, y) = text.split_once(',').ok_or_else(|| format!("--start-at wants X,Y (a tile), not {text}"))?;
+    match (x.trim().parse::<i32>(), y.trim().parse::<i32>()) {
+        (Ok(x), Ok(y)) if x >= 0 && y >= 0 => Ok((x, y)),
+        _ => Err(format!("--start-at wants X,Y (whole tiles from 0), not {text}")),
+    }
+}
+
+/// `--time 8:30` or `--time 510` (minutes after midnight).
+fn parse_time(text: &str) -> Result<u32, String> {
+    let error = || format!("--time wants a minute of the day (510) or HH:MM (8:30), not {text}");
+    match text.split_once(':') {
+        Some((hours, minutes)) => {
+            let (hours, minutes) =
+                (hours.parse::<u32>().map_err(|_| error())?, minutes.parse::<u32>().map_err(|_| error())?);
+            if minutes >= 60 {
+                return Err(error());
+            }
+            hours.checked_mul(60).and_then(|h| h.checked_add(minutes)).ok_or_else(error)
+        }
+        None => text.parse().map_err(|_| error()),
+    }
 }
 
 fn usage() -> &'static str {
@@ -26,10 +111,14 @@ fn usage() -> &'static str {
      \x20     Play the game in a window (game.cart beside the executable by default). --renderer (or\n\
      \x20     FARM_RENDERER) picks the GPU or CPU renderer; auto takes the GPU when a hardware one works.\n\
      \x20 farm-player --headless [--cart game.cart] [--replay replay.json] [--load save] [--save save]\n\
-     \x20     Replay without a window and print a JSON report. A save path ending in .json writes a\n\
-     \x20     JSON save; any other name writes a binary save. --load reads either.\n\
+     \x20     Replay without a window and print a JSON report (quests, flags, variables, money). A save\n\
+     \x20     path ending in .json writes a JSON save; any other name writes a binary save. --load\n\
+     \x20     reads either. Replay `expect` entries that do not hold fail the run.\n\
      \x20 farm-player --screenshot out.png [--cart game.cart] [--size 1280x800] [--frames 60] [--script inputs.json]\n\
-     \x20     Render frames without a window (60 per second of game time) and write the last one."
+     \x20     Render frames without a window (60 per second of game time) and write the last one.\n\
+     \x20 Start options for --headless and --screenshot, applied after New Game:\n\
+     \x20     [--test-state state.json] [--start-scene ID] [--start-at X,Y] [--facing up|down|left|right]\n\
+     \x20     [--time MINUTE|HH:MM] [--day N]"
 }
 
 fn parse_size(text: &str) -> Result<(u32, u32), String> {
@@ -65,6 +154,29 @@ fn parse_args() -> Result<Options, String> {
                 options.exit_after_frames =
                     Some(text.parse().map_err(|_| format!("--exit-after-frames wants a number, not {text}"))?);
             }
+            "--test-state" => options.test_state = Some(PathBuf::from(value("--test-state")?)),
+            "--start-scene" => options.start.scene_id = Some(value("--start-scene")?),
+            "--start-at" => {
+                let (x, y) = parse_tile(&value("--start-at")?)?;
+                (options.start.x, options.start.y) = (Some(x), Some(y));
+            }
+            "--facing" => {
+                let text = value("--facing")?;
+                if !farm_sim::schema::directions::ALL.contains(&text.as_str()) {
+                    return Err(format!("--facing wants up, down, left or right, not {text}"));
+                }
+                options.start.facing = Some(text);
+            }
+            "--time" => options.start.time = Some(parse_time(&value("--time")?)?),
+            "--day" => {
+                let text = value("--day")?;
+                options.start.day = Some(
+                    text.parse()
+                        .ok()
+                        .filter(|day| *day >= 1)
+                        .ok_or_else(|| format!("--day wants a day from 1, not {text}"))?,
+                );
+            }
             "--fullscreen" => options.fullscreen = Some(true),
             "--windowed" => options.fullscreen = Some(false),
             "--renderer" => {
@@ -98,13 +210,14 @@ fn read(path: &PathBuf) -> Result<Vec<u8>, String> {
 
 fn headless(options: Options) -> Result<(), String> {
     let cart = read(&cart_path(&options)?)?;
-    let replay: ReplayFile = match &options.replay {
+    let mut replay: ReplayFile = match &options.replay {
         Some(path) => {
             let text = fs::read_to_string(path).map_err(|error| format!("Read {}: {error}", path.display()))?;
-            serde_json::from_str(&text).map_err(|error| format!("Replay {}: {error}", path.display()))?
+            ReplayFile::parse(&text).map_err(|error| format!("Replay {}: {error}", path.display()))?
         }
         None => ReplayFile::default(),
     };
+    replay.test_state = options.test_state(replay.test_state.take())?;
     let incoming_save = match &options.load {
         Some(path) => Some(read(path)?),
         None => None,
@@ -131,6 +244,12 @@ fn screenshot(options: Options, out: PathBuf) -> Result<(), String> {
     let (width, height) = options.size.unwrap_or((1280, 800));
     let mut player =
         Player::from_cartridge_bytes(&cart, PlayerOptions::standalone()).map_err(|error| error.to_string())?;
+    // A run that starts somewhere skips the title screen: New Game, then the test state (the
+    // way Play Mode's debug teleport moves the player).
+    if let Some(test) = options.test_state(None)? {
+        player.start_new_game().map_err(|error| error.to_string())?;
+        player.debug(&DebugAction::ApplyTestState { state: Box::new(test) }).map_err(|error| error.to_string())?;
+    }
     let pixmap = run_frames(&mut player, options.frames.unwrap_or(60), width, height, &script)
         .map_err(|error| error.to_string())?;
     let png = farm_render::encode_png(&pixmap);
@@ -167,6 +286,9 @@ fn windowed(_: Options) -> Result<(), String> {
 fn run(options: Options) -> Result<(), String> {
     if options.headless {
         return headless(options);
+    }
+    if options.screenshot.is_none() && options.starts_somewhere() {
+        return Err(format!("The start options are for --headless and --screenshot runs.\n{}", usage()));
     }
     if let Some(out) = options.screenshot.clone() {
         return screenshot(options, out);

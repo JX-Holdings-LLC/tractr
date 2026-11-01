@@ -1671,6 +1671,8 @@ and ExportSettings =
         PixelScale: string
         Credits: string option
         Targets: string list
+        /// The ids the last Export Game shipped (#242): what saves of that version can hold.
+        ExportedIds: ExportedIds option
     }
 
     /// A `ExportSettings` with every field at its schema default.
@@ -1687,6 +1689,25 @@ and ExportSettings =
             PixelScale = "integer"
             Credits = None
             Targets = [ "windows-x64"; "linux-x64" ]
+            ExportedIds = None
+        }
+
+/// The ids an exported version of the game had (#242), so Problems can tell which removed ids
+/// players' saves still hold.
+and ExportedIds =
+    {
+        /// The game version that was exported.
+        Version: string
+        Items: string list
+        Scenes: string list
+    }
+
+    /// A `ExportedIds` with every field at its schema default.
+    static member Default: ExportedIds =
+        {
+            Version = ""
+            Items = []
+            Scenes = []
         }
 
 /// Default window for a standalone exported game.
@@ -1812,6 +1833,8 @@ and GameContent =
         Mail: (MailDefinition list) option
         /// Monsters (M7).
         Monsters: (MonsterDefinition list) option
+        /// Rules for saves written before a game update (#242); absent when there are none.
+        SaveMigrations: (SaveMigration list) option
     }
 
     /// A `GameContent` with every field at its schema default.
@@ -1852,6 +1875,7 @@ and GameContent =
             Achievements = None
             Mail = None
             Monsters = None
+            SaveMigrations = None
         }
 
 and GameEvent =
@@ -2014,6 +2038,10 @@ and GameProject =
         Mail: (MailDefinition list) option
         /// Monsters (M7).
         Monsters: (MonsterDefinition list) option
+        /// Rules for saves written before a game update (#242), compiled into the content.
+        SaveMigrations: (SaveMigration list) option
+        /// Named states a playtest can start from (#229); never compiled into a cartridge.
+        TestStates: (TestState list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -2099,6 +2127,8 @@ and GameProject =
             Achievements = None
             Mail = None
             Monsters = None
+            SaveMigrations = None
+            TestStates = None
             Export = None
             RngState = None
             CurrentWeatherId = None
@@ -3991,6 +4021,122 @@ and SkillState =
 
     /// A `SkillState` with every field at its schema default.
     static member Default: SkillState = { Xp = 0.0; Level = 0.0 }
+
+/// A rule a game update carries for saves written before it (#242): an old item or scene id
+/// renamed (`To`), an item replaced by `Quantity` of another, or removed and paid for (`Money`
+/// a unit). Applied when such a save loads, while the game has no content under `From`.
+and SaveMigration =
+    {
+        /// One of `SaveMigrationKinds`.
+        Kind: string
+        From: string
+        To: string option
+        /// Units of `To` for each unit of `From` (items). int, positive.
+        Quantity: float option
+        /// Gold paid for each unit of a removed item (items without `To`).
+        Money: float option
+        /// Where a player in a moved scene lands (scenes; their own tile when absent). int.
+        X: float option
+        /// int.
+        Y: float option
+        /// The old name, for the notice players read.
+        Name: string option
+    }
+
+    /// A `SaveMigration` with every field at its schema default.
+    static member Default: SaveMigration =
+        {
+            Kind = ""
+            From = ""
+            To = None
+            Quantity = None
+            Money = None
+            X = None
+            Y = None
+            Name = None
+        }
+
+/// A named game state a playtest or a headless run starts from (#229), applied after New Game
+/// on the current content. Everything is optional: what a state leaves out stays as New Game made
+/// it. Quest statuses are set as they are (no rewards or outcomes run).
+and TestState =
+    {
+        Id: string
+        Name: string
+        Description: string option
+        /// Absolute day (1 is the first day). int, positive.
+        Day: float option
+        Season: string option
+        /// int, positive.
+        DayOfSeason: float option
+        /// int, positive.
+        Year: float option
+        /// Minute of the day (480 is 8:00). int.
+        Time: float option
+        Weather: string option
+        SceneId: string option
+        /// The player's tile (the scene's centre when absent). int.
+        X: float option
+        /// int.
+        Y: float option
+        /// One of `Directions`.
+        Facing: string option
+        /// Flags set (`true`) or cleared (`false`).
+        [<JsonDecode "(Decode.dict Decode.flagValue) (key :: path) value">]
+        Flags: (string * Json) list
+        /// Variables: flags holding a number or a text.
+        [<JsonDecode "(Decode.dict Decode.flagValue) (key :: path) value">]
+        Variables: (string * Json) list
+        /// Quest statuses by quest id (one of `QuestStatuses`).
+        Quests: (string * string) list
+        /// Friendship points by NPC id (125 a heart). int.
+        Friendship: (string * float) list
+        /// The whole inventory, replacing New Game's.
+        Inventory: (TestStateItem list) option
+        /// int, nonnegative.
+        Money: float option
+    }
+
+    /// A `TestState` with every field at its schema default.
+    static member Default: TestState =
+        {
+            Id = ""
+            Name = ""
+            Description = None
+            Day = None
+            Season = None
+            DayOfSeason = None
+            Year = None
+            Time = None
+            Weather = None
+            SceneId = None
+            X = None
+            Y = None
+            Facing = None
+            Flags = []
+            Variables = []
+            Quests = []
+            Friendship = []
+            Inventory = None
+            Money = None
+        }
+
+and TestStateItem =
+    {
+        ItemId: string
+        /// int, positive.
+        Quantity: float
+        /// A crop quality other than normal.
+        Quality: string option
+    }
+
+    /// A `TestStateItem` with every field at its schema default.
+    static member Default: TestStateItem =
+        {
+            ItemId = ""
+            Quantity = 1.0
+            Quality = None
+        }
 
 /// Sprite-sheet slicing metadata (M7). A sheet is a grid: columns = walk frames, rows = directions (down, left, right, up) when `directional`. Assets without this stay static images; games with zero art still render via the colored-rectangle fallback.
 and SpriteSheet =

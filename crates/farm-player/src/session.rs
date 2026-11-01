@@ -201,6 +201,10 @@ pub enum DebugAction {
         flag: String,
     },
     SkipDay,
+    /// Puts the game in a test state (#229: "Play from state"; `farm-player --test-state`).
+    ApplyTestState {
+        state: Box<farm_sim::schema::TestState>,
+    },
 }
 
 /// What plays a mounted minigame.
@@ -517,6 +521,11 @@ impl PlaySession {
         &self.state
     }
 
+    /// The running game as a test state a later playtest can start from (#229).
+    pub fn capture_test_state(&self, id: &str, name: &str) -> farm_sim::schema::TestState {
+        farm_sim::test_states::capture_test_state(&self.ctx, &self.state, id, name)
+    }
+
     /// Raw keyboard state (the host forwards key events here, in farm-runtime key names).
     pub fn input_mut(&mut self) -> &mut InputManager {
         &mut self.input
@@ -830,6 +839,12 @@ impl PlaySession {
             DebugAction::SkipDay => {
                 game_time::perform_sleep(&self.ctx, &mut self.state, game_time::SleepOptions { collapsed: false });
                 self.dispatch_hooks(&[], 0);
+            }
+            DebugAction::ApplyTestState { state } => {
+                // What the game lacks is skipped; the creator reads why (Problems lists it too).
+                for note in farm_sim::test_states::apply_test_state(&self.ctx, &mut self.state, state) {
+                    self.events.push(SessionEvent::Toast { text: note, kind: ToastKind::Error, message: None });
+                }
             }
             DebugAction::AddMoney { .. } | DebugAction::AddMinutes { .. } => {}
         }

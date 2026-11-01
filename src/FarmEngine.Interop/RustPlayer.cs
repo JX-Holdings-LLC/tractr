@@ -350,6 +350,20 @@ public sealed unsafe class RustPlayer : IDisposable
         _native.Call(nameof(Debug), JsonSerializer.SerializeToUtf8Bytes(action, InteropJson.Options), NativeMethods.fe_player_debug);
     }
 
+    /// <summary>
+    /// A debug action given as JSON text, such as the <c>applyTestState</c> action of
+    /// <c>TestStatesApi.ApplyAction</c> (#229).
+    /// </summary>
+    public void DebugJson(string actionJson)
+    {
+        ArgumentNullException.ThrowIfNull(actionJson);
+        _native.Call(nameof(Debug), Encoding.UTF8.GetBytes(actionJson), NativeMethods.fe_player_debug);
+    }
+
+    /// <summary>The running game as test state JSON (<c>TestStatesApi.FromCapture</c> reads it).</summary>
+    public string CaptureTestState(string id, string name) =>
+        Query<JsonElement>(new { type = "captureTestState", id, name }).GetRawText();
+
     /// <summary>Runs engine commands (a JSON array of <c>{"type":…}</c> objects) as if the player had done them.</summary>
     public void RunCommands(string commandsJson)
     {
