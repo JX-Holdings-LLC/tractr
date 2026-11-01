@@ -108,7 +108,13 @@ pub struct SkinLayout {
 
 impl Default for SkinLayout {
     fn default() -> Self {
-        Self { hud_bottom: false, toolbar: true, clock: ClockStyle::TwelveHour, dialogue_top: false, portrait_size: 48.0 }
+        Self {
+            hud_bottom: false,
+            toolbar: true,
+            clock: ClockStyle::TwelveHour,
+            dialogue_top: false,
+            portrait_size: 48.0,
+        }
     }
 }
 
@@ -166,12 +172,7 @@ pub fn sprite_image(
     })
 }
 
-fn nine_slice(
-    slice: &UiNineSlice,
-    assets: &[ArtAsset],
-    images: &mut ImageStore,
-    pixel_art: bool,
-) -> Option<NineSlice> {
+fn nine_slice(slice: &UiNineSlice, assets: &[ArtAsset], images: &mut ImageStore, pixel_art: bool) -> Option<NineSlice> {
     let image = sprite_image(assets, &slice.visual, images, pixel_art)?;
     let edge = |v: f64, room: f32| (v.max(0.0) as f32).min(room);
     let (w, h) = (image.src.width, image.src.height);

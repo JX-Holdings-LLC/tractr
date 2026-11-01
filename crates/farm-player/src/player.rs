@@ -919,7 +919,8 @@ impl Player {
             let (state, graphics) = self.title_state.get_or_insert_with(|| {
                 let mut state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
                 // The skin's title scene, seen from its middle.
-                let title_scene = self.def.presentation.ui_skin.as_ref().and_then(|skin| skin.title.as_ref()?.scene.clone());
+                let title_scene =
+                    self.def.presentation.ui_skin.as_ref().and_then(|skin| skin.title.as_ref()?.scene.clone());
                 if let Some(scene) = title_scene.and_then(|id| state.world.scenes.iter().find(|scene| scene.id == id)) {
                     let (id, w, h) = (scene.id.clone(), scene.width, scene.height);
                     state.player.scene_id = id;
@@ -1862,7 +1863,6 @@ fn confirm_view(kind: Confirmation, lang: Lang) -> ConfirmView {
     };
     ConfirmView { title: lang.tr(title).to_owned(), message, confirm: lang.tr(confirm).to_owned() }
 }
-
 
 /// Registers the fonts an interface skin names (#236): each `font` asset's file, from the
 /// cartridge's asset table or a `data:` URL, as a font `farm_render::text` draws with. A file

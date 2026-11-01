@@ -228,6 +228,7 @@ public sealed partial class EditModeView
             NamedButton("ResizeSceneButton", "Resize", ResizeScene)));
         side.Children.Add(WrapButtons(
             NamedButton("DuplicateSceneButton", "Duplicate", DuplicateScene), _startScene, _deleteScene));
+        side.Children.Add(BuildMapImport());
         _startScene.Click += (_, _) => ApplyToScene(id => Edits.SetStartScene(id));
         _deleteScene.Click += (_, _) => DeleteScene();
         _fillScene.Click += (_, _) =>

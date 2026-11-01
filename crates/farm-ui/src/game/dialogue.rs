@@ -5,9 +5,9 @@
 //! right stick), and moving the focus scrolls the focused option into view.
 
 use super::{draw_sprite, GameAction, GameView};
-use crate::skin::Part;
 use crate::icons::{self, Icon};
 use crate::layout::{Align, RectExt};
+use crate::skin::Part;
 use crate::ui::{HitKind, Ui, WidgetId};
 use crate::widgets::{Button, ButtonKind};
 use farm_render::{resolve_visual, FontId, ImageStore, Rect, SnapshotSprite, TextAlign};

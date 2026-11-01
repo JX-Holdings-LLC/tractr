@@ -36,8 +36,12 @@ module internal ChecksSkin =
         | None -> ()
         | Some skin ->
             let target = Some NavigationTarget.Interface
-            let error code path message = sink.Error("skin." + code, "uiSkin." + path, message, target)
-            let warning code path message = sink.Warning("skin." + code, "uiSkin." + path, message, target)
+
+            let error code path message =
+                sink.Error("skin." + code, "uiSkin." + path, message, target)
+
+            let warning code path message =
+                sink.Warning("skin." + code, "uiSkin." + path, message, target)
 
             let asset (id: string) =
                 project.CustomAssets |> List.tryFind (fun a -> a.Id = id)
@@ -45,7 +49,11 @@ module internal ChecksSkin =
             let checkVisual (path: string) (what: string) (visual: VisualRef) =
                 match asset visual.AssetId with
                 | None -> error "missingArt" path (sprintf "The %s uses art '%s', which the game doesn't have." what visual.AssetId)
-                | Some a when a.Type = CustomAssetTypes.Font || a.Type = CustomAssetTypes.Sound || a.Type = CustomAssetTypes.Music ->
+                | Some a when
+                    a.Type = CustomAssetTypes.Font
+                    || a.Type = CustomAssetTypes.Sound
+                    || a.Type = CustomAssetTypes.Music
+                    ->
                     error "notArt" path (sprintf "The %s uses '%s', which is not an image." what a.Name)
                 | Some _ -> ()
 
@@ -69,8 +77,7 @@ module internal ChecksSkin =
                         | Some(Ok ranges) ->
                             if path = "numberFont" then
                                 match FontFile.firstMissing ranges "0123456789" with
-                                | Some rune ->
-                                    warning "fontCoverage" path (sprintf "The number font '%s' has no %s." font.Name (rune.ToString()))
+                                | Some rune -> warning "fontCoverage" path (sprintf "The number font '%s' has no %s." font.Name (rune.ToString()))
                                 | None -> ()
 
             for role, value in defaultArg skin.Colors [] do
@@ -136,7 +143,9 @@ module internal ChecksSkin =
             match skin.Title with
             | None -> ()
             | Some title ->
-                title.Background |> Option.iter (checkVisual "title.background" "title background")
+                title.Background
+                |> Option.iter (checkVisual "title.background" "title background")
+
                 title.Logo |> Option.iter (checkVisual "title.logo" "title logo")
 
                 match title.Scene with

@@ -42,12 +42,15 @@ let private skinned (skin: UiSkin) =
     let project = starter ()
 
     { project with
-        CustomAssets = project.CustomAssets @ [ fontAsset "font-body" "AtkinsonHyperlegible-Regular.ttf"; art "panel-art" ]
+        CustomAssets =
+            project.CustomAssets
+            @ [ fontAsset "font-body" "AtkinsonHyperlegible-Regular.ttf"; art "panel-art" ]
     }
     |> apply (SetUiSkin(Some skin))
 
 let private skinProblems (project: GameProject) =
-    Problems.collect project |> List.filter (fun p -> p.Code.StartsWith("skin.", StringComparison.Ordinal))
+    Problems.collect project
+    |> List.filter (fun p -> p.Code.StartsWith("skin.", StringComparison.Ordinal))
 
 [<Fact>]
 let ``font files are read for their characters`` () =
@@ -72,7 +75,14 @@ let ``a complete skin has no problems and ships in the presentation`` () =
             BodyFont = Some "font-body"
             Colors = Some [ "text", "#102030"; "warning", "#ff000080" ]
             Panels = Some [ "panel", slice "panel-art"; "button", slice "panel-art" ]
-            Icons = Some [ "money", { VisualRef.Default with AssetId = "panel-art" } ]
+            Icons =
+                Some
+                    [
+                        "money",
+                        { VisualRef.Default with
+                            AssetId = "panel-art"
+                        }
+                    ]
             Layout =
                 Some
                     { UiLayout.Default with
@@ -108,15 +118,35 @@ let ``problems name the skin parts that would keep the built-in look`` () =
             HeadingFont = Some "panel-art"
             NumberFont = Some "missing"
             Colors = Some [ "text", "blue-ish"; "sparkle", "#ffffff" ]
-            Panels = Some [ "panel", { slice "nothing" with Scale = Some 12.0 }; "lid", slice "panel-art"; "slot", { slice "panel-art" with Left = 10.0 } ]
-            Icons = Some [ "rocket", { VisualRef.Default with AssetId = "panel-art" } ]
+            Panels =
+                Some
+                    [
+                        "panel",
+                        { slice "nothing" with
+                            Scale = Some 12.0
+                        }
+                        "lid", slice "panel-art"
+                        "slot", { slice "panel-art" with Left = 10.0 }
+                    ]
+            Icons =
+                Some
+                    [
+                        "rocket",
+                        { VisualRef.Default with
+                            AssetId = "panel-art"
+                        }
+                    ]
             Layout =
                 Some
                     { UiLayout.Default with
                         ClockStyle = Some "sundial"
                         PortraitSize = Some 500.0
                     }
-            Title = Some { UiTitleScreen.Default with Scene = Some "nowhere" }
+            Title =
+                Some
+                    { UiTitleScreen.Default with
+                        Scene = Some "nowhere"
+                    }
         }
 
     let codes =
@@ -140,12 +170,19 @@ let ``problems name the skin parts that would keep the built-in look`` () =
         |> List.sort
 
     Assert.Equal<(string * string) list>(expected, codes)
-    Assert.True(skinProblems (skinned skin) |> List.forall (fun p -> p.Target = Some NavigationTarget.Interface))
+
+    Assert.True(
+        skinProblems (skinned skin)
+        |> List.forall (fun p -> p.Target = Some NavigationTarget.Interface)
+    )
 
 [<Fact>]
 let ``the font coverage check reads the skin's font`` () =
     let project =
-        skinned { UiSkin.Default with BodyFont = Some "font-body" }
+        skinned
+            { UiSkin.Default with
+                BodyFont = Some "font-body"
+            }
         |> apply (UpsertItem(item "item-tea" "Matcha 抹茶"))
 
     let coverage =

@@ -990,6 +990,8 @@ type RecordWith =
     [<Extension>]
     static member WithGamePanels(record: GameProject, value: seq<GamePanel> | null) : GameProject = { record with GamePanels = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithUiSkin(record: GameProject, value: UiSkin | null) : GameProject = { record with UiSkin = Option.ofObj value }
+    [<Extension>]
     static member WithCurrentSeason(record: GameProject, value: string) : GameProject = { record with CurrentSeason = value }
     [<Extension>]
     static member WithCurrentDay(record: GameProject, value: float) : GameProject = { record with CurrentDay = value }
@@ -1057,6 +1059,8 @@ type RecordWith =
     static member WithMail(record: GameProject, value: seq<MailDefinition> | null) : GameProject = { record with Mail = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithMonsters(record: GameProject, value: seq<MonsterDefinition> | null) : GameProject = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithImports(record: GameProject, value: seq<ImportSource> | null) : GameProject = { record with Imports = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithExport(record: GameProject, value: ExportSettings | null) : GameProject = { record with Export = Option.ofObj value }
     [<Extension>]
@@ -1135,6 +1139,16 @@ type RecordWith =
     static member WithMin(record: HeartsCondition, value: Nullable<float>) : HeartsCondition = { record with Min = Option.ofNullable value }
     [<Extension>]
     static member WithMax(record: HeartsCondition, value: Nullable<float>) : HeartsCondition = { record with Max = Option.ofNullable value }
+    [<Extension>]
+    static member WithKind(record: ImportSource, value: string) : ImportSource = { record with Kind = value }
+    [<Extension>]
+    static member WithTargetId(record: ImportSource, value: string) : ImportSource = { record with TargetId = value }
+    [<Extension>]
+    static member WithPath(record: ImportSource, value: string) : ImportSource = { record with Path = value }
+    [<Extension>]
+    static member WithLevel(record: ImportSource, value: string | null) : ImportSource = { record with Level = Option.ofObj value }
+    [<Extension>]
+    static member WithNames(record: ImportSource, value: seq<(string * string)> | null) : ImportSource = { record with Names = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithX(record: InteractTileCondition, value: float) : InteractTileCondition = { record with X = value }
     [<Extension>]
@@ -2293,6 +2307,52 @@ type RecordWith =
     static member WithMaterials(record: ToolUpgrade, value: seq<RecipeIngredient>) : ToolUpgrade = { record with Materials = List.ofSeq value }
     [<Extension>]
     static member WithNights(record: ToolUpgrade, value: float) : ToolUpgrade = { record with Nights = value }
+    [<Extension>]
+    static member WithHudPosition(record: UiLayout, value: string | null) : UiLayout = { record with HudPosition = Option.ofObj value }
+    [<Extension>]
+    static member WithToolbar(record: UiLayout, value: Nullable<bool>) : UiLayout = { record with Toolbar = Option.ofNullable value }
+    [<Extension>]
+    static member WithClockStyle(record: UiLayout, value: string | null) : UiLayout = { record with ClockStyle = Option.ofObj value }
+    [<Extension>]
+    static member WithDialoguePosition(record: UiLayout, value: string | null) : UiLayout = { record with DialoguePosition = Option.ofObj value }
+    [<Extension>]
+    static member WithPortraitSize(record: UiLayout, value: Nullable<float>) : UiLayout = { record with PortraitSize = Option.ofNullable value }
+    [<Extension>]
+    static member WithVisual(record: UiNineSlice, value: VisualRef) : UiNineSlice = { record with Visual = value }
+    [<Extension>]
+    static member WithLeft(record: UiNineSlice, value: float) : UiNineSlice = { record with Left = value }
+    [<Extension>]
+    static member WithTop(record: UiNineSlice, value: float) : UiNineSlice = { record with Top = value }
+    [<Extension>]
+    static member WithRight(record: UiNineSlice, value: float) : UiNineSlice = { record with Right = value }
+    [<Extension>]
+    static member WithBottom(record: UiNineSlice, value: float) : UiNineSlice = { record with Bottom = value }
+    [<Extension>]
+    static member WithScale(record: UiNineSlice, value: Nullable<float>) : UiNineSlice = { record with Scale = Option.ofNullable value }
+    [<Extension>]
+    static member WithHeadingFont(record: UiSkin, value: string | null) : UiSkin = { record with HeadingFont = Option.ofObj value }
+    [<Extension>]
+    static member WithBodyFont(record: UiSkin, value: string | null) : UiSkin = { record with BodyFont = Option.ofObj value }
+    [<Extension>]
+    static member WithNumberFont(record: UiSkin, value: string | null) : UiSkin = { record with NumberFont = Option.ofObj value }
+    [<Extension>]
+    static member WithColors(record: UiSkin, value: seq<(string * string)> | null) : UiSkin = { record with Colors = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithPanels(record: UiSkin, value: seq<(string * UiNineSlice)> | null) : UiSkin = { record with Panels = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithIcons(record: UiSkin, value: seq<(string * VisualRef)> | null) : UiSkin = { record with Icons = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithLayout(record: UiSkin, value: UiLayout | null) : UiSkin = { record with Layout = Option.ofObj value }
+    [<Extension>]
+    static member WithTitle(record: UiSkin, value: UiTitleScreen | null) : UiSkin = { record with Title = Option.ofObj value }
+    [<Extension>]
+    static member WithBackground(record: UiTitleScreen, value: VisualRef | null) : UiTitleScreen = { record with Background = Option.ofObj value }
+    [<Extension>]
+    static member WithScene(record: UiTitleScreen, value: string | null) : UiTitleScreen = { record with Scene = Option.ofObj value }
+    [<Extension>]
+    static member WithLogo(record: UiTitleScreen, value: VisualRef | null) : UiTitleScreen = { record with Logo = Option.ofObj value }
+    [<Extension>]
+    static member WithMenuPosition(record: UiTitleScreen, value: string | null) : UiTitleScreen = { record with MenuPosition = Option.ofObj value }
     [<Extension>]
     static member WithName(record: VariableCondition, value: string) : VariableCondition = { record with Name = value }
     [<Extension>]

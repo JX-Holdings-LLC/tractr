@@ -219,7 +219,8 @@ module Problems =
             | fonts ->
                 fonts
                 |> List.tryPick (fun (name, ranges) ->
-                    FontFile.firstMissing ranges text |> Option.map (fun rune -> rune, sprintf "The font '%s'" name))
+                    FontFile.firstMissing ranges text
+                    |> Option.map (fun rune -> rune, sprintf "The font '%s'" name))
 
         let shownKeys =
             set

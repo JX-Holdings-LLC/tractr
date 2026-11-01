@@ -68,8 +68,7 @@ module FontFile =
                                     let at = cmap + int offset
 
                                     match u16 bytes at with
-                                    | Some format when (platform = 0 || (platform = 3 && (encoding = 1 || encoding = 10))) ->
-                                        yield format, at
+                                    | Some format when (platform = 0 || (platform = 3 && (encoding = 1 || encoding = 10))) -> yield format, at
                                     | _ -> ()
                                 | _ -> ()
                         ]
@@ -116,4 +115,7 @@ module FontFile =
         text.EnumerateRunes()
         |> Seq.tryFind (fun rune ->
             not (Text.Rune.IsWhiteSpace rune || Text.Rune.IsControl rune)
-            && not (ranges |> Array.exists (fun (first, last) -> rune.Value >= first && rune.Value <= last)))
+            && not (
+                ranges
+                |> Array.exists (fun (first, last) -> rune.Value >= first && rune.Value <= last)
+            ))

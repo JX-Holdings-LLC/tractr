@@ -66,7 +66,11 @@ pub fn title(ui: &mut Ui, view: &TitleView) -> Option<ShellAction> {
         });
         y = dst.bottom();
     }
-    let lines = if skin.logo.is_some() { Vec::new() } else { ui.wrap(&view.title, (screen.width / 16.0).clamp(34.0, 64.0), FontId::Bold, screen.width - 96.0) };
+    let lines = if skin.logo.is_some() {
+        Vec::new()
+    } else {
+        ui.wrap(&view.title, (screen.width / 16.0).clamp(34.0, 64.0), FontId::Bold, screen.width - 96.0)
+    };
 
     // Logo text: the game's title.
     let title_size = (screen.width / 16.0).clamp(34.0, 64.0);
@@ -138,8 +142,7 @@ pub fn title(ui: &mut Ui, view: &TitleView) -> Option<ShellAction> {
     let mut action = None;
     let default = if view.can_continue { "Continue" } else { "New Game" };
     for (index, (name, key, icon, entry, enabled)) in entries.into_iter().enumerate() {
-        let rect =
-            Rect::new(menu_x, top + index as f32 * (button_height + gap), width, button_height);
+        let rect = Rect::new(menu_x, top + index as f32 * (button_height + gap), width, button_height);
         let mut button = Button::new(ui.tr(key)).kind(ButtonKind::Menu).icon(icon).size(16.0).enabled(enabled);
         if name == default {
             button = button.default_focus();

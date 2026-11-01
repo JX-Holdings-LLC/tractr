@@ -9,8 +9,8 @@ use crate::i18n::Lang;
 use crate::icons::Icon;
 use crate::input::{GamepadButton, InputDevice};
 use crate::layout::{Align, Flow, RectExt};
-use crate::skin::Part;
 use crate::settings::BindAction;
+use crate::skin::Part;
 use crate::theme::fade;
 use crate::ui::{Ui, WidgetId};
 use crate::widgets::Button;
@@ -288,7 +288,11 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang, clock_style: crate::ski
         } else {
             format!("{} / {}", num(state.player.energy.div_euclid(point)), crate::format::energy(max))
         };
-        stats.push(Stat { label: energy_label(view, lang), value: StatValue::Energy { ratio, text }, icon: Some("energy") });
+        stats.push(Stat {
+            label: energy_label(view, lang),
+            value: StatValue::Energy { ratio, text },
+            icon: Some("energy"),
+        });
     }
     // Health beside energy (M7, with combat on).
     if let (Some(health), Some(max)) = (
@@ -370,7 +374,8 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     let content_height = if one_row { flow.height.max(ROW) } else { flow.height + 6.0 + wrapped_toolbar.height };
     // The skin can put the HUD at the bottom, above the host's on-screen controls.
     let hud_bottom = ui.skin().layout.hud_bottom;
-    let bar_y = if hud_bottom { (ui.safe_area().bottom() - 10.0 - content_height - 16.0).max(10.0) } else { bar_outer.y };
+    let bar_y =
+        if hud_bottom { (ui.safe_area().bottom() - 10.0 - content_height - 16.0).max(10.0) } else { bar_outer.y };
     let shift = bar_y - bar_outer.y;
     let bar = Rect::new(bar_outer.x, bar_y, bar_outer.width, content_height + 16.0);
     ui.skinned_panel(Part::Hud, bar, colors.hud, colors.hud_border, 10.0, true);

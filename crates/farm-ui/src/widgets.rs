@@ -286,7 +286,8 @@ impl Ui {
         } else {
             Part::Button
         };
-        let skinned = skinnable && (self.skin_part(part, rect) || (part != Part::Button && self.skin_part(Part::Button, rect)));
+        let skinned =
+            skinnable && (self.skin_part(part, rect) || (part != Part::Button && self.skin_part(Part::Button, rect)));
         if !skinned {
             self.bordered(rect, radius, fill, border);
         }
