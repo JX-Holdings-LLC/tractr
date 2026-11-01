@@ -17,6 +17,7 @@ mod hud;
 mod inventory;
 mod mail;
 mod minigame;
+mod plugin_screen;
 mod quests;
 mod shop;
 mod storage;
@@ -24,6 +25,7 @@ mod toasts;
 
 pub use building::Placement;
 pub use goals::GoalsTab;
+pub use plugin_screen::PluginScreenView;
 
 pub use toasts::{
     toast_lifetime, Toast, ToastKind, Toasts, MAX_TOAST_LIFETIME, MAX_VISIBLE as MAX_TOASTS, TOAST_LIFETIME,
@@ -53,6 +55,8 @@ pub enum Panel {
     Goals,
     /// The mailbox (M6).
     Mail,
+    /// A plugin's screen (#240): [`GameUi::plugin_screen`].
+    Plugin,
 }
 
 /// The shop dialog's tab.
@@ -84,6 +88,12 @@ pub enum GameAction {
     MinigamePointer(farm_runtime::canvas::CanvasPointer),
     /// Hold this seed or fertilizer for planting, or put it away when it is held.
     Hold(String),
+    /// A plugin screen's button, list row, slot or tab (#240): `action` goes to the screen of
+    /// `hook` (`screen:packId:name`).
+    PluginScreen {
+        hook: String,
+        action: String,
+    },
 }
 
 /// What the player holds for planting (picked in the inventory): interacting with open soil
@@ -177,6 +187,9 @@ pub struct GameUi {
     /// (UI seconds).
     pub last_health: Option<i32>,
     pub hurt_until: f64,
+    /// The plugin screen shown while [`Panel::Plugin`] is open (#240); the host refreshes it
+    /// each frame from the screen's `draw`.
+    pub plugin_screen: Option<PluginScreenView>,
 }
 
 /// How long the screen flashes red after the player is hurt, in seconds.
@@ -230,6 +243,10 @@ impl GameUi {
             Some(Panel::Crafting) => crafting::draw(ui, view, &mut actions),
             Some(Panel::Goals) => goals::draw(ui, view, &mut self.goals_tab, &mut actions),
             Some(Panel::Mail) => mail::draw(ui, view, images, &mut self.letter, &mut actions),
+            Some(Panel::Plugin) => match &self.plugin_screen {
+                Some(screen) => plugin_screen::draw(ui, view, images, screen, &mut actions),
+                None => self.panel = None,
+            },
             None => {}
         }
         // Under the dialogue, shop or minigame a cutscene step opened.

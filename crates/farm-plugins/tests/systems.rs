@@ -108,7 +108,7 @@ fn strings(list: &[&str]) -> Vec<String> {
 fn handlers_read_the_state_of_the_step_their_hook_fired_at() {
     let source = "api.on('onCommand', p => { if (p.commandType !== 'sleep') return []; \
                   var me = api.state.player(); var d = api.state.date(); var t = api.state.tile(me.tileX, me.tileY); \
-                  var w; try { api.state.npc('npc-farmer'); w = 'npc ok'; } catch (e) { w = e.message; } \
+                  var w; try { api.state.item('seed-wheat'); w = 'item ok'; } catch (e) { w = e.message; } \
                   return [{ type: 'setFlag', flag: 'seen', value: me.money + ':' + me.sceneId + ':' + d.day + ':' + (t && t.terrain) + ':' + api.state.flag('seen') + ':' + w }]; });";
     let pack = ContentPack {
         manifest: manifest(
@@ -116,7 +116,7 @@ fn handlers_read_the_state_of_the_step_their_hook_fired_at() {
             PackPermissions {
                 hooks: strings(&["onCommand"]),
                 mutations: Some(strings(&["setFlag"])),
-                read: Some(strings(&["player", "world"])),
+                read: Some(strings(&["player", "world", "people"])),
                 ..Default::default()
             },
         ),
@@ -138,7 +138,7 @@ fn handlers_read_the_state_of_the_step_their_hook_fired_at() {
     assert_eq!(parts[0], "1234", "{seen}");
     assert_eq!(parts[2], "2", "sleeping started day 2: {seen}");
     assert_eq!(parts[4], "null", "its own flag was not set yet: {seen}");
-    assert!(parts[5].contains("not permitted") && parts[5].contains("people"), "{seen}");
+    assert!(parts[5].contains("not permitted") && parts[5].contains("content"), "{seen}");
     assert!(session.errors.is_empty(), "{:?}", session.errors);
 }
 
