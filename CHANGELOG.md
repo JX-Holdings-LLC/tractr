@@ -107,6 +107,7 @@ Fixes and smaller changes:
 - The fishing minigame no longer warns about missing result tiers, so the
   templates start with no warnings.
 - New tip when an NPC's appearance names no built-in look.
+
 ## 0.11.2
 
 - Publish fewer release files, and say which one to download. Releases no
