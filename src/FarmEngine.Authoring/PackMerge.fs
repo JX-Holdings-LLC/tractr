@@ -499,6 +499,7 @@ module PackMerge =
             HarvestItemId = crop.HarvestItemId
             Requirements = crop.Requirements
             Light = crop.Light
+            Tags = None
             Extra = crop.Extra
         }
 

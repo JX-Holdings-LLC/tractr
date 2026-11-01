@@ -1316,6 +1316,8 @@ and CustomCropDefinition =
         Requirements: GrowthRequirements option
         /// The light it gives at night once grown (M8: glowing crops).
         Light: LightSource option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1340,6 +1342,7 @@ and CustomCropDefinition =
             HarvestItemId = None
             Requirements = None
             Light = None
+            Tags = None
             Extra = []
         }
 
@@ -1386,10 +1389,12 @@ and CutsceneChoice =
         Text: string
         /// The label of the step to go on from; empty: the next step.
         Goto: string
+        /// A stable id for the answer, so translations keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `CutsceneChoice` with every field at its schema default.
-    static member Default: CutsceneChoice = { Text = ""; Goto = "" }
+    static member Default: CutsceneChoice = { Text = ""; Goto = ""; Id = None }
 
 /// One step of a cutscene. Like an outcome, one flat object whose `type` (one of
 /// `CutsceneStepTypes`) says which fields apply.
@@ -1433,6 +1438,8 @@ and CutsceneStep =
         Outcomes: EventOutcome list
         /// A move waits for the actor to arrive before the next step (absent: it waits).
         Wait: bool option
+        /// A stable id for the step's text, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `CutsceneStep` with every field at its schema default.
@@ -1457,6 +1464,7 @@ and CutsceneStep =
             SoundId = None
             Outcomes = []
             Wait = None
+            Id = None
         }
 
 and Dialogue =
@@ -1507,6 +1515,8 @@ and DialogueOption =
         RequiresFriendship: float option
         /// Choosing this option performs a creator-defined action.
         ActionId: string option
+        /// A stable id for the option, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1529,6 +1539,7 @@ and DialogueOption =
             OfferQuestId = None
             RequiresFriendship = None
             ActionId = None
+            Id = None
             Extra = []
         }
 
@@ -1682,6 +1693,8 @@ and FishTable =
         /// Chance (0..1) a cast catches junk instead of rolling the table.
         JunkChance: float
         JunkItemId: string option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         Filter: FishingFilter option
@@ -1698,6 +1711,7 @@ and FishTable =
             Entries = []
             JunkChance = 0.15
             JunkItemId = None
+            Tags = None
             Extra = []
             Filter = None
             Layered = None
@@ -1993,6 +2007,11 @@ and GameProject =
         /// the shipping log, collections, bundles, achievements, mail, monsters and health).
         /// Only the engine reads it.
         KeptState: Json option
+        /// The game's own text in other languages: one table per language (the project's
+        /// `settings.locale` is the source).
+        Translations: (TranslationTable list) option
+        /// Saved entries (or groups of entries) to make new ones from.
+        ContentTemplates: (ContentTemplate list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2065,8 +2084,58 @@ and GameProject =
             MineDeepestFloor = None
             QuarantinedItems = None
             KeptState = None
+            Translations = None
+            ContentTemplates = None
             Extra = []
         }
+
+/// The game's text in one language, by the stable key of each text field
+/// (`item:hoe:name`, `npc:bram:line:l-3f2a`, see `Translations.catalog`).
+and TranslationTable =
+    {
+        /// A locale code (`es`, `pt-BR`).
+        Locale: string
+        Strings: (string * TranslatedText) list
+    }
+
+    /// A `TranslationTable` with every field at its schema default.
+    static member Default: TranslationTable = { Locale = ""; Strings = [] }
+
+/// One translated text and a hash of the source text it was translated from, so a changed
+/// source shows as a stale translation.
+and TranslatedText =
+    {
+        Text: string
+        /// The first 8 bytes of the SHA-256 of the source text, in hex; empty: unknown.
+        Source: string
+    }
+
+    /// A `TranslatedText` with every field at its schema default.
+    static member Default: TranslatedText = { Text = ""; Source = "" }
+
+/// A saved entry, or a group of entries (a seed, its crop and its harvest), to make new ones from.
+and ContentTemplate =
+    {
+        Id: string
+        Name: string
+        /// The entries, each with its category (`items`, `crops`, `recipes`, …).
+        Entries: ContentTemplateEntry list
+    }
+
+    /// A `ContentTemplate` with every field at its schema default.
+    static member Default: ContentTemplate = { Id = ""; Name = ""; Entries = [] }
+
+/// One entry of a template: its category and the entry as the project stores it.
+and ContentTemplateEntry =
+    {
+        /// One of `ContentTables.Categories` (`items`, `crops`, `recipes`, `shops`, `fishTables`,
+        /// `nodeTypes`, `machineTypes`, `npcs`, `quests`).
+        Kind: string
+        Entry: Json option
+    }
+
+    /// A `ContentTemplateEntry` with every field at its schema default.
+    static member Default: ContentTemplateEntry = { Kind = ""; Entry = None }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -2251,6 +2320,8 @@ and Item =
         Wear: WearDefinition option
         /// Health it restores when eaten, with combat on (M7). int.
         Health: float option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         FishingGear: FishingGear option
@@ -2279,6 +2350,7 @@ and Item =
             Buffs = None
             Wear = None
             Health = None
+            Tags = None
             Extra = []
             FishingGear = None
         }
@@ -2321,6 +2393,8 @@ and MachineTypeDefinition =
         AreaEffects: (AreaEffect list) option
         /// The light it gives at night (M8).
         Light: LightSource option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         FishProduction: FishProduction option
@@ -2342,6 +2416,7 @@ and MachineTypeDefinition =
             Gate = None
             AreaEffects = None
             Light = None
+            Tags = None
             Extra = []
             FishProduction = None
         }
@@ -2564,6 +2639,8 @@ and NodeTypeDefinition =
         Light: LightSource option
         /// Undeclared keys, in order.
         Seasons: (string list) option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         Extra: (string * Json) list
     }
 
@@ -2582,6 +2659,7 @@ and NodeTypeDefinition =
             BlocksMovement = true
             Light = None
             Seasons = None
+            Tags = None
             Extra = []
         }
 
@@ -2616,6 +2694,8 @@ and Npc =
         Portraits: (NpcPortrait list) option
         /// The NPC can be dated and married, when the game allows it (M4).
         Romanceable: bool option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2642,6 +2722,7 @@ and Npc =
             Lines = None
             Portraits = None
             Romanceable = None
+            Tags = None
             Extra = []
         }
 
@@ -3321,6 +3402,8 @@ and Quest =
         DeadlineDays: float option
         DeadlineDay: float option
         OnFail: (EventOutcome list) option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3344,6 +3427,7 @@ and Quest =
             DeadlineDays = None
             DeadlineDay = None
             OnFail = None
+            Tags = None
             Extra = []
         }
 
@@ -3438,6 +3522,8 @@ and RecipeDefinition =
         /// Hand-craftable only while near a machine providing this station category.
         RequiresStationCategory: string option
         Unlock: RecipeUnlock option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3454,6 +3540,7 @@ and RecipeDefinition =
             Category = "crafting"
             RequiresStationCategory = None
             Unlock = None
+            Tags = None
             Extra = []
         }
 
@@ -3731,6 +3818,8 @@ and ShopDefinition =
         KeeperNpcId: string option
         PriceModifiers: (ShopPriceModifier list) option
         Saturation: ShopSaturation option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3753,6 +3842,7 @@ and ShopDefinition =
             KeeperNpcId = None
             PriceModifiers = None
             Saturation = None
+            Tags = None
             Extra = []
         }
 
@@ -4221,6 +4311,8 @@ and NpcLine =
         Expression: string option
         /// How often the line comes up next to the others that hold (absent: 1). int.
         Weight: float option
+        /// A stable id for the line, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `NpcLine` with every field at its schema default.
@@ -4230,6 +4322,7 @@ and NpcLine =
             Conditions = []
             Expression = None
             Weight = None
+            Id = None
         }
 
 /// A portrait an NPC shows in the dialogue box for an expression (M4).

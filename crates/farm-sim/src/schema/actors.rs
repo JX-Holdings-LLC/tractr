@@ -49,6 +49,9 @@ pub struct DialogueOption {
     /// Choosing this option performs a creator-defined action.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub action_id: Option<String>,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

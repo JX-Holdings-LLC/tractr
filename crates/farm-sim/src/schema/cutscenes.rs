@@ -56,6 +56,9 @@ pub struct CutsceneChoice {
     pub text: String,
     /// The label of the step to go on from; empty: the next step.
     pub goto: String,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 /// One step of a cutscene: a flat object whose `type` (one of [`cutscene_step_types`]) says
@@ -103,6 +106,9 @@ pub struct CutsceneStep {
     pub outcomes: Vec<EventOutcome>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wait: Option<bool>,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 /// A cutscene being played (game state). The engine's cutscene runner (`crate::cutscenes`) owns
