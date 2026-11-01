@@ -321,6 +321,8 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
         }
     }
     announce_new_day(ctx, &next, &previous_season, previous_year, &mut effects);
+    // Plugin entities hear the morning right after `onDayStart` (#238).
+    crate::plugin_world::day_started(ctx, state);
     // Relationships (M4), the morning's post (M6), then the morning's events (M3).
     effects.extend(crate::relationships::morning(ctx, state, previous_day));
     effects.extend(crate::mail::deliver_morning(ctx, state));

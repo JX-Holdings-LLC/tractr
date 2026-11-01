@@ -586,6 +586,11 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
         return Vec::new();
     }
 
+    // A plugin entity on the tile hears the interaction (#238).
+    if crate::plugin_world::interact(ctx, state, target_x, target_y) {
+        return Vec::new();
+    }
+
     let Some(target) = target else {
         return Vec::new();
     };
