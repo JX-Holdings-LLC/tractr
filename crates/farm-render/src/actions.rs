@@ -107,9 +107,9 @@ pub fn player_asset(source: &crate::GraphicsSource) -> Option<&ArtAsset> {
 /// squash (the height kept, in thousandths) and an opacity (thousandths).
 pub fn effect_at(effect: Option<&str>, elapsed: u32, impact: u32) -> (i32, u32, u32) {
     match effect {
-        Some("shake") => (if (elapsed / 2) % 2 == 0 { 1 } else { -1 }, 1000, 1000),
+        Some("shake") => (if (elapsed / 2).is_multiple_of(2) { 1 } else { -1 }, 1000, 1000),
         Some("squash") if elapsed >= impact && elapsed < impact.saturating_add(4) => (0, 850, 1000),
-        Some("flash") if (elapsed / 2) % 2 == 1 => (0, 1000, 550),
+        Some("flash") if !(elapsed / 2).is_multiple_of(2) => (0, 1000, 550),
         _ => (0, 1000, 1000),
     }
 }
