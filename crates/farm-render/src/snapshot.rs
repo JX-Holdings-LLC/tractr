@@ -10,7 +10,7 @@
 //! The JSON form (camelCase) is what the C# host deserializes into its `WorldSnapshot`
 //! classes, so field names must stay as they are. `None` fields are omitted.
 
-use farm_sim::schema::{DaylightKey, VisualRef, WeatherOverlayDefinition};
+use farm_sim::schema::{CharacterLayer, DaylightKey, VisualRef, WeatherOverlayDefinition};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -168,6 +168,10 @@ pub struct SnapshotSprite {
     pub frame_height: f64,
     pub frame: f64,
     pub row: f64,
+    /// Creator art: the asset's `pixelsPerTile` (how many sheet pixels make a tile when the
+    /// sprite stands on the map); absent: the default rule (see `WorldBuilder::draw_standing`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pixels_per_tile: Option<f64>,
 }
 
 /// An NPC, an animal or the player (C# `SnapshotEntity` and `SnapshotPlayer`).
@@ -212,6 +216,50 @@ pub struct SnapshotEntity {
     /// Drawn smaller or larger than a tile's actor (children, M4); absent: 1.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scale: Option<f64>,
+    /// The character's own layer stack (#234), resolved by [`crate::apply_graphics`]: replaces
+    /// `sprite` and the built-in art when not empty.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layers: Option<Vec<SnapshotLayer>>,
+    /// The layers of the clothes the character wears (#234), drawn over its art: their
+    /// references (filled by the snapshot builder) and their resolved frames.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worn_refs: Option<Vec<CharacterLayer>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub worn_layers: Option<Vec<SnapshotLayer>>,
+    /// An action clip playing on the character (#235): a tool use, eating, a cutscene's
+    /// `animate` step.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action: Option<SnapshotAction>,
+}
+
+/// An action clip playing on a character (#235).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotAction {
+    /// The clip's name on the character's art.
+    pub clip: String,
+    /// Ticks since it started.
+    pub elapsed: f64,
+    /// The impact frame's first tick.
+    pub impact: f64,
+    /// One of `clip_effects`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect: Option<String>,
+    /// The art of the item held over the character (`holdItem` clips) and its resolved frame.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub held_visual: Option<VisualRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub held: Option<SnapshotSprite>,
+}
+
+/// One resolved layer of a layered character (#234): this frame of the layer's sheet and the
+/// colour it is multiplied with.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SnapshotLayer {
+    pub sprite: SnapshotSprite,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
 }
 
 impl Default for SnapshotEntity {
@@ -232,6 +280,10 @@ impl Default for SnapshotEntity {
             hat_visual: None,
             hat: None,
             scale: None,
+            layers: None,
+            worn_refs: None,
+            worn_layers: None,
+            action: None,
         }
     }
 }

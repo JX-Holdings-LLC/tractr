@@ -249,6 +249,9 @@ pub struct PlaySession {
     planting: Option<(Option<String>, Option<String>)>,
     /// The pointer over a pack minigame's canvas, for its next frame.
     pointer: Option<CanvasPointer>,
+    /// The player's art whose action clips play (#235), and the clip playing.
+    action_art: Option<farm_render::graphics::ArtAsset>,
+    action: Option<crate::actions::Playback>,
 }
 
 /// Commands kept for crash reports.
@@ -293,6 +296,73 @@ impl PlaySession {
             recent: std::collections::VecDeque::new(),
             planting: None,
             pointer: None,
+            action_art: None,
+            action: None,
+        }
+    }
+
+    /// The player's art whose action clips (#235) play when the player uses a tool or eats
+    /// (`farm_render::actions::player_asset`); `None`: no action clips, nothing is deferred.
+    pub fn set_action_art(&mut self, art: Option<farm_render::graphics::ArtAsset>) {
+        self.action_art = art.filter(|art| art.animations.as_ref().is_some_and(|clips| !clips.is_empty()));
+    }
+
+    /// The action clip playing on the player, for the renderer.
+    pub fn action_view(&self) -> Option<farm_render::SnapshotAction> {
+        self.action.as_ref().map(|playing| playing.view(self.state.clock.tick, self.alpha))
+    }
+
+    /// Runs the playing action's command once its impact tick is here, and forgets the action
+    /// once it is over.
+    fn advance_action(&mut self) {
+        let now = self.state.clock.tick;
+        if let Some(command) = self.action.as_mut().filter(|playing| playing.due(now)).and_then(|p| p.pending.take()) {
+            self.run_command(&command);
+        }
+        if self.action.as_ref().is_some_and(|playing| playing.over(now)) {
+            self.action = None;
+        }
+    }
+
+    /// A frame's command, through the player's action clips (#235): a tool use with a clip
+    /// starts it (the command waits for its impact frame; presses while a locking clip plays are
+    /// dropped), eating plays `eat`; anything else, or no clip, runs at once.
+    fn run_acted(&mut self, command: &Command) {
+        use farm_render::actions::Action;
+        let now = self.state.clock.tick;
+        let direction = self.state.player.direction.clone();
+        let started =
+            |clip, pending: Option<Command>, held| crate::actions::Playback { clip, started: now, pending, held };
+        match command {
+            Command::UseTool { tool } if self.action_art.is_some() => {
+                if self.action.as_ref().is_some_and(|playing| playing.locks(now)) {
+                    return;
+                }
+                let tool_action = farm_sim::vocabulary::tools(&self.ctx.content)
+                    .iter()
+                    .find(|definition| definition.id == *tool)
+                    .map(|definition| definition.action.clone());
+                let clip = tool_action.as_deref().and_then(|action| {
+                    crate::actions::find(self.action_art.as_ref(), Action::Tool(action), &direction)
+                });
+                match clip {
+                    Some(clip) => {
+                        self.action = Some(started(clip, Some(command.clone()), None));
+                        self.advance_action();
+                    }
+                    None => self.run_command(command),
+                }
+            }
+            Command::UseItem { item_id } if self.action_art.is_some() => {
+                let clip = crate::actions::find(self.action_art.as_ref(), Action::Named("eat"), &direction);
+                let held =
+                    self.ctx.content.items.iter().find(|item| item.id == *item_id).and_then(|item| item.visual.clone());
+                self.run_command(command);
+                if let Some(clip) = clip {
+                    self.action = Some(started(clip, None, held));
+                }
+            }
+            _ => self.run_command(command),
         }
     }
 
@@ -459,8 +529,12 @@ impl PlaySession {
 
         // Free movement: only CHANGES of the held intent become commands; zero while any
         // modal is open.
-        let intent =
-            if host_modal_open { MoveVector::default() } else { input::move_intent(&self.input, &self.state, None) };
+        let locked = self.action.as_ref().is_some_and(|playing| playing.locks(self.state.clock.tick));
+        let intent = if host_modal_open || locked {
+            MoveVector::default()
+        } else {
+            input::move_intent(&self.input, &self.state, None)
+        };
         let mut ticks = self.timestep.advance(delta);
         self.alpha = self.timestep.alpha();
         // With `time.pauseInModals` a menu stops the game clock like a dialogue does (#37).
@@ -476,6 +550,10 @@ impl PlaySession {
         // whether the frame holds one tick or five: the same input reaches the same state at
         // any frame rate. (advance_tick(n) is exactly n × advance_tick(1).)
         for tick in 0..ticks {
+            // An action's command at its impact tick (#235), like a command sent before the tick.
+            if self.action.is_some() {
+                self.advance_action();
+            }
             self.apply_plugin_mutations();
             if tick == 0 {
                 let (x, y) = (tiles(self.state.player.x), tiles(self.state.player.y));
@@ -493,8 +571,11 @@ impl PlaySession {
                     seed_item_id: seed.clone(),
                     fertilizer_item_id: fertilizer.clone(),
                 }),
-                _ => self.run_command(command),
+                _ => self.run_acted(command),
             }
+        }
+        if self.action.is_some() {
+            self.advance_action();
         }
         self.update_minigame(delta);
         self.input.end_frame();

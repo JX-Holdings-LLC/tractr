@@ -70,6 +70,9 @@ pub struct GameProject {
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
+    /// The player as a stack of layer sheets (#234), replacing `playerVisual` when not empty.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub player_layers: Option<Vec<super::CharacterLayer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
     #[serde(skip_serializing_if = "Option::is_none")]

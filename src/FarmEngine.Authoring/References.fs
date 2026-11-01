@@ -261,6 +261,15 @@ module References =
             "elder", "Elder"
             "child", "Child"
             "guard", "Guard"
+            // Base characters in built-in colours (#216, CharacterArt.colouredAppearances).
+            "fisher", "Fisher"
+            "miner", "Miner"
+            "baker", "Baker"
+            "doctor", "Doctor"
+            "blacksmith", "Blacksmith"
+            "noble", "Noble"
+            "gardener", "Gardener"
+            "sailor", "Sailor"
         ]
 
     /// QuestEditor objective type select (plus `gift`, which the engine also tracks).
@@ -380,6 +389,8 @@ module References =
             reference "VisualRef" "AssetId" ReferenceKind.Asset
             plain "VisualRef" "Animation" "a clip name on the chosen asset"
             optionalAs "ArtFrame" "AssetId" ReferenceKind.Asset "(same image)"
+            reference "CharacterLayer" "AssetId" ReferenceKind.Asset
+            optional "WearDefinition" "Layer" ReferenceKind.Asset
             oneOf "CustomAsset" "Type" (same CustomAssetTypes.All)
             optional "CustomAsset" "TileType" ReferenceKind.Terrain
             // Items and crops

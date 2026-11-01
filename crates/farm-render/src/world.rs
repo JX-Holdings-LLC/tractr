@@ -20,6 +20,7 @@ use crate::canvas2d::{self, entity_pixel_origin};
 use crate::css_color::{self, Color};
 use crate::draw::{DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke, MAX_LIGHTS};
 use crate::images::{ImageId, ImageStore};
+use crate::layers::{self, LayerPart};
 use crate::num::{cs_clamp, cs_compare, cs_max, cs_min, round_half_even, to_byte, to_int};
 use crate::snapshot::{
     SnapshotEmote, SnapshotEntity, SnapshotSprite, SnapshotTerrain, SnapshotTile, WorldSnapshot, MAX_TALL,
@@ -28,6 +29,8 @@ use std::sync::Arc;
 
 const BACKGROUND_TINT: Color = Color::rgba(0x1a, 0x1a, 0x2e, 0x10);
 const SHADOW_COLOR: Color = Color::rgba(0, 0, 0, 0x48);
+/// Sheet pixels per tile of creator art standing on the map, the built-in pack's (#215).
+const CREATOR_PIXELS_PER_TILE: f64 = 32.0;
 
 /// Builds the draw list of a world frame. `art` is the built-in pack for anything the project
 /// binds no art to (`None` draws the original colored shapes only); `images` decodes and caches
@@ -297,6 +300,23 @@ impl<'a, 'l> Builder<'a, 'l> {
         });
     }
 
+    /// The image and source rectangle of a creator sprite; `None` when its image is missing or
+    /// the rectangle lies outside it.
+    fn sprite_source(&mut self, sprite: &SnapshotSprite) -> Option<(ImageId, Rect)> {
+        let (id, width, height) = self.image(&sprite.image_url)?;
+        if width == 0.0 || height == 0.0 {
+            return None;
+        }
+        let sw = if sprite.frame_width != 0.0 { sprite.frame_width } else { width };
+        let sh = if sprite.frame_height != 0.0 { sprite.frame_height } else { height };
+        let sx = sprite.source_x.unwrap_or(sprite.frame * sw);
+        let sy = sprite.source_y.unwrap_or(sprite.row * sh);
+        if sx < 0.0 || sy < 0.0 || sx + sw > width || sy + sh > height {
+            return None;
+        }
+        Some((id, rect(sx, sy, sw, sh)))
+    }
+
     /// Creator sprites: scaled to fit the box, bottom-aligned (TS `drawSprite`).
     fn draw_sprite(
         &mut self,
@@ -308,20 +328,40 @@ impl<'a, 'l> Builder<'a, 'l> {
         opacity: f64,
     ) -> bool {
         let Some(sprite) = sprite else { return false };
-        let Some((id, width, height)) = self.image(&sprite.image_url) else { return false };
-        if width == 0.0 || height == 0.0 {
-            return false;
-        }
-        let sw = if sprite.frame_width != 0.0 { sprite.frame_width } else { width };
-        let sh = if sprite.frame_height != 0.0 { sprite.frame_height } else { height };
-        let sx = sprite.source_x.unwrap_or(sprite.frame * sw);
-        let sy = sprite.source_y.unwrap_or(sprite.row * sh);
-        if sx < 0.0 || sy < 0.0 || sx + sw > width || sy + sh > height {
-            return false;
-        }
+        let Some((id, src)) = self.sprite_source(sprite) else { return false };
+        let (sw, sh) = (f64::from(src.width), f64::from(src.height));
         let scale = cs_min(dw / sw, dh / sh);
         let dst = rect(dx + ((dw - (sw * scale)) / 2.0), dy + dh - (sh * scale), sw * scale, sh * scale);
-        self.push_image(id, rect(sx, sy, sw, sh), dst, opacity, None);
+        self.push_image(id, src, dst, opacity, None);
+        true
+    }
+
+    /// Where creator art for something standing on tile (`px`, `py`) goes (#215): characters,
+    /// animals, monsters, crops, items, nodes and machines. A frame of at most
+    /// [`CREATOR_PIXELS_PER_TILE`] square is scaled to fill the tile (as before); a larger frame is
+    /// drawn at the built-in pack's scale (32 sheet pixels per tile), so a 32×48 character stands
+    /// a tile and a half tall like the built-in ones. An asset's `pixelsPerTile` sets the scale
+    /// for every frame instead. Either way the frame is centred on the tile and stands on its
+    /// bottom edge; `scale` shrinks or grows it (children).
+    fn standing_rect(&self, sprite: &SnapshotSprite, sw: f64, sh: f64, px: f64, py: f64, scale: f64) -> Rect {
+        let ts = self.ts;
+        let per_tile = sprite.pixels_per_tile.filter(|per_tile| *per_tile > 0.0);
+        let unit = ts / per_tile.unwrap_or(CREATOR_PIXELS_PER_TILE);
+        let (dw, dh) = if per_tile.is_none() && sw * unit <= ts && sh * unit <= ts {
+            let fit = cs_min(ts / sw, ts / sh);
+            (sw * fit, sh * fit)
+        } else {
+            (sw * unit * scale, sh * unit * scale)
+        };
+        rect(px + ((ts - dw) / 2.0), py + ts - dh, dw, dh)
+    }
+
+    /// Creator art standing on a tile, sized by [`WorldBuilder::standing_rect`].
+    fn draw_standing(&mut self, sprite: Option<&SnapshotSprite>, px: f64, py: f64, opacity: f64, scale: f64) -> bool {
+        let Some(sprite) = sprite else { return false };
+        let Some((id, src)) = self.sprite_source(sprite) else { return false };
+        let dst = self.standing_rect(sprite, f64::from(src.width), f64::from(src.height), px, py, scale);
+        self.push_image(id, src, dst, opacity, None);
         true
     }
 
@@ -807,7 +847,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         let Some(node) = d.tile.and_then(|tile| tile.node.as_ref()) else { return };
         let (px, py, ts) = (d.px, d.py, self.ts);
         let opacity = if node.depleted { 0.35 } else { 1.0 };
-        if self.draw_sprite(node.sprite.as_ref(), px, py, ts, ts, opacity) {
+        if self.draw_standing(node.sprite.as_ref(), px, py, opacity, 1.0) {
             return;
         }
         if let Some(art) = self.art {
@@ -836,7 +876,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         let (px, py, ts) = (d.px, d.py, self.ts);
         // An open gate (M5) stands aside: its art faded between its two posts.
         if machine.open {
-            self.draw_sprite(machine.sprite.as_ref(), px, py, ts, ts, 0.3);
+            self.draw_standing(machine.sprite.as_ref(), px, py, 0.3, 1.0);
             let color = parse(&machine.color);
             let post_width = cs_max(2.0, (ts * 0.16).floor());
             let post_height = (ts * 0.8).floor();
@@ -847,7 +887,7 @@ impl<'a, 'l> Builder<'a, 'l> {
             }
             return;
         }
-        if self.draw_sprite(machine.sprite.as_ref(), px, py, ts, ts, 1.0) {
+        if self.draw_standing(machine.sprite.as_ref(), px, py, 1.0, 1.0) {
             return;
         }
         if let Some(art) = self.art {
@@ -886,7 +926,7 @@ impl<'a, 'l> Builder<'a, 'l> {
             // Canvas shadowBlur 8 ≈ Gaussian sigma 4: a golden glow behind ripe crops.
             self.push(DrawCmd::BlurRect { rect: crop_rect, color: parse("#d6bd2499"), sigma: 4.0 });
         }
-        if self.draw_sprite(crop.sprite.as_ref(), px, py, ts, ts, 1.0) {
+        if self.draw_standing(crop.sprite.as_ref(), px, py, 1.0, 1.0) {
             return;
         }
         if let Some(art) = self.art {
@@ -903,7 +943,7 @@ impl<'a, 'l> Builder<'a, 'l> {
     fn item(&mut self, d: &Drawable<'_>) {
         let Some(item) = d.tile.and_then(|tile| tile.item.as_ref()) else { return };
         let (px, py, ts) = (d.px, d.py, self.ts);
-        if self.draw_sprite(item.sprite.as_ref(), px, py, ts, ts, 1.0) {
+        if self.draw_standing(item.sprite.as_ref(), px, py, 1.0, 1.0) {
             return;
         }
         if let Some(art) = self.art {
@@ -1010,7 +1050,7 @@ impl<'a, 'l> Builder<'a, 'l> {
         let monster = &self.snapshot.monsters[d.index];
         let (px, py, ts, tick) = (d.px, d.py, self.ts, self.tick);
         let opacity = if monster.stunned { 0.6 } else { 1.0 };
-        if !self.draw_sprite(monster.sprite.as_ref(), px, py, ts, ts, opacity) {
+        if !self.draw_standing(monster.sprite.as_ref(), px, py, opacity, 1.0) {
             // A gentle bob while it moves.
             let bob = if monster.moving { ((tick / 4.0).floor() % 2.0) * (ts * 0.04) } else { 0.0 };
             let body_width = (ts * 0.72).floor();
@@ -1062,22 +1102,119 @@ impl<'a, 'l> Builder<'a, 'l> {
         }
     }
 
-    /// Creator sprite, then built-in art (`builtin` picks it).
+    /// A character's art: its own layer stack (#234), else its creator sprite, else the built-in
+    /// art (`builtin` picks it), with the layers of what it wears on top. Creator art is sized by
+    /// [`WorldBuilder::standing_rect`] (`scale` for children), built-in art at the pack's scale.
+    /// More than one part is composed into one cached image per frame ([`crate::layers`]).
     fn entity_art(
         &mut self,
         entity: &SnapshotEntity,
         px: f64,
         py: f64,
+        scale: f64,
         builtin: impl FnOnce(&BuiltinArt) -> Option<SnapshotSprite>,
     ) -> bool {
-        let ts = self.ts;
-        if entity.sprite.is_some() && self.draw_sprite(entity.sprite.as_ref(), px, py, ts, ts, 1.0) {
-            return true;
+        let own = entity.layers.as_deref().unwrap_or_default();
+        let worn = entity.worn_layers.as_deref().unwrap_or_default();
+        let mut parts: Vec<(SnapshotSprite, Option<Color>)> = Vec::new();
+        let mut native = false;
+        if !own.is_empty() {
+            parts.extend(own.iter().map(|layer| (layer.sprite.clone(), layers::tint_of(layer.color.as_deref()))));
+        } else if let Some(sprite) = entity.sprite.as_ref().filter(|sprite| self.sprite_source(sprite).is_some()) {
+            parts.push((sprite.clone(), None));
+        } else if let Some(sprite) = self.art.and_then(builtin) {
+            native = true;
+            parts.push((sprite, None));
         }
-        match self.art {
-            Some(art) => self.draw_builtin(builtin(art), px, py, 1.0, false, false),
-            None => false,
+        if parts.is_empty() {
+            return false;
         }
+        parts.extend(worn.iter().map(|layer| (layer.sprite.clone(), layers::tint_of(layer.color.as_deref()))));
+        if parts.len() == 1 {
+            let (sprite, _) = parts.remove(0);
+            return if native {
+                self.draw_builtin(Some(sprite), px, py, 1.0, false, false)
+            } else {
+                self.draw_standing(Some(&sprite), px, py, 1.0, scale)
+            };
+        }
+        self.draw_layers(&parts, px, py, scale, native)
+    }
+
+    /// An action clip's drawing effect (#235) on the images drawn since command `from` (the
+    /// character's), and the held item over its head.
+    fn action_effects(&mut self, entity: &SnapshotEntity, from: usize, px: f64, py: f64) {
+        let Some(action) = entity.action.as_ref() else { return };
+        let whole = |v: f64| if v.is_finite() { v.max(0.0).min(f64::from(u32::MAX)) as u32 } else { 0 };
+        let (shift, kept, opacity) =
+            crate::actions::effect_at(action.effect.as_deref(), whole(action.elapsed), whole(action.impact));
+        let unit = self.ts / CREATOR_PIXELS_PER_TILE;
+        for command in self.list.commands.iter_mut().skip(from) {
+            if let DrawCmd::Image { dst, opacity: alpha, .. } = command {
+                dst.x += (f64::from(shift) * unit) as f32;
+                if kept != 1000 {
+                    // Squashed: shorter and wider, still standing on its bottom edge.
+                    let (height, width) =
+                        (dst.height * kept as f32 / 1000.0, dst.width * 2000.0 / (1000.0 + kept as f32));
+                    dst.y += dst.height - height;
+                    dst.x -= (width - dst.width) / 2.0;
+                    (dst.height, dst.width) = (height, width);
+                }
+                *alpha *= opacity as f32 / 1000.0;
+            }
+        }
+        if let Some(held) = action.held.as_ref() {
+            let size = (self.ts * 0.6).floor();
+            self.draw_sprite(Some(held), px + ((self.ts - size) / 2.0), py - (self.ts * 0.95), size, size, 1.0);
+        }
+    }
+
+    /// Several layers of one character, composed into one cached frame (#234) and drawn like the
+    /// first (base) layer would be.
+    fn draw_layers(
+        &mut self,
+        parts: &[(SnapshotSprite, Option<Color>)],
+        px: f64,
+        py: f64,
+        scale: f64,
+        native: bool,
+    ) -> bool {
+        let mut pieces = Vec::with_capacity(parts.len());
+        for (sprite, tint) in parts {
+            let source =
+                if native && pieces.is_empty() { self.builtin_source(sprite) } else { self.sprite_source(sprite) };
+            let Some((image, src)) = source else { continue };
+            // Whole pixels: sheets are cut on pixel boundaries.
+            let whole = |v: f32| v.max(0.0).round() as u32;
+            pieces.push(LayerPart {
+                image,
+                src: (whole(src.x), whole(src.y), whole(src.width), whole(src.height)),
+                tint: *tint,
+            });
+        }
+        if pieces.is_empty() {
+            return false;
+        }
+        let (width, height) = layers::composed_size(&pieces);
+        let Some(id) = layers::composed(self.images, &pieces) else { return false };
+        let (w, h) = (f64::from(width), f64::from(height));
+        let dst = if native {
+            let (dw, dh) = (w * self.art_scale, h * self.art_scale);
+            rect(px + ((self.ts - dw) / 2.0), py + self.ts - dh, dw, dh)
+        } else {
+            self.standing_rect(&parts[0].0, w, h, px, py, scale)
+        };
+        self.push_image(id, rect(0.0, 0.0, w, h), dst, 1.0, None);
+        true
+    }
+
+    /// The image and source rectangle of a built-in sprite (see [`WorldBuilder::draw_builtin`]).
+    fn builtin_source(&mut self, sprite: &SnapshotSprite) -> Option<(ImageId, Rect)> {
+        let (id, width, height) = self.image(&sprite.image_url)?;
+        let (sw, sh) = (sprite.frame_width, sprite.frame_height);
+        let sx = sprite.source_x.unwrap_or(0.0);
+        let sy = sprite.source_y.unwrap_or(0.0);
+        (sw > 0.0 && sh > 0.0 && sx + sw <= width && sy + sh <= height).then(|| (id, rect(sx, sy, sw, sh)))
     }
 
     fn entity(&mut self, d: &Drawable<'_>) {
@@ -1088,15 +1225,21 @@ impl<'a, 'l> Builder<'a, 'l> {
         // Children (M4) draw smaller.
         let art_scale = self.art_scale;
         self.art_scale *= npc.scale.unwrap_or(1.0);
-        let drawn = self.entity_art(npc, px, py, |art| {
+        let scale = npc.scale.unwrap_or(1.0);
+        let from = self.list.commands.len();
+        let drawn = self.entity_art(npc, px, py, scale, |art| {
             if npc.kind == "animal" {
                 art.animal(npc.species_id.as_deref(), Some(&npc.direction), tick, npc.moving)
             } else {
-                art.npc(npc.appearance.as_deref(), Some(&npc.direction), tick, npc.moving)
+                // A look (or an appearance with built-in colours) recolours the base character (#216).
+                let appearance = npc.appearance.as_deref();
+                let key = npc.look.clone().or_else(|| crate::look::npc_look_key(None, appearance));
+                crate::look::npc_sprite(art, appearance, key.as_deref(), Some(&npc.direction), tick, npc.moving)
             }
         });
         self.art_scale = art_scale;
         if drawn {
+            self.action_effects(npc, from, px, py);
             return;
         }
         let body = rect(px + ((ts - npc_w) / 2.0), py + ((ts - npc_h) / 2.0), npc_w, npc_h);
@@ -1156,7 +1299,8 @@ impl<'a, 'l> Builder<'a, 'l> {
         let player_w = (ts * 0.65).floor();
         let player_h = (ts * 0.75).floor();
         let look = player.look.as_deref();
-        let drawn = self.entity_art(player, px, py, |art| {
+        let from = self.list.commands.len();
+        let drawn = self.entity_art(player, px, py, 1.0, |art| {
             art.player(Some(&player.direction), tick, player.moving).map(|sprite| crate::look::with_look(sprite, look))
         });
         // A worn hat (M4) sits on the head: the built-in characters stand a tile and a half tall.
@@ -1165,6 +1309,7 @@ impl<'a, 'l> Builder<'a, 'l> {
             self.draw_sprite(player.hat.as_ref(), px + ((ts - size) / 2.0), py - (ts * 0.62), size, size, 1.0);
         }
         if drawn {
+            self.action_effects(player, from, px, py);
             return;
         }
         let body = rect(px + ((ts - player_w) / 2.0), py + ((ts - player_h) / 2.0), player_w, player_h);

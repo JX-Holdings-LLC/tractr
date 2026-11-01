@@ -375,6 +375,16 @@ pub fn shell_snapshot(
     // A cutscene (M2) turns and walks characters and shows emotes over them.
     let cutscene = (scene.id == state.player.scene_id).then(|| cutscenes::view(content, state)).flatten();
     let directed = |actor: &str| cutscene_actor(cutscene.as_ref(), actor);
+    // Clips a cutscene's `animate` steps play (#235).
+    let animated = |actor: &str| {
+        let view = cutscene.as_ref()?;
+        let animation = view.animations.iter().find(|animation| animation.actor == actor)?;
+        Some(crate::snapshot::SnapshotAction {
+            clip: animation.clip.clone(),
+            elapsed: animation.elapsed as f64,
+            ..crate::snapshot::SnapshotAction::default()
+        })
+    };
 
     let mut npcs = Vec::new();
     for npc in &content.npcs {
@@ -399,6 +409,8 @@ pub fn shell_snapshot(
             x,
             y,
             appearance: Some(npc.appearance.clone()),
+            look: crate::look::npc_look_key(npc.look.as_ref(), Some(&npc.appearance)),
+            action: animated(&npc.id),
             direction,
             moving,
             pixel_x: pixel(x),
@@ -526,6 +538,8 @@ pub fn shell_snapshot(
                 || directed(cutscenes::PLAYER).is_some_and(|(_, moving)| moving),
             look: crate::look::look_key(state.player.look.as_ref(), &state.player.worn),
             hat_visual,
+            worn_refs: crate::look::worn_layers(&state.player.worn),
+            action: animated(cutscenes::PLAYER),
             ..SnapshotEntity::default()
         },
         pops: None,
@@ -593,6 +607,7 @@ pub fn editor_snapshot_window(
             x: tiles_of(npc.x),
             y: tiles_of(npc.y),
             appearance: Some(npc.appearance.clone()),
+            look: crate::look::npc_look_key(npc.look.as_ref(), Some(&npc.appearance)),
             ..SnapshotEntity::default()
         })
         .collect();

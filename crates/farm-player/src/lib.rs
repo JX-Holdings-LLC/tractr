@@ -13,6 +13,7 @@
 //!   write a save (`--headless`).
 #![forbid(unsafe_code)]
 
+pub mod actions;
 pub mod audio;
 pub mod audio_assets;
 pub mod audio_stream;

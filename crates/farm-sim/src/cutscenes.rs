@@ -46,8 +46,8 @@ use crate::engine_types::{Effects, EngineContext};
 use crate::events;
 use crate::messages;
 use crate::schema::{
-    cutscene_step_types as steps, directions, emotes, Cutscene, CutsceneCamera, CutsceneEmote, CutsceneFade,
-    CutsceneStep, CutsceneWalk, GameContent, GameState, GridPoint,
+    cutscene_step_types as steps, directions, emotes, Cutscene, CutsceneAnimation, CutsceneCamera, CutsceneEmote,
+    CutsceneFade, CutsceneStep, CutsceneWalk, GameContent, GameState, GridPoint,
 };
 use crate::substitution;
 use crate::units;
@@ -278,6 +278,10 @@ fn pass_tick(ctx: &EngineContext, state: &mut GameState) {
         emote.elapsed = emote.elapsed.saturating_add(1);
     }
     running.emotes.retain(|emote| emote.elapsed < emote.duration);
+    for animation in &mut running.animations {
+        animation.elapsed = animation.elapsed.saturating_add(1);
+    }
+    running.animations.retain(|animation| animation.elapsed < animation.duration);
     settle(running);
 }
 
@@ -420,6 +424,7 @@ fn start(ctx: &EngineContext, state: &mut GameState, step: &CutsceneStep) -> (bo
             }
             (true, Vec::new())
         }
+        steps::ANIMATE => (start_animate(state, step), Vec::new()),
         steps::CAMERA => (start_camera(state, step), Vec::new()),
         steps::FADE => (start_fade(state, step), Vec::new()),
         steps::MUSIC => {
@@ -457,9 +462,28 @@ fn flow(ctx: &EngineContext, state: &GameState, cutscene: &Cutscene, step: &Cuts
             }
         }
         steps::EMOTE | steps::WAIT | steps::CAMERA | steps::FADE => timed(),
+        steps::ANIMATE if step.wait == Some(false) => Flow::Next,
+        steps::ANIMATE => timed(),
         steps::END => Flow::End,
         _ => Flow::Next,
     }
+}
+
+/// `animate` (#235): the actor plays the step's clip for its `seconds` (1 by default). The clip
+/// is art, which the simulation never reads: it only keeps the time, and hosts draw the clip.
+fn start_animate(state: &mut GameState, step: &CutsceneStep) -> bool {
+    let Some(actor) = non_empty(step.actor.as_deref()).filter(|actor| actor_point(state, actor).is_some()) else {
+        return false;
+    };
+    let Some(clip) = non_empty(step.animation.as_deref()) else { return false };
+    let animation =
+        CutsceneAnimation { actor: actor.to_owned(), clip: clip.to_owned(), duration: duration(step), elapsed: 0 };
+    let Some(running) = state.cutscene.as_mut() else { return false };
+    running.animations.retain(|shown| shown.actor != animation.actor);
+    if animation.duration > 0 {
+        running.animations.push(animation);
+    }
+    true
 }
 
 /// The actor and tile of a `move` step, when the tile lies in the player's scene and does not
@@ -671,6 +695,7 @@ pub fn handle_skip(ctx: &EngineContext, state: &mut GameState) -> Effects {
     if let Some(running) = state.cutscene.as_mut() {
         let walks = std::mem::take(&mut running.walks);
         running.emotes.clear();
+        running.animations.clear();
         running.camera = None;
         running.fade = None;
         for walk in &walks {
@@ -758,6 +783,19 @@ pub struct CutsceneView {
     pub emotes: Vec<CutsceneEmoteView>,
     /// Actors the cutscene walks or turns (the player's direction is also in its state).
     pub actors: Vec<CutsceneActorView>,
+    /// Clips `animate` steps play (#235).
+    pub animations: Vec<CutsceneAnimationView>,
+}
+
+/// A clip an `animate` step plays on an actor (#235): hosts draw the actor's art from it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CutsceneAnimationView {
+    pub actor: String,
+    pub clip: String,
+    /// Ticks since the clip started.
+    #[serde(with = "crate::units::ticks")]
+    pub elapsed: u64,
 }
 
 /// A `say` line, or a `choice` question with its answers.
@@ -931,6 +969,15 @@ pub fn view(content: &GameContent, state: &GameState) -> Option<CutsceneView> {
         fade,
         emotes,
         actors,
+        animations: running
+            .animations
+            .iter()
+            .map(|animation| CutsceneAnimationView {
+                actor: animation.actor.clone(),
+                clip: animation.clip.clone(),
+                elapsed: animation.elapsed,
+            })
+            .collect(),
     })
 }
 

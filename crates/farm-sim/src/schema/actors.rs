@@ -172,8 +172,28 @@ pub struct Npc {
     /// The NPC can be dated and married, when the game allows it (M4).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub romanceable: Option<bool>,
+    /// Colours for the built-in base character (#216): an NPC with a look and no art of its own
+    /// is drawn as the base character in these colours, like the player's character creator.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub look: Option<PlayerLook>,
+    /// The NPC as a stack of layer sheets (#234): body, eyes, hair, clothes…, drawn in order,
+    /// each optionally tinted. Replaces its `visual` and built-in art when not empty.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layers: Option<Vec<CharacterLayer>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
+}
+
+/// One layer of a layered character (#234): a creator asset whose clips have the same names and
+/// frame layout as the character's other layers, optionally tinted.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CharacterLayer {
+    /// The layer's art (a custom asset id).
+    pub asset_id: String,
+    /// A `#rrggbb` the layer is multiplied with (draw the layer in light greys to recolour it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
 }
 
 /// The project's player start/record (TS `PlayerSchema`); runtime uses [`super::save::PlayerState`].

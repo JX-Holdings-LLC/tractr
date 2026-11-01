@@ -10,7 +10,7 @@
 
 use crate::images::Image;
 use crate::snapshot::SnapshotSprite;
-use farm_sim::schema::{wear_slots, InventorySlot, PlayerLook};
+use farm_sim::schema::{wear_slots, CharacterLayer, InventorySlot, PlayerLook};
 use std::sync::Arc;
 
 /// What separates a sheet's source from its look key.
@@ -65,6 +65,92 @@ pub fn look_key(look: Option<&PlayerLook>, worn: &[InventorySlot]) -> Option<Str
             .collect::<Vec<_>>()
             .join(","),
     )
+}
+
+/// The layers (#234) of the clothes worn, bottom to top: trousers, shirt, hat (then any other
+/// slot, in the order worn). Each is tinted with the item's colour. `None` when nothing worn has
+/// a layer.
+pub fn worn_layers(worn: &[InventorySlot]) -> Option<Vec<CharacterLayer>> {
+    let rank = |slot: &str| match slot {
+        wear_slots::PANTS => 0,
+        wear_slots::SHIRT => 1,
+        wear_slots::HAT => 2,
+        _ => 3,
+    };
+    let mut layers: Vec<(i32, CharacterLayer)> = worn
+        .iter()
+        .filter_map(|slot| {
+            let wear = slot.item.wear.as_ref()?;
+            let asset_id = wear.layer.clone().filter(|id| !id.is_empty())?;
+            Some((rank(&wear.slot), CharacterLayer { asset_id, color: wear.color.clone() }))
+        })
+        .collect();
+    layers.sort_by_key(|(rank, _)| *rank);
+    (!layers.is_empty()).then(|| layers.into_iter().map(|(_, layer)| layer).collect())
+}
+
+/// Built-in NPC appearances drawn as the base character in fixed colours (#216), on top of the
+/// hand-drawn `farmer`, `merchant` and `villager`: `(appearance, skin, hair, shirt, trousers,
+/// accent)`. An appearance containing one of these names picks it.
+pub const APPEARANCE_LOOKS: &[(&str, [&str; PARTS])] = &[
+    ("fisher", ["e0b088", "c8c8c8", "2f7f7a", "3c4a5c", "f2c14e"]),
+    ("miner", ["c08a5c", "2b2138", "7a6a5a", "4a3b2a", "f28c3b"]),
+    ("baker", ["f2c9a0", "e8d080", "f4f0e8", "8a5a3a", "d95f8e"]),
+    ("doctor", ["a07350", "1e1e28", "eef0f5", "3a4a6a", "4f9be0"]),
+    ("blacksmith", ["c49a6a", "3d2a1e", "5a5a6b", "2b2b38", "a3a3b1"]),
+    ("noble", ["f2c9a0", "f2e0a0", "7a3fa0", "2b2138", "f7b24a"]),
+    ("gardener", ["d9a074", "7c563a", "6fae4a", "5c4a32", "f4a2c2"]),
+    ("sailor", ["e0b088", "3d2a1e", "eef0f5", "1e3a6e", "c23a3a"]),
+];
+
+/// The built-in colours of an appearance (#216), when it names one of [`APPEARANCE_LOOKS`].
+pub fn appearance_look(appearance: Option<&str>) -> Option<PlayerLook> {
+    let id = appearance?.to_lowercase();
+    let (_, colors) = APPEARANCE_LOOKS.iter().find(|(name, _)| id.contains(name))?;
+    let color = |part: usize| Some(format!("#{}", colors[part]));
+    Some(PlayerLook {
+        skin: color(SKIN),
+        hair: color(HAIR),
+        shirt: color(SHIRT),
+        pants: color(PANTS),
+        accent: color(ACCENT),
+    })
+}
+
+/// The look key of an NPC (#216): its `look`'s colours over its appearance's built-in ones
+/// ([`appearance_look`]); `None` when it has neither (it keeps its hand-drawn built-in art).
+pub fn npc_look_key(look: Option<&PlayerLook>, appearance: Option<&str>) -> Option<String> {
+    let preset = appearance_look(appearance);
+    let merged = match (look, preset) {
+        (None, None) => return None,
+        (Some(look), None) => look.clone(),
+        (None, Some(preset)) => preset,
+        (Some(look), Some(preset)) => PlayerLook {
+            skin: look.skin.clone().or(preset.skin),
+            hair: look.hair.clone().or(preset.hair),
+            shirt: look.shirt.clone().or(preset.shirt),
+            pants: look.pants.clone().or(preset.pants),
+            accent: look.accent.clone().or(preset.accent),
+        },
+    };
+    // A look of no colours still draws the base character (as drawn).
+    Some(look_key(Some(&merged), &[]).unwrap_or_else(|| "-,-,-,-,-".to_owned()))
+}
+
+/// An NPC's built-in art (#216): with a look key, the base character (the player's sheet)
+/// recoloured; else the hand-drawn art of its appearance.
+pub fn npc_sprite(
+    art: &crate::BuiltinArt,
+    appearance: Option<&str>,
+    key: Option<&str>,
+    direction: Option<&str>,
+    tick: f64,
+    moving: bool,
+) -> Option<SnapshotSprite> {
+    match key {
+        Some(key) => art.player(direction, tick, moving).map(|sprite| with_look(sprite, Some(key))),
+        None => art.npc(appearance, direction, tick, moving),
+    }
 }
 
 /// `sprite` drawn from the recoloured sheet of `key` (unchanged without a key).
@@ -155,7 +241,11 @@ mod tests {
         assert_eq!(look_key(Some(&look), &[]).as_deref(), Some("-,ffcc00,ff0000,-,-"));
         let wear = |slot: &str, color: &str| InventorySlot {
             item: Item {
-                wear: Some(WearDefinition { slot: slot.into(), color: Some(color.into()), visual: None }),
+                wear: Some(WearDefinition {
+                    slot: slot.into(),
+                    color: Some(color.into()),
+                    ..WearDefinition::default()
+                }),
                 ..Item::default()
             },
             quantity: 1,

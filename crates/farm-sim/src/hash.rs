@@ -162,6 +162,14 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("Scene", "forageSpawns")
             | ("StartQuest", "deadlineDay" | "deadlineDays")
             | ("EventCondition", "mineId")
+            // Character art (#215, #216, #234).
+            | ("CustomAsset", "pixelsPerTile")
+            | ("Npc", "look" | "layers")
+            | ("WearDefinition", "layer")
+            | ("GameProject", "playerLayers")
+            | ("AnimationClip", "effect" | "holdItem" | "impactFrame" | "lockMovement")
+            | ("CutsceneStep", "animation")
+            | ("CutsceneState", "animations")
     )
 }
 

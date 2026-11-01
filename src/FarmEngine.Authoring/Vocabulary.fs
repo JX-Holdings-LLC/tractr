@@ -504,6 +504,7 @@ module Vocabulary =
         | CutsceneStepTypes.Music
         | CutsceneStepTypes.Sound -> [ "SoundId" ]
         | CutsceneStepTypes.Outcomes -> [ "Outcomes" ]
+        | CutsceneStepTypes.Animate -> [ "Actor"; "Animation"; "Seconds"; "Wait" ]
         | _ -> []
 
     let private stepProperties =
@@ -525,6 +526,7 @@ module Vocabulary =
             "Outcomes"
             "Wait"
             "Expression"
+            "Animation"
         ]
 
     /// Properties of `owner` a form hides while its `type` discriminator is `kind`.

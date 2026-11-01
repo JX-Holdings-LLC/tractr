@@ -2121,7 +2121,28 @@ module internal ChecksContent =
 
                     clip.Frames
                     |> Seq.iteri (fun k f ->
-                        frame (sprintf "%s.animations[%d].frames[%d]" path c k) f a.Id (sprintf "%s / %s / frame %d" a.Name clip.Name (k + 1)) target))
+                        frame (sprintf "%s.animations[%d].frames[%d]" path c k) f a.Id (sprintf "%s / %s / frame %d" a.Name clip.Name (k + 1)) target)
+
+                    // Action clips (#235).
+                    match clip.ImpactFrame with
+                    | Some impact when impact < 0.0 || impact >= float clip.Frames.Length ->
+                        sink.Error(
+                            "graphics.impactOutside",
+                            sprintf "%s.animations[%d].impactFrame" path c,
+                            sprintf "%s / %s: the impact frame %g is not one of its %d frames (0 is the first)" a.Name clip.Name impact clip.Frames.Length,
+                            target
+                        )
+                    | _ -> ()
+
+                    match clip.Effect with
+                    | Some effect when not (List.contains effect ClipEffects.All) ->
+                        sink.Error(
+                            "graphics.unknownEffect",
+                            sprintf "%s.animations[%d].effect" path c,
+                            sprintf "%s / %s: unknown effect %s (one of %s)" a.Name clip.Name effect (String.concat ", " ClipEffects.All),
+                            target
+                        )
+                    | _ -> ())
 
             match a.Sheet, a.Width, a.Height with
             | Some sheet, Some width, Some height when
@@ -2135,6 +2156,41 @@ module internal ChecksContent =
 
         project.Npcs
         |> Seq.iteri (fun i n -> visual (sprintf "npcs[%d].visual" i) n.Visual n.Name (Some(NavigationTarget.Npc n.Id)))
+
+        // Layered characters (#234) and NPC looks (#216).
+        let layerAsset (path: string) (assetId: string) (label: string) (target: NavigationTarget option) =
+            if not (assets.ContainsKey assetId) then
+                sink.Error("graphics.missingAsset", path, sprintf "%s: missing layer artwork %s" label assetId, target)
+
+        let layerColor (path: string) (color: string option) (label: string) (target: NavigationTarget option) =
+            match color with
+            | Some c when not (CharacterArt.isHexColor c) -> sink.Error("graphics.badColor", path, sprintf "%s: %s is not a #rrggbb colour" label c, target)
+            | _ -> ()
+
+        let layers (path: string) (stack: CharacterLayer list option) (label: string) (target: NavigationTarget option) =
+            defaultArg stack []
+            |> List.iteri (fun j layer ->
+                layerAsset (sprintf "%s[%d].assetId" path j) layer.AssetId label target
+                layerColor (sprintf "%s[%d].color" path j) layer.Color label target)
+
+        layers "playerLayers" project.PlayerLayers "Player" (Some NavigationTarget.Settings)
+
+        project.Npcs
+        |> Seq.iteri (fun i n ->
+            let target = Some(NavigationTarget.Npc n.Id)
+            layers (sprintf "npcs[%d].layers" i) n.Layers n.Name target
+
+            match n.Look with
+            | None -> ()
+            | Some look ->
+                for key, value in CharacterArt.lookParts look do
+                    layerColor (sprintf "npcs[%d].look.%s" i key) value n.Name target)
+
+        project.Items
+        |> Seq.iteri (fun i d ->
+            match d.Wear |> Option.bind (fun wear -> wear.Layer) with
+            | Some assetId -> layerAsset (sprintf "items[%d].wear.layer" i) assetId d.Name (Some(NavigationTarget.Item d.Id))
+            | None -> ())
 
         project.Items
         |> Seq.iteri (fun i d -> visual (sprintf "items[%d].visual" i) d.Visual d.Name (Some(NavigationTarget.Item d.Id)))

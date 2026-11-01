@@ -167,6 +167,10 @@ module CutsceneStepTypes =
     [<Literal>]
     let End = "end"
 
+    /// Plays a named clip of the actor's art (#235).
+    [<Literal>]
+    let Animate = "animate"
+
     let All: string list =
         [
             Say
@@ -182,7 +186,22 @@ module CutsceneStepTypes =
             Sound
             Outcomes
             End
+            Animate
         ]
+
+/// Drawing effects of an action clip (#235, `AnimationClip.Effect`).
+[<RequireQualifiedAccess>]
+module ClipEffects =
+    [<Literal>]
+    let Flash = "flash"
+
+    [<Literal>]
+    let Shake = "shake"
+
+    [<Literal>]
+    let Squash = "squash"
+
+    let All: string list = [ Flash; Shake; Squash ]
 
 /// The emotes a cutscene can show over a character (`CutsceneStep.Emote`).
 [<RequireQualifiedAccess>]
