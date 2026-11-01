@@ -10,8 +10,9 @@
 
 use crate::packs;
 use crate::schema::{
-    AnimalState, BuildingState, CustomAsset, CustomCropDefinition, GameContent, GamePanel, GameProject, GraphicsSettings,
-    InventorySlot, KeptState, NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene, VisualRef,
+    AnimalState, BuildingState, CustomAsset, CustomCropDefinition, GameContent, GamePanel, GameProject,
+    GraphicsSettings, InventorySlot, KeptState, NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene,
+    VisualRef,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -209,7 +210,9 @@ impl Presentation {
                 return None;
             }
             let cleaned: String = tag.split('.').next().unwrap_or(tag).replace('_', "-");
-            if let Some((locale, _)) = self.content_strings.iter().find(|(locale, _)| locale.eq_ignore_ascii_case(&cleaned)) {
+            if let Some((locale, _)) =
+                self.content_strings.iter().find(|(locale, _)| locale.eq_ignore_ascii_case(&cleaned))
+            {
                 return Some(locale.clone());
             }
             let language = cleaned.split('-').next().unwrap_or("");
@@ -236,7 +239,9 @@ fn content_strings(project: &GameProject) -> IndexMap<String, IndexMap<String, S
         let mut strings = IndexMap::new();
         if let Some(serde_json::Value::Object(entries)) = table.get("strings") {
             for (key, entry) in entries {
-                if let Some(text) = entry.get("text").and_then(serde_json::Value::as_str).filter(|text| !text.is_empty()) {
+                if let Some(text) =
+                    entry.get("text").and_then(serde_json::Value::as_str).filter(|text| !text.is_empty())
+                {
                     strings.insert(key.clone(), text.to_owned());
                 }
             }

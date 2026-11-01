@@ -40,7 +40,12 @@ fn content() -> GameContent {
             }],
             ..Cutscene::default()
         }],
-        mail: vec![MailDefinition { id: "hi".into(), subject: "Hi".into(), text: "Dear you".into(), ..MailDefinition::default() }],
+        mail: vec![MailDefinition {
+            id: "hi".into(),
+            subject: "Hi".into(),
+            text: "Dear you".into(),
+            ..MailDefinition::default()
+        }],
         ..GameContent::default()
     }
 }
@@ -93,7 +98,11 @@ fn the_player_language_picks_a_table_by_locale_or_language() {
     assert_eq!(presentation.content_locale("es", None), Some("es".to_owned()));
     assert_eq!(presentation.content_locale("", Some("es_MX.UTF-8")), Some("es".to_owned()));
     assert_eq!(presentation.content_locale("", Some("pt-br")), Some("pt-BR".to_owned()));
-    assert_eq!(presentation.content_locale("en", Some("es")), None, "a chosen language without a table shows the source");
+    assert_eq!(
+        presentation.content_locale("en", Some("es")),
+        None,
+        "a chosen language without a table shows the source"
+    );
     assert_eq!(presentation.content_locale("", None), None);
     assert_eq!(presentation.localized(&content(), Some("es")).items[0].name, "Azada");
     assert_eq!(presentation.localized(&content(), None), content());

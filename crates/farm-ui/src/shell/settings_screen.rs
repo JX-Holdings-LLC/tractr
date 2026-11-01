@@ -364,8 +364,7 @@ pub fn settings(
             let label = lang.tr("settings.language");
             if let Some(next) = ui.stepper(id("language"), Rect::new(area.x, y, area.width, row), label, &names, index)
             {
-                settings.language =
-                    next.checked_sub(1).map_or_else(String::new, |index| options[index].0.clone());
+                settings.language = next.checked_sub(1).map_or_else(String::new, |index| options[index].0.clone());
                 changed = true;
             }
             y += row + 4.0;
