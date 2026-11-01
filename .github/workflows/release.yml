@@ -592,27 +592,26 @@ jobs:
         pattern: editor-*
         path: Releases
         merge-multiple: true
-    - name: Checksums and build info
+    # DOWNLOADS.md (which file to download, with build info) and SHA256SUMS cover exactly the
+    # files .release/config.json publishes; the publisher appends DOWNLOADS.md to the release notes.
+    - name: Download guide and checksums
       shell: pwsh
       env:
         VERSION: ${{ needs.version.outputs.version }}
+        REPOSITORY: ${{ github.repository }}
       run: |
-        $files = @(Get-ChildItem Releases -File | Where-Object { $_.Extension -ne '.nupkg' -or $_.Name -like "*-$env:VERSION-*" })
-        $files += @(Get-ChildItem player-templates -File)
-        $lines = $files | Sort-Object Name | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant())  $($_.Name)" }
-        # LF line ends, as sha256sum --check expects.
-        [IO.File]::WriteAllText("$PWD/SHA256SUMS", ($lines -join "`n") + "`n")
-        Get-Content SHA256SUMS
         $info = @(
           "version:    $env:VERSION",
-          "commit:     ${{ github.sha }}",
+          "commit:     $env:RELEASE_SOURCE_SHA",
           "dotnet sdk: $(dotnet --version)",
           "rustc:      $(rustc --version)",
           "vpk:        $env:VPK_VERSION",
           "runner:     $env:ImageOS $env:ImageVersion"
         )
-        Set-Content -Path build-info.txt -Value $info -Encoding utf8
-        Get-Content build-info.txt
+        python tools/release/release-files.py $env:VERSION $env:RELEASE_TAG $env:REPOSITORY Releases @info
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Get-Content Releases/DOWNLOADS.md
+        Get-Content SHA256SUMS
     - name: Upload test results
       if: failure()
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -627,10 +626,8 @@ jobs:
         name: release-bundle-${{ needs.version.outputs.version }}
         path: |
           Releases
-          player-templates
           release-notes.md
           SHA256SUMS
-          build-info.txt
         retention-days: 30
     if: needs.plan.outputs.selected == 'true' && fromJSON(needs.plan.outputs.apps)['tractr'].selected
     permissions:

@@ -266,6 +266,7 @@ jobs:
           python3 tools/ci/text-style.py
           python3 tools/release/test-templates.py
           python3 tools/release/test-macos-smoke.py
+          python3 tools/release/test-release-files.py
 
       # Coverage needs the real source paths in the PDBs: coverlet leaves out assemblies whose
       # sources it cannot find, so no deterministic /_/ paths here (Directory.Build.props).

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.2
+
+- Publish fewer release files, and say which one to download. Releases no
+  longer carry Velopack's legacy `RELEASES` feeds (read only by apps migrating
+  from Squirrel, which Tractr never used), the three player template archives
+  (every editor package already ships them in `players/`) or
+  `build-info.txt`. The release notes end with a "Download" table: one file
+  per computer, with links and sizes, what the other files are for, and the
+  build info. The README and install guide link straight to each installer of
+  the latest release.
+- Fix a game whose player starts with a maximum energy of 0: sleeping
+  refilled energy to 1, above that maximum. A new game now starts the
+  maximum at 1 or more, as settings and level-ups already require.
+
 ## 0.11.1
 
 - Reorganize the documentation by reader. Creators get an install guide, a
