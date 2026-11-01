@@ -1,0 +1,14 @@
+{
+  "id": "tool-watering-can-2",
+  "name": "Copper Watering Can",
+  "description": "Waters a wider area with less effort",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 250,
+  "toolType": "watering-can",
+  "toolPower": 2,
+  "toolTier": 2,
+  "durability": 200,
+  "maxDurability": 200
+}

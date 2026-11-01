@@ -1,0 +1,19 @@
+{
+  "id": "dialogue-hazel-hello",
+  "npcId": "npc-hazel",
+  "text": "Morning! The lanterns need lighting tonight.",
+  "options": [
+    {
+      "text": "I'll help.",
+      "eventFlag": "offered-help"
+    },
+    {
+      "text": "What do you sell?",
+      "openShopId": "shop-general"
+    },
+    {
+      "text": "Maybe later."
+    }
+  ],
+  "expression": "happy"
+}

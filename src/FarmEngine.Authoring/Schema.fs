@@ -2180,7 +2180,7 @@ and InventorySlot =
         }
 
 /// A kind of item (M1) and what items of it do. The built-in kinds are seed, tool, crop, gift,
-/// quest, fertilizer, material and fish.
+/// quest, fertilizer, material, fish and food (edible, for the item's own energy).
 and ItemCategoryDefinition =
     {
         Id: string
@@ -3596,8 +3596,9 @@ and Scene =
         Monsters: (MonsterSpawn list) option
         /// Its extra layers beyond background, overlay and object, in drawing order (M8).
         Layers: (SceneLayer list) option
-        /// Undeclared keys, in order.
+        /// Forage that spawns in it each morning.
         ForageSpawns: (ForageSpawnTable list) option
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 

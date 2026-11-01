@@ -1,0 +1,10 @@
+{
+  "id": "crop-potato",
+  "name": "Potato",
+  "description": "Fresh potato",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 30,
+  "cropType": "potato"
+}

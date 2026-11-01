@@ -1,0 +1,10 @@
+{
+  "id": "crop-cauliflower",
+  "name": "Cauliflower",
+  "description": "Fresh cauliflower",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 120,
+  "cropType": "cauliflower"
+}

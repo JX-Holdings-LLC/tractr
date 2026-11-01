@@ -1,0 +1,9 @@
+{
+  "id": "product-egg",
+  "name": "Egg",
+  "description": "A fresh egg",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 22
+}

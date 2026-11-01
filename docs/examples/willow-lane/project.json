@@ -1,0 +1,901 @@
+{
+  "schemaVersion": 3,
+  "id": "example-willow-lane",
+  "name": "Willow Lane",
+  "version": "2.0",
+  "scenes": [
+    "scenes/scene-lane.json",
+    "scenes/scene-cottage.json"
+  ],
+  "npcs": [
+    "npcs/npc-hazel.json"
+  ],
+  "items": [
+    "items/seed-wheat.json",
+    "items/crop-wheat.json",
+    "items/seed-corn.json",
+    "items/crop-corn.json",
+    "items/seed-tomato.json",
+    "items/crop-tomato.json",
+    "items/seed-carrot.json",
+    "items/crop-carrot.json",
+    "items/seed-potato.json",
+    "items/crop-potato.json",
+    "items/seed-strawberry.json",
+    "items/crop-strawberry.json",
+    "items/seed-pumpkin.json",
+    "items/crop-pumpkin.json",
+    "items/seed-cauliflower.json",
+    "items/crop-cauliflower.json",
+    "items/seed-blueberry.json",
+    "items/crop-blueberry.json",
+    "items/tool-hoe.json",
+    "items/tool-watering-can.json",
+    "items/tool-axe.json",
+    "items/tool-pickaxe.json",
+    "items/tool-scythe.json",
+    "items/tool-hoe-2.json",
+    "items/tool-watering-can-2.json",
+    "items/tool-axe-2.json",
+    "items/tool-pickaxe-2.json",
+    "items/material-wood.json",
+    "items/material-stone.json",
+    "items/material-fiber.json",
+    "items/fertilizer-basic.json",
+    "items/fertilizer-quality.json",
+    "items/gift-flower.json",
+    "items/tool-fishing-rod.json",
+    "items/fish-carp.json",
+    "items/fish-perch.json",
+    "items/fish-catfish.json",
+    "items/junk-boot.json",
+    "items/feed-hay.json",
+    "items/product-egg.json",
+    "items/product-milk.json",
+    "items/ore-copper.json",
+    "items/ore-iron.json",
+    "items/gem-quartz.json",
+    "items/bar-copper.json",
+    "items/bar-iron.json",
+    "items/machine-furnace.json",
+    "items/machine-preserves.json",
+    "items/food-preserves.json"
+  ],
+  "events": [
+    {
+      "id": "event-welcome",
+      "name": "Welcome to the lane",
+      "sceneId": "scene-lane",
+      "trigger": "enter",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Willow Lane smells of wet leaves."
+        },
+        {
+          "type": "setFlag",
+          "flagName": "visited-lane"
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-mailbox",
+      "name": "Check the mailbox",
+      "sceneId": "scene-lane",
+      "trigger": "interact",
+      "conditions": [
+        {
+          "type": "interactTile",
+          "x": 9,
+          "y": 7
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "The mailbox is empty today."
+        }
+      ],
+      "active": true,
+      "repeatable": true
+    },
+    {
+      "id": "event-first-tick",
+      "name": "Settle in",
+      "sceneId": "",
+      "trigger": "tick",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Take your time; the day is long."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-morning",
+      "name": "A new morning",
+      "sceneId": "",
+      "trigger": "dayStart",
+      "conditions": [
+        {
+          "type": "dayRange",
+          "minDay": 2
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "sendMail",
+          "mailId": "mail-hazel-note"
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-dusk",
+      "name": "Dusk",
+      "sceneId": "",
+      "trigger": "time",
+      "conditions": [
+        {
+          "type": "flag",
+          "flag": "offered-help",
+          "value": true
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "startCutscene",
+          "cutsceneId": "cutscene-lanterns"
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "minute": 1140
+    },
+    {
+      "id": "event-first-harvest",
+      "name": "First harvest",
+      "sceneId": "",
+      "trigger": "harvest",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Your first harvest!"
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "crop-carrot"
+    },
+    {
+      "id": "event-first-sale",
+      "name": "First sale",
+      "sceneId": "",
+      "trigger": "sell",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Coins in your pocket."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-craft",
+      "name": "First craft",
+      "sceneId": "",
+      "trigger": "craft",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Made by hand."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-catch",
+      "name": "First catch",
+      "sceneId": "",
+      "trigger": "catch",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "A fish!"
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-find",
+      "name": "First find",
+      "sceneId": "",
+      "trigger": "pickUp",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Something shiny."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-friends",
+      "name": "Friends with Hazel",
+      "sceneId": "",
+      "trigger": "friendship",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Hazel waves at you."
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "npc-hazel"
+    },
+    {
+      "id": "event-lanterns-done",
+      "name": "Lanterns done",
+      "sceneId": "",
+      "trigger": "quest",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "The lane glows."
+        }
+      ],
+      "active": true,
+      "repeatable": false,
+      "subject": "quest-lanterns"
+    },
+    {
+      "id": "event-first-build",
+      "name": "First building",
+      "sceneId": "",
+      "trigger": "build",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "A building of your own."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-bundle",
+      "name": "First bundle",
+      "sceneId": "",
+      "trigger": "bundle",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "The bundle is complete."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-achievement",
+      "name": "First achievement",
+      "sceneId": "",
+      "trigger": "achievement",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Well done!"
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    },
+    {
+      "id": "event-first-slay",
+      "name": "First monster",
+      "sceneId": "",
+      "trigger": "slay",
+      "conditions": [],
+      "outcomes": [
+        {
+          "type": "message",
+          "message": "Phew."
+        }
+      ],
+      "active": true,
+      "repeatable": false
+    }
+  ],
+  "dialogues": [
+    "dialogue/dialogue-hazel-hello.json"
+  ],
+  "quests": [
+    {
+      "id": "quest-lanterns",
+      "name": "Lantern Night",
+      "description": "Talk to Hazel about the lanterns.",
+      "giver": "npc-hazel",
+      "status": "not-started",
+      "objectives": [
+        {
+          "id": "obj-talk",
+          "type": "talk",
+          "description": "Talk to Hazel",
+          "targetNPCId": "npc-hazel",
+          "completed": false,
+          "progress": 0
+        }
+      ],
+      "rewards": {
+        "money": 50
+      },
+      "prerequisites": [],
+      "autoStart": true
+    }
+  ],
+  "player": {
+    "x": 5,
+    "y": 5,
+    "direction": "down",
+    "sceneId": "scene-lane",
+    "inventory": [],
+    "maxInventorySize": 20,
+    "money": 100,
+    "activeQuests": [],
+    "completedQuests": []
+  },
+  "eventFlags": {},
+  "startSceneId": "scene-lane",
+  "mode": "tiles",
+  "selectedTileType": "grass",
+  "selectedNPCId": null,
+  "selectedItemId": null,
+  "customAssets": [
+    {
+      "id": "asset-hazel-happy",
+      "name": "Hazel (happy)",
+      "type": "art",
+      "width": 32,
+      "height": 32,
+      "animations": [],
+      "dataFile": "assets/asset-hazel-happy.png",
+      "dataType": "image/png"
+    },
+    {
+      "id": "asset-chime",
+      "name": "Chime",
+      "type": "sound",
+      "width": 1,
+      "height": 1,
+      "animations": [],
+      "dataFile": "assets/asset-chime.ogg",
+      "dataType": "audio/ogg"
+    }
+  ],
+  "currentSeason": "spring",
+  "currentDay": 1,
+  "currentTimeMinutes": 360,
+  "currentYear": 1,
+  "gameStartTime": 1793490302146,
+  "shops": [
+    {
+      "id": "shop-general",
+      "name": "General Store",
+      "stock": [
+        {
+          "itemId": "seed-wheat",
+          "seasons": [
+            "spring",
+            "fall"
+          ]
+        },
+        {
+          "itemId": "seed-corn",
+          "seasons": [
+            "summer",
+            "fall"
+          ]
+        },
+        {
+          "itemId": "seed-tomato",
+          "seasons": [
+            "summer"
+          ]
+        },
+        {
+          "itemId": "seed-carrot",
+          "seasons": [
+            "spring",
+            "fall",
+            "winter"
+          ]
+        },
+        {
+          "itemId": "seed-potato",
+          "seasons": [
+            "spring",
+            "fall"
+          ]
+        },
+        {
+          "itemId": "seed-strawberry",
+          "seasons": [
+            "spring"
+          ]
+        },
+        {
+          "itemId": "seed-pumpkin",
+          "seasons": [
+            "fall"
+          ]
+        },
+        {
+          "itemId": "seed-cauliflower",
+          "seasons": [
+            "spring"
+          ]
+        },
+        {
+          "itemId": "seed-blueberry",
+          "seasons": [
+            "summer"
+          ]
+        },
+        {
+          "itemId": "fertilizer-basic"
+        },
+        {
+          "itemId": "fertilizer-quality",
+          "dailyLimit": 5
+        },
+        {
+          "itemId": "tool-hoe"
+        },
+        {
+          "itemId": "tool-watering-can"
+        },
+        {
+          "itemId": "tool-axe"
+        },
+        {
+          "itemId": "tool-pickaxe"
+        },
+        {
+          "itemId": "tool-scythe"
+        },
+        {
+          "itemId": "tool-hoe-2"
+        },
+        {
+          "itemId": "tool-watering-can-2"
+        },
+        {
+          "itemId": "tool-axe-2"
+        },
+        {
+          "itemId": "tool-pickaxe-2"
+        },
+        {
+          "itemId": "tool-fishing-rod"
+        },
+        {
+          "itemId": "feed-hay"
+        },
+        {
+          "itemId": "machine-furnace"
+        },
+        {
+          "itemId": "machine-preserves"
+        }
+      ],
+      "sellPriceMultiplier": 1,
+      "buysItems": true,
+      "repairsTools": true,
+      "repairCostPerPoint": 0.5
+    }
+  ],
+  "nodeTypes": [],
+  "settings": {
+    "movement": {
+      "playerSpeed": 4.5
+    },
+    "energyEnabled": true,
+    "maxEnergy": 100,
+    "collapseEnergyFraction": 0.5,
+    "collapseMoneyPenalty": 50,
+    "time": {
+      "dayStartMinute": 360,
+      "dayEndMinute": 1560,
+      "minutesPerRealSecond": 1
+    },
+    "calendar": {
+      "seasons": [
+        {
+          "id": "spring",
+          "name": "Spring",
+          "days": 28
+        },
+        {
+          "id": "summer",
+          "name": "Summer",
+          "days": 28
+        },
+        {
+          "id": "fall",
+          "name": "Fall",
+          "days": 28
+        },
+        {
+          "id": "winter",
+          "name": "Winter",
+          "days": 28
+        }
+      ],
+      "festivals": [],
+      "weekdays": [
+        {
+          "id": "monday",
+          "name": "Monday"
+        },
+        {
+          "id": "tuesday",
+          "name": "Tuesday"
+        },
+        {
+          "id": "wednesday",
+          "name": "Wednesday"
+        },
+        {
+          "id": "thursday",
+          "name": "Thursday"
+        },
+        {
+          "id": "friday",
+          "name": "Friday"
+        },
+        {
+          "id": "saturday",
+          "name": "Saturday"
+        },
+        {
+          "id": "sunday",
+          "name": "Sunday"
+        }
+      ]
+    },
+    "skillsEnabled": true,
+    "skillLevelCurve": [
+      0,
+      50,
+      150,
+      300,
+      500,
+      750,
+      1050,
+      1400,
+      1800,
+      2250
+    ],
+    "locale": "en",
+    "showMadeWithCredit": false
+  },
+  "recipes": [],
+  "machineTypes": [],
+  "weather": {
+    "types": [
+      {
+        "id": "sun",
+        "name": "Sunny",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": null
+      },
+      {
+        "id": "rain",
+        "name": "Rain",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "rain"
+      },
+      {
+        "id": "storm",
+        "name": "Storm",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0.03,
+        "npcsStayInside": true,
+        "overlay": "rain"
+      },
+      {
+        "id": "snow",
+        "name": "Snow",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "snow"
+      }
+    ],
+    "table": {
+      "spring": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "summer": [
+        {
+          "weatherId": "sun",
+          "weight": 7
+        },
+        {
+          "weatherId": "rain",
+          "weight": 1
+        },
+        {
+          "weatherId": "storm",
+          "weight": 2
+        }
+      ],
+      "fall": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "winter": [
+        {
+          "weatherId": "sun",
+          "weight": 5
+        },
+        {
+          "weatherId": "snow",
+          "weight": 5
+        }
+      ]
+    }
+  },
+  "animalSpecies": [],
+  "animals": [],
+  "fishTables": [],
+  "mine": {
+    "enabled": false,
+    "floors": 20,
+    "floorWidth": 14,
+    "floorHeight": 12,
+    "bands": [],
+    "ladderChance": 0.18,
+    "elevatorEvery": 5
+  },
+  "actions": [],
+  "minigames": [],
+  "contentPacks": [],
+  "cutscenes": [
+    {
+      "id": "cutscene-lanterns",
+      "name": "Lighting the lanterns",
+      "steps": [
+        {
+          "type": "fade",
+          "seconds": 0.5,
+          "options": [],
+          "conditions": [],
+          "mode": "out",
+          "outcomes": []
+        },
+        {
+          "type": "music",
+          "options": [],
+          "conditions": [],
+          "soundId": "",
+          "outcomes": []
+        },
+        {
+          "type": "fade",
+          "seconds": 0.5,
+          "options": [],
+          "conditions": [],
+          "mode": "in",
+          "outcomes": []
+        },
+        {
+          "type": "camera",
+          "actor": "npc-hazel",
+          "seconds": 1,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "move",
+          "actor": "npc-hazel",
+          "x": 6,
+          "y": 5,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "face",
+          "actor": "npc-hazel",
+          "direction": "left",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "emote",
+          "actor": "npc-hazel",
+          "emote": "heart",
+          "seconds": 1,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "Ready to light them?",
+          "speaker": "npc-hazel",
+          "expression": "happy",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "choice",
+          "text": "Light the lanterns?",
+          "options": [
+            {
+              "text": "Yes",
+              "goto": "light"
+            },
+            {
+              "text": "Not yet",
+              "goto": "later"
+            }
+          ],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "label": "later",
+          "text": "Come back when you're ready.",
+          "speaker": "npc-hazel",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "end",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "sound",
+          "label": "light",
+          "options": [],
+          "conditions": [],
+          "soundId": "asset-chime",
+          "outcomes": []
+        },
+        {
+          "type": "wait",
+          "seconds": 0.5,
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "outcomes",
+          "options": [],
+          "conditions": [],
+          "outcomes": [
+            {
+              "type": "setFlag",
+              "flagName": "lanterns-lit"
+            }
+          ]
+        },
+        {
+          "type": "jump",
+          "options": [],
+          "goto": "done",
+          "conditions": [
+            {
+              "type": "flag",
+              "flag": "lanterns-lit",
+              "value": true
+            }
+          ],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "text": "(The lanterns flicker out.)",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        },
+        {
+          "type": "say",
+          "label": "done",
+          "text": "Beautiful.",
+          "speaker": "npc-hazel",
+          "options": [],
+          "conditions": [],
+          "outcomes": []
+        }
+      ],
+      "skippable": true
+    }
+  ],
+  "heartEvents": [
+    {
+      "id": "heart-hazel-2",
+      "name": "Hazel's garden",
+      "npcId": "npc-hazel",
+      "hearts": 2,
+      "cutsceneId": "cutscene-lanterns",
+      "sceneId": "scene-cottage",
+      "conditions": []
+    }
+  ],
+  "mail": [
+    {
+      "id": "mail-hazel-note",
+      "subject": "Lanterns",
+      "from": "npc-hazel",
+      "text": "Will you help me light the lanterns this evening? - Hazel",
+      "attachments": [
+        {
+          "itemId": "gift-flower",
+          "quantity": 1
+        }
+      ],
+      "money": 0,
+      "outcomes": [],
+      "conditions": [],
+      "repeat": false
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "tool-scythe",
+  "name": "Scythe",
+  "description": "Harvest crops quickly in an area",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 200,
+  "toolType": "scythe",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

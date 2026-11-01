@@ -1,0 +1,10 @@
+{
+  "id": "seed-corn",
+  "name": "Corn Seeds",
+  "description": "Plant these to grow corn",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 15,
+  "cropType": "corn"
+}

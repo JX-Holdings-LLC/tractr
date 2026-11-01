@@ -259,7 +259,10 @@ vocabulary; change any of it in the Content tab.
   tool.
 - **Item kinds** (the item's type) say what items of the kind do: planted
   (seeds), fertilize, equipped as a tool, **eaten** for energy (the item's own
-  energy, or the kind's), placed, given as gifts, sold to shops.
+  energy, or the kind's), placed, given as gifts, sold to shops. The built-in
+  `food` kind is for cooked dishes: eaten for the item's own energy (give
+  each dish its energy), and it can be given and sold. The templates' cooked
+  dishes (Veggie Soup, Fruit Tart) are food.
 - **Crop qualities** are the tiers a harvest comes out at, ranked in list
   order: each has its price, yield and mutation-chance multipliers, its stars
   and colour. Fertilized soil plants at the second tier, and every three
@@ -295,6 +298,12 @@ opens a menu, and requirements that name what doesn't exist.
 An NPC has a place to stand, a daily **Schedule** (a row per stop: the time
 of day, the scene and the tile), patrol waypoints, gift tastes, a birthday
 and dialogue. In the game the dialogue box shows the NPC's art.
+
+An NPC without art of its own is drawn with a built-in look its appearance
+names: `farmer`, `merchant` or `villager`. Another name is guessed from its
+words (one with "farm" or "elder" in it looks like the farmer, "shop",
+"vendor" or "merchant" like the merchant, anything else like the villager),
+and Problems adds a tip that names the look the NPC falls back to.
 
 #### Daily lines
 
@@ -370,6 +379,22 @@ completed, an achievement unlocked and a monster slain (`slay`). All but the
 first five can name a subject (the crop or item, the NPC, the quest, the
 building kind, the bundle, the achievement or the monster); without one the
 event fires for any.
+
+An event that is not repeatable fires once in a game: the engine remembers
+that it ran (the `event:<id>:fired` flag). A repeatable event fires every
+time its trigger happens and its conditions hold.
+
+#### The first time the player enters a scene
+
+To greet the player the first time they walk into a scene, give an event the
+scene, the `enter` trigger, no tile condition, and leave it not repeatable: it
+fires on the first step in the scene and never again. If it has to stay
+repeatable (say, so a later outcome can arm it again), give it a `flag`
+condition that needs a flag of your own to be false, and an outcome that sets
+that flag: the first run sets it, and the condition stops every run after.
+Problems only warns that an `enter` event "fires on every step" when it is
+repeatable and nothing stops it like this. An `enter` event with a tile or
+region condition fires when the player steps there instead.
 
 **Conditions** check tiles, items, flags, the day, the season, the year, the
 time, quests, friendship and the weather, and also:
@@ -897,7 +922,8 @@ event messages, a minigame's own prompt) shows as you wrote it.
 The Problems tab checks the whole project: missing references, unreachable
 content and settings that would break the game. **Errors block export**;
 warnings and tips help you improve the game. **Go to** jumps to the entry or
-scene that needs a fix.
+scene that needs a fix. `farmc check` lists the same problems from the
+command line ([Export from the command line](EXPORT.md#export-from-the-command-line)).
 
 ### If something goes wrong
 
@@ -975,6 +1001,9 @@ Shortcuts** lists the editor's shortcuts too.
   to ship it on Steam or itch.io.
 - [The game player](PLAYER.md): the player's screens, settings, saves and
   command-line options.
+- [Project files](PROJECT-FILES.md): the two file layouts of a project, its
+  JSON Schema and a worked example, for editing projects by hand or with
+  other tools.
 - [Content packs](PACKS.md) and [Pack plugins](PLUGINS.md): extend a game
   with packs and small JavaScript programs.
 - [Troubleshooting](TROUBLESHOOTING.md): when something doesn't work.

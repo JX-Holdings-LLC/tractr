@@ -1,0 +1,14 @@
+{
+  "id": "tool-hoe-2",
+  "name": "Copper Hoe",
+  "description": "A sturdier hoe — tills with less effort",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 250,
+  "toolType": "hoe",
+  "toolPower": 2,
+  "toolTier": 2,
+  "durability": 200,
+  "maxDurability": 200
+}

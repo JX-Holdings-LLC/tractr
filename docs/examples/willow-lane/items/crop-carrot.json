@@ -1,0 +1,10 @@
+{
+  "id": "crop-carrot",
+  "name": "Carrot",
+  "description": "Fresh carrot",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 20,
+  "cropType": "carrot"
+}

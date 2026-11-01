@@ -1,0 +1,9 @@
+{
+  "id": "material-stone",
+  "name": "Stone",
+  "description": "Rough stone chipped from rocks",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 4
+}

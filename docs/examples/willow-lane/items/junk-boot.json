@@ -1,0 +1,9 @@
+{
+  "id": "junk-boot",
+  "name": "Old Boot",
+  "description": "Someone lost this a long time ago",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 1
+}

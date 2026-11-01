@@ -1,0 +1,9 @@
+{
+  "id": "fish-perch",
+  "name": "Perch",
+  "description": "A quick freshwater fish",
+  "type": "fish",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 30
+}

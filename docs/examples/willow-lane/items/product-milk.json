@@ -1,0 +1,9 @@
+{
+  "id": "product-milk",
+  "name": "Milk",
+  "description": "A pail of fresh milk",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 48
+}

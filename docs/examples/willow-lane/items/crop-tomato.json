@@ -1,0 +1,10 @@
+{
+  "id": "crop-tomato",
+  "name": "Tomato",
+  "description": "Fresh tomato",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 50,
+  "cropType": "tomato"
+}
