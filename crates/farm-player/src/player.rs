@@ -924,8 +924,8 @@ impl Player {
                 if let Some(scene) = title_scene.and_then(|id| state.world.scenes.iter().find(|scene| scene.id == id)) {
                     let (id, w, h) = (scene.id.clone(), scene.width, scene.height);
                     state.player.scene_id = id;
-                    state.player.x = (i32::try_from(w).unwrap_or(0) / 2).saturating_mul(units::TILE);
-                    state.player.y = (i32::try_from(h).unwrap_or(0) / 2).saturating_mul(units::TILE);
+                    state.player.x = units::tile_center(w / 2);
+                    state.player.y = units::tile_center(h / 2);
                 }
                 let graphics = GraphicsSource::from_state(&self.def.presentation, &self.def.content, &state);
                 (state, graphics)

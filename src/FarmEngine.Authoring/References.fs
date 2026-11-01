@@ -648,6 +648,11 @@ module References =
             plain "GamePanel" "VisibleFlag" flag
             oneOf "GamePanelEntry" "Kind" (same GamePanelEntryKinds.All)
             plain "GamePanelEntry" "Value" "text, an item id, an action id or a flag, depending on the entry kind"
+            plain "UiSkin" "Colors" "colours by palette role (`UiPaletteRoles`); checked by `skin.unknownColor`"
+            plain "UiSkin" "Panels" "panel art by interface part (`UiSkinParts`); checked by `skin.unknownPart` and `skin.missingArt`"
+            plain "UiSkin" "Icons" "icons by name (`UiSkinIcons`); checked by `skin.unknownIcon` and `skin.missingArt`"
+            plain "ImportSource" "TargetId" "the asset or scene an import made; the importers skip a record whose target is gone"
+            plain "ImportSource" "Names" "Aseprite tag and slice names and the clips they became"
 
             // Content packs
             reference "PackDependency" "PackId" ReferenceKind.Pack
