@@ -118,6 +118,14 @@ type RecordWith =
     [<Extension>]
     static member WithFrames(record: AnimationClip, value: seq<ArtFrame>) : AnimationClip = { record with Frames = List.ofSeq value }
     [<Extension>]
+    static member WithLockMovement(record: AnimationClip, value: Nullable<bool>) : AnimationClip = { record with LockMovement = Option.ofNullable value }
+    [<Extension>]
+    static member WithImpactFrame(record: AnimationClip, value: Nullable<float>) : AnimationClip = { record with ImpactFrame = Option.ofNullable value }
+    [<Extension>]
+    static member WithEffect(record: AnimationClip, value: string | null) : AnimationClip = { record with Effect = Option.ofObj value }
+    [<Extension>]
+    static member WithHoldItem(record: AnimationClip, value: Nullable<bool>) : AnimationClip = { record with HoldItem = Option.ofNullable value }
+    [<Extension>]
     static member WithConditions(record: AnyCondition, value: seq<EventCondition>) : AnyCondition = { record with Conditions = List.ofSeq value }
     [<Extension>]
     static member WithEffect(record: AreaEffect, value: string) : AreaEffect = { record with Effect = value }
@@ -282,6 +290,10 @@ type RecordWith =
     [<Extension>]
     static member WithChance(record: ChanceCondition, value: float) : ChanceCondition = { record with Chance = value }
     [<Extension>]
+    static member WithAssetId(record: CharacterLayer, value: string) : CharacterLayer = { record with AssetId = value }
+    [<Extension>]
+    static member WithColor(record: CharacterLayer, value: string | null) : CharacterLayer = { record with Color = Option.ofObj value }
+    [<Extension>]
     static member WithCollectionId(record: CollectionCondition, value: string) : CollectionCondition = { record with CollectionId = value }
     [<Extension>]
     static member WithMin(record: CollectionCondition, value: Nullable<float>) : CollectionCondition = { record with Min = Option.ofNullable value }
@@ -432,6 +444,8 @@ type RecordWith =
     [<Extension>]
     static member WithSheet(record: CustomAsset, value: SpriteSheet | null) : CustomAsset = { record with Sheet = Option.ofObj value }
     [<Extension>]
+    static member WithPixelsPerTile(record: CustomAsset, value: Nullable<float>) : CustomAsset = { record with PixelsPerTile = Option.ofNullable value }
+    [<Extension>]
     static member WithId(record: CustomCropDefinition, value: string) : CustomCropDefinition = { record with Id = value }
     [<Extension>]
     static member WithName(record: CustomCropDefinition, value: string) : CustomCropDefinition = { record with Name = value }
@@ -515,6 +529,8 @@ type RecordWith =
     static member WithOutcomes(record: CutsceneStep, value: seq<EventOutcome>) : CutsceneStep = { record with Outcomes = List.ofSeq value }
     [<Extension>]
     static member WithWait(record: CutsceneStep, value: Nullable<bool>) : CutsceneStep = { record with Wait = Option.ofNullable value }
+    [<Extension>]
+    static member WithAnimation(record: CutsceneStep, value: string | null) : CutsceneStep = { record with Animation = Option.ofObj value }
     [<Extension>]
     static member WithMinDay(record: DayOfSeasonCondition, value: Nullable<float>) : DayOfSeasonCondition = { record with MinDay = Option.ofNullable value }
     [<Extension>]
@@ -985,6 +1001,8 @@ type RecordWith =
     static member WithCustomCrops(record: GameProject, value: seq<CustomCropDefinition> | null) : GameProject = { record with CustomCrops = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithPlayerVisual(record: GameProject, value: VisualRef | null) : GameProject = { record with PlayerVisual = Option.ofObj value }
+    [<Extension>]
+    static member WithPlayerLayers(record: GameProject, value: seq<CharacterLayer> | null) : GameProject = { record with PlayerLayers = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithGraphics(record: GameProject, value: GraphicsSettings | null) : GameProject = { record with Graphics = Option.ofObj value }
     [<Extension>]
@@ -1479,6 +1497,10 @@ type RecordWith =
     static member WithPortraits(record: Npc, value: seq<NpcPortrait> | null) : Npc = { record with Portraits = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithRomanceable(record: Npc, value: Nullable<bool>) : Npc = { record with Romanceable = Option.ofNullable value }
+    [<Extension>]
+    static member WithLook(record: Npc, value: PlayerLook | null) : Npc = { record with Look = Option.ofObj value }
+    [<Extension>]
+    static member WithLayers(record: Npc, value: seq<CharacterLayer> | null) : Npc = { record with Layers = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithSeason(record: NpcBirthday, value: string) : NpcBirthday = { record with Season = value }
     [<Extension>]
@@ -2313,6 +2335,8 @@ type RecordWith =
     static member WithColor(record: WearDefinition, value: string | null) : WearDefinition = { record with Color = Option.ofObj value }
     [<Extension>]
     static member WithVisual(record: WearDefinition, value: VisualRef | null) : WearDefinition = { record with Visual = Option.ofObj value }
+    [<Extension>]
+    static member WithLayer(record: WearDefinition, value: string | null) : WearDefinition = { record with Layer = Option.ofObj value }
     [<Extension>]
     static member WithWeatherIds(record: WeatherCondition, value: seq<string>) : WeatherCondition = { record with WeatherIds = List.ofSeq value }
     [<Extension>]

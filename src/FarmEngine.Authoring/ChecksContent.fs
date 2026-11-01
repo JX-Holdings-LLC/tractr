@@ -228,6 +228,12 @@ module internal ChecksContent =
                 npc.Visual.IsNone
                 && npc.Appearance.Length > 0
                 && (BuiltinLooks.exactNpcSheet npc.Appearance).IsNone
+                && npc.Look.IsNone
+                && (npc.Layers |> Option.defaultValue []).IsEmpty
+                && not (
+                    CharacterArt.colouredAppearances
+                    |> List.exists (fun name -> npc.Appearance.ToLowerInvariant().Contains name)
+                )
             then
                 sink.Info(
                     "npc.appearanceFallback",
@@ -237,9 +243,7 @@ module internal ChecksContent =
                         npc.Name
                         npc.Appearance
                         (BuiltinLooks.npcSheet npc.Appearance)
-                        (BuiltinLooks.NpcSheets
-                         |> List.map (fun s -> s.Substring 4)
-                         |> String.concat ", "),
+                        (CharacterArt.builtinAppearances |> String.concat ", "),
                     Some(NavigationTarget.Npc npc.Id)
                 ))
 

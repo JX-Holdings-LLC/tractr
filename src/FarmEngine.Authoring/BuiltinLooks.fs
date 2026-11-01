@@ -2,7 +2,8 @@ namespace FarmEngine.Authoring
 
 /// The built-in art an NPC without its own art is drawn with, chosen by its `appearance`: the
 /// F# mirror of `BuiltinArt::npc_entry` in `crates/farm-render/src/builtin_art.rs`, so Problems
-/// can say which sheet an appearance falls back to. **Add a new built-in look here** (to
+/// can say which sheet an appearance falls back to. Looks drawn by recolouring the base character
+/// (fisher, miner, …) are listed in `CharacterArt.colouredAppearances`. **Add a new built-in sheet here** (to
 /// `Entries`, and a rule to `NpcRules` if names should guess it) when it is added to
 /// `assets/builtin-art/manifest.json`: the authoring tests compare `Entries` with the manifest,
 /// and the Rust and F# tests both check the cases in `fixtures/art/npc-appearances.json`.

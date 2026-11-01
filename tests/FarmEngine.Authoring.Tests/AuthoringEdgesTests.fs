@@ -236,7 +236,7 @@ let ``an NPC appearance that names no built-in look gets a tip naming its fallba
     Assert.Contains("npc-villager", tip.Message)
     Assert.Contains("npc-merchant", (Assert.Single(codes "npc.appearanceFallback" (looking "shopkeeper"))).Message)
 
-    for quiet in [ "farmer"; "merchant"; "villager"; "" ] do
+    for quiet in [ "farmer"; "merchant"; "villager"; ""; "fisher"; "Old Sailor" ] do
         Assert.Empty(codes "npc.appearanceFallback" (looking quiet))
     // An NPC with its own art does not use the built-in looks.
     let ownArt =
