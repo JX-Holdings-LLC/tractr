@@ -289,6 +289,11 @@ const ES: &[(&str, &str)] = &[
     ("msg.save.newRng", "Esta partida no ten\u{ed}a estado aleatorio; se empez\u{f3} uno nuevo."),
     ("msg.save.itemSetAside", "{0} objeto de esta partida ya no existe en el juego y se apart\u{f3}: {1}."),
     ("msg.save.itemsSetAside", "{0} objetos de esta partida ya no existen en el juego y se apartaron: {1}."),
+    ("msg.save.itemRenamed", "Tu antiguo {0} ahora es {1}."),
+    ("msg.save.itemReplaced", "Tu antiguo {0} ({1}) se convirti\u{f3} en {2} \u{d7} {3}."),
+    ("msg.save.itemBoughtBack", "Tu antiguo {0} ({1}) ya no est\u{e1} en el juego; recibiste ${2} por \u{e9}l."),
+    ("msg.save.itemRemoved", "Tu antiguo {0} ({1}) ya no est\u{e1} en el juego."),
+    ("msg.save.sceneMoved", "El lugar donde guardaste se ha movido: ahora est\u{e1}s en {0}."),
 ];
 
 #[cfg(test)]

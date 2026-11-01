@@ -147,6 +147,9 @@ pub struct LoadedSave {
     pub quarantined: Vec<String>,
     /// Ids of quarantined items that came back because the content has them again.
     pub restored: Vec<String>,
+    /// What the game update's migration rules changed (#242), in English; also in `warnings`,
+    /// which the player shows once after loading.
+    pub migrations: Vec<String>,
 }
 
 /// Loads a JSON save file for the running game `target` with `content`. Never panics.
@@ -217,6 +220,8 @@ fn load_parts(header: SaveHeader, state_raw: Value, target: &SaveTarget, content
     }
 
     let same_content = header.as_ref().is_some_and(|h| h.cart_hash == target.cart_hash);
+    // A game update's migration rules run first, so renamed ids never reach quarantine (#242).
+    let migrations = if same_content { Vec::new() } else { crate::migrations::apply_migrations(&mut state, content) };
     let (quarantined, restored) =
         if same_content { (Vec::new(), Vec::new()) } else { reconcile_items(&mut state, content) };
     // A save written by another version of this game takes its maps and meets its new NPCs.
@@ -231,6 +236,7 @@ fn load_parts(header: SaveHeader, state_raw: Value, target: &SaveTarget, content
         state.rng = rng::create_rng_state(&format!("{}:{}", state.meta.engine_seed, state.clock.tick));
         warnings.push(messages::SAVE_NEW_RNG.with(&[]));
     }
+    warnings.extend(migrations.iter().cloned());
     if !quarantined.is_empty() {
         let set_aside =
             if quarantined.len() == 1 { &messages::SAVE_ITEM_SET_ASIDE } else { &messages::SAVE_ITEMS_SET_ASIDE };
@@ -247,6 +253,7 @@ fn load_parts(header: SaveHeader, state_raw: Value, target: &SaveTarget, content
         warning_messages: warnings,
         quarantined,
         restored,
+        migrations: migrations.iter().map(Message::english).collect(),
     }
 }
 
