@@ -136,6 +136,14 @@ module Document =
         | SetProjectInfo(name, version) -> EditProject.setProjectInfo name version project
         | SetSettings settings -> EditProject.setSettings settings project
         | SetExportSettings settings -> EditProject.setExportSettings settings project
+        | SetSaveMigrations rules ->
+            { project with
+                SaveMigrations = (if List.isEmpty rules then None else Some rules)
+            }
+        | SetTestStates states ->
+            { project with
+                TestStates = (if List.isEmpty states then None else Some states)
+            }
         | RemoveSeason seasonId -> EditProject.removeSeason seasonId project
         | MoveSeason(seasonId, delta) -> EditProject.moveSeason seasonId delta project
         | SetGraphics graphics -> EditProject.setGraphics graphics project

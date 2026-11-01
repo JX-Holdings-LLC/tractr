@@ -39,6 +39,7 @@
     <Compile Include="QuestsMinesTests.fs" />
     <Compile Include="ProgressionTests.fs" />
     <Compile Include="CalendarDepthTests.fs" />
+    <Compile Include="UpkeepTests.fs" />
     <Compile Include="ParityTests.fs" />
   </ItemGroup>
   <ItemGroup>

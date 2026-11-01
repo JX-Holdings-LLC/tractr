@@ -36,6 +36,7 @@
     <Compile Include="Vocabulary.fs" />
     <Compile Include="Readouts.fs" />
     <Compile Include="AudioFiles.fs" />
+    <Compile Include="Upkeep.fs" />
     <Compile Include="Problem.fs" />
     <Compile Include="SchemaChecks.fs" />
     <Compile Include="ContentLints.fs" />
@@ -44,6 +45,9 @@
     <Compile Include="ChecksVocabulary.fs" />
     <Compile Include="ChecksExport.fs" />
     <Compile Include="FontCoverage.fs" />
+    <Compile Include="ChecksUpkeep.fs" />
+    <Compile Include="ContentGraph.fs" />
+    <Compile Include="ChecksGraph.fs" />
     <Compile Include="Problems.fs" />
     <Compile Include="ProjectLoad.fs" />
     <Compile Include="ProjectFolder.fs" />
@@ -58,6 +62,7 @@
     <Compile Include="Playtest.fs" />
     <Compile Include="Patterns.fs" />
     <Compile Include="Api.fs" />
+    <Compile Include="UpkeepApi.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />

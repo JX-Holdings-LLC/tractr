@@ -185,6 +185,7 @@ module ContentCompiler =
             Achievements = nonEmpty project.Achievements
             Mail = nonEmpty project.Mail
             Monsters = nonEmpty project.Monsters
+            SaveMigrations = nonEmpty project.SaveMigrations
         }
 
     let compile (project: GameProject) =

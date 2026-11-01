@@ -508,7 +508,6 @@ issue before work starts.
   cpal.
 - **Generated FFI bindings with `SafeHandle`s**; `FarmEngine.Interop` is
   hand-written `LibraryImport` declarations with owning wrappers.
-- **The balancing lab** (`FarmEngine.Lab`).
 
 ## Open questions and settled decisions
 
