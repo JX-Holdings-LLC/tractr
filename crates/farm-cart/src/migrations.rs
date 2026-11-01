@@ -151,11 +151,9 @@ fn migrate_scene(state: &mut GameState, content: &GameContent, rule: &SaveMigrat
     };
     let saved_has_target = state.world.scenes.iter().any(|scene| scene.id == to);
     for scene in &mut state.world.scenes {
-        if scene.id == rule.from {
-            if rule.to.is_some() && !saved_has_target {
-                // Keeps what play made of it: the world rebase matches it to the new map.
-                to.clone_into(&mut scene.id);
-            }
+        // Keeps what play made of it: the world rebase matches it to the new map.
+        if scene.id == rule.from && rule.to.is_some() && !saved_has_target {
+            to.clone_into(&mut scene.id);
         }
         for transition in &mut scene.transitions {
             if transition.to_scene_id == rule.from {
