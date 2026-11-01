@@ -47,6 +47,7 @@ public sealed class ContentEditorView : UserControl, IRetirable
     private readonly Button _addToInventory;
     private readonly Button _delete;
     private readonly Button _customize;
+    private readonly Button _script;
     private readonly VisualPreview _art;
     private readonly EditorPreview? _sharedPreview;
     private readonly List<(Border Holder, VisualRef Visual)> _thumbnails = [];
@@ -120,6 +121,13 @@ public sealed class ContentEditorView : UserControl, IRetirable
         _customize = Ui.CommandButton("Customize", ViewModel.CustomizeCommand, "accent");
         _customize.Name = "CustomizeBuiltinButton";
         _customize.IsVisible = false;
+        // Dialogue scripts and content tables (docs/AUTHORING-AT-SCALE.md) open in their own windows.
+        _script = Ui.Button("Edit as script", OpenScript, "tool");
+        _script.Name = "EditAsScriptButton";
+        ToolTip.SetTip(_script, "Write this NPC's dialogue and lines, or the cutscenes, as text");
+        var tables = Ui.Button("Tables", () => ShowTool(new TableEditorWindow(_workspace)), "tool");
+        tables.Name = "ContentTablesButton";
+        ToolTip.SetTip(tables, "Edit items, crops, recipes, stock, fish and drops as tables, with CSV and bulk edits");
 
         var listSide = new StackPanel { Spacing = 10, Margin = new Thickness(0, 0, 16, 0) };
         listSide.Children.Add(Ui.Text("CONTENT", "section"));
@@ -128,6 +136,7 @@ public sealed class ContentEditorView : UserControl, IRetirable
         listSide.Children.Add(_entities);
         listSide.Children.Add(Ui.HStack(8, add, _delete));
         listSide.Children.Add(Ui.HStack(8, _duplicate, _addToInventory));
+        listSide.Children.Add(Ui.HStack(8, _script, tables));
         listSide.Children.Add(Ui.Wrapped("Select a type, then edit its fields. Every nested field also has an Edit as JSON box.", "muted", "small"));
         var editor = new StackPanel { Spacing = 12 };
         editor.Children.Add(Ui.Text("DETAILS", "section"));
@@ -164,6 +173,22 @@ public sealed class ContentEditorView : UserControl, IRetirable
 
     public ContentEditorViewModel ViewModel { get; }
 
+    private void ShowScriptButton() =>
+        _script.IsVisible = ViewModel.SelectedCategory.Name == "Cutscenes" || (ViewModel.SelectedCategory.Name == "NPCs" && ViewModel.SelectedId is not null);
+
+    private void OpenScript()
+    {
+        var npc = ViewModel.SelectedCategory.Name == "NPCs" ? ViewModel.SelectedId : null;
+        if (npc is null && ViewModel.SelectedCategory.Name != "Cutscenes") return;
+        ShowTool(new ScriptEditorWindow(_workspace, npc));
+    }
+
+    private void ShowTool(Window window)
+    {
+        if (TopLevel.GetTopLevel(this) is Window owner) window.Show(owner);
+        else window.Show();
+    }
+
     /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
     public void Retire() => ViewModel.Retire();
 
@@ -187,8 +212,14 @@ public sealed class ContentEditorView : UserControl, IRetirable
     {
         switch (e.PropertyName)
         {
-            case nameof(ContentEditorViewModel.SelectedCategory): ShowCategory(); break;
-            case nameof(ContentEditorViewModel.SelectedId): ShowSelection(); break;
+            case nameof(ContentEditorViewModel.SelectedCategory):
+                ShowCategory();
+                ShowScriptButton();
+                break;
+            case nameof(ContentEditorViewModel.SelectedId):
+                ShowSelection();
+                ShowScriptButton();
+                break;
             case nameof(ContentEditorViewModel.Rows): ShowRows(); break;
             case nameof(ContentEditorViewModel.FormEntity): ShowForm(); break;
             case nameof(ContentEditorViewModel.Summary): ShowSummary(); break;

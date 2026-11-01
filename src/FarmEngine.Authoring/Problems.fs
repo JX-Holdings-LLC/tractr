@@ -318,6 +318,7 @@ module Problems =
         ChecksGraph.run project sink
         ChecksSkin.run project sink
         fontCoverage project sink
+        Translations.check project (fun severity code path message -> sink.Add(severity, code, path, message, Some NavigationTarget.Settings))
         sink.ToList()
 
     let errors (problems: Problem list) =

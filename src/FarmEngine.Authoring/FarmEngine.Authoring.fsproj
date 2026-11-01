@@ -53,8 +53,14 @@
     <Compile Include="ChecksUpkeep.fs" />
     <Compile Include="ContentGraph.fs" />
     <Compile Include="ChecksGraph.fs" />
+    <Compile Include="Csv.fs" />
+    <Compile Include="ConditionText.fs" />
+    <Compile Include="DialogueScript.fs" />
+    <Compile Include="Translations.fs" />
     <Compile Include="Problems.fs" />
     <Compile Include="ProjectLoad.fs" />
+    <Compile Include="ContentTables.fs" />
+    <Compile Include="BulkEdit.fs" />
     <Compile Include="ProjectFolder.fs" />
     <Compile Include="AssetUsage.fs" />
     <Compile Include="ArtLibrary.fs" />
@@ -72,6 +78,7 @@
     <Compile Include="Api.fs" />
     <Compile Include="UpkeepApi.fs" />
     <Compile Include="ImportApi.fs" />
+    <Compile Include="AuthoringTools.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />

@@ -87,7 +87,22 @@ let ``the folder has one file per scene npc dialogue item and asset`` () =
     for item in project.Items do
         Assert.Contains(sprintf "items/%s.json" item.Id, paths)
 
-    Assert.Equal(project.Dialogues.Length, paths |> List.filter (fun p -> p.StartsWith "dialogue/") |> List.length)
+    // Each dialogue has its file, or is one of an NPC's script (`scripts/<npc>.dialogue#<id>`).
+    let scripted =
+        match Json.parse (textOf files ProjectFolder.MainFile) with
+        | Ok main ->
+            Json.get "dialogues" main
+            |> Json.elements "dialogues"
+            |> List.filter (fun d -> (Json.asString d |> Option.defaultValue "").Contains '#')
+            |> List.length
+        | Error e -> failwith e
+
+    Assert.Equal(
+        project.Dialogues.Length,
+        scripted
+        + (paths |> List.filter (fun p -> p.StartsWith "dialogue/") |> List.length)
+    )
+
     Assert.Equal<string list>([ "assets/hero.png"; "assets/Hero~2.png" ], paths |> List.filter (fun p -> p.StartsWith "assets/"))
     Assert.Equal<byte[]>(png, files |> List.find (fun (p, _) -> p = "assets/hero.png") |> snd)
     // The project file lists the files in order and keeps no art inline.

@@ -1051,6 +1051,41 @@
       },
       "additionalProperties": true
     },
+    "ContentTemplate": {
+      "description": "A saved entry, or a group of entries (a seed, its crop and its harvest), to make new ones from.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "entries": {
+          "description": "The entries, each with its category (`items`, `crops`, `recipes`, …).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentTemplateEntry"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContentTemplateEntry": {
+      "description": "One entry of a template: its category and the entry as the project stores it.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "One of `ContentTables.Categories` (`items`, `crops`, `recipes`, `shops`, `fishTables`, `nodeTypes`, `machineTypes`, `npcs`, `quests`).",
+          "type": "string",
+          "default": ""
+        },
+        "entry": {}
+      },
+      "additionalProperties": false
+    },
     "Crop": {
       "description": "A dropped/growing crop instance on a tile (game state, not content).",
       "type": "object",
@@ -1423,6 +1458,13 @@
         "light": {
           "description": "The light it gives at night once grown (M8: glowing crops).",
           "$ref": "#/$defs/LightSource"
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -1465,6 +1507,10 @@
           "description": "The label of the step to go on from; empty: the next step.",
           "type": "string",
           "default": ""
+        },
+        "id": {
+          "description": "A stable id for the answer, so translations keep finding it when it moves (absent: its place).",
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -1590,6 +1636,10 @@
         },
         "animation": {
           "description": "The clip an `animate` step plays on its actor (#235).",
+          "type": "string"
+        },
+        "id": {
+          "description": "A stable id for the step's text, so translations and scripts keep finding it when it moves (absent: its place).",
           "type": "string"
         }
       },
@@ -1731,6 +1781,10 @@
         },
         "actionId": {
           "description": "Choosing this option performs a creator-defined action.",
+          "type": "string"
+        },
+        "id": {
+          "description": "A stable id for the option, so translations and scripts keep finding it when it moves (absent: its place).",
           "type": "string"
         }
       },
@@ -2409,6 +2463,13 @@
         },
         "junkItemId": {
           "type": "string"
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "filter": {
           "$ref": "#/$defs/FishingFilter"
@@ -3177,6 +3238,20 @@
         },
         "keptState": {
           "description": "The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop, minigame or cutscene, chosen music, today's shop purchases, NPC walks, mine floor, children, changed shop stock, and the M5–M7 `goals`: open storage, the farm layout, the shipping log, collections, bundles, achievements, mail, monsters and health). Only the engine reads it."
+        },
+        "translations": {
+          "description": "The game's own text in other languages: one table per language (the project's `settings.locale` is the source).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TranslationTable"
+          }
+        },
+        "contentTemplates": {
+          "description": "Saved entries (or groups of entries) to make new ones from.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentTemplate"
+          }
         }
       },
       "required": [
@@ -3592,6 +3667,13 @@
           "description": "Health it restores when eaten, with combat on (M7). int.",
           "type": "number"
         },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "fishingGear": {
           "$ref": "#/$defs/FishingGear"
         }
@@ -3750,6 +3832,13 @@
         "light": {
           "description": "The light it gives at night (M8).",
           "$ref": "#/$defs/LightSource"
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "fishProduction": {
           "$ref": "#/$defs/FishProduction"
@@ -4370,6 +4459,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -4502,6 +4598,13 @@
           "items": {
             "$ref": "#/$defs/CharacterLayer"
           }
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -4545,6 +4648,10 @@
         "weight": {
           "description": "How often the line comes up next to the others that hold (absent: 1). int.",
           "type": "number"
+        },
+        "id": {
+          "description": "A stable id for the line, so translations and scripts keep finding it when it moves (absent: its place).",
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -5592,6 +5699,13 @@
           "items": {
             "$ref": "#/$defs/EventOutcome"
           }
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -5773,6 +5887,13 @@
         },
         "unlock": {
           "$ref": "#/$defs/RecipeUnlock"
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -6397,6 +6518,13 @@
         },
         "saturation": {
           "$ref": "#/$defs/ShopSaturation"
+        },
+        "tags": {
+          "description": "Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
@@ -7286,6 +7414,40 @@
         "nights": {
           "type": "number",
           "default": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "TranslatedText": {
+      "description": "One translated text and a hash of the source text it was translated from, so a changed source shows as a stale translation.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "default": ""
+        },
+        "source": {
+          "description": "The first 8 bytes of the SHA-256 of the source text, in hex; empty: unknown.",
+          "type": "string",
+          "default": ""
+        }
+      },
+      "additionalProperties": false
+    },
+    "TranslationTable": {
+      "description": "The game's text in one language, by the stable key of each text field (`item:hoe:name`, `npc:bram:line:l-3f2a`, see `Translations.catalog`).",
+      "type": "object",
+      "properties": {
+        "locale": {
+          "description": "A locale code (`es`, `pt-BR`).",
+          "type": "string",
+          "default": ""
+        },
+        "strings": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/TranslatedText"
+          }
         }
       },
       "additionalProperties": false

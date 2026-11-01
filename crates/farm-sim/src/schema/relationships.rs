@@ -20,6 +20,9 @@ pub struct NpcLine {
     /// How often the line comes up next to the others that hold (absent: 1). int.
     #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
     pub weight: Option<u32>,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 /// A portrait an NPC shows in the dialogue box for an expression (M4).

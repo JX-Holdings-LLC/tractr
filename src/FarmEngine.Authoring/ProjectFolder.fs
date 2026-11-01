@@ -27,6 +27,11 @@ open FarmEngine.Schemas
 ///   (without their `x` and `y`) and one `rows` string per row of palette indices, `n*i` for a
 ///   run of `n` tiles of index `i` (`"3*0 1 2*0"`).
 /// - `npcs/<id>.json`, `dialogue/<id>.json`, `items/<id>.json`: one definition each.
+/// - `scripts/<npc id>.dialogue`: an NPC's dialogues and lines as a dialogue script
+///   (`DialogueScript`, #225), when the script reads back exactly as the records are. The NPC's
+///   file then names it in `dialogueScript` instead of holding `dialogue` and `lines`, and the
+///   project's `dialogues` list names each of its dialogues as `scripts/<npc id>.dialogue#<id>`.
+/// - `strings/<locale>.json`: the game's text in one language (`Translations`, #228).
 /// - `assets/<id>.<extension>`: the asset's bytes.
 /// - `scripts/<id>.js`: a project script's source (#241); its entry in `project.json` has a
 ///   `sourceFile` in place of the `source`.
@@ -42,11 +47,16 @@ module ProjectFolder =
             "npcs", "npcs"
             "dialogues", "dialogue"
             "items", "items"
+            "translations", "strings"
         ]
 
     /// The folders a project file may name.
     let private folders =
-        Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets"; "scripts" ]
+        Set.ofList [ "scenes"; "npcs"; "dialogue"; "items"; "assets"; "scripts"; "strings" ]
+
+    /// The NPC key that names its script (in place of `dialogue` and `lines`).
+    [<Literal>]
+    let ScriptKey = "dialogueScript"
 
     /// Device names Windows refuses as a file name, with or without an extension.
     let private reservedNames =
@@ -296,6 +306,56 @@ module ProjectFolder =
         let json = ProjectLoad.toJson project
         let files = ResizeArray<string * byte[]>()
 
+        // The NPCs whose dialogue goes to a script: those it covers exactly, whose dialogues
+        // the project's list holds as the same copies (and no other NPC carries).
+        let scripts = Dictionary<string, string>()
+        let scriptedDialogues = Dictionary<string, string>()
+
+        let scriptTaken = HashSet<string>()
+        let carriers = Dictionary<string, int>()
+
+        for npc in project.Npcs do
+            for dialogue in npc.Dialogue do
+                carriers.[dialogue.Id] <-
+                    (match carriers.TryGetValue dialogue.Id with
+                     | true, n -> n + 1
+                     | _ -> 1)
+
+        let listed = Dictionary<string, Dialogue list>()
+
+        for dialogue in project.Dialogues do
+            listed.[dialogue.Id] <-
+                dialogue
+                :: (match listed.TryGetValue dialogue.Id with
+                    | true, copies -> copies
+                    | _ -> [])
+
+        for npc in project.Npcs do
+            let hasDialogue = not npc.Dialogue.IsEmpty || npc.Lines.IsSome
+
+            let copiesAgree =
+                npc.Dialogue
+                |> List.forall (fun d ->
+                    carriers.[d.Id] = 1
+                    && (match listed.TryGetValue d.Id with
+                        | true, copies -> copies |> List.forall ((=) d)
+                        | _ -> true))
+
+            if
+                hasDialogue
+                && not (scripts.ContainsKey npc.Id)
+                && copiesAgree
+                && DialogueScript.isLossless npc
+            then
+                let path =
+                    sprintf "scripts/%s%s" (fileStem scriptTaken npc.Id) DialogueScript.Extension
+
+                scripts.[npc.Id] <- path
+                files.Add(path, Encoding.UTF8.GetBytes(DialogueScript.printNpc npc))
+
+                for dialogue in npc.Dialogue do
+                    scriptedDialogues.[dialogue.Id] <- path
+
         let members =
             Json.spread json
             |> List.map (fun (key, value) ->
@@ -306,11 +366,31 @@ module ProjectFolder =
                     let paths =
                         entries
                         |> List.map (fun entry ->
-                            let id = Json.get "id" entry |> Json.asString |> Option.defaultValue ""
-                            let path = sprintf "%s/%s.json" folder (fileStem taken id)
-                            let entry = if key = "scenes" then compactTiles entry else entry
-                            files.Add(path, text entry)
-                            JString path)
+                            let id =
+                                Json.get (if key = "translations" then "locale" else "id") entry
+                                |> Json.asString
+                                |> Option.defaultValue ""
+
+                            match key, scriptedDialogues.TryGetValue id with
+                            | "dialogues", (true, script) -> JString(script + "#" + id)
+                            | _ ->
+                                let path = sprintf "%s/%s.json" folder (fileStem taken id)
+                                let entry = if key = "scenes" then compactTiles entry else entry
+
+                                let entry =
+                                    match key, scripts.TryGetValue id, entry with
+                                    | "npcs", (true, script), JObject members ->
+                                        JObject(
+                                            members
+                                            |> List.choose (fun (k, v) ->
+                                                if k = "dialogue" then Some(ScriptKey, JString script)
+                                                elif k = "lines" then None
+                                                else Some(k, v))
+                                        )
+                                    | _ -> entry
+
+                                files.Add(path, text entry)
+                                JString path)
 
                     key, JArray paths
                 | _ when key = "customAssets" ->
@@ -397,6 +477,71 @@ module ProjectFolder =
                 | Ok json -> Ok json
                 | Error message -> Error(sprintf "%s is not valid JSON: %s" path message))
 
+        let scriptCache = Dictionary<string, Result<ScriptDocument, string>>()
+
+        let readScript (path: string) : Result<ScriptDocument, string> =
+            match scriptCache.TryGetValue path with
+            | true, cached -> cached
+            | _ ->
+                let result =
+                    read path
+                    |> Result.bind (fun bytes ->
+                        match DialogueScript.parse (Encoding.UTF8.GetString bytes) with
+                        | Ok document -> Ok document
+                        | Error errors ->
+                            Error(
+                                errors
+                                |> List.truncate 5
+                                |> List.map (fun e -> sprintf "%s:%d: %s" path e.Line e.Message)
+                                |> String.concat "\n"
+                            ))
+
+                scriptCache.[path] <- result
+                result
+
+        // An NPC that names its script gets its dialogues and lines from it.
+        let withScript (json: Json) : Result<Json, string> =
+            match json with
+            | JObject members ->
+                match Json.get ScriptKey json with
+                | JString path ->
+                    readScript path
+                    |> Result.bind (fun document ->
+                        let id = Json.get "id" json |> Json.asString |> Option.defaultValue ""
+
+                        match document.Npc with
+                        | Some npc when npc <> id -> Error(sprintf "%s:1: this script is for %s, not %s" path npc id)
+                        | _ when not document.Cutscenes.IsEmpty -> Error(sprintf "%s: an NPC's script holds no cutscenes" path)
+                        | _ ->
+                            Ok(
+                                JObject(
+                                    members
+                                    |> List.collect (fun (k, v) ->
+                                        if k = ScriptKey then
+                                            [
+                                                yield "dialogue", JArray(document.Dialogues |> List.map SchemaJson.encodeDialogue)
+                                                match document.Lines with
+                                                | Some lines -> yield "lines", JArray(lines |> List.map SchemaJson.encodeNpcLine)
+                                                | None -> ()
+                                            ]
+                                        else
+                                            [ k, v ])
+                                )
+                            ))
+                | _ -> Ok json
+            | _ -> Ok json
+
+        // `scripts/x.dialogue#id`: a dialogue of a script.
+        let scriptedDialogue (reference: string) : Result<Json, string> =
+            let at = reference.IndexOf '#'
+            let path, id = reference.Substring(0, at), reference.Substring(at + 1)
+
+            readScript path
+            |> Result.bind (fun document ->
+                match document.Dialogues |> List.tryFind (fun d -> d.Id = id) with
+                | Some dialogue -> Ok(SchemaJson.encodeDialogue dialogue)
+                | None -> Error(sprintf "%s has no dialogue %s" path id))
+
         match readJson MainFile with
         | Error error -> Error [ error ]
         | Ok(JObject members) ->
@@ -413,8 +558,15 @@ module ProjectFolder =
                                 match entry with
                                 | JString path ->
                                     match
-                                        readJson path
-                                        |> Result.bind (fun json -> if key = "scenes" then expandTiles path json else Ok json)
+                                        if key = "dialogues" && path.StartsWith "scripts/" && path.Contains '#' then
+                                            scriptedDialogue path
+                                        else
+                                            readJson path
+                                            |> Result.bind (fun json ->
+                                                match key with
+                                                | "scenes" -> expandTiles path json
+                                                | "npcs" -> withScript json
+                                                | _ -> Ok json)
                                     with
                                     | Ok json -> Some json
                                     | Error error ->

@@ -1182,6 +1182,8 @@ Shortcuts** lists the editor's shortcuts too.
 
 ## More
 
+- [Authoring at scale](AUTHORING-AT-SCALE.md): dialogue scripts, content
+  tables and CSV, bulk edits, templates and translating your game.
 - [Export Game](EXPORT.md): settings, what an exported game contains and how
   to ship it on Steam or itch.io.
 - [The game player](PLAYER.md): the player's screens, settings, saves and

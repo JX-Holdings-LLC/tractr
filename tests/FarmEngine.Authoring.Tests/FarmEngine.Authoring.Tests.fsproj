@@ -12,6 +12,9 @@
     <Compile Include="SchemaRecordTests.fs" />
     <Compile Include="ProjectLoadTests.fs" />
     <Compile Include="ProjectFolderTests.fs" />
+    <Compile Include="DialogueScriptTests.fs" />
+    <Compile Include="ContentTablesTests.fs" />
+    <Compile Include="TranslationsTests.fs" />
     <Compile Include="DocumentTests.fs" />
     <Compile Include="SceneEditTests.fs" />
     <Compile Include="ContentEditTests.fs" />
