@@ -658,6 +658,16 @@ module References =
             plain "PackPlugin" "Hooks" "plugin hook names the plugin handles"
             plain "PackPlugin" "Minigames" "minigame kinds the plugin defines with api.minigame"
             plain "PackContent" "Strings" "locale string tables keyed by locale code"
+            plain "Item" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "Npc" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "Quest" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "CustomCropDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "ShopDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "NodeTypeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "RecipeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "MachineTypeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "FishTable" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "TranslationTable" "Strings" "translated texts keyed by text field (`Translations.catalog`, #228)"
             optional "PackPlayerStart" "SceneId" ReferenceKind.Scene
             reference "PackStartItem" "ItemId" ReferenceKind.Item
 
