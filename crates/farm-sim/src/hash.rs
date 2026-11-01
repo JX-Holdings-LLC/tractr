@@ -122,6 +122,8 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("FishTableEntry", "rules")
             | ("FishTable", "filter" | "layered")
             | ("GameContent", "mines" | "requestBoards")
+            | ("GameContent", "saveMigrations")
+            | ("GameProject", "saveMigrations" | "testStates")
             | ("NodeDrop", "seasons")
             | ("NodeTypeDefinition", "seasons")
             | ("TileNode", "dormantHealth" | "expiresOnDay" | "spawnedOnDay" | "spawnedSeason")
