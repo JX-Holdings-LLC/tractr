@@ -338,7 +338,7 @@ fn clothes_are_worn_and_taken_off() {
     let (ctx, mut state) = make_engine(
         |project| {
             let wear = |slot: &str, color: &str| {
-                Some(WearDefinition { slot: slot.into(), color: Some(color.into()), visual: None })
+                Some(WearDefinition { slot: slot.into(), color: Some(color.into()), visual: None, layer: None })
             };
             project.items.push(Item { wear: wear("hat", "#aa2222"), ..item("hat-red", "Red Hat") });
             project.items.push(Item { wear: wear("hat", "#2222aa"), ..item("hat-blue", "Blue Hat") });

@@ -52,6 +52,20 @@ pub struct PackPermissions {
     /// empty both allow none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minigames: Option<Vec<String>>,
+    /// What the pack's plugins may read of the game (#237): `player`, `world`, `people`,
+    /// `content`, and `any` for other packs' and the game's flags (`farm_plugins::ReadGrants`).
+    /// `None` and empty both allow no reads.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub read: Option<Vec<String>>,
+    /// Entity types the pack's plugins may define (#238), by local name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entities: Option<Vec<String>>,
+    /// Item-use handlers the pack's plugins may define (#238), by local name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_uses: Option<Vec<String>>,
+    /// Game screens the pack's plugins may add (#240), by local name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screens: Option<Vec<String>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -64,6 +78,10 @@ impl Default for PackPermissions {
             ui_panels: false,
             mutations: None,
             minigames: None,
+            read: None,
+            entities: None,
+            item_uses: None,
+            screens: None,
             extra: Map::new(),
         }
     }
@@ -93,6 +111,74 @@ pub struct PackPlugin {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub minigames: Option<Vec<String>>,
     pub source: String,
+    /// Conditions this plugin defines (`api.condition(name, …)`, #239), with the argument
+    /// forms the editor shows.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub conditions: Option<Vec<PluginFunction>>,
+    /// Outcomes this plugin defines (`api.outcome(name, …)`, #239).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outcomes: Option<Vec<PluginFunction>>,
+    /// Entity types this plugin defines (`api.entity(name, …)`, #238), by local name;
+    /// effective set = intersection with manifest permissions.entities.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entities: Option<Vec<String>>,
+    /// Item-use handlers this plugin defines (`api.itemUse(name, …)`, #238); effective set =
+    /// intersection with manifest permissions.itemUses.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_uses: Option<Vec<String>>,
+    /// Game screens this plugin adds (`api.screen(name, …)`, #240); effective set =
+    /// intersection with manifest permissions.screens.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screens: Option<Vec<PluginScreen>>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+/// A condition or outcome a plugin defines (#239): its local name, how the editor shows it,
+/// and its arguments.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PluginFunction {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub args: Vec<PluginArgument>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+/// One argument of a plugin condition or outcome (#239).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PluginArgument {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// `text`, `number`, `integer`, `bool` or `id`.
+    pub r#type: String,
+    /// For an `id`: the content it names (`item`, `npc`, `quest`, …).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    /// May be left out.
+    #[serde(skip_serializing_if = "super::is_false")]
+    pub optional: bool,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+/// A game screen a plugin adds (#240): its local name, the title and menu entry the game
+/// shows, and an optional hotkey.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct PluginScreen {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// A key that opens it (`farm_runtime` key names, e.g. `j`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hotkey: Option<String>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }
@@ -478,6 +564,54 @@ pub enum PluginMutation {
     /// hears it again in `onLoad` (M9).
     #[serde(rename = "saveData")]
     SaveData { data: Value },
+    /// Put a plugin entity of type `entity_type` (`packId:name`) on a tile (#238).
+    #[serde(rename = "spawnEntity")]
+    SpawnEntity {
+        entity_type: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(with = "crate::units::int")]
+        x: i32,
+        #[serde(with = "crate::units::int")]
+        y: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        art: Option<String>,
+        #[serde(default, skip_serializing_if = "Value::is_null")]
+        state: Value,
+    },
+    /// Change a plugin entity: move it, change its art or replace its state (#238).
+    #[serde(rename = "updateEntity")]
+    UpdateEntity {
+        entity_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        scene_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+        x: Option<i32>,
+        #[serde(default, skip_serializing_if = "Option::is_none", with = "crate::units::int::opt")]
+        y: Option<i32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        art: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        state: Option<Value>,
+    },
+    /// Take a plugin entity out of the world (#238).
+    #[serde(rename = "removeEntity")]
+    RemoveEntity { entity_id: String },
+    /// Run the plugin's `timer` handler after `minutes` game minutes plus `days` days, with
+    /// `data` (#238). A timer of the same name restarts.
+    #[serde(rename = "startTimer")]
+    StartTimer {
+        timer: String,
+        #[serde(default, skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+        minutes: u32,
+        #[serde(default, skip_serializing_if = "super::is_zero", with = "crate::units::count")]
+        days: u32,
+        #[serde(default, skip_serializing_if = "Value::is_null")]
+        data: Value,
+    },
+    /// Stop one of the plugin's timers (#238).
+    #[serde(rename = "cancelTimer")]
+    CancelTimer { timer: String },
 }
 
 impl PluginMutation {
@@ -519,6 +653,11 @@ impl PluginMutation {
             Self::ApplyBuff { .. } => "applyBuff",
             Self::ModifyHealth { .. } => "modifyHealth",
             Self::SaveData { .. } => "saveData",
+            Self::SpawnEntity { .. } => "spawnEntity",
+            Self::UpdateEntity { .. } => "updateEntity",
+            Self::RemoveEntity { .. } => "removeEntity",
+            Self::StartTimer { .. } => "startTimer",
+            Self::CancelTimer { .. } => "cancelTimer",
         }
     }
 }

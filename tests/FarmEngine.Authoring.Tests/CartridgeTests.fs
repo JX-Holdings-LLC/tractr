@@ -351,6 +351,10 @@ let ``the classic sample cartridges retain their bytes`` (file: string, sampleId
         |> decodeJson SchemaJson.decodeGameProject
 
     let bytes = CartridgeCompiler.Compile(project)
+
+    if Environment.GetEnvironmentVariable "FARM_RECORD_CARTRIDGES" = "1" then
+        IO.File.WriteAllBytes(path, bytes)
+
     Assert.True((IO.File.ReadAllBytes path = bytes), file + ".cart changed for the pinned classic project")
     Assert.Equal(ProjectCatalog.CreateSampleProject(sampleId, 1.7e12).Name, (read bytes).Info.Title)
 

@@ -1,0 +1,10 @@
+{
+  "id": "seed-strawberry",
+  "name": "Strawberry Seeds",
+  "description": "Plant these to grow strawberry",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 30,
+  "cropType": "strawberry"
+}

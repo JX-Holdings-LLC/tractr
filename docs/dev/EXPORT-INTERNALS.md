@@ -228,6 +228,21 @@ These decisions are expensive to change once games have shipped:
   version of the game takes that version's maps (tiles, doors, new scenes)
   while keeping what the player did on them, and NPCs new in the game join
   the world.
+- **Save migrations run before quarantine.** The project's `saveMigrations`
+  compile into the content (`GameContent.saveMigrations`), and
+  `farm_cart::migrations` applies them to a save written against other
+  content: an item id renamed (or replaced by `quantity` of another, in the
+  inventory, worn items, machine and chest contents, the ground and
+  quarantine; the inventory through the normal add, the overflow to
+  quarantine), an item removed and paid for (`money` a unit), a scene renamed
+  (the saved scene keeps its play state and the world rebase matches it to
+  the new map; a player inside lands on `x`, `y`). A rule applies only while
+  the content has nothing under `from`. Each rule that changed something adds
+  a catalog message to the load warnings (`LoadedSave::migrations`), which the
+  player shows once: the next save no longer holds the old ids.
+- **Export Game remembers the shipped ids** (`export.exportedIds`: the
+  version and its item and scene ids), so Problems (`saveMigration.orphan`)
+  warns about ids that version had and the project lost without a rule.
 - **The save header carries** `gameId`, the game version, the cartridge
   content hash and the save format version. The player refuses a save from a
   different `gameId`, loads saves from older game versions, and warns about

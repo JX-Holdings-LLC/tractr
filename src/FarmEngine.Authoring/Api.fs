@@ -194,6 +194,10 @@ type Edits =
 
     static member SetMine(config: MineConfig) : Edit = SetMine config
     static member SetGamePanels(panels: seq<GamePanel>) : Edit = SetGamePanels(List.ofSeq panels)
+    /// The interface skin (#236).
+    static member SetUiSkin(skin: UiSkin) : Edit = SetUiSkin(Some skin)
+    /// Back to the built-in look.
+    static member ResetUiSkin() : Edit = SetUiSkin None
 
     static member SetProjectInfo(name: string, version: string) : Edit = SetProjectInfo(name, version)
     static member SetSettings(settings: ProjectSettings) : Edit = SetSettings settings

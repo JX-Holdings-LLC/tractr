@@ -210,6 +210,18 @@ module Problems =
     // Inspect authored text, not tile grids or embedded assets. Each warning points at the
     // original record, so a creator can fix unsupported text before exporting a game.
     let private fontCoverage (project: GameProject) (sink: Sink) =
+        // The skin's fonts draw the game's text when it has them (#236); else the built-in Inter.
+        let skinFonts = ChecksSkin.fontRanges project
+
+        let missing (text: string) =
+            match skinFonts with
+            | [] -> FontCoverage.firstMissing text |> Option.map (fun rune -> rune, "The game font")
+            | fonts ->
+                fonts
+                |> List.tryPick (fun (name, ranges) ->
+                    FontFile.firstMissing ranges text
+                    |> Option.map (fun rune -> rune, sprintf "The font '%s'" name))
+
         let shownKeys =
             set
                 [
@@ -228,14 +240,15 @@ module Problems =
         let rec walk path segments shown value =
             match value with
             | JString text when shown ->
-                match FontCoverage.firstMissing text with
-                | Some rune ->
+                match missing text with
+                | Some(rune, font) ->
                     sink.Add(
                         Severity.Warning,
                         "text.fontCoverage",
                         path,
                         sprintf
-                            "The game font cannot draw U+%04X (%s); it will appear as a box. Use characters covered by the game font."
+                            "%s cannot draw U+%04X (%s); it will appear as a box. Use characters covered by the game font."
+                            font
                             rune.Value
                             (rune.ToString()),
                         schemaTarget project segments
@@ -301,7 +314,11 @@ module Problems =
         ChecksContent.run context sink
         ChecksVocabulary.run context sink
         ChecksExport.run project sink
+        ChecksUpkeep.run project sink
+        ChecksGraph.run project sink
+        ChecksSkin.run project sink
         fontCoverage project sink
+        Translations.check project (fun severity code path message -> sink.Add(severity, code, path, message, Some NavigationTarget.Settings))
         sink.ToList()
 
     let errors (problems: Problem list) =

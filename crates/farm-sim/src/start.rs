@@ -10,8 +10,9 @@
 
 use crate::packs;
 use crate::schema::{
-    AnimalState, BuildingState, CustomAsset, CustomCropDefinition, GamePanel, GameProject, GraphicsSettings,
-    InventorySlot, KeptState, NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene, VisualRef,
+    AnimalState, BuildingState, CustomAsset, CustomCropDefinition, GameContent, GamePanel, GameProject,
+    GraphicsSettings, InventorySlot, KeptState, NpcSocialState, Player, ProjectSettings, RngState, SavePackRef, Scene,
+    VisualRef,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -158,11 +159,21 @@ pub struct Presentation {
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
+    /// The player's layer sheets (#234).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub player_layers: Option<Vec<crate::schema::CharacterLayer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
     pub game_panels: Vec<GamePanel>,
     /// Show "Made with Tractr" (project setting `showMadeWithCredit`).
     pub show_made_with_credit: bool,
+    /// The look of the game's interface (`farm-ui` reads it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ui_skin: Option<crate::schema::UiSkin>,
+    /// The game's own text in other languages (#228): by locale, the translated text of each key
+    /// ([`packs::localize_content`]). The player shows the one chosen in Settings.
+    #[serde(skip_serializing_if = "IndexMap::is_empty")]
+    pub content_strings: IndexMap<String, IndexMap<String, String>>,
 }
 
 impl Presentation {
@@ -173,6 +184,7 @@ impl Presentation {
             custom_assets: project.custom_assets.clone(),
             custom_crops: project.custom_crops.clone(),
             player_visual: project.player_visual.clone(),
+            player_layers: project.player_layers.clone(),
             graphics: project.graphics.clone(),
             // The game's own panels, then those its packs add (M9).
             game_panels: project
@@ -183,8 +195,70 @@ impl Presentation {
                 .chain(crate::packs::pack_game_panels(&project.content_packs))
                 .collect(),
             show_made_with_credit: project.settings.show_made_with_credit,
+            ui_skin: project.ui_skin.clone(),
+            content_strings: content_strings(project),
         }
     }
+
+    /// The content in `locale`: its translated texts where the game has a table for it.
+    pub fn localized(&self, content: &GameContent, locale: Option<&str>) -> GameContent {
+        match locale.and_then(|locale| self.content_strings.get(locale)) {
+            Some(table) => packs::localize_content(content.clone(), table),
+            None => content.clone(),
+        }
+    }
+
+    /// The locale of the game's text for a player's choice (`preference`, empty for automatic)
+    /// and the system's locale: the first the game has a table for, matched whole (`pt-BR`) or
+    /// by language (`pt`); None for the game's own language.
+    pub fn content_locale(&self, preference: &str, system: Option<&str>) -> Option<String> {
+        let matches = |tag: &str| -> Option<String> {
+            let tag = tag.trim();
+            if tag.is_empty() {
+                return None;
+            }
+            let cleaned: String = tag.split('.').next().unwrap_or(tag).replace('_', "-");
+            if let Some((locale, _)) =
+                self.content_strings.iter().find(|(locale, _)| locale.eq_ignore_ascii_case(&cleaned))
+            {
+                return Some(locale.clone());
+            }
+            let language = cleaned.split('-').next().unwrap_or("");
+            self.content_strings.keys().find(|locale| locale.eq_ignore_ascii_case(language)).cloned()
+        };
+        if !preference.is_empty() {
+            // A chosen language the game is not translated into shows the game's own text.
+            return matches(preference);
+        }
+        system.and_then(matches)
+    }
+}
+
+/// The translation tables of a project (`translations`, kept by Rust as an unknown key), as
+/// [`Presentation::content_strings`]: the game's own locale and empty texts left out.
+fn content_strings(project: &GameProject) -> IndexMap<String, IndexMap<String, String>> {
+    let mut tables = IndexMap::new();
+    let Some(serde_json::Value::Array(list)) = project.extra.get("translations") else { return tables };
+    for table in list {
+        let locale = table.get("locale").and_then(serde_json::Value::as_str).unwrap_or("");
+        if locale.is_empty() || locale == project.settings.locale {
+            continue;
+        }
+        let mut strings = IndexMap::new();
+        if let Some(serde_json::Value::Object(entries)) = table.get("strings") {
+            for (key, entry) in entries {
+                if let Some(text) =
+                    entry.get("text").and_then(serde_json::Value::as_str).filter(|text| !text.is_empty())
+                {
+                    strings.insert(key.clone(), text.to_owned());
+                }
+            }
+        }
+        if !strings.is_empty() {
+            tables.insert(locale.to_owned(), strings);
+        }
+    }
+    tables
 }
 
 #[cfg(test)]

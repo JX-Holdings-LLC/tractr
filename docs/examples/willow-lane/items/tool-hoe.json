@@ -1,0 +1,13 @@
+{
+  "id": "tool-hoe",
+  "name": "Hoe",
+  "description": "Till grass into soil for planting",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 50,
+  "toolType": "hoe",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

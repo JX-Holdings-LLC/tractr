@@ -219,6 +219,9 @@ public sealed class GameWorkspaceView : UserControl
         _snapshot = _workspace.Current;
         _play = new PlayModeView(player, _options.AutoRun);
         _play.RestartRequested += OnRestartRequested;
+        _play.PlayFromStateRequested += OnPlayFromState;
+        _play.SaveStateRequested += OnSaveState;
+        _play.TestStates = TestStateNames;
         _play.Faulted += OnPlayFaulted;
         Content = _play;
         _shell.ShowStatus($"Playtesting {DisplayName()} — changes are discarded on exit unless you keep them.");
@@ -253,6 +256,8 @@ public sealed class GameWorkspaceView : UserControl
         }
 
         play.RestartRequested -= OnRestartRequested;
+        play.PlayFromStateRequested -= OnPlayFromState;
+        play.SaveStateRequested -= OnSaveState;
         play.Faulted -= OnPlayFaulted;
         play.Close();
         _play = null;
@@ -421,6 +426,57 @@ public sealed class GameWorkspaceView : UserControl
 
         _play.Attach(player);
         _play.ShowToast(new ToastMessage("Playtest restarted", ToastKind.Success));
+    }
+
+    /// <summary>The (id, name) of the snapshot's test states, for the States menu.</summary>
+    private IReadOnlyList<(string Id, string Name)> TestStateNames() =>
+        _snapshot is null
+            ? new List<(string Id, string Name)>()
+            : TestStatesApi.All(_snapshot).Select(state => (state.Id, string.IsNullOrEmpty(state.Name) ? state.Id : state.Name)).ToList();
+
+    /// <summary>"Play from state" (#229): a new game from the pre-play snapshot, put in the test state.</summary>
+    private void OnPlayFromState(object? sender, string id)
+    {
+        if (_play is null || _snapshot is null || TestStatesApi.Find(_snapshot, id) is not { } state)
+        {
+            return;
+        }
+
+        try
+        {
+            var player = CreatePlayer(_snapshot);
+            player.DebugJson(TestStatesApi.ApplyAction(state));
+            _play.Attach(player);
+            _play.ShowToast(new ToastMessage($"Playing from \"{(string.IsNullOrEmpty(state.Name) ? state.Id : state.Name)}\"", ToastKind.Success));
+        }
+        catch (FarmFfiException ex)
+        {
+            _play.ShowToast(new ToastMessage($"Could not play from that state: {ex.Message}", ToastKind.Error));
+        }
+    }
+
+    /// <summary>"Save this state" (#229): the running game becomes a test state of the project.</summary>
+    private void OnSaveState(object? sender, EventArgs e)
+    {
+        if (_play is null || _snapshot is null || _workspace.Current is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var json = _play.Use(player => player.CaptureTestState("", ""));
+            var name = $"Playtest state {TestStatesApi.All(_snapshot).Count + 1}";
+            var state = TestStatesApi.FromCapture(_snapshot, json, name);
+            _workspace.Apply(TestStatesApi.Save(_workspace.Current, state));
+            // Kept whether or not the playtest's changes are: the snapshot is what ending restores.
+            _snapshot = TestStatesApi.WithState(_snapshot, state);
+            _play.ShowToast(new ToastMessage($"Saved test state \"{state.Name}\"", ToastKind.Success));
+        }
+        catch (Exception ex) when (ex is FarmFfiException or FormatException)
+        {
+            _play.ShowToast(new ToastMessage($"Could not save the state: {ex.Message}", ToastKind.Error));
+        }
     }
 
     private void OnModeChanged(object? sender, EditorMode mode)

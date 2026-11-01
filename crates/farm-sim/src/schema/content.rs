@@ -175,6 +175,10 @@ pub struct WearDefinition {
     /// Art drawn over the player (a hat), facing like the player.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visual: Option<VisualRef>,
+    /// A layer sheet (a custom asset id, #234) drawn over the character while worn, with the
+    /// same clips and frame layout as the character's art; tinted with `color` when set.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer: Option<String>,
 }
 
 /// The places clothing is worn (M4).
@@ -313,6 +317,11 @@ pub struct CustomAsset {
     /// Present when the image is an animated sprite sheet (M7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sheet: Option<SpriteSheet>,
+    /// How many of the image's pixels make one tile when it stands on the map (a character, a
+    /// crop, an item…); absent: frames up to 32×32 fill the tile and larger ones are drawn at
+    /// 32 pixels per tile, like the built-in art (#215). int, positive.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::screen::opt")]
+    pub pixels_per_tile: Option<f64>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

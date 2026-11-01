@@ -174,7 +174,8 @@ pub fn tools() -> Vec<ToolDefinition> {
     TOOLS.into_iter().map(tool_from_row).collect()
 }
 
-/// The built-in item categories (M1): the eight item types of a game without its own.
+/// The built-in item categories (M1): the nine item types of a game without its own. Food is
+/// eaten for the item's own energy (the kind's is 0).
 pub fn item_categories() -> Vec<ItemCategoryDefinition> {
     let category = |id: &str, name: &str| ItemCategoryDefinition {
         id: id.to_owned(),
@@ -190,6 +191,7 @@ pub fn item_categories() -> Vec<ItemCategoryDefinition> {
         ItemCategoryDefinition { fertilizer: true, ..category(item_types::FERTILIZER, "Fertilizer") },
         category(item_types::MATERIAL, "Material"),
         category(item_types::FISH, "Fish"),
+        ItemCategoryDefinition { edible: true, ..category(item_types::FOOD, "Food") },
     ]
 }
 

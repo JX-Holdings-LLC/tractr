@@ -4,6 +4,7 @@
 #   - crates/farm-cart-schema/src/{cart,save}_generated.rs: flatc 25.2.10 (schemas/README.md)
 #     over schemas/*.fbs
 #   - src/FarmEngine.Authoring/SchemaJson.fs: tools/codegen/schema-json.fsx, which loads Schema.fs
+#   - schemas/project.schema.json: tools/codegen/project-schema.fsx, which loads Schema.fs
 #   - src/FarmEngine.Authoring.Net/RecordJson.fs: tools/codegen/record-json.py
 #   - src/FarmEngine.Authoring.Net/RecordWith.fs: tools/codegen/record-with.fsx, which reads
 #     the Release build of src/FarmEngine.Authoring (built here when it is missing)
@@ -61,6 +62,7 @@ for schema in cart save; do
 done
 
 dotnet fsi "$root/tools/codegen/schema-json.fsx" --check || failed=1
+dotnet fsi "$root/tools/codegen/project-schema.fsx" --check || failed=1
 python3 "$root/tools/codegen/record-json.py" --check || failed=1
 python3 "$root/tools/codegen/font-coverage.py" --check || failed=1
 

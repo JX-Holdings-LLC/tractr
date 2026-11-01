@@ -14,7 +14,7 @@
 use std::fmt;
 use wasmi::{
     Caller, CompilationMode, Config, Engine, Extern, Global, Instance, Linker, Memory, Module, Store, StoreLimits,
-    StoreLimitsBuilder, TrapCode, TypedFunc, Val,
+    StoreLimitsBuilder, TrapCode, TypedFunc, TypedResumableCall, Val,
 };
 
 /// The checked-in guest: QuickJS compiled to `wasm32-wasip1` (see `guest/README.md`).
@@ -33,6 +33,31 @@ pub const MAX_RESULT_BYTES: usize = 1 << 20;
 /// Most bytes of an error text (a thrown message, an init failure) the host reads; the rest is
 /// cut off with `…`. However large a plugin makes its message, the host keeps at most this.
 pub const MAX_ERROR_MESSAGE_BYTES: usize = 1024;
+
+/// Longest request a plugin may hand the host through `api.host` (the guest refuses longer ones
+/// itself; the host checks again).
+pub const MAX_HOST_REQUEST_BYTES: usize = 64 * 1024;
+
+/// Answers a plugin's host calls (`api.host`, guest ABI 2) during one guest call.
+///
+/// Host calls are synchronous: the guest's `farm.host_call` import suspends the wasm call
+/// (wasmi's resumable calls), the protocol loop asks this for the answer, and the call resumes
+/// with it. So the answer can borrow whatever the caller holds (the game state of the step a
+/// hook fired at) without the guest's store owning it.
+pub(crate) trait HostCalls {
+    /// The answer to `request` as JSON text (`{"ok":…}` or `{"error":"…"}`), and the fuel it
+    /// costs the plugin.
+    fn answer(&mut self, request: &str) -> (String, u64);
+}
+
+/// The host-call handler of calls that may not make any (`fp_buffer`, `fp_prepare`, …).
+pub(crate) struct NoHostCalls;
+
+impl HostCalls for NoHostCalls {
+    fn answer(&mut self, _request: &str) -> (String, u64) {
+        (r#"{"error":"host calls are not available here"}"#.to_owned(), 0)
+    }
+}
 
 /// Guest status codes (`STATUS_*` in `crates/farm-plugin-guest/src/lib.rs`).
 pub(crate) mod status {
@@ -109,8 +134,13 @@ pub(crate) trait GuestInstance: Send {
     /// Fuel left from the last [`GuestInstance::set_fuel`]. Negative after an overrun: the
     /// counter is checked at loop heads and function entries, so it can dip below zero.
     fn fuel(&self) -> i64;
-    /// Call an export that takes and returns `i32`s.
-    fn call(&mut self, export: GuestExport, args: &[i32]) -> Result<i32, GuestFault>;
+    /// Call an export that takes and returns `i32`s; the plugin's host calls during it go to
+    /// `host`.
+    fn call_with(&mut self, export: GuestExport, args: &[i32], host: &mut dyn HostCalls) -> Result<i32, GuestFault>;
+    /// [`GuestInstance::call_with`] for calls that make no host calls.
+    fn call(&mut self, export: GuestExport, args: &[i32]) -> Result<i32, GuestFault> {
+        self.call_with(export, args, &mut NoHostCalls)
+    }
     /// Copy `bytes` into linear memory at `address`.
     fn write(&mut self, address: u32, bytes: &[u8]) -> Result<(), GuestFault>;
     /// Copy `len` bytes out of linear memory at `address`.
@@ -172,6 +202,7 @@ fn call_with_input(
     instance: &mut dyn GuestInstance,
     parts: [&[u8]; 2],
     export: GuestExport,
+    host: &mut dyn HostCalls,
 ) -> Result<GuestReply, GuestFault> {
     let first = to_i32(parts[0].len())?;
     let second = to_i32(parts[1].len())?;
@@ -179,7 +210,7 @@ fn call_with_input(
     let address = instance.call(GuestExport::Buffer, &[total])? as u32;
     instance.write(address, parts[0])?;
     instance.write(address.wrapping_add(first as u32), parts[1])?;
-    let status = instance.call(export, &[first, second])?;
+    let status = instance.call_with(export, &[first, second], host)?;
     reply(instance, status)
 }
 
@@ -201,16 +232,27 @@ pub(crate) fn init(
     granted_json: &str,
     source: &str,
 ) -> Result<GuestReply, GuestFault> {
-    call_with_input(instance, [granted_json.as_bytes(), source.as_bytes()], GuestExport::Init)
+    // A plugin's top level runs before any step: it has no game to read.
+    call_with_input(instance, [granted_json.as_bytes(), source.as_bytes()], GuestExport::Init, &mut NoHostCalls)
 }
 
-/// `fp_dispatch`: run the plugin's handler for `hook`.
+/// `fp_dispatch`: run the plugin's handler for `hook` (without host calls).
 pub(crate) fn dispatch(
     instance: &mut dyn GuestInstance,
     hook: &str,
     payload_json: &str,
 ) -> Result<GuestReply, GuestFault> {
-    call_with_input(instance, [hook.as_bytes(), payload_json.as_bytes()], GuestExport::Dispatch)
+    dispatch_with(instance, hook, payload_json, &mut NoHostCalls)
+}
+
+/// `fp_dispatch` with the handler's host calls going to `host`.
+pub(crate) fn dispatch_with(
+    instance: &mut dyn GuestInstance,
+    hook: &str,
+    payload_json: &str,
+    host: &mut dyn HostCalls,
+) -> Result<GuestReply, GuestFault> {
+    call_with_input(instance, [hook.as_bytes(), payload_json.as_bytes()], GuestExport::Dispatch, host)
 }
 
 /// An engine plus the memory image of a prepared guest: `fp_prepare` runs once, and every
@@ -257,10 +299,34 @@ impl Sandbox {
 // ---------------------------------------------------------------------------------------------
 // wasmi
 
-/// Store data: the resource limits wasmi enforces on memory growth.
+/// Store data: the resource limits wasmi enforces on memory growth, and the host call in
+/// flight.
 struct StoreData {
     limits: StoreLimits,
+    /// The request of the suspended `farm.host_call`.
+    request: Option<String>,
+    /// The answer `farm.host_answer` copies into the guest.
+    answer: Vec<u8>,
 }
+
+impl StoreData {
+    fn new(limits: StoreLimits) -> Self {
+        Self { limits, request: None, answer: Vec::new() }
+    }
+}
+
+/// The host error `farm.host_call` suspends the guest with: the protocol loop answers the
+/// request and resumes the call.
+#[derive(Debug)]
+struct HostCallPending;
+
+impl fmt::Display for HostCallPending {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a plugin host call is pending")
+    }
+}
+
+impl wasmi::errors::HostError for HostCallPending {}
 
 /// The guest module compiled once for wasmi, shared by all of a host's instances.
 pub(crate) struct WasmiEngine {
@@ -292,6 +358,7 @@ impl WasmiEngine {
         let module = Module::new(&engine, GUEST_WASM).map_err(|error| GuestFault::Other(error.to_string()))?;
         let mut linker = Linker::new(&engine);
         wasi::define_stubs(&mut linker).map_err(|error| GuestFault::Other(error.to_string()))?;
+        host_imports::define(&mut linker).map_err(|error| GuestFault::Other(error.to_string()))?;
         Ok(Self { engine, module, linker, limits })
     }
 }
@@ -300,7 +367,7 @@ impl GuestEngine for WasmiEngine {
     fn instantiate(&self) -> Result<Box<dyn GuestInstance>, GuestFault> {
         let limits =
             StoreLimitsBuilder::new().memory_size(self.limits.memory_bytes).memories(1).tables(4).instances(1).build();
-        let mut store = Store::new(&self.engine, StoreData { limits });
+        let mut store = Store::new(&self.engine, StoreData::new(limits));
         store.limiter(|data| &mut data.limits);
         let instance =
             self.linker.instantiate_and_start(&mut store, &self.module).map_err(|error| classify(&error, false))?;
@@ -347,6 +414,47 @@ struct WasmiInstance {
     exports: Exports,
 }
 
+/// Call `func` and answer every host call it makes: `farm.host_call` suspends the call with
+/// [`HostCallPending`], `host` answers the request, the fuel counter pays its cost, and the
+/// call resumes with the answer's length (`farm.host_answer` then copies it in). A cost that
+/// takes the counter below zero stops the call at the guest's next fuel check, like any other
+/// overrun.
+fn run_resumable<Params: wasmi::WasmParams>(
+    store: &mut Store<StoreData>,
+    fuel: Global,
+    func: &TypedFunc<Params, i32>,
+    params: Params,
+    host: &mut dyn HostCalls,
+) -> Result<i32, wasmi::Error> {
+    let mut call = func.call_resumable(&mut *store, params)?;
+    loop {
+        match call {
+            TypedResumableCall::Finished(result) => return Ok(result),
+            TypedResumableCall::HostTrap(trap) => {
+                if trap.host_error().downcast_ref::<HostCallPending>().is_none() {
+                    let error = trap.host_error();
+                    return Err(match error.i32_exit_status() {
+                        Some(code) => wasmi::Error::i32_exit(code),
+                        None => wasmi::Error::new(error.to_string()),
+                    });
+                }
+                let request = store.data_mut().request.take().unwrap_or_default();
+                let (answer, cost) = host.answer(&request);
+                if let Val::I64(left) = fuel.get(&*store) {
+                    let cost = i64::try_from(cost).unwrap_or(i64::MAX);
+                    let _ = fuel.set(&mut *store, Val::I64(left.saturating_sub(cost)));
+                }
+                let len = i32::try_from(answer.len()).unwrap_or(-1);
+                store.data_mut().answer = if len < 0 { Vec::new() } else { answer.into_bytes() };
+                call = trap.resume(&mut *store, &[Val::I32(len)])?;
+            }
+            TypedResumableCall::OutOfFuel(_) => {
+                return Err(wasmi::Error::new("wasmi fuel is off for the plugin guest"));
+            }
+        }
+    }
+}
+
 /// Map a wasmi error to a fault. `out_of_fuel` says whether the guest's counter went negative
 /// (its metering traps with `unreachable` then).
 fn classify(error: &wasmi::Error, out_of_fuel: bool) -> GuestFault {
@@ -378,13 +486,15 @@ impl GuestInstance for WasmiInstance {
         }
     }
 
-    fn call(&mut self, export: GuestExport, args: &[i32]) -> Result<i32, GuestFault> {
+    fn call_with(&mut self, export: GuestExport, args: &[i32], host: &mut dyn HostCalls) -> Result<i32, GuestFault> {
         let arg = |index: usize| args.get(index).copied().unwrap_or(0);
         let result = match export {
             GuestExport::Buffer => self.exports.buffer.call(&mut self.store, arg(0)),
             GuestExport::Prepare => self.exports.prepare.call(&mut self.store, (arg(0), arg(1))),
-            GuestExport::Init => self.exports.init.call(&mut self.store, (arg(0), arg(1))),
-            GuestExport::Dispatch => self.exports.dispatch.call(&mut self.store, (arg(0), arg(1))),
+            GuestExport::Init => run_resumable(&mut self.store, self.fuel, &self.exports.init, (arg(0), arg(1)), host),
+            GuestExport::Dispatch => {
+                run_resumable(&mut self.store, self.fuel, &self.exports.dispatch, (arg(0), arg(1)), host)
+            }
             GuestExport::OutputPtr => self.exports.output_ptr.call(&mut self.store, ()),
             GuestExport::OutputLen => self.exports.output_len.call(&mut self.store, ()),
         };
@@ -422,6 +532,42 @@ impl GuestInstance for WasmiInstance {
     }
 }
 
+/// The guest's host calls (ABI 2, `api.host`): `farm.host_call` reads the request and
+/// suspends the call ([`HostCallPending`]) so [`run_resumable`] can answer it with the caller's
+/// [`HostCalls`]; `farm.host_answer` copies the answer in.
+mod host_imports {
+    use super::{wasi, Caller, HostCallPending, Linker, StoreData, MAX_HOST_REQUEST_BYTES};
+
+    const MODULE: &str = "farm";
+
+    pub(super) fn define(linker: &mut Linker<StoreData>) -> Result<(), wasmi::Error> {
+        linker.func_wrap(
+            MODULE,
+            "host_call",
+            |mut caller: Caller<'_, StoreData>, ptr: i32, len: i32| -> Result<i32, wasmi::Error> {
+                let (start, len) = (ptr as u32 as usize, len as u32 as usize);
+                if len > MAX_HOST_REQUEST_BYTES {
+                    return Ok(-1);
+                }
+                let Some(memory) = wasi::memory_of(&caller) else { return Ok(-1) };
+                let Some(bytes) = start.checked_add(len).and_then(|end| memory.data(&caller).get(start..end)) else {
+                    return Ok(-1);
+                };
+                let request = String::from_utf8_lossy(bytes).into_owned();
+                caller.data_mut().request = Some(request);
+                Err(wasmi::Error::host(HostCallPending))
+            },
+        )?;
+        linker.func_wrap(MODULE, "host_answer", |mut caller: Caller<'_, StoreData>, ptr: i32| {
+            let answer = std::mem::take(&mut caller.data_mut().answer);
+            // Out of bounds leaves the guest's buffer as it was; the guest only ever passes a
+            // buffer of the answer's length.
+            let _ = wasi::write_bytes(&mut caller, ptr, &answer);
+        })?;
+        Ok(())
+    }
+}
+
 /// The WASI preview 1 functions the guest imports, as inert stubs: no files, no environment,
 /// a clock stuck at the Unix epoch, deterministic "random" bytes, stdout/stderr discarded, and
 /// `proc_exit` ends the call.
@@ -435,11 +581,11 @@ mod wasi {
     /// `EFAULT`: a pointer outside linear memory.
     const FAULT: i32 = 21;
 
-    fn memory_of(caller: &Caller<'_, StoreData>) -> Option<wasmi::Memory> {
+    pub(super) fn memory_of(caller: &Caller<'_, StoreData>) -> Option<wasmi::Memory> {
         caller.get_export("memory").and_then(Extern::into_memory)
     }
 
-    fn write_bytes(caller: &mut Caller<'_, StoreData>, address: i32, bytes: &[u8]) -> i32 {
+    pub(super) fn write_bytes(caller: &mut Caller<'_, StoreData>, address: i32, bytes: &[u8]) -> i32 {
         match memory_of(caller) {
             Some(memory) if memory.write(&mut *caller, address as u32 as usize, bytes).is_ok() => SUCCESS,
             _ => FAULT,
@@ -563,7 +709,14 @@ mod tests {
         let imports: Vec<String> =
             engine.module.imports().map(|import| format!("{}.{}", import.module(), import.name())).collect();
         assert!(!imports.is_empty());
-        assert!(imports.iter().all(|name| name.starts_with("wasi_snapshot_preview1.")), "{imports:?}");
+        let host_calls = ["farm.host_call", "farm.host_answer"];
+        assert!(
+            imports
+                .iter()
+                .all(|name| name.starts_with("wasi_snapshot_preview1.") || host_calls.contains(&name.as_str())),
+            "{imports:?}"
+        );
+        assert!(host_calls.iter().all(|name| imports.iter().any(|import| import == name)), "ABI 2 has host calls");
         // Instantiation resolves every import against the stubs.
         engine.instantiate().expect("all imports are defined");
     }
@@ -682,7 +835,7 @@ mod tests {
         let module = Module::new(&engine, &wasm[..]).expect("the test module is valid");
         let mut linker = Linker::new(&engine);
         wasi::define_stubs(&mut linker).unwrap();
-        let mut store = Store::new(&engine, StoreData { limits: StoreLimitsBuilder::new().build() });
+        let mut store = Store::new(&engine, StoreData::new(StoreLimitsBuilder::new().build()));
         let instance = linker.instantiate_and_start(&mut store, &module).unwrap();
         let random = instance.get_typed_func::<(i32, i32), i32>(&store, "random").unwrap();
         let page = PAGE as i32;
@@ -692,6 +845,69 @@ mod tests {
         assert_eq!(random.call(&mut store, (0, i32::MAX)).unwrap(), 21);
         assert_eq!(random.call(&mut store, (page - 16, 17)).unwrap(), 21);
         assert_eq!(random.call(&mut store, (-1, 2)).unwrap(), 21);
+    }
+
+    /// Answers every request with its own text and a fixed cost, recording the requests.
+    struct Echo {
+        requests: Vec<String>,
+        cost: u64,
+    }
+
+    impl HostCalls for Echo {
+        fn answer(&mut self, request: &str) -> (String, u64) {
+            self.requests.push(request.to_owned());
+            if request.contains("fail") {
+                return (r#"{"error":"no such thing"}"#.to_owned(), self.cost);
+            }
+            (format!(r#"{{"ok":{request}}}"#), self.cost)
+        }
+    }
+
+    #[test]
+    fn host_calls_answer_synchronously_and_cost_fuel() {
+        let source =
+            "api.on('onDayStart', p => { var a = api.host({ q: 'echo', n: p.day }); var b = api.host([1, 'two']); \
+                      var e; try { api.host({ fail: true }); } catch (err) { e = err.message; } \
+                      return [{ type: 'message', text: a.q + a.n + ':' + b[1] + ':' + e }]; });";
+        let run = |cost: u64| {
+            let mut instance = fresh();
+            init(instance.as_mut(), r#"["onDayStart"]"#, source).unwrap();
+            let mut host = Echo { requests: Vec::new(), cost };
+            instance.set_fuel(1 << 40);
+            let reply = dispatch_with(instance.as_mut(), "onDayStart", r#"{"day":3}"#, &mut host).unwrap();
+            (reply, instance.fuel_used(1 << 40), host.requests)
+        };
+        let (reply, cheap, requests) = run(0);
+        assert_eq!(reply, GuestReply::new(status::OK, r#"[{"type":"message","text":"echo3:two:no such thing"}]"#));
+        assert_eq!(requests, [r#"{"q":"echo","n":3}"#, r#"[1,"two"]"#, r#"{"fail":true}"#]);
+        let (_, dear, _) = run(1_000_000);
+        assert_eq!(dear, cheap + 3_000_000, "each host call pays its cost from the call's fuel");
+        // A cost beyond the budget stops the call like any overrun.
+        let mut instance = fresh();
+        init(instance.as_mut(), r#"["onDayStart"]"#, source).unwrap();
+        instance.set_fuel(5_000_000);
+        let mut host = Echo { requests: Vec::new(), cost: 10_000_000 };
+        assert_eq!(
+            dispatch_with(instance.as_mut(), "onDayStart", r#"{"day":3}"#, &mut host),
+            Err(GuestFault::OutOfFuel)
+        );
+    }
+
+    #[test]
+    fn host_calls_outside_a_host_throw_in_the_plugin() {
+        let mut instance = fresh();
+        let source = "api.on('onDayStart', () => { try { api.host({ q: 'player' }); return []; } catch (e) { return [{ type: 'message', text: e.message }]; } });";
+        init(instance.as_mut(), r#"["onDayStart"]"#, source).unwrap();
+        let reply = dispatch(instance.as_mut(), "onDayStart", "{}").unwrap();
+        assert_eq!(reply.output, r#"[{"type":"message","text":"host calls are not available here"}]"#);
+        // Requests over the limit never reach the host.
+        let mut instance = fresh();
+        let source = "api.on('onDayStart', () => { try { api.host('x'.repeat(70000)); return []; } catch (e) { return [{ type: 'message', text: e.message }]; } });";
+        init(instance.as_mut(), r#"["onDayStart"]"#, source).unwrap();
+        let mut host = Echo { requests: Vec::new(), cost: 0 };
+        let reply = dispatch_with(instance.as_mut(), "onDayStart", "{}", &mut host).unwrap();
+        assert!(reply.output.contains("refused"), "{}", reply.output);
+        assert!(host.requests.is_empty());
     }
 
     #[test]

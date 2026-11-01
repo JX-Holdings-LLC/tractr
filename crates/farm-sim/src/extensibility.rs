@@ -90,6 +90,15 @@ pub fn handle_use_item(ctx: &EngineContext, state: &mut GameState, item_id: &str
     };
     let consume_on_use = slot.item.consume_on_use == Some(true);
 
+    // `plugin:<handler>` runs a plugin's item-use handler with the faced tile (#238).
+    if let Some(handler) = crate::plugin_world::use_handler(item_id, &use_action_id) {
+        crate::plugin_world::use_item(ctx, state, item_id, &handler);
+        if consume_on_use {
+            state.player.inventory = inventory::remove_item(&state.player.inventory, item_id, 1);
+        }
+        return Vec::new();
+    }
+
     let result = events::perform_action(ctx, state, &use_action_id);
     if result.ran && consume_on_use {
         state.player.inventory = inventory::remove_item(&state.player.inventory, item_id, 1);

@@ -13,7 +13,7 @@ use super::farm::{BuildingDefinition, BuildingState};
 use super::fishing::FishTable;
 use super::goals::{AchievementDefinition, BundleDefinition, CollectionDefinition, MailDefinition};
 use super::graphics::{GraphicsSettings, VisualRef};
-use super::interface::GamePanel;
+use super::interface::{GamePanel, UiSkin};
 use super::mining::MineConfig;
 use super::nodes::NodeTypeDefinition;
 use super::packs::PackInstallation;
@@ -70,10 +70,16 @@ pub struct GameProject {
     pub custom_crops: Option<Vec<CustomCropDefinition>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub player_visual: Option<VisualRef>,
+    /// The player as a stack of layer sheets (#234), replacing `playerVisual` when not empty.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub player_layers: Option<Vec<super::CharacterLayer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graphics: Option<GraphicsSettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_panels: Option<Vec<GamePanel>>,
+    /// The look of the game's interface; absent: the built-in look.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ui_skin: Option<UiSkin>,
     pub current_season: String,
     #[serde(with = "crate::units::count")]
     pub current_day: u32,
@@ -106,6 +112,10 @@ pub struct GameProject {
     pub minigames: Vec<MinigameDef>,
     /// Installed content packs (M5). Array order = load order.
     pub content_packs: Vec<PackInstallation>,
+    /// The creator's own scripts (#241): trusted plugins of the game itself, which use the
+    /// game's ids as written.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scripts: Option<Vec<super::ProjectScript>>,
     /// The project's terrains (M1), beside and over the built-in ones.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terrains: Option<Vec<TerrainDefinition>>,
@@ -148,6 +158,12 @@ pub struct GameProject {
     /// Monsters (M7).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monsters: Option<Vec<MonsterDefinition>>,
+    /// Rules for saves written before a game update (#242), compiled into the content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub save_migrations: Option<Vec<super::upkeep::SaveMigration>>,
+    /// Named states a playtest can start from (#229); never part of the content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_states: Option<Vec<super::upkeep::TestState>>,
     /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rng_state: Option<RngState>,

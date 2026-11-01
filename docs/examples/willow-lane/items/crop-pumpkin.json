@@ -1,0 +1,10 @@
+{
+  "id": "crop-pumpkin",
+  "name": "Pumpkin",
+  "description": "Fresh pumpkin",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 150,
+  "cropType": "pumpkin"
+}

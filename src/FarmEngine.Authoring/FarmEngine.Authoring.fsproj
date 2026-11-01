@@ -17,7 +17,9 @@
     <Compile Include="ProjectVersion.fs" />
     <Compile Include="AuthoringTiles.fs" />
     <Compile Include="PackRules.fs" />
+    <Compile Include="PluginExtensions.fs" />
     <Compile Include="Builtin.fs" />
+    <Compile Include="BuiltinLooks.fs" />
     <Compile Include="PackMerge.fs" />
     <Compile Include="ContentCompiler.fs" />
     <Compile Include="StarterContent.fs" />
@@ -36,6 +38,9 @@
     <Compile Include="Vocabulary.fs" />
     <Compile Include="Readouts.fs" />
     <Compile Include="AudioFiles.fs" />
+    <Compile Include="CharacterArt.fs" />
+    <Compile Include="Upkeep.fs" />
+    <Compile Include="FontFile.fs" />
     <Compile Include="Problem.fs" />
     <Compile Include="SchemaChecks.fs" />
     <Compile Include="ContentLints.fs" />
@@ -43,12 +48,25 @@
     <Compile Include="ChecksContent.fs" />
     <Compile Include="ChecksVocabulary.fs" />
     <Compile Include="ChecksExport.fs" />
+    <Compile Include="ChecksSkin.fs" />
     <Compile Include="FontCoverage.fs" />
+    <Compile Include="ChecksUpkeep.fs" />
+    <Compile Include="ContentGraph.fs" />
+    <Compile Include="ChecksGraph.fs" />
+    <Compile Include="Csv.fs" />
+    <Compile Include="ConditionText.fs" />
+    <Compile Include="DialogueScript.fs" />
+    <Compile Include="Translations.fs" />
     <Compile Include="Problems.fs" />
     <Compile Include="ProjectLoad.fs" />
+    <Compile Include="ContentTables.fs" />
+    <Compile Include="BulkEdit.fs" />
     <Compile Include="ProjectFolder.fs" />
     <Compile Include="AssetUsage.fs" />
     <Compile Include="ArtLibrary.fs" />
+    <Compile Include="Png.fs" />
+    <Compile Include="AsepriteImport.fs" />
+    <Compile Include="MapImport.fs" />
     <Compile Include="PackExport.fs" />
     <Compile Include="ModRegistry.fs" />
     <Compile Include="Bytes.fs" />
@@ -58,6 +76,9 @@
     <Compile Include="Playtest.fs" />
     <Compile Include="Patterns.fs" />
     <Compile Include="Api.fs" />
+    <Compile Include="UpkeepApi.fs" />
+    <Compile Include="ImportApi.fs" />
+    <Compile Include="AuthoringTools.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />

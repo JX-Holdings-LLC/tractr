@@ -12,6 +12,9 @@
     <Compile Include="SchemaRecordTests.fs" />
     <Compile Include="ProjectLoadTests.fs" />
     <Compile Include="ProjectFolderTests.fs" />
+    <Compile Include="DialogueScriptTests.fs" />
+    <Compile Include="ContentTablesTests.fs" />
+    <Compile Include="TranslationsTests.fs" />
     <Compile Include="DocumentTests.fs" />
     <Compile Include="SceneEditTests.fs" />
     <Compile Include="ContentEditTests.fs" />
@@ -39,7 +42,14 @@
     <Compile Include="QuestsMinesTests.fs" />
     <Compile Include="ProgressionTests.fs" />
     <Compile Include="CalendarDepthTests.fs" />
+    <Compile Include="CharacterArtTests.fs" />
+    <Compile Include="PluginSystemsTests.fs" />
+    <Compile Include="UpkeepTests.fs" />
+    <Compile Include="ImportTests.fs" />
+    <Compile Include="SkinTests.fs" />
     <Compile Include="ParityTests.fs" />
+    <Compile Include="AuthoringEdgesTests.fs" />
+    <Compile Include="ProjectSchemaTests.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="../../fixtures/golden/content/*.json" Link="Golden/content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

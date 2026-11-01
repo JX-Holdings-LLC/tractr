@@ -1,0 +1,10 @@
+{
+  "id": "crop-wheat",
+  "name": "Wheat",
+  "description": "Fresh wheat",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 25,
+  "cropType": "wheat"
+}

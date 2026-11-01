@@ -196,7 +196,8 @@ module Builtin =
             tool ToolTypes.FishingRod "Fishing Rod" "Catch fish from water tiles" ToolActions.Fish None 3.0 single None
         ]
 
-    /// The built-in item categories (M1): the eight item types of a game without its own.
+    /// The built-in item categories (M1): the nine item types of a game without its own. Food is
+    /// eaten for the item's own energy (the kind's is 0).
     let itemCategories () : ItemCategoryDefinition list =
         let category id name : ItemCategoryDefinition =
             { ItemCategoryDefinition.Default with
@@ -222,6 +223,9 @@ module Builtin =
             }
             category ItemTypes.Material "Material"
             category ItemTypes.Fish "Fish"
+            { category ItemTypes.Food "Food" with
+                Edible = true
+            }
         ]
 
     /// The built-in crop quality tiers (M1), ranked.

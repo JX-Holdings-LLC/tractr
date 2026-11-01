@@ -187,12 +187,18 @@ type Edit =
     | SetMine of config: MineConfig
     /// InterfaceEditor: the creator panels shown in play.
     | SetGamePanels of panels: GamePanel list
+    /// The interface skin (#236); `None` resets the built-in look.
+    | SetUiSkin of skin: UiSkin option
 
     // ---- Project (ProjectSettingsEditor.tsx, AssetManager.tsx, ArtBindings.tsx, ModsEditor.tsx) ----
     | SetProjectInfo of name: string * version: string
     | SetSettings of settings: ProjectSettings
     /// Native export identity and target settings; None disables standalone export metadata.
     | SetExportSettings of settings: ExportSettings option
+    /// The project's save migration rules (#242).
+    | SetSaveMigrations of rules: SaveMigration list
+    /// The project's test states (#229).
+    | SetTestStates of states: TestState list
     /// ProjectSettingsEditor `removeSeason`: also drops festivals and weather rows of that season; refused for the last season.
     | RemoveSeason of seasonId: string
     /// ProjectSettingsEditor `moveSeason`: swap a season with the one `delta` places away (±1 for

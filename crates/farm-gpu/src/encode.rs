@@ -784,7 +784,7 @@ fn command_key(command: &DrawCmd, images: &ImageStore) -> Vec<u32> {
             }
         }
         DrawCmd::Text { text, x, y, font, size, color: c, stroke, align } => {
-            key.extend([13, x.to_bits(), y.to_bits(), *font as u32, size.to_bits(), *align as u32]);
+            key.extend([13, x.to_bits(), y.to_bits(), font.code(), size.to_bits(), *align as u32]);
             color(&mut key, c);
             match stroke {
                 Some(stroke) => key.extend([1, pack(stroke.color), stroke.width.to_bits()]),

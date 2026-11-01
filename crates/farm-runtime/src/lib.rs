@@ -17,4 +17,5 @@ pub mod input;
 pub mod minigames;
 pub mod music;
 pub mod panels;
+pub mod screens;
 pub mod timestep;

@@ -308,6 +308,41 @@ pub enum HookEvent {
     AchievementUnlock(AchievementUnlockHookPayload),
     #[serde(rename = "onMonsterSlay")]
     MonsterSlay(MonsterSlayHookPayload),
+    /// A plugin system's own hook (#238, #239): an entity's handlers, a timer, an item use, a
+    /// plugin outcome. Its name is dynamic ([`ExtensionHookPayload::hook`]).
+    #[serde(rename = "extension")]
+    Extension(ExtensionHookPayload),
+}
+
+/// The hook names of plugin systems ([`HookEvent::Extension`]): each is a prefix followed by
+/// the full name of what it runs (`entity:packId:name`, …), except [`extension_hooks::TIMER`].
+pub mod extension_hooks {
+    /// `entity:<type>`: the handlers of an entity type, `{ op: 'tick' | 'dayStart', entities }`
+    /// or `{ op: 'interact', entity }`.
+    pub const ENTITY: &str = "entity:";
+    /// `use:<handler>`: an item whose `useActionId` is `plugin:<handler>` was used, with the
+    /// tile the player faces.
+    pub const ITEM_USE: &str = "use:";
+    /// `outcome:<name>`: a plugin outcome ran, with its arguments.
+    pub const OUTCOME: &str = "outcome:";
+    /// `condition:<name>`: a plugin condition (asked synchronously, never emitted).
+    pub const CONDITION: &str = "condition:";
+    /// `timer`: one of the plugin's timers came due (only that plugin hears it).
+    pub const TIMER: &str = "timer";
+}
+
+/// The payload of a [`HookEvent::Extension`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtensionHookPayload {
+    /// The hook a plugin registered its handler on (see [`extension_hooks`]).
+    pub hook: String,
+    /// The one plugin that hears it (`packId:pluginId`, a timer's owner); absent: every plugin
+    /// granted the hook.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plugin_id: Option<String>,
+    /// What the handler gets.
+    pub payload: serde_json::Value,
 }
 
 impl HookEvent {
@@ -337,6 +372,16 @@ impl HookEvent {
             Self::BundleComplete(_) => hook_names::ON_BUNDLE_COMPLETE,
             Self::AchievementUnlock(_) => hook_names::ON_ACHIEVEMENT_UNLOCK,
             Self::MonsterSlay(_) => hook_names::ON_MONSTER_SLAY,
+            Self::Extension(_) => "extension",
+        }
+    }
+
+    /// The hook a plugin hears this event on: [`HookEvent::hook`], or the dynamic name of a
+    /// plugin system's hook ([`ExtensionHookPayload::hook`]).
+    pub fn hook_name(&self) -> &str {
+        match self {
+            Self::Extension(extension) => &extension.hook,
+            other => other.hook(),
         }
     }
 }

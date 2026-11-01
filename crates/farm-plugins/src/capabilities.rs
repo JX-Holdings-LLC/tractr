@@ -66,6 +66,12 @@ pub const MUTATION_TYPES: &[&str] = &[
     "addMaxHealth",
     "applyBuff",
     "modifyHealth",
+    // Entities and timers (#238).
+    "spawnEntity",
+    "updateEntity",
+    "removeEntity",
+    "startTimer",
+    "cancelTimer",
 ];
 
 /// The mutation every plugin may answer without a capability: it keeps only the plugin's own
@@ -97,6 +103,7 @@ pub const SCOPED_MUTATION_TYPES: &[&str] = &[
     "setRelationship",
     "sendMail",
     "applyBuff",
+    "spawnEntity",
 ];
 
 /// Flags no plugin may write: `event:<id>:fired` re-arms or disables one-shot events.
@@ -305,6 +312,14 @@ impl MutationGrants {
                 buff.id = scope.resolve("buff.id", buff.id)?;
                 PluginMutation::ApplyBuff { buff }
             }
+            PluginMutation::SpawnEntity { entity_type, scene_id, x, y, art, state } => PluginMutation::SpawnEntity {
+                entity_type: scope.resolve("entityType", entity_type)?,
+                scene_id,
+                x,
+                y,
+                art,
+                state,
+            },
             other => other,
         };
         Ok(authorized)

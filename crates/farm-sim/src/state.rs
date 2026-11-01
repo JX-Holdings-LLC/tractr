@@ -88,6 +88,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         achievements: project.achievements.clone().unwrap_or_default(),
         mail: project.mail.clone().unwrap_or_default(),
         monsters: project.monsters.clone().unwrap_or_default(),
+        save_migrations: project.save_migrations.clone().unwrap_or_default(),
     }
 }
 
@@ -254,6 +255,9 @@ pub fn create_game_state_from_start(start: &StartState, seed: Option<&str>) -> G
         next_monster: 0,
         slain: IndexMap::new(),
         plugin_data: IndexMap::new(),
+        plugin_entities: Vec::new(),
+        next_plugin_entity: 0,
+        plugin_timers: Vec::new(),
     };
 
     // Grids that don't match their scene's size (a hand-edited project, an import) are fixed

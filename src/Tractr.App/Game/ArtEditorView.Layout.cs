@@ -32,6 +32,7 @@ public sealed partial class ArtEditorView
         var svgSize = Ui.HStack(6, Ui.Text("SVG size (longest side, px)", "muted", "small"), _svgSize);
         ToolTip.SetTip(svgSize, "Leave empty to use the SVG's own size.");
         left.Children.Add(svgSize);
+        left.Children.Add(BuildAsepriteImport());
         left.Children.Add(_assets);
         var removeUnused = Ui.Button("Remove unused art…", ConfirmRemoveUnused, "tool");
         removeUnused.Name = "RemoveUnusedArtButton";

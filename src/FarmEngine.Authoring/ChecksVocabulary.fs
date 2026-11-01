@@ -491,6 +491,9 @@ module internal ChecksVocabulary =
                 | CutsceneStepTypes.Emote ->
                     needs "actor" (hasValue step.Actor)
                     needs "emote" (hasValue step.Emote)
+                | CutsceneStepTypes.Animate ->
+                    needs "actor" (hasValue step.Actor)
+                    needs "animation" (hasValue step.Animation)
                 | CutsceneStepTypes.Fade -> needs "mode" (hasValue step.Mode)
                 | CutsceneStepTypes.Music ->
                     match step.SoundId with

@@ -3,10 +3,10 @@
 //! gameplay rule; it only picks images and frames.
 
 use crate::num::{cs_max, cs_min};
-use crate::snapshot::{SnapshotSprite, WorldSnapshot};
+use crate::snapshot::{SnapshotAction, SnapshotLayer, SnapshotSprite, WorldSnapshot};
 use farm_sim::schema::{
-    AnimationClip, ArtFrame, CustomAsset, CustomCropDefinition, GameContent, GameProject, GameState, GraphicsSettings,
-    Scene, SpriteSheet, Tile, VisualRef,
+    AnimationClip, ArtFrame, CharacterLayer, CustomAsset, CustomCropDefinition, GameContent, GameProject, GameState,
+    GraphicsSettings, Scene, SpriteSheet, Tile, VisualRef,
 };
 use farm_sim::vocabulary;
 use farm_sim::Presentation;
@@ -27,6 +27,8 @@ pub struct ArtAsset {
     pub height: Option<f64>,
     pub animations: Option<Vec<AnimationClip>>,
     pub sheet: Option<SpriteSheet>,
+    /// `pixelsPerTile` (#215): sheet pixels per tile for art standing on the map.
+    pub pixels_per_tile: Option<f64>,
 }
 
 impl From<&CustomAsset> for ArtAsset {
@@ -40,6 +42,7 @@ impl From<&CustomAsset> for ArtAsset {
             height: asset.height,
             animations: asset.animations.clone(),
             sheet: asset.sheet.clone(),
+            pixels_per_tile: asset.pixels_per_tile.filter(|ppt| *ppt > 0.0),
         }
     }
 }
@@ -54,6 +57,8 @@ pub fn art_assets(assets: &[CustomAsset]) -> Vec<ArtAsset> {
 pub struct NpcArt {
     pub scene_id: String,
     pub visual: Option<VisualRef>,
+    /// Its layer stack (#234).
+    pub layers: Option<Vec<CharacterLayer>>,
 }
 
 /// An animal instance for the art pass.
@@ -88,6 +93,8 @@ pub struct CropArt {
 pub struct GraphicsSource {
     pub assets: Vec<ArtAsset>,
     pub player_visual: Option<VisualRef>,
+    /// The player's layer stack (#234).
+    pub player_layers: Option<Vec<CharacterLayer>>,
     /// `graphics.pixelArt` (true when the game has no graphics settings).
     pub pixel_art: bool,
     pub npcs: Vec<NpcArt>,
@@ -125,6 +132,7 @@ impl GraphicsSource {
         Self {
             assets: art_assets(assets),
             player_visual: player_visual.cloned(),
+            player_layers: None,
             pixel_art: graphics.is_none_or(|graphics| graphics.pixel_art),
             npcs: Vec::new(),
             animal_species: Vec::new(),
@@ -139,12 +147,14 @@ impl GraphicsSource {
     /// The presentation parts only (assets, player art, pixel-art mode, custom crops); NPCs,
     /// animals and definitions come from [`GraphicsSource::set_live_state`].
     pub fn from_presentation(presentation: &Presentation) -> Self {
-        Self::base(
+        let mut source = Self::base(
             &presentation.custom_assets,
             presentation.player_visual.as_ref(),
             presentation.graphics.as_ref(),
             presentation.custom_crops.as_ref(),
-        )
+        );
+        source.player_layers.clone_from(&presentation.player_layers);
+        source
     }
 
     /// Play mode (game-shell `draw()`): presentation art plus live NPC and animal positions from
@@ -163,10 +173,15 @@ impl GraphicsSource {
             project.graphics.as_ref(),
             project.custom_crops.as_ref(),
         );
+        source.player_layers.clone_from(&project.player_layers);
         source.npcs = project
             .npcs
             .iter()
-            .map(|npc| NpcArt { scene_id: npc.scene_id.clone(), visual: npc.visual.clone() })
+            .map(|npc| NpcArt {
+                scene_id: npc.scene_id.clone(),
+                visual: npc.visual.clone(),
+                layers: npc.layers.clone(),
+            })
             .collect();
         source.animal_species = definitions(project.animal_species.iter().map(|d| (&d.id, &d.visual)));
         source.animals = animal_art(&project.animals);
@@ -185,6 +200,7 @@ impl GraphicsSource {
             .map(|npc| NpcArt {
                 scene_id: state.npcs.get(&npc.id).map_or(&npc.scene_id, |live| &live.scene_id).clone(),
                 visual: npc.visual.clone(),
+                layers: npc.layers.clone(),
             })
             .collect();
         self.node_types = definitions(content.node_types.iter().map(|d| (&d.id, &d.visual)));
@@ -341,6 +357,7 @@ pub fn resolve_visual(
         return None;
     }
     let image_url = Arc::clone(&source.image_url);
+    let pixels_per_tile = asset.pixels_per_tile;
 
     if let Some(frame) = frame {
         return Some(SnapshotSprite {
@@ -351,6 +368,7 @@ pub fn resolve_visual(
             row: 0.0,
             source_x: Some(frame.x),
             source_y: Some(frame.y),
+            pixels_per_tile,
         });
     }
 
@@ -373,6 +391,7 @@ pub fn resolve_visual(
             row,
             source_x: None,
             source_y: None,
+            pixels_per_tile,
         });
     }
 
@@ -385,7 +404,54 @@ pub fn resolve_visual(
         row: 0.0,
         source_x: None,
         source_y: None,
+        pixels_per_tile,
     })
+}
+
+/// The frames of a layer stack (#234) for this tick, direction and motion: every layer picks its
+/// clip like a character sprite does, so layers with the same clips stay in step. Layers whose
+/// asset is missing are left out; `None` when none is left.
+pub fn resolve_layers(
+    assets: &[ArtAsset],
+    layers: Option<&[CharacterLayer]>,
+    tick: f64,
+    direction: &str,
+    moving: bool,
+    action: Option<&SnapshotAction>,
+) -> Option<Vec<SnapshotLayer>> {
+    let resolved: Vec<SnapshotLayer> = layers?
+        .iter()
+        .filter_map(|layer| {
+            let visual = VisualRef { asset_id: layer.asset_id.clone(), ..VisualRef::default() };
+            let sprite = resolve_acting(assets, Some(&visual), tick, direction, moving, action)?;
+            Some(SnapshotLayer { sprite, color: layer.color.clone() })
+        })
+        .collect();
+    (!resolved.is_empty()).then_some(resolved)
+}
+
+/// [`resolve_visual`] for a character that may be playing an action clip (#235): the clip's
+/// frame `elapsed` ticks in when its art has a clip of that name, else its usual frame.
+pub fn resolve_acting(
+    assets: &[ArtAsset],
+    visual: Option<&VisualRef>,
+    tick: f64,
+    direction: &str,
+    moving: bool,
+    action: Option<&SnapshotAction>,
+) -> Option<SnapshotSprite> {
+    if let (Some(action), Some(visual)) = (action, visual) {
+        let has_clip = assets
+            .iter()
+            .find(|asset| asset.id == visual.asset_id)
+            .and_then(|asset| asset.animations.as_ref())
+            .is_some_and(|clips| clips.iter().any(|clip| clip.name == action.clip));
+        if has_clip {
+            let playing = VisualRef { animation: Some(action.clip.clone()), frame: None, ..visual.clone() };
+            return resolve_visual(assets, Some(&playing), action.elapsed, direction, false);
+        }
+    }
+    resolve_visual(assets, visual, tick, direction, moving)
 }
 
 /// Decorates a simulation snapshot with the project's art, in place (`Graphics.ApplyGraphics`):
@@ -399,17 +465,34 @@ pub fn apply_graphics(snapshot: &mut WorldSnapshot, source: &GraphicsSource, sce
     let art = |visual: Option<&VisualRef>| resolve_visual(assets, visual, tick, "down", true);
 
     snapshot.pixel_art = Some(source.pixel_art);
-    snapshot.player.sprite =
-        resolve_visual(assets, source.player_visual.as_ref(), tick, &snapshot.player.direction, moving);
+    let acting = snapshot.player.action.clone();
+    snapshot.player.sprite = resolve_acting(
+        assets,
+        source.player_visual.as_ref(),
+        tick,
+        &snapshot.player.direction,
+        moving,
+        acting.as_ref(),
+    );
     // A worn hat's art (M4) faces like the player.
     snapshot.player.hat =
         resolve_visual(assets, snapshot.player.hat_visual.as_ref(), tick, &snapshot.player.direction, false);
+    // Layered characters (#234): the player's own stack and the layers of what it wears.
+    let player = &mut snapshot.player;
+    let acting = acting.as_ref();
+    player.layers = resolve_layers(assets, source.player_layers.as_deref(), tick, &player.direction, moving, acting);
+    player.worn_layers = resolve_layers(assets, player.worn_refs.as_deref(), tick, &player.direction, moving, acting);
+    if let Some(action) = player.action.as_mut() {
+        action.held = art(action.held_visual.as_ref());
+    }
 
     let npcs: Vec<&NpcArt> = source.npcs.iter().filter(|npc| npc.scene_id == scene.id).collect();
     // NPCs face and walk like the player: a schedule's walk or a cutscene's `face` and `move`
     // steps pick the direction's clips and sheet row.
     for (target, npc) in snapshot.npcs.iter_mut().zip(&npcs) {
-        target.sprite = resolve_visual(assets, npc.visual.as_ref(), tick, &target.direction, target.moving);
+        let acting = target.action.as_ref();
+        target.sprite = resolve_acting(assets, npc.visual.as_ref(), tick, &target.direction, target.moving, acting);
+        target.layers = resolve_layers(assets, npc.layers.as_deref(), tick, &target.direction, target.moving, acting);
     }
     let animals = source.animals.iter().filter(|animal| animal.scene_id == scene.id);
     for (target, animal) in snapshot.npcs.iter_mut().skip(npcs.len()).zip(animals) {
@@ -527,6 +610,7 @@ mod tests {
                     name: "idle".into(),
                     r#loop: true,
                     frames: vec![frame(None, 0.0, 2.0), frame(Some("b"), 0.0, 3.0)],
+                    ..AnimationClip::default()
                 }]),
                 ..CustomAsset::default()
             },
@@ -577,6 +661,7 @@ mod tests {
             name: "walk-left".into(),
             r#loop: true,
             frames: vec![frame(None, 16.0, 1.0)],
+            ..AnimationClip::default()
         });
         let walking = resolve_visual(&assets, Some(&visual("a")), 0.0, "left", true).unwrap();
         assert_eq!(walking.source_x, Some(16.0));

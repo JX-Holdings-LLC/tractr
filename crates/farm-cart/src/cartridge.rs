@@ -54,6 +54,8 @@ pub struct CartPlugin {
     pub granted_mutations: Option<Vec<String>>,
     /// The minigame kinds (`packId:name`) the plugin defines that the manifest allows.
     pub granted_minigames: Vec<String>,
+    /// The pack manifest's `permissions.read` (#237).
+    pub granted_reads: Vec<String>,
 }
 
 /// A verified cartridge, borrowing its sections from the buffer.
@@ -130,6 +132,10 @@ pub fn read_cartridge(bytes: &[u8]) -> Result<Cartridge<'_>, String> {
                     granted_minigames: plugin
                         .granted_minigames()
                         .map(|kinds| kinds.iter().map(str::to_owned).collect())
+                        .unwrap_or_default(),
+                    granted_reads: plugin
+                        .granted_reads()
+                        .map(|reads| reads.iter().map(str::to_owned).collect())
                         .unwrap_or_default(),
                 })
                 .collect()

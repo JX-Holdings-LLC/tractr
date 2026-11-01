@@ -255,6 +255,9 @@ pub struct ProjectSettings {
     pub progression: Option<super::ProgressionLimits>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub skill_definitions: Option<Vec<super::SkillDefinition>>,
+    /// Budgets of the project's own scripts (#241); absent: the pack plugin defaults.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scripts: Option<super::ScriptSettings>,
 }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
@@ -374,6 +377,7 @@ impl Default for ProjectSettings {
             combat: None,
             progression: None,
             skill_definitions: None,
+            scripts: None,
         }
     }
 }

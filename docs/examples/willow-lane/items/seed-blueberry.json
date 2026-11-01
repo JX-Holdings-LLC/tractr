@@ -1,0 +1,10 @@
+{
+  "id": "seed-blueberry",
+  "name": "Blueberry Seeds",
+  "description": "Plant these to grow blueberry",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 35,
+  "cropType": "blueberry"
+}

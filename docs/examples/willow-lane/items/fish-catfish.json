@@ -1,0 +1,9 @@
+{
+  "id": "fish-catfish",
+  "name": "Catfish",
+  "description": "A prized whiskered catch",
+  "type": "fish",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 75
+}

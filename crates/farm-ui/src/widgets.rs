@@ -3,6 +3,7 @@
 
 use crate::icons::{self, Icon};
 use crate::layout::{Align, RectExt};
+use crate::skin::Part;
 use crate::theme::{fade, mix};
 use crate::ui::{HitKind, Interaction, Ui, WidgetId};
 use farm_render::{Color, DrawCmd, FontId, Rect};
@@ -32,6 +33,8 @@ pub struct Button<'a> {
     pub kind: ButtonKind,
     pub enabled: bool,
     pub icon: Option<Icon>,
+    /// The skin icon (`UiSkinIcons`) drawn instead of `icon` when the skin has it.
+    pub skin_icon: Option<&'a str>,
     /// A keycap drawn before the label (dialogue option numbers).
     pub keycap: Option<&'a str>,
     /// Font size (logical, before the text-size setting).
@@ -49,6 +52,7 @@ impl<'a> Button<'a> {
             kind: ButtonKind::Secondary,
             enabled: true,
             icon: None,
+            skin_icon: None,
             keycap: None,
             size: 13.0,
             focusable: true,
@@ -72,6 +76,11 @@ impl<'a> Button<'a> {
 
     pub fn icon(mut self, icon: Icon) -> Self {
         self.icon = Some(icon);
+        self
+    }
+
+    pub fn skin_icon(mut self, name: &'a str) -> Self {
+        self.skin_icon = Some(name);
         self
     }
 
@@ -162,7 +171,7 @@ impl Ui {
     pub fn row_background(&mut self, rect: Rect) {
         let colors = self.theme().colors;
         let radius = self.theme().small_radius;
-        self.panel(rect, colors.row, colors.row_border, radius, false);
+        self.skinned_panel(Part::Slot, rect, colors.row, colors.row_border, radius, false);
     }
 
     /// A vertical gradient over `rect` from `top` to `bottom` (drawn as bands).
@@ -266,7 +275,22 @@ impl Ui {
             border = fade(colors.button_border, 0.5);
             text = fade(colors.muted, 0.75);
         }
-        self.bordered(rect, radius, fill, border);
+        // The skin's button art for this state, else its plain button art, else the theme.
+        let skinnable = !matches!(button.kind, ButtonKind::Subtle | ButtonKind::Tab { .. });
+        let part = if !button.enabled {
+            Part::ButtonDisabled
+        } else if state.active {
+            Part::ButtonPressed
+        } else if state.hovered || state.focus_visible {
+            Part::ButtonHover
+        } else {
+            Part::Button
+        };
+        let skinned =
+            skinnable && (self.skin_part(part, rect) || (part != Part::Button && self.skin_part(Part::Button, rect)));
+        if !skinned {
+            self.bordered(rect, radius, fill, border);
+        }
         if state.focus_visible {
             self.focus_ring(rect, radius);
         }
@@ -287,7 +311,9 @@ impl Ui {
         if let Some(icon) = button.icon {
             let icon_rect = content.cut_left(icon_width);
             let square = Rect::new(icon_rect.x, rect.y + (rect.height - px) / 2.0, px, px);
-            icons::draw(self.list_mut(), icon, square, text, fill);
+            if !button.skin_icon.is_some_and(|name| self.skin_icon(name, square)) {
+                icons::draw(self.list_mut(), icon, square, text, fill);
+            }
         }
         if let Some(key) = button.keycap {
             let key_rect = content.cut_left(key_width);
@@ -474,7 +500,7 @@ impl Ui {
         let height =
             (header_height + content + 4.0 + spec.footer).clamp(header_height + spec.footer + 60.0, max_height);
         let card = screen.centered(width, height);
-        self.panel(card, colors.panel, colors.panel_border, radius, true);
+        self.skinned_panel(Part::Panel, card, colors.panel, colors.panel_border, radius, true);
         self.blocker(card);
 
         let mut area = card;

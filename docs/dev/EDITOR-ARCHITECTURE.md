@@ -15,6 +15,7 @@ commands and navigation. They can be tested without constructing Avalonia.
 | Content | `ContentEditorView` | `ContentEditorViewModel`: category, entry list, selected record, commands, readouts and unsaved-draft prompts |
 | Generated fields | `ContentForm`, its `ListEditor` and `VocabularyEditor` helpers | `ContentDraftViewModel`: JSON draft, field writers, dirty tracking, numeric validation, raw JSON validation and commit |
 | Art | `ArtEditorView` and `ArtEditorView.Layout` | `ArtEditorViewModel`: selection, imports, animation frames/clips, bindings, removals and messages |
+| Authoring tools | `ScriptEditorWindow`, `TableEditorWindow` (opened from the Content tab's Edit as script and Tables) | `ScriptEditorViewModel`, `TableEditorViewModel` over the F# `AuthoringTools` (dialogue scripts, tables, CSV, bulk edits) |
 | Other tabs | `ProblemsView`, `SettingsEditorView`, `ModsEditorView`, `WorkshopView`, `InterfaceEditorView` | Matching classes in `ViewModels/EditMode` |
 | Project persistence | `ProjectWorkspace`, `ProjectStore`, project dialogs | Immutable F# `Document`, undo/redo, background autosave and F# project edits |
 | Game surface | `GameWorkspaceView`, `PlayModeView`, `DebugDrawer` | Rust simulation, renderer and runtime UI through `FarmEngine.Interop` |

@@ -235,6 +235,9 @@ pub fn condition_holds(
             crate::buildings::count_standing(ctx, state, building_id) >= *min
         }
         EventCondition::Slain { monster_id, min } => crate::combat::slain(state, monster_id) >= u64::from(*min),
+        EventCondition::Plugin { condition, args } => {
+            ctx.plugin_conditions.as_ref().is_some_and(|plugins| plugins.holds(ctx, state, condition, args, scope))
+        }
         EventCondition::Birthday { npc_id } => {
             let date = game_time::clock_date(&ctx.content.settings.calendar, &state.clock);
             let today = |npc: &crate::schema::Npc| {
@@ -473,6 +476,16 @@ fn apply_outcome(
         OutcomeKind::ModifyHealth => {
             let amount = i32::try_from(whole(outcome.amount.unwrap_or(0))).unwrap_or(0);
             crate::combat::modify_health(ctx, state, amount)
+        }
+        OutcomeKind::Plugin => {
+            // The plugin answers through the mutation queue, like any hook (#239).
+            if let Some(name) =
+                outcome.extra.get("pluginOutcome").and_then(Value::as_str).filter(|name| !name.is_empty())
+            {
+                let args = outcome.extra.get("args").cloned().unwrap_or(Value::Null);
+                crate::plugin_world::run_outcome(ctx, name, &args);
+            }
+            vec![]
         }
     }
 }

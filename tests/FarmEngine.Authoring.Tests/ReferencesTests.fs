@@ -324,6 +324,7 @@ let ``condition and outcome types are pinned`` () =
             "building"
             "slain"
             "birthday"
+            "plugin"
         ],
         Vocabulary.conditionTypes |> List.map fst
     )
@@ -375,6 +376,7 @@ let ``condition and outcome types are pinned`` () =
             "addMaxHealth"
             "applyBuff"
             "modifyHealth"
+            "plugin"
         ],
         Vocabulary.outcomeTypes |> List.map fst
     )
@@ -426,6 +428,7 @@ let ``each condition type shows the web fields`` () =
             "building", [ "buildingId"; "min" ]
             "slain", [ "monsterId"; "min" ]
             "birthday", [ "npcId" ]
+            "plugin", [ "condition" ]
         ]
 
     for kind, fields in expected do
@@ -493,6 +496,7 @@ let ``each outcome type shows the web fields`` () =
             "addMaxHealth", [ "amount" ]
             "applyBuff", []
             "modifyHealth", [ "amount" ]
+            "plugin", []
         ]
 
     for kind, fields in expected do

@@ -94,6 +94,9 @@ pub struct GameContent {
     /// Monsters (M7).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub monsters: Vec<MonsterDefinition>,
+    /// Rules for saves written before a game update (#242), applied when they load.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub save_migrations: Vec<super::upkeep::SaveMigration>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

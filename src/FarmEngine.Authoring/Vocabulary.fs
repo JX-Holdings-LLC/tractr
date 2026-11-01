@@ -103,6 +103,7 @@ module Vocabulary =
             "building", "Has building"
             "slain", "Monsters slain ≥ n"
             "birthday", "Today is a birthday"
+            "plugin", "Plugin condition"
         ]
 
     /// How a `variable` condition compares, with the editor's labels.
@@ -168,6 +169,7 @@ module Vocabulary =
             EventOutcomeTypes.AddMaxHealth, "Increase maximum health"
             EventOutcomeTypes.ApplyBuff, "Apply timed buff"
             EventOutcomeTypes.ModifyHealth, "Restore / take health"
+            EventOutcomeTypes.Plugin, "Plugin outcome"
         ]
 
     /// The label of a condition type (the type itself when unknown).
@@ -338,6 +340,8 @@ module Vocabulary =
                     Empty = Some "(anyone's)"
                 }
             ]
+        // The arguments come from the plugin's own form (`PluginExtensions.conditionChoices`).
+        | "plugin" -> [ text "condition" "Condition" "packId:name" ]
         | _ -> []
 
     /// `OutcomeFields`: the fields each outcome type shows.
@@ -504,6 +508,7 @@ module Vocabulary =
         | CutsceneStepTypes.Music
         | CutsceneStepTypes.Sound -> [ "SoundId" ]
         | CutsceneStepTypes.Outcomes -> [ "Outcomes" ]
+        | CutsceneStepTypes.Animate -> [ "Actor"; "Animation"; "Seconds"; "Wait" ]
         | _ -> []
 
     let private stepProperties =
@@ -525,6 +530,7 @@ module Vocabulary =
             "Outcomes"
             "Wait"
             "Expression"
+            "Animation"
         ]
 
     /// Properties of `owner` a form hides while its `type` discriminator is `kind`.

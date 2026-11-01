@@ -1,0 +1,13 @@
+{
+  "id": "tool-fishing-rod",
+  "name": "Fishing Rod",
+  "description": "Catch fish from water tiles",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 120,
+  "toolType": "fishing-rod",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

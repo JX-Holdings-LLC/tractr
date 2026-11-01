@@ -261,6 +261,15 @@ module References =
             "elder", "Elder"
             "child", "Child"
             "guard", "Guard"
+            // Base characters in built-in colours (#216, CharacterArt.colouredAppearances).
+            "fisher", "Fisher"
+            "miner", "Miner"
+            "baker", "Baker"
+            "doctor", "Doctor"
+            "blacksmith", "Blacksmith"
+            "noble", "Noble"
+            "gardener", "Gardener"
+            "sailor", "Sailor"
         ]
 
     /// QuestEditor objective type select (plus `gift`, which the engine also tracks).
@@ -380,6 +389,8 @@ module References =
             reference "VisualRef" "AssetId" ReferenceKind.Asset
             plain "VisualRef" "Animation" "a clip name on the chosen asset"
             optionalAs "ArtFrame" "AssetId" ReferenceKind.Asset "(same image)"
+            reference "CharacterLayer" "AssetId" ReferenceKind.Asset
+            optional "WearDefinition" "Layer" ReferenceKind.Asset
             oneOf "CustomAsset" "Type" (same CustomAssetTypes.All)
             optional "CustomAsset" "TileType" ReferenceKind.Terrain
             // Items and crops
@@ -648,6 +659,11 @@ module References =
             plain "GamePanel" "VisibleFlag" flag
             oneOf "GamePanelEntry" "Kind" (same GamePanelEntryKinds.All)
             plain "GamePanelEntry" "Value" "text, an item id, an action id or a flag, depending on the entry kind"
+            plain "UiSkin" "Colors" "colours by palette role (`UiPaletteRoles`); checked by `skin.unknownColor`"
+            plain "UiSkin" "Panels" "panel art by interface part (`UiSkinParts`); checked by `skin.unknownPart` and `skin.missingArt`"
+            plain "UiSkin" "Icons" "icons by name (`UiSkinIcons`); checked by `skin.unknownIcon` and `skin.missingArt`"
+            plain "ImportSource" "TargetId" "the asset or scene an import made; the importers skip a record whose target is gone"
+            plain "ImportSource" "Names" "Aseprite tag and slice names and the clips they became"
 
             // Content packs
             reference "PackDependency" "PackId" ReferenceKind.Pack
@@ -657,7 +673,24 @@ module References =
             plain "PackPermissions" "Minigames" "minigame kinds the pack's plugins may define (docs/PLUGINS.md)"
             plain "PackPlugin" "Hooks" "plugin hook names the plugin handles"
             plain "PackPlugin" "Minigames" "minigame kinds the plugin defines with api.minigame"
+            plain "PackPermissions" "Read" "read API scopes the pack's plugins may query (docs/PLUGINS.md)"
+            plain "PackPermissions" "Entities" "entity types the pack's plugins may place (docs/PLUGINS.md)"
+            plain "PackPermissions" "ItemUses" "item use handlers the pack's plugins may define (docs/PLUGINS.md)"
+            plain "PackPermissions" "Screens" "screens the pack's plugins may add (docs/PLUGINS.md)"
+            plain "PackPlugin" "Entities" "entity types the plugin defines"
+            plain "PackPlugin" "ItemUses" "item use handlers the plugin defines"
+            plain "PluginArgument" "Type" "the argument's value type (PluginArgumentTypes)"
             plain "PackContent" "Strings" "locale string tables keyed by locale code"
+            plain "Item" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "Npc" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "Quest" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "CustomCropDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "ShopDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "NodeTypeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "RecipeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "MachineTypeDefinition" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "FishTable" "Tags" "labels of the creator's own for selecting entries (#227)"
+            plain "TranslationTable" "Strings" "translated texts keyed by text field (`Translations.catalog`, #228)"
             optional "PackPlayerStart" "SceneId" ReferenceKind.Scene
             reference "PackStartItem" "ItemId" ReferenceKind.Item
 
@@ -666,6 +699,20 @@ module References =
             optional "ExportSettings" "IconAssetId" ReferenceKind.Asset
             oneOf "ExportSettings" "PixelScale" [ "integer", "Whole-number scaling (crisp)"; "fit", "Fit the window" ]
             plain "ExportSettings" "Targets" "export target names (windows-x64, linux-x64, web)"
+            plain "ExportedIds" "Items" "the item ids an exported version had (they may be gone now)"
+            plain "ExportedIds" "Scenes" "the scene ids an exported version had (they may be gone now)"
+
+            // Save migrations (#242) and test states (#229)
+            plain "SaveMigration" "From" "an id old saves hold, which the game may no longer have"
+            plain "SaveMigration" "To" "the item or scene id (by kind) that takes the old id's place"
+            optional "TestState" "SceneId" ReferenceKind.Scene
+            optional "TestState" "Season" ReferenceKind.Season
+            plain "TestState" "Flags" flag
+            plain "TestState" "Variables" variable
+            keys "TestState" "Quests" ReferenceKind.Quest
+            keys "TestState" "Friendship" ReferenceKind.Npc
+            reference "TestStateItem" "ItemId" ReferenceKind.Item
+            optional "TestStateItem" "Quality" ReferenceKind.CropQuality
         ]
 
     let private byProperty =

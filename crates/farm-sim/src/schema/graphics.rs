@@ -39,12 +39,45 @@ pub struct AnimationClip {
     pub r#loop: bool,
     /// 1..1024 frames.
     pub frames: Vec<ArtFrame>,
+    /// An action clip (#235: `use-till-down`, `eat`, …) keeps the player in place until it ends.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lock_movement: Option<bool>,
+    /// An action clip's impact frame (0 = the first): the tool's effect applies when it shows;
+    /// absent: at once. int, nonnegative.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::count::opt")]
+    pub impact_frame: Option<u32>,
+    /// A drawing effect while the clip plays: one of [`clip_effects`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect: Option<String>,
+    /// The item the action is about (the one eaten or held up) is drawn over the character.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hold_item: Option<bool>,
 }
 
 impl Default for AnimationClip {
     fn default() -> Self {
-        Self { name: String::new(), r#loop: true, frames: Vec::new() }
+        Self {
+            name: String::new(),
+            r#loop: true,
+            frames: Vec::new(),
+            lock_movement: None,
+            impact_frame: None,
+            effect: None,
+            hold_item: None,
+        }
     }
+}
+
+/// Drawing effects of an action clip (#235, F# `ClipEffects`).
+pub mod clip_effects {
+    /// Blinks lighter every other frame.
+    pub const FLASH: &str = "flash";
+    /// Shakes a pixel left and right.
+    pub const SHAKE: &str = "shake";
+    /// Squashes down at the impact frame.
+    pub const SQUASH: &str = "squash";
+
+    pub const ALL: &[&str] = &[FLASH, SHAKE, SQUASH];
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]

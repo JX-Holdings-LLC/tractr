@@ -73,12 +73,56 @@ const GAMEPAD_LAYOUT: [(GamepadButton, &str); 5] = [
     (GamepadButton::RightShoulder, "settings.padNextTab"),
 ];
 
+/// A language's name in itself, for the languages a game's own text may be translated into
+/// (#228) beyond the interface's; other codes show as they are.
+fn language_name(code: &str) -> String {
+    let language = code.split(['-', '_']).next().unwrap_or(code).to_ascii_lowercase();
+    let name = match language.as_str() {
+        "de" => "Deutsch",
+        "fr" => "Fran\u{e7}ais",
+        "it" => "Italiano",
+        "pt" => "Portugu\u{ea}s",
+        "nl" => "Nederlands",
+        "pl" => "Polski",
+        "sv" => "Svenska",
+        "da" => "Dansk",
+        "nb" | "no" => "Norsk",
+        "fi" => "Suomi",
+        "tr" => "T\u{fc}rk\u{e7}e",
+        "cs" => "\u{10c}e\u{161}tina",
+        "ru" => "\u{420}\u{443}\u{441}\u{441}\u{43a}\u{438}\u{439}",
+        "uk" => "\u{423}\u{43a}\u{440}\u{430}\u{457}\u{43d}\u{441}\u{44c}\u{43a}\u{430}",
+        "el" => "\u{395}\u{3bb}\u{3bb}\u{3b7}\u{3bd}\u{3b9}\u{3ba}\u{3ac}",
+        _ => return code.to_owned(),
+    };
+    if language == code.to_ascii_lowercase() {
+        name.to_owned()
+    } else {
+        format!("{name} ({code})")
+    }
+}
+
+/// The languages the picker offers after "automatic": the interface's, then the game's own
+/// translations (`game_languages`, locale codes) the interface has no table for.
+pub fn language_options(game_languages: &[String]) -> Vec<(String, String)> {
+    let mut options: Vec<(String, String)> =
+        Lang::ALL.iter().map(|lang| (lang.code().to_owned(), lang.native_name().to_owned())).collect();
+    for code in game_languages {
+        if !options.iter().any(|(known, _)| known.eq_ignore_ascii_case(code)) {
+            options.push((code.clone(), language_name(code)));
+        }
+    }
+    options
+}
+
 /// Draws the settings; `embedded` hides the display options the editor controls itself.
+/// `game_languages` are the locales the game's own text is translated into (#228).
 pub fn settings(
     ui: &mut Ui,
     screen: &mut SettingsScreen,
     settings: &mut Settings,
     embedded: bool,
+    game_languages: &[String],
 ) -> Option<ShellAction> {
     let colors = ui.theme().colors;
     let lang = ui.lang();
@@ -304,16 +348,23 @@ pub fn settings(
                 changed = true;
             }
             y += row + 4.0;
-            // Language: automatic, then each table by its own name.
+            // Language: automatic, then each table by its own name: the interface's, then those
+            // the game's own text is translated into.
+            let options = language_options(game_languages);
             let mut names = vec![lang.tr("settings.languageAuto")];
-            names.extend(Lang::ALL.iter().map(|option| option.native_name()));
-            let chosen = Lang::from_tag(&settings.language);
-            let index = Lang::ALL.iter().position(|option| chosen == Some(*option)).map_or(0, |index| index + 1);
+            names.extend(options.iter().map(|(_, name)| name.as_str()));
+            let index = options
+                .iter()
+                .position(|(code, _)| code.eq_ignore_ascii_case(&settings.language))
+                .or_else(|| {
+                    let chosen = Lang::from_tag(&settings.language)?;
+                    options.iter().position(|(code, _)| code == chosen.code())
+                })
+                .map_or(0, |index| index + 1);
             let label = lang.tr("settings.language");
             if let Some(next) = ui.stepper(id("language"), Rect::new(area.x, y, area.width, row), label, &names, index)
             {
-                settings.language =
-                    next.checked_sub(1).map_or_else(String::new, |index| Lang::ALL[index].code().to_owned());
+                settings.language = next.checked_sub(1).map_or_else(String::new, |index| options[index].0.clone());
                 changed = true;
             }
             y += row + 4.0;

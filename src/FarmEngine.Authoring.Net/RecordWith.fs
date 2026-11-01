@@ -118,6 +118,14 @@ type RecordWith =
     [<Extension>]
     static member WithFrames(record: AnimationClip, value: seq<ArtFrame>) : AnimationClip = { record with Frames = List.ofSeq value }
     [<Extension>]
+    static member WithLockMovement(record: AnimationClip, value: Nullable<bool>) : AnimationClip = { record with LockMovement = Option.ofNullable value }
+    [<Extension>]
+    static member WithImpactFrame(record: AnimationClip, value: Nullable<float>) : AnimationClip = { record with ImpactFrame = Option.ofNullable value }
+    [<Extension>]
+    static member WithEffect(record: AnimationClip, value: string | null) : AnimationClip = { record with Effect = Option.ofObj value }
+    [<Extension>]
+    static member WithHoldItem(record: AnimationClip, value: Nullable<bool>) : AnimationClip = { record with HoldItem = Option.ofNullable value }
+    [<Extension>]
     static member WithConditions(record: AnyCondition, value: seq<EventCondition>) : AnyCondition = { record with Conditions = List.ofSeq value }
     [<Extension>]
     static member WithEffect(record: AreaEffect, value: string) : AreaEffect = { record with Effect = value }
@@ -282,6 +290,10 @@ type RecordWith =
     [<Extension>]
     static member WithChance(record: ChanceCondition, value: float) : ChanceCondition = { record with Chance = value }
     [<Extension>]
+    static member WithAssetId(record: CharacterLayer, value: string) : CharacterLayer = { record with AssetId = value }
+    [<Extension>]
+    static member WithColor(record: CharacterLayer, value: string | null) : CharacterLayer = { record with Color = Option.ofObj value }
+    [<Extension>]
     static member WithCollectionId(record: CollectionCondition, value: string) : CollectionCondition = { record with CollectionId = value }
     [<Extension>]
     static member WithMin(record: CollectionCondition, value: Nullable<float>) : CollectionCondition = { record with Min = Option.ofNullable value }
@@ -325,6 +337,16 @@ type RecordWith =
     static member WithContent(record: ContentPack, value: PackContent) : ContentPack = { record with Content = value }
     [<Extension>]
     static member WithPlugins(record: ContentPack, value: seq<PackPlugin>) : ContentPack = { record with Plugins = List.ofSeq value }
+    [<Extension>]
+    static member WithId(record: ContentTemplate, value: string) : ContentTemplate = { record with Id = value }
+    [<Extension>]
+    static member WithName(record: ContentTemplate, value: string) : ContentTemplate = { record with Name = value }
+    [<Extension>]
+    static member WithEntries(record: ContentTemplate, value: seq<ContentTemplateEntry>) : ContentTemplate = { record with Entries = List.ofSeq value }
+    [<Extension>]
+    static member WithKind(record: ContentTemplateEntry, value: string) : ContentTemplateEntry = { record with Kind = value }
+    [<Extension>]
+    static member WithEntry(record: ContentTemplateEntry, value: Json | null) : ContentTemplateEntry = { record with Entry = Option.ofObj value }
     [<Extension>]
     static member WithType(record: Crop, value: string) : Crop = { record with Type = value }
     [<Extension>]
@@ -432,6 +454,8 @@ type RecordWith =
     [<Extension>]
     static member WithSheet(record: CustomAsset, value: SpriteSheet | null) : CustomAsset = { record with Sheet = Option.ofObj value }
     [<Extension>]
+    static member WithPixelsPerTile(record: CustomAsset, value: Nullable<float>) : CustomAsset = { record with PixelsPerTile = Option.ofNullable value }
+    [<Extension>]
     static member WithId(record: CustomCropDefinition, value: string) : CustomCropDefinition = { record with Id = value }
     [<Extension>]
     static member WithName(record: CustomCropDefinition, value: string) : CustomCropDefinition = { record with Name = value }
@@ -466,6 +490,8 @@ type RecordWith =
     [<Extension>]
     static member WithLight(record: CustomCropDefinition, value: LightSource | null) : CustomCropDefinition = { record with Light = Option.ofObj value }
     [<Extension>]
+    static member WithTags(record: CustomCropDefinition, value: seq<string> | null) : CustomCropDefinition = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithId(record: Cutscene, value: string) : Cutscene = { record with Id = value }
     [<Extension>]
     static member WithName(record: Cutscene, value: string) : Cutscene = { record with Name = value }
@@ -477,6 +503,8 @@ type RecordWith =
     static member WithText(record: CutsceneChoice, value: string) : CutsceneChoice = { record with Text = value }
     [<Extension>]
     static member WithGoto(record: CutsceneChoice, value: string) : CutsceneChoice = { record with Goto = value }
+    [<Extension>]
+    static member WithId(record: CutsceneChoice, value: string | null) : CutsceneChoice = { record with Id = Option.ofObj value }
     [<Extension>]
     static member WithType(record: CutsceneStep, value: string) : CutsceneStep = { record with Type = value }
     [<Extension>]
@@ -515,6 +543,10 @@ type RecordWith =
     static member WithOutcomes(record: CutsceneStep, value: seq<EventOutcome>) : CutsceneStep = { record with Outcomes = List.ofSeq value }
     [<Extension>]
     static member WithWait(record: CutsceneStep, value: Nullable<bool>) : CutsceneStep = { record with Wait = Option.ofNullable value }
+    [<Extension>]
+    static member WithAnimation(record: CutsceneStep, value: string | null) : CutsceneStep = { record with Animation = Option.ofObj value }
+    [<Extension>]
+    static member WithId(record: CutsceneStep, value: string | null) : CutsceneStep = { record with Id = Option.ofObj value }
     [<Extension>]
     static member WithMinDay(record: DayOfSeasonCondition, value: Nullable<float>) : DayOfSeasonCondition = { record with MinDay = Option.ofNullable value }
     [<Extension>]
@@ -567,6 +599,8 @@ type RecordWith =
     static member WithRequiresFriendship(record: DialogueOption, value: Nullable<float>) : DialogueOption = { record with RequiresFriendship = Option.ofNullable value }
     [<Extension>]
     static member WithActionId(record: DialogueOption, value: string | null) : DialogueOption = { record with ActionId = Option.ofObj value }
+    [<Extension>]
+    static member WithId(record: DialogueOption, value: string | null) : DialogueOption = { record with Id = Option.ofObj value }
     [<Extension>]
     static member WithX(record: EnterTileCondition, value: float) : EnterTileCondition = { record with X = value }
     [<Extension>]
@@ -658,11 +692,19 @@ type RecordWith =
     [<Extension>]
     static member WithTargets(record: ExportSettings, value: seq<string>) : ExportSettings = { record with Targets = List.ofSeq value }
     [<Extension>]
+    static member WithExportedIds(record: ExportSettings, value: ExportedIds | null) : ExportSettings = { record with ExportedIds = Option.ofObj value }
+    [<Extension>]
     static member WithWidth(record: ExportWindow, value: int) : ExportWindow = { record with Width = value }
     [<Extension>]
     static member WithHeight(record: ExportWindow, value: int) : ExportWindow = { record with Height = value }
     [<Extension>]
     static member WithFullscreen(record: ExportWindow, value: bool) : ExportWindow = { record with Fullscreen = value }
+    [<Extension>]
+    static member WithVersion(record: ExportedIds, value: string) : ExportedIds = { record with Version = value }
+    [<Extension>]
+    static member WithItems(record: ExportedIds, value: seq<string>) : ExportedIds = { record with Items = List.ofSeq value }
+    [<Extension>]
+    static member WithScenes(record: ExportedIds, value: seq<string>) : ExportedIds = { record with Scenes = List.ofSeq value }
     [<Extension>]
     static member WithId(record: FarmLayout, value: string) : FarmLayout = { record with Id = value }
     [<Extension>]
@@ -759,6 +801,8 @@ type RecordWith =
     static member WithJunkChance(record: FishTable, value: float) : FishTable = { record with JunkChance = value }
     [<Extension>]
     static member WithJunkItemId(record: FishTable, value: string | null) : FishTable = { record with JunkItemId = Option.ofObj value }
+    [<Extension>]
+    static member WithTags(record: FishTable, value: seq<string> | null) : FishTable = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithFilter(record: FishTable, value: FishingFilter | null) : FishTable = { record with Filter = Option.ofObj value }
     [<Extension>]
@@ -906,6 +950,8 @@ type RecordWith =
     [<Extension>]
     static member WithMonsters(record: GameContent, value: seq<MonsterDefinition> | null) : GameContent = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithSaveMigrations(record: GameContent, value: seq<SaveMigration> | null) : GameContent = { record with SaveMigrations = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithId(record: GameEvent, value: string) : GameEvent = { record with Id = value }
     [<Extension>]
     static member WithName(record: GameEvent, value: string) : GameEvent = { record with Name = value }
@@ -986,9 +1032,13 @@ type RecordWith =
     [<Extension>]
     static member WithPlayerVisual(record: GameProject, value: VisualRef | null) : GameProject = { record with PlayerVisual = Option.ofObj value }
     [<Extension>]
+    static member WithPlayerLayers(record: GameProject, value: seq<CharacterLayer> | null) : GameProject = { record with PlayerLayers = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithGraphics(record: GameProject, value: GraphicsSettings | null) : GameProject = { record with Graphics = Option.ofObj value }
     [<Extension>]
     static member WithGamePanels(record: GameProject, value: seq<GamePanel> | null) : GameProject = { record with GamePanels = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithUiSkin(record: GameProject, value: UiSkin | null) : GameProject = { record with UiSkin = Option.ofObj value }
     [<Extension>]
     static member WithCurrentSeason(record: GameProject, value: string) : GameProject = { record with CurrentSeason = value }
     [<Extension>]
@@ -1030,6 +1080,8 @@ type RecordWith =
     [<Extension>]
     static member WithContentPacks(record: GameProject, value: seq<PackInstallation>) : GameProject = { record with ContentPacks = List.ofSeq value }
     [<Extension>]
+    static member WithScripts(record: GameProject, value: seq<ProjectScript> | null) : GameProject = { record with Scripts = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithTerrains(record: GameProject, value: seq<TerrainDefinition> | null) : GameProject = { record with Terrains = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithTools(record: GameProject, value: seq<ToolDefinition> | null) : GameProject = { record with Tools = (match value with null -> None | items -> Some(List.ofSeq items)) }
@@ -1058,6 +1110,12 @@ type RecordWith =
     [<Extension>]
     static member WithMonsters(record: GameProject, value: seq<MonsterDefinition> | null) : GameProject = { record with Monsters = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithSaveMigrations(record: GameProject, value: seq<SaveMigration> | null) : GameProject = { record with SaveMigrations = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithTestStates(record: GameProject, value: seq<TestState> | null) : GameProject = { record with TestStates = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithImports(record: GameProject, value: seq<ImportSource> | null) : GameProject = { record with Imports = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithExport(record: GameProject, value: ExportSettings | null) : GameProject = { record with Export = Option.ofObj value }
     [<Extension>]
     static member WithRngState(record: GameProject, value: RngState | null) : GameProject = { record with RngState = Option.ofObj value }
@@ -1071,6 +1129,10 @@ type RecordWith =
     static member WithQuarantinedItems(record: GameProject, value: seq<InventorySlot> | null) : GameProject = { record with QuarantinedItems = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithKeptState(record: GameProject, value: Json | null) : GameProject = { record with KeptState = Option.ofObj value }
+    [<Extension>]
+    static member WithTranslations(record: GameProject, value: seq<TranslationTable> | null) : GameProject = { record with Translations = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithContentTemplates(record: GameProject, value: seq<ContentTemplate> | null) : GameProject = { record with ContentTemplates = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithMoney(record: GameWords, value: string | null) : GameWords = { record with Money = Option.ofObj value }
     [<Extension>]
@@ -1136,6 +1198,16 @@ type RecordWith =
     [<Extension>]
     static member WithMax(record: HeartsCondition, value: Nullable<float>) : HeartsCondition = { record with Max = Option.ofNullable value }
     [<Extension>]
+    static member WithKind(record: ImportSource, value: string) : ImportSource = { record with Kind = value }
+    [<Extension>]
+    static member WithTargetId(record: ImportSource, value: string) : ImportSource = { record with TargetId = value }
+    [<Extension>]
+    static member WithPath(record: ImportSource, value: string) : ImportSource = { record with Path = value }
+    [<Extension>]
+    static member WithLevel(record: ImportSource, value: string | null) : ImportSource = { record with Level = Option.ofObj value }
+    [<Extension>]
+    static member WithNames(record: ImportSource, value: seq<(string * string)> | null) : ImportSource = { record with Names = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithX(record: InteractTileCondition, value: float) : InteractTileCondition = { record with X = value }
     [<Extension>]
     static member WithY(record: InteractTileCondition, value: float) : InteractTileCondition = { record with Y = value }
@@ -1194,6 +1266,8 @@ type RecordWith =
     [<Extension>]
     static member WithHealth(record: Item, value: Nullable<float>) : Item = { record with Health = Option.ofNullable value }
     [<Extension>]
+    static member WithTags(record: Item, value: seq<string> | null) : Item = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithFishingGear(record: Item, value: FishingGear | null) : Item = { record with FishingGear = Option.ofObj value }
     [<Extension>]
     static member WithId(record: ItemCategoryDefinition, value: string) : ItemCategoryDefinition = { record with Id = value }
@@ -1251,6 +1325,8 @@ type RecordWith =
     static member WithAreaEffects(record: MachineTypeDefinition, value: seq<AreaEffect> | null) : MachineTypeDefinition = { record with AreaEffects = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithLight(record: MachineTypeDefinition, value: LightSource | null) : MachineTypeDefinition = { record with Light = Option.ofObj value }
+    [<Extension>]
+    static member WithTags(record: MachineTypeDefinition, value: seq<string> | null) : MachineTypeDefinition = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithFishProduction(record: MachineTypeDefinition, value: FishProduction | null) : MachineTypeDefinition = { record with FishProduction = Option.ofObj value }
     [<Extension>]
@@ -1440,6 +1516,8 @@ type RecordWith =
     [<Extension>]
     static member WithSeasons(record: NodeTypeDefinition, value: seq<string> | null) : NodeTypeDefinition = { record with Seasons = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithTags(record: NodeTypeDefinition, value: seq<string> | null) : NodeTypeDefinition = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithConditions(record: NotCondition, value: seq<EventCondition>) : NotCondition = { record with Conditions = List.ofSeq value }
     [<Extension>]
     static member WithId(record: Npc, value: string) : Npc = { record with Id = value }
@@ -1480,6 +1558,12 @@ type RecordWith =
     [<Extension>]
     static member WithRomanceable(record: Npc, value: Nullable<bool>) : Npc = { record with Romanceable = Option.ofNullable value }
     [<Extension>]
+    static member WithLook(record: Npc, value: PlayerLook | null) : Npc = { record with Look = Option.ofObj value }
+    [<Extension>]
+    static member WithLayers(record: Npc, value: seq<CharacterLayer> | null) : Npc = { record with Layers = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithTags(record: Npc, value: seq<string> | null) : Npc = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithSeason(record: NpcBirthday, value: string) : NpcBirthday = { record with Season = value }
     [<Extension>]
     static member WithDay(record: NpcBirthday, value: float) : NpcBirthday = { record with Day = value }
@@ -1491,6 +1575,8 @@ type RecordWith =
     static member WithExpression(record: NpcLine, value: string | null) : NpcLine = { record with Expression = Option.ofObj value }
     [<Extension>]
     static member WithWeight(record: NpcLine, value: Nullable<float>) : NpcLine = { record with Weight = Option.ofNullable value }
+    [<Extension>]
+    static member WithId(record: NpcLine, value: string | null) : NpcLine = { record with Id = Option.ofObj value }
     [<Extension>]
     static member WithExpression(record: NpcPortrait, value: string) : NpcPortrait = { record with Expression = value }
     [<Extension>]
@@ -1630,6 +1716,14 @@ type RecordWith =
     [<Extension>]
     static member WithMinigames(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Minigames = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithRead(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Read = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithEntities(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Entities = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithItemUses(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with ItemUses = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithScreens(record: PackPermissions, value: seq<string> | null) : PackPermissions = { record with Screens = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
     static member WithSceneId(record: PackPlayerStart, value: string | null) : PackPlayerStart = { record with SceneId = Option.ofObj value }
     [<Extension>]
     static member WithX(record: PackPlayerStart, value: Nullable<float>) : PackPlayerStart = { record with X = Option.ofNullable value }
@@ -1649,6 +1743,16 @@ type RecordWith =
     static member WithMinigames(record: PackPlugin, value: seq<string> | null) : PackPlugin = { record with Minigames = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithSource(record: PackPlugin, value: string) : PackPlugin = { record with Source = value }
+    [<Extension>]
+    static member WithConditions(record: PackPlugin, value: seq<PluginFunction> | null) : PackPlugin = { record with Conditions = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithOutcomes(record: PackPlugin, value: seq<PluginFunction> | null) : PackPlugin = { record with Outcomes = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithEntities(record: PackPlugin, value: seq<string> | null) : PackPlugin = { record with Entities = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithItemUses(record: PackPlugin, value: seq<string> | null) : PackPlugin = { record with ItemUses = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithScreens(record: PackPlugin, value: seq<PluginScreen> | null) : PackPlugin = { record with Screens = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithItemId(record: PackStartItem, value: string) : PackStartItem = { record with ItemId = value }
     [<Extension>]
@@ -1712,6 +1816,34 @@ type RecordWith =
     [<Extension>]
     static member WithAmount(record: PlayerUpgrade, value: float) : PlayerUpgrade = { record with Amount = value }
     [<Extension>]
+    static member WithName(record: PluginArgument, value: string) : PluginArgument = { record with Name = value }
+    [<Extension>]
+    static member WithLabel(record: PluginArgument, value: string | null) : PluginArgument = { record with Label = Option.ofObj value }
+    [<Extension>]
+    static member WithType(record: PluginArgument, value: string) : PluginArgument = { record with Type = value }
+    [<Extension>]
+    static member WithKind(record: PluginArgument, value: string | null) : PluginArgument = { record with Kind = Option.ofObj value }
+    [<Extension>]
+    static member WithOptional(record: PluginArgument, value: bool) : PluginArgument = { record with Optional = value }
+    [<Extension>]
+    static member WithCondition(record: PluginCondition, value: string) : PluginCondition = { record with Condition = value }
+    [<Extension>]
+    static member WithArgs(record: PluginCondition, value: Json | null) : PluginCondition = { record with Args = Option.ofObj value }
+    [<Extension>]
+    static member WithName(record: PluginFunction, value: string) : PluginFunction = { record with Name = value }
+    [<Extension>]
+    static member WithLabel(record: PluginFunction, value: string | null) : PluginFunction = { record with Label = Option.ofObj value }
+    [<Extension>]
+    static member WithDescription(record: PluginFunction, value: string | null) : PluginFunction = { record with Description = Option.ofObj value }
+    [<Extension>]
+    static member WithArgs(record: PluginFunction, value: seq<PluginArgument>) : PluginFunction = { record with Args = List.ofSeq value }
+    [<Extension>]
+    static member WithName(record: PluginScreen, value: string) : PluginScreen = { record with Name = value }
+    [<Extension>]
+    static member WithTitle(record: PluginScreen, value: string | null) : PluginScreen = { record with Title = Option.ofObj value }
+    [<Extension>]
+    static member WithHotkey(record: PluginScreen, value: string | null) : PluginScreen = { record with Hotkey = Option.ofObj value }
+    [<Extension>]
     static member WithDays(record: ProductProgress, value: float) : ProductProgress = { record with Days = value }
     [<Extension>]
     static member WithReady(record: ProductProgress, value: bool) : ProductProgress = { record with Ready = value }
@@ -1725,6 +1857,14 @@ type RecordWith =
     static member WithLimits(record: ProgressionSettings, value: ProgressionLimits | null) : ProgressionSettings = { record with Limits = Option.ofObj value }
     [<Extension>]
     static member WithSkills(record: ProgressionSettings, value: seq<SkillDefinition> | null) : ProgressionSettings = { record with Skills = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithId(record: ProjectScript, value: string) : ProjectScript = { record with Id = value }
+    [<Extension>]
+    static member WithName(record: ProjectScript, value: string | null) : ProjectScript = { record with Name = Option.ofObj value }
+    [<Extension>]
+    static member WithSource(record: ProjectScript, value: string) : ProjectScript = { record with Source = value }
+    [<Extension>]
+    static member WithDisabled(record: ProjectScript, value: bool) : ProjectScript = { record with Disabled = value }
     [<Extension>]
     static member WithMovement(record: ProjectSettings, value: MovementConfig) : ProjectSettings = { record with Movement = value }
     [<Extension>]
@@ -1764,6 +1904,8 @@ type RecordWith =
     [<Extension>]
     static member WithSkillDefinitions(record: ProjectSettings, value: seq<SkillDefinition> | null) : ProjectSettings = { record with SkillDefinitions = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
+    static member WithScripts(record: ProjectSettings, value: ScriptSettings | null) : ProjectSettings = { record with Scripts = Option.ofObj value }
+    [<Extension>]
     static member WithId(record: Quest, value: string) : Quest = { record with Id = value }
     [<Extension>]
     static member WithName(record: Quest, value: string) : Quest = { record with Name = value }
@@ -1795,6 +1937,8 @@ type RecordWith =
     static member WithDeadlineDay(record: Quest, value: Nullable<float>) : Quest = { record with DeadlineDay = Option.ofNullable value }
     [<Extension>]
     static member WithOnFail(record: Quest, value: seq<EventOutcome> | null) : Quest = { record with OnFail = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithTags(record: Quest, value: seq<string> | null) : Quest = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithId(record: QuestObjective, value: string) : QuestObjective = { record with Id = value }
     [<Extension>]
@@ -1859,6 +2003,8 @@ type RecordWith =
     static member WithRequiresStationCategory(record: RecipeDefinition, value: string | null) : RecipeDefinition = { record with RequiresStationCategory = Option.ofObj value }
     [<Extension>]
     static member WithUnlock(record: RecipeDefinition, value: RecipeUnlock | null) : RecipeDefinition = { record with Unlock = Option.ofObj value }
+    [<Extension>]
+    static member WithTags(record: RecipeDefinition, value: seq<string> | null) : RecipeDefinition = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithItemId(record: RecipeIngredient, value: string) : RecipeIngredient = { record with ItemId = value }
     [<Extension>]
@@ -1946,6 +2092,22 @@ type RecordWith =
     [<Extension>]
     static member WithS(record: RngState, value: seq<uint32>) : RngState = { record with S = List.ofSeq value }
     [<Extension>]
+    static member WithKind(record: SaveMigration, value: string) : SaveMigration = { record with Kind = value }
+    [<Extension>]
+    static member WithFrom(record: SaveMigration, value: string) : SaveMigration = { record with From = value }
+    [<Extension>]
+    static member WithTo(record: SaveMigration, value: string | null) : SaveMigration = { record with To = Option.ofObj value }
+    [<Extension>]
+    static member WithQuantity(record: SaveMigration, value: Nullable<float>) : SaveMigration = { record with Quantity = Option.ofNullable value }
+    [<Extension>]
+    static member WithMoney(record: SaveMigration, value: Nullable<float>) : SaveMigration = { record with Money = Option.ofNullable value }
+    [<Extension>]
+    static member WithX(record: SaveMigration, value: Nullable<float>) : SaveMigration = { record with X = Option.ofNullable value }
+    [<Extension>]
+    static member WithY(record: SaveMigration, value: Nullable<float>) : SaveMigration = { record with Y = Option.ofNullable value }
+    [<Extension>]
+    static member WithName(record: SaveMigration, value: string | null) : SaveMigration = { record with Name = Option.ofObj value }
+    [<Extension>]
     static member WithId(record: Scene, value: string) : Scene = { record with Id = value }
     [<Extension>]
     static member WithName(record: Scene, value: string) : Scene = { record with Name = value }
@@ -2004,6 +2166,12 @@ type RecordWith =
     [<Extension>]
     static member WithLocked(record: SceneTransition, value: Nullable<bool>) : SceneTransition = { record with Locked = Option.ofNullable value }
     [<Extension>]
+    static member WithFuelPerCall(record: ScriptSettings, value: Nullable<float>) : ScriptSettings = { record with FuelPerCall = Option.ofNullable value }
+    [<Extension>]
+    static member WithFuelPerSecond(record: ScriptSettings, value: Nullable<float>) : ScriptSettings = { record with FuelPerSecond = Option.ofNullable value }
+    [<Extension>]
+    static member WithInitFuel(record: ScriptSettings, value: Nullable<float>) : ScriptSettings = { record with InitFuel = Option.ofNullable value }
+    [<Extension>]
     static member WithSeasons(record: SeasonCondition, value: seq<string>) : SeasonCondition = { record with Seasons = List.ofSeq value }
     [<Extension>]
     static member WithItemId(record: ShippedCondition, value: string) : ShippedCondition = { record with ItemId = value }
@@ -2045,6 +2213,8 @@ type RecordWith =
     static member WithPriceModifiers(record: ShopDefinition, value: seq<ShopPriceModifier> | null) : ShopDefinition = { record with PriceModifiers = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithSaturation(record: ShopDefinition, value: ShopSaturation | null) : ShopDefinition = { record with Saturation = Option.ofObj value }
+    [<Extension>]
+    static member WithTags(record: ShopDefinition, value: seq<string> | null) : ShopDefinition = { record with Tags = (match value with null -> None | items -> Some(List.ofSeq items)) }
     [<Extension>]
     static member WithOpen(record: ShopHours, value: float) : ShopHours = { record with Open = value }
     [<Extension>]
@@ -2184,6 +2354,58 @@ type RecordWith =
     [<Extension>]
     static member WithInto(record: TerrainTransform, value: string) : TerrainTransform = { record with Into = value }
     [<Extension>]
+    static member WithId(record: TestState, value: string) : TestState = { record with Id = value }
+    [<Extension>]
+    static member WithName(record: TestState, value: string) : TestState = { record with Name = value }
+    [<Extension>]
+    static member WithDescription(record: TestState, value: string | null) : TestState = { record with Description = Option.ofObj value }
+    [<Extension>]
+    static member WithDay(record: TestState, value: Nullable<float>) : TestState = { record with Day = Option.ofNullable value }
+    [<Extension>]
+    static member WithSeason(record: TestState, value: string | null) : TestState = { record with Season = Option.ofObj value }
+    [<Extension>]
+    static member WithDayOfSeason(record: TestState, value: Nullable<float>) : TestState = { record with DayOfSeason = Option.ofNullable value }
+    [<Extension>]
+    static member WithYear(record: TestState, value: Nullable<float>) : TestState = { record with Year = Option.ofNullable value }
+    [<Extension>]
+    static member WithTime(record: TestState, value: Nullable<float>) : TestState = { record with Time = Option.ofNullable value }
+    [<Extension>]
+    static member WithWeather(record: TestState, value: string | null) : TestState = { record with Weather = Option.ofObj value }
+    [<Extension>]
+    static member WithSceneId(record: TestState, value: string | null) : TestState = { record with SceneId = Option.ofObj value }
+    [<Extension>]
+    static member WithX(record: TestState, value: Nullable<float>) : TestState = { record with X = Option.ofNullable value }
+    [<Extension>]
+    static member WithY(record: TestState, value: Nullable<float>) : TestState = { record with Y = Option.ofNullable value }
+    [<Extension>]
+    static member WithFacing(record: TestState, value: string | null) : TestState = { record with Facing = Option.ofObj value }
+    [<Extension>]
+    static member WithFlags(record: TestState, value: ((string * Json) list)) : TestState = { record with Flags = value }
+    [<Extension>]
+    static member WithFlags(record: TestState, value: seq<KeyValuePair<string, Json>>) : TestState = { record with Flags = [ for pair in value -> pair.Key, pair.Value ] }
+    [<Extension>]
+    static member WithVariables(record: TestState, value: ((string * Json) list)) : TestState = { record with Variables = value }
+    [<Extension>]
+    static member WithVariables(record: TestState, value: seq<KeyValuePair<string, Json>>) : TestState = { record with Variables = [ for pair in value -> pair.Key, pair.Value ] }
+    [<Extension>]
+    static member WithQuests(record: TestState, value: ((string * string) list)) : TestState = { record with Quests = value }
+    [<Extension>]
+    static member WithQuests(record: TestState, value: seq<KeyValuePair<string, string>>) : TestState = { record with Quests = [ for pair in value -> pair.Key, pair.Value ] }
+    [<Extension>]
+    static member WithFriendship(record: TestState, value: ((string * float) list)) : TestState = { record with Friendship = value }
+    [<Extension>]
+    static member WithFriendship(record: TestState, value: seq<KeyValuePair<string, float>>) : TestState = { record with Friendship = [ for pair in value -> pair.Key, pair.Value ] }
+    [<Extension>]
+    static member WithInventory(record: TestState, value: seq<TestStateItem> | null) : TestState = { record with Inventory = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithMoney(record: TestState, value: Nullable<float>) : TestState = { record with Money = Option.ofNullable value }
+    [<Extension>]
+    static member WithItemId(record: TestStateItem, value: string) : TestStateItem = { record with ItemId = value }
+    [<Extension>]
+    static member WithQuantity(record: TestStateItem, value: float) : TestStateItem = { record with Quantity = value }
+    [<Extension>]
+    static member WithQuality(record: TestStateItem, value: string | null) : TestStateItem = { record with Quality = Option.ofObj value }
+    [<Extension>]
     static member WithX(record: Tile, value: float) : Tile = { record with X = value }
     [<Extension>]
     static member WithY(record: Tile, value: float) : Tile = { record with Y = value }
@@ -2294,6 +2516,62 @@ type RecordWith =
     [<Extension>]
     static member WithNights(record: ToolUpgrade, value: float) : ToolUpgrade = { record with Nights = value }
     [<Extension>]
+    static member WithText(record: TranslatedText, value: string) : TranslatedText = { record with Text = value }
+    [<Extension>]
+    static member WithSource(record: TranslatedText, value: string) : TranslatedText = { record with Source = value }
+    [<Extension>]
+    static member WithLocale(record: TranslationTable, value: string) : TranslationTable = { record with Locale = value }
+    [<Extension>]
+    static member WithStrings(record: TranslationTable, value: ((string * TranslatedText) list)) : TranslationTable = { record with Strings = value }
+    [<Extension>]
+    static member WithStrings(record: TranslationTable, value: seq<KeyValuePair<string, TranslatedText>>) : TranslationTable = { record with Strings = [ for pair in value -> pair.Key, pair.Value ] }
+    [<Extension>]
+    static member WithHudPosition(record: UiLayout, value: string | null) : UiLayout = { record with HudPosition = Option.ofObj value }
+    [<Extension>]
+    static member WithToolbar(record: UiLayout, value: Nullable<bool>) : UiLayout = { record with Toolbar = Option.ofNullable value }
+    [<Extension>]
+    static member WithClockStyle(record: UiLayout, value: string | null) : UiLayout = { record with ClockStyle = Option.ofObj value }
+    [<Extension>]
+    static member WithDialoguePosition(record: UiLayout, value: string | null) : UiLayout = { record with DialoguePosition = Option.ofObj value }
+    [<Extension>]
+    static member WithPortraitSize(record: UiLayout, value: Nullable<float>) : UiLayout = { record with PortraitSize = Option.ofNullable value }
+    [<Extension>]
+    static member WithVisual(record: UiNineSlice, value: VisualRef) : UiNineSlice = { record with Visual = value }
+    [<Extension>]
+    static member WithLeft(record: UiNineSlice, value: float) : UiNineSlice = { record with Left = value }
+    [<Extension>]
+    static member WithTop(record: UiNineSlice, value: float) : UiNineSlice = { record with Top = value }
+    [<Extension>]
+    static member WithRight(record: UiNineSlice, value: float) : UiNineSlice = { record with Right = value }
+    [<Extension>]
+    static member WithBottom(record: UiNineSlice, value: float) : UiNineSlice = { record with Bottom = value }
+    [<Extension>]
+    static member WithScale(record: UiNineSlice, value: Nullable<float>) : UiNineSlice = { record with Scale = Option.ofNullable value }
+    [<Extension>]
+    static member WithHeadingFont(record: UiSkin, value: string | null) : UiSkin = { record with HeadingFont = Option.ofObj value }
+    [<Extension>]
+    static member WithBodyFont(record: UiSkin, value: string | null) : UiSkin = { record with BodyFont = Option.ofObj value }
+    [<Extension>]
+    static member WithNumberFont(record: UiSkin, value: string | null) : UiSkin = { record with NumberFont = Option.ofObj value }
+    [<Extension>]
+    static member WithColors(record: UiSkin, value: seq<(string * string)> | null) : UiSkin = { record with Colors = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithPanels(record: UiSkin, value: seq<(string * UiNineSlice)> | null) : UiSkin = { record with Panels = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithIcons(record: UiSkin, value: seq<(string * VisualRef)> | null) : UiSkin = { record with Icons = (match value with null -> None | items -> Some(List.ofSeq items)) }
+    [<Extension>]
+    static member WithLayout(record: UiSkin, value: UiLayout | null) : UiSkin = { record with Layout = Option.ofObj value }
+    [<Extension>]
+    static member WithTitle(record: UiSkin, value: UiTitleScreen | null) : UiSkin = { record with Title = Option.ofObj value }
+    [<Extension>]
+    static member WithBackground(record: UiTitleScreen, value: VisualRef | null) : UiTitleScreen = { record with Background = Option.ofObj value }
+    [<Extension>]
+    static member WithScene(record: UiTitleScreen, value: string | null) : UiTitleScreen = { record with Scene = Option.ofObj value }
+    [<Extension>]
+    static member WithLogo(record: UiTitleScreen, value: VisualRef | null) : UiTitleScreen = { record with Logo = Option.ofObj value }
+    [<Extension>]
+    static member WithMenuPosition(record: UiTitleScreen, value: string | null) : UiTitleScreen = { record with MenuPosition = Option.ofObj value }
+    [<Extension>]
     static member WithName(record: VariableCondition, value: string) : VariableCondition = { record with Name = value }
     [<Extension>]
     static member WithCompare(record: VariableCondition, value: string) : VariableCondition = { record with Compare = value }
@@ -2313,6 +2591,8 @@ type RecordWith =
     static member WithColor(record: WearDefinition, value: string | null) : WearDefinition = { record with Color = Option.ofObj value }
     [<Extension>]
     static member WithVisual(record: WearDefinition, value: VisualRef | null) : WearDefinition = { record with Visual = Option.ofObj value }
+    [<Extension>]
+    static member WithLayer(record: WearDefinition, value: string | null) : WearDefinition = { record with Layer = Option.ofObj value }
     [<Extension>]
     static member WithWeatherIds(record: WeatherCondition, value: seq<string>) : WeatherCondition = { record with WeatherIds = List.ofSeq value }
     [<Extension>]

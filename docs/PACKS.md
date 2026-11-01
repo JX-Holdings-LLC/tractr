@@ -91,6 +91,9 @@ The review shows these to the creator before they install the pack.
 | `hooks` | none | The game events the pack's plugins may hear ([Hooks](PLUGINS.md#hooks)). |
 | `mutations` | a few | The changes the plugins may make ([Mutation capabilities](PLUGINS.md#mutation-capabilities)). |
 | `minigames` | none | The minigame kinds the plugins may define ([Minigames](PLUGINS.md#minigames)). |
+| `read` | none | What the plugins may read of the game: `player`, `world`, `people`, `content`, `any` ([Reading the game](PLUGINS.md#reading-the-game)). |
+| `entities`, `itemUses` | none | The entity types and item-use handlers the plugins may define ([Entities, timers and item use](PLUGINS.md#entities-timers-and-item-use)). |
+| `screens` | none | The game screens the plugins may add ([Screens](PLUGINS.md#screens)). |
 
 ### Content
 

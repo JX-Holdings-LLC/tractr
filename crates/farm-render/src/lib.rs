@@ -23,6 +23,7 @@
 //! (tile colors, the follow camera, entity positions) and [`css_color`] (CSS color parsing).
 #![forbid(unsafe_code)]
 
+pub mod actions;
 pub mod atmosphere;
 pub mod builtin_art;
 pub mod canvas2d;
@@ -31,6 +32,7 @@ pub mod css_color;
 pub mod draw;
 pub mod graphics;
 pub mod images;
+pub mod layers;
 pub mod look;
 mod num;
 #[cfg(feature = "raster")]
@@ -48,7 +50,7 @@ pub use draw::{
     light_add, light_factor, light_round, DrawCmd, DrawList, FontId, LightSpot, Rect, Sampling, TextAlign, TextStroke,
     MAX_LIGHTS,
 };
-pub use graphics::{apply_graphics, resolve_visual, ArtAsset, GraphicsSource};
+pub use graphics::{apply_graphics, resolve_acting, resolve_layers, resolve_visual, ArtAsset, GraphicsSource};
 pub use images::{Image, ImageError, ImageId, ImageStore};
 #[cfg(feature = "raster")]
 pub use raster::{device_lights, encode_png, render_to_pixmap, Rasterizer, WorldRenderer};
@@ -57,9 +59,9 @@ pub use shell::{
     SnapshotOptions,
 };
 pub use snapshot::{
-    SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotDecor, SnapshotEmote, SnapshotEntity,
-    SnapshotItem, SnapshotLight, SnapshotMachine, SnapshotMonster, SnapshotNode, SnapshotPlayer, SnapshotPop,
-    SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot, MAX_TALL,
+    SnapshotAction, SnapshotAtmosphere, SnapshotBuilding, SnapshotCamera, SnapshotCrop, SnapshotDecor, SnapshotEmote,
+    SnapshotEntity, SnapshotItem, SnapshotLayer, SnapshotLight, SnapshotMachine, SnapshotMonster, SnapshotNode,
+    SnapshotPlayer, SnapshotPop, SnapshotSprite, SnapshotTerrain, SnapshotTile, TileWindow, WorldSnapshot, MAX_TALL,
 };
 #[cfg(feature = "raster")]
 pub use tiny_skia;

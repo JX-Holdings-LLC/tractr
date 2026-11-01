@@ -122,6 +122,8 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("FishTableEntry", "rules")
             | ("FishTable", "filter" | "layered")
             | ("GameContent", "mines" | "requestBoards")
+            | ("GameContent", "saveMigrations")
+            | ("GameProject", "saveMigrations" | "testStates")
             | ("NodeDrop", "seasons")
             | ("NodeTypeDefinition", "seasons")
             | ("TileNode", "dormantHealth" | "expiresOnDay" | "spawnedOnDay" | "spawnedSeason")
@@ -162,6 +164,20 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("Scene", "forageSpawns")
             | ("StartQuest", "deadlineDay" | "deadlineDays")
             | ("EventCondition", "mineId")
+            // Character art (#215, #216, #234).
+            | ("CustomAsset", "pixelsPerTile")
+            | ("Npc", "look" | "layers")
+            | ("WearDefinition", "layer")
+            | ("GameProject", "playerLayers")
+            | ("AnimationClip", "effect" | "holdItem" | "impactFrame" | "lockMovement")
+            | ("CutsceneStep", "animation")
+            | ("CutsceneState", "animations")
+            // Plugin systems (#238).
+            | ("GameState", "pluginEntities" | "nextPluginEntity" | "pluginTimers")
+            | ("GameProject", "scripts")
+            | ("ProjectSettings", "scripts")
+            | ("PackPermissions", "entities" | "itemUses" | "read" | "screens")
+            | ("PackPlugin", "conditions" | "entities" | "itemUses" | "outcomes" | "screens")
     )
 }
 

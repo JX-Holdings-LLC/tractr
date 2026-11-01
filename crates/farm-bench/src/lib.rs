@@ -41,6 +41,8 @@ use std::time::Instant;
 pub const SEED: &str = "farm-bench";
 
 /// The time budgets of docs/dev/ARCHITECTURE.md ("Tests"), in milliseconds.
+pub mod lab;
+
 pub mod budgets {
     /// Overnight pass, 64×64 farm, full crops.
     pub const OVERNIGHT_64: f64 = 2.0;

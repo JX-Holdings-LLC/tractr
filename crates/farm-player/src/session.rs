@@ -19,7 +19,7 @@
 //!   like a `playSound` outcome's. One that fails (a limit, a throw, a malformed answer)
 //!   resolves with score 0 and reports the error like any plugin error.
 
-use farm_plugins::{MinigameControls, MinigameFrame, PackMinigame, PluginError};
+use farm_plugins::{GameView, MinigameControls, MinigameFrame, PackMinigame, PluginError};
 use farm_runtime::canvas::CanvasPointer;
 use farm_runtime::host::{HostedMinigame, MinigameInput, MinigameView};
 use farm_runtime::input::{self, InputManager, Modifiers, MoveVector};
@@ -116,17 +116,32 @@ pub trait SessionPlugins: Send {
     /// The hook events of one engine step, in order. `depth` is 0 for ticks and the player's
     /// commands, and a plugin mutation's depth + 1 for the step that ran it (plugins do not
     /// hear `onCommand` / `onEffect` from such steps, and deep chains are cut off).
-    fn dispatch(&mut self, events: &[HookEvent], depth: u32);
+    fn dispatch(&mut self, events: &[HookEvent], depth: u32, game: GameView<'_>);
     /// Plugin mutations to run now, as `pluginMutation` commands with their depth, in arrival
     /// order.
     fn drain_commands(&mut self) -> Vec<(Command, u32)>;
     /// The game is about to run tick `tick` (plugin budgets follow the game clock).
     fn begin_tick(&mut self, _tick: u64) {}
     /// The game started or loaded: each plugin hears `onLoad` with the data it saved (M9).
-    fn restore(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
+    fn restore(&mut self, _saved: &indexmap::IndexMap<String, Value>, _game: GameView<'_>) {}
     /// Plugins rebuilt after an overrun since the last call hear `onLoad` again with what they
     /// have saved so far (`saved`).
-    fn restore_rebuilt(&mut self, _saved: &indexmap::IndexMap<String, Value>) {}
+    fn restore_rebuilt(&mut self, _saved: &indexmap::IndexMap<String, Value>, _game: GameView<'_>) {}
+    /// The engine's answer to plugin conditions (#239), for the plugins that define some.
+    fn condition_host(&mut self) -> Option<Box<dyn farm_sim::PluginConditions>> {
+        None
+    }
+    /// Run a plugin screen's handler (#240): `payload` is `{ op: 'draw' }` or
+    /// `{ op: 'action', action }`. `None` when no plugin has the screen.
+    fn call_screen(&mut self, _hook: &str, _payload: &str, _game: GameView<'_>) -> Option<Result<Value, PluginError>> {
+        None
+    }
+    /// Queue mutations a screen's action answered, as a game step's answers.
+    fn queue_screen_answer(&mut self, _plugin_hook: &str, _answer: &Value, _game: GameView<'_>) {}
+    /// The hooks of the plugin screens the plugins may add (`screen:packId:name`, #240).
+    fn screen_hooks(&self) -> Vec<String> {
+        Vec::new()
+    }
     /// The most recent plugin errors (init failures, throws, overruns), oldest first.
     fn recent_errors(&self) -> Vec<String> {
         Vec::new()
@@ -144,6 +159,16 @@ pub trait SessionPlugins: Send {
     }
     /// Keep a pack minigame's failure in the recent errors.
     fn report_error(&mut self, _error: PluginError) {}
+}
+
+/// A plugin screen the game can open (#240): what its `describe` answered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PluginScreenEntry {
+    /// `screen:packId:name`.
+    pub hook: String,
+    pub title: String,
+    /// The key that opens it (`farm_runtime` key names), if any.
+    pub hotkey: Option<String>,
 }
 
 /// A plugin error as [`SessionPlugins::recent_errors`] lists it.
@@ -176,6 +201,10 @@ pub enum DebugAction {
         flag: String,
     },
     SkipDay,
+    /// Puts the game in a test state (#229: "Play from state"; `farm-player --test-state`).
+    ApplyTestState {
+        state: Box<farm_sim::schema::TestState>,
+    },
 }
 
 /// What plays a mounted minigame.
@@ -249,6 +278,11 @@ pub struct PlaySession {
     planting: Option<(Option<String>, Option<String>)>,
     /// The pointer over a pack minigame's canvas, for its next frame.
     pointer: Option<CanvasPointer>,
+    /// The player's art whose action clips play (#235), and the clip playing.
+    action_art: Option<farm_render::graphics::ArtAsset>,
+    action: Option<crate::actions::Playback>,
+    /// The plugin screens the game can open (#240).
+    plugin_screens: Vec<PluginScreenEntry>,
 }
 
 /// Commands kept for crash reports.
@@ -293,6 +327,74 @@ impl PlaySession {
             recent: std::collections::VecDeque::new(),
             planting: None,
             pointer: None,
+            action_art: None,
+            action: None,
+            plugin_screens: Vec::new(),
+        }
+    }
+
+    /// The player's art whose action clips (#235) play when the player uses a tool or eats
+    /// (`farm_render::actions::player_asset`); `None`: no action clips, nothing is deferred.
+    pub fn set_action_art(&mut self, art: Option<farm_render::graphics::ArtAsset>) {
+        self.action_art = art.filter(|art| art.animations.as_ref().is_some_and(|clips| !clips.is_empty()));
+    }
+
+    /// The action clip playing on the player, for the renderer.
+    pub fn action_view(&self) -> Option<farm_render::SnapshotAction> {
+        self.action.as_ref().map(|playing| playing.view(self.state.clock.tick, self.alpha))
+    }
+
+    /// Runs the playing action's command once its impact tick is here, and forgets the action
+    /// once it is over.
+    fn advance_action(&mut self) {
+        let now = self.state.clock.tick;
+        if let Some(command) = self.action.as_mut().filter(|playing| playing.due(now)).and_then(|p| p.pending.take()) {
+            self.run_command(&command);
+        }
+        if self.action.as_ref().is_some_and(|playing| playing.over(now)) {
+            self.action = None;
+        }
+    }
+
+    /// A frame's command, through the player's action clips (#235): a tool use with a clip
+    /// starts it (the command waits for its impact frame; presses while a locking clip plays are
+    /// dropped), eating plays `eat`; anything else, or no clip, runs at once.
+    fn run_acted(&mut self, command: &Command) {
+        use farm_render::actions::Action;
+        let now = self.state.clock.tick;
+        let direction = self.state.player.direction.clone();
+        let started =
+            |clip, pending: Option<Command>, held| crate::actions::Playback { clip, started: now, pending, held };
+        match command {
+            Command::UseTool { tool } if self.action_art.is_some() => {
+                if self.action.as_ref().is_some_and(|playing| playing.locks(now)) {
+                    return;
+                }
+                let tool_action = farm_sim::vocabulary::tools(&self.ctx.content)
+                    .iter()
+                    .find(|definition| definition.id == *tool)
+                    .map(|definition| definition.action.clone());
+                let clip = tool_action.as_deref().and_then(|action| {
+                    crate::actions::find(self.action_art.as_ref(), Action::Tool(action), &direction)
+                });
+                match clip {
+                    Some(clip) => {
+                        self.action = Some(started(clip, Some(command.clone()), None));
+                        self.advance_action();
+                    }
+                    None => self.run_command(command),
+                }
+            }
+            Command::UseItem { item_id } if self.action_art.is_some() => {
+                let clip = crate::actions::find(self.action_art.as_ref(), Action::Named("eat"), &direction);
+                let held =
+                    self.ctx.content.items.iter().find(|item| item.id == *item_id).and_then(|item| item.visual.clone());
+                self.run_command(command);
+                if let Some(clip) = clip {
+                    self.action = Some(started(clip, None, held));
+                }
+            }
+            _ => self.run_command(command),
         }
     }
 
@@ -313,10 +415,73 @@ impl PlaySession {
     /// auto-started quests) go to it; then it sees every later step.
     pub fn set_plugins(&mut self, plugins: Option<Box<dyn SessionPlugins>>) {
         self.plugins = plugins;
+        // Plugin conditions answer from their own sandbox instances (#239).
+        self.ctx.plugin_conditions = self.plugins.as_mut().and_then(|plugins| plugins.condition_host());
         if let Some(plugins) = self.plugins.as_mut() {
-            plugins.restore(&self.state.plugin_data);
+            plugins.restore(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
         }
+        self.plugin_screens = self.describe_plugin_screens();
         self.dispatch_hooks(&[], 0);
+    }
+
+    /// Ask every plugin screen for its title and hotkey.
+    fn describe_plugin_screens(&mut self) -> Vec<PluginScreenEntry> {
+        let Some(plugins) = self.plugins.as_mut() else { return Vec::new() };
+        let mut entries = Vec::new();
+        for hook in plugins.screen_hooks() {
+            let game = GameView { ctx: &self.ctx, state: &self.state };
+            let name = hook.rsplit(':').next().unwrap_or(&hook).to_owned();
+            let described = plugins.call_screen(&hook, r#"{"op":"describe"}"#, game);
+            let (title, hotkey) = match described {
+                Some(Ok(Value::Array(items))) => {
+                    let first = items.first().cloned().unwrap_or(Value::Null);
+                    let text = |key: &str| {
+                        first.get(key).and_then(Value::as_str).filter(|text| !text.is_empty() && text.len() <= 64)
+                    };
+                    (text("title").unwrap_or(&name).to_owned(), text("hotkey").map(|key| key.to_lowercase()))
+                }
+                // A plugin that has no handler for it adds no screen.
+                None => continue,
+                Some(_) => (name, None),
+            };
+            entries.push(PluginScreenEntry { hook, title, hotkey });
+        }
+        entries
+    }
+
+    /// The plugin screens the game can open (#240), in spec order.
+    pub fn plugin_screens(&self) -> &[PluginScreenEntry] {
+        &self.plugin_screens
+    }
+
+    /// What the plugin screen of `hook` shows now: its `draw` answer, checked, or why there is
+    /// none (the error is also reported like any plugin error, once per message).
+    pub fn draw_plugin_screen(&mut self, hook: &str) -> Result<farm_runtime::screens::ScreenWidget, String> {
+        let Some(plugins) = self.plugins.as_mut() else { return Err("no plugins are running".to_owned()) };
+        let game = GameView { ctx: &self.ctx, state: &self.state };
+        let answer = match plugins.call_screen(hook, r#"{"op":"draw"}"#, game) {
+            None => return Err(format!("no plugin draws {hook}")),
+            Some(Err(error)) => return Err(describe_plugin_error(&error)),
+            Some(Ok(answer)) => answer,
+        };
+        let tree = answer.as_array().and_then(|items| items.first()).cloned().unwrap_or(Value::Null);
+        farm_runtime::screens::parse_screen(&tree, farm_runtime::screens::ScreenLimits::default())
+    }
+
+    /// The player chose `action` on the plugin screen of `hook`: the screen's `action` answers
+    /// mutations, which apply at the next tick like any plugin answer.
+    pub fn plugin_screen_action(&mut self, hook: &str, action: &str) {
+        let Some(plugins) = self.plugins.as_mut() else { return };
+        let payload = serde_json::json!({ "op": "action", "action": action }).to_string();
+        let game = GameView { ctx: &self.ctx, state: &self.state };
+        match plugins.call_screen(hook, &payload, game) {
+            Some(Ok(answer)) => {
+                let game = GameView { ctx: &self.ctx, state: &self.state };
+                plugins.queue_screen_answer(hook, &answer, game);
+            }
+            Some(Err(error)) => self.report_plugin_error(error),
+            None => {}
+        }
     }
 
     pub fn has_plugins(&self) -> bool {
@@ -348,12 +513,24 @@ impl PlaySession {
         &self.ctx.content
     }
 
+    /// Replaces the content with the same content in another language (#228: the player chose
+    /// one in Settings). Only its texts may differ: ids, numbers and rules stay.
+    pub fn set_content_text(&mut self, content: GameContent) {
+        self.ctx.content = content;
+        self.ctx.reindex();
+    }
+
     pub fn context(&self) -> &EngineContext {
         &self.ctx
     }
 
     pub fn state(&self) -> &GameState {
         &self.state
+    }
+
+    /// The running game as a test state a later playtest can start from (#229).
+    pub fn capture_test_state(&self, id: &str, name: &str) -> farm_sim::schema::TestState {
+        farm_sim::test_states::capture_test_state(&self.ctx, &self.state, id, name)
     }
 
     /// Raw keyboard state (the host forwards key events here, in farm-runtime key names).
@@ -443,7 +620,7 @@ impl PlaySession {
             self.run_step(&command, depth.saturating_add(1));
         }
         if let Some(plugins) = self.plugins.as_mut() {
-            plugins.restore_rebuilt(&self.state.plugin_data);
+            plugins.restore_rebuilt(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
         }
     }
 
@@ -459,8 +636,12 @@ impl PlaySession {
 
         // Free movement: only CHANGES of the held intent become commands; zero while any
         // modal is open.
-        let intent =
-            if host_modal_open { MoveVector::default() } else { input::move_intent(&self.input, &self.state, None) };
+        let locked = self.action.as_ref().is_some_and(|playing| playing.locks(self.state.clock.tick));
+        let intent = if host_modal_open || locked {
+            MoveVector::default()
+        } else {
+            input::move_intent(&self.input, &self.state, None)
+        };
         let mut ticks = self.timestep.advance(delta);
         self.alpha = self.timestep.alpha();
         // With `time.pauseInModals` a menu stops the game clock like a dialogue does (#37).
@@ -476,6 +657,10 @@ impl PlaySession {
         // whether the frame holds one tick or five: the same input reaches the same state at
         // any frame rate. (advance_tick(n) is exactly n × advance_tick(1).)
         for tick in 0..ticks {
+            // An action's command at its impact tick (#235), like a command sent before the tick.
+            if self.action.is_some() {
+                self.advance_action();
+            }
             self.apply_plugin_mutations();
             if tick == 0 {
                 let (x, y) = (tiles(self.state.player.x), tiles(self.state.player.y));
@@ -493,8 +678,11 @@ impl PlaySession {
                     seed_item_id: seed.clone(),
                     fertilizer_item_id: fertilizer.clone(),
                 }),
-                _ => self.run_command(command),
+                _ => self.run_acted(command),
             }
+        }
+        if self.action.is_some() {
+            self.advance_action();
         }
         self.update_minigame(delta);
         self.input.end_frame();
@@ -659,6 +847,12 @@ impl PlaySession {
                 game_time::perform_sleep(&self.ctx, &mut self.state, game_time::SleepOptions { collapsed: false });
                 self.dispatch_hooks(&[], 0);
             }
+            DebugAction::ApplyTestState { state } => {
+                // What the game lacks is skipped; the creator reads why (Problems lists it too).
+                for note in farm_sim::test_states::apply_test_state(&self.ctx, &mut self.state, state) {
+                    self.events.push(SessionEvent::Toast { text: note, kind: ToastKind::Error, message: None });
+                }
+            }
             DebugAction::AddMoney { .. } | DebugAction::AddMinutes { .. } => {}
         }
         self.prev_player = None;
@@ -738,7 +932,7 @@ impl PlaySession {
             effects.iter().map(|e| HookEvent::Effect(EffectHookPayload { effect_type: e.type_name().to_owned() })),
         );
         if !events.is_empty() {
-            plugins.dispatch(&events, depth);
+            plugins.dispatch(&events, depth, GameView { ctx: &self.ctx, state: &self.state });
         }
     }
 

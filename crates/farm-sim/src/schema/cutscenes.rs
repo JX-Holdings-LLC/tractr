@@ -21,8 +21,11 @@ pub mod cutscene_step_types {
     pub const SOUND: &str = "sound";
     pub const OUTCOMES: &str = "outcomes";
     pub const END: &str = "end";
+    /// Plays a named clip of the actor's art (#235).
+    pub const ANIMATE: &str = "animate";
 
-    pub const ALL: &[&str] = &[SAY, CHOICE, JUMP, MOVE, FACE, EMOTE, WAIT, CAMERA, FADE, MUSIC, SOUND, OUTCOMES, END];
+    pub const ALL: &[&str] =
+        &[SAY, CHOICE, JUMP, MOVE, FACE, EMOTE, WAIT, CAMERA, FADE, MUSIC, SOUND, OUTCOMES, END, ANIMATE];
 }
 
 /// The emotes a cutscene can show over a character (F# `Emotes`).
@@ -56,6 +59,9 @@ pub struct CutsceneChoice {
     pub text: String,
     /// The label of the step to go on from; empty: the next step.
     pub goto: String,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 /// One step of a cutscene: a flat object whose `type` (one of [`cutscene_step_types`]) says
@@ -103,6 +109,12 @@ pub struct CutsceneStep {
     pub outcomes: Vec<EventOutcome>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wait: Option<bool>,
+    /// The clip an `animate` step plays on its actor (#235).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub animation: Option<String>,
+    /// A stable id (translations and dialogue scripts find the text by it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
 }
 
 /// A cutscene being played (game state). The engine's cutscene runner (`crate::cutscenes`) owns
@@ -135,6 +147,22 @@ pub struct CutsceneState {
     /// The way NPCs face, set by `face` steps and walks (the player's is its own direction).
     #[serde(skip_serializing_if = "IndexMap::is_empty")]
     pub facing: IndexMap<String, String>,
+    /// Clips `animate` steps play on actors (#235).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub animations: Vec<CutsceneAnimation>,
+}
+
+/// A clip an `animate` step plays on an actor (#235).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct CutsceneAnimation {
+    pub actor: String,
+    /// The clip's name on the actor's art.
+    pub clip: String,
+    #[serde(with = "crate::units::ticks")]
+    pub duration: u64,
+    #[serde(with = "crate::units::ticks")]
+    pub elapsed: u64,
 }
 
 /// A camera pan: from a point to a tile or onto an actor, then held there.

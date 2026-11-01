@@ -22,6 +22,7 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
     private readonly StackPanel _entries = new() { Name = "InterfaceEntries", Spacing = 8 };
     private readonly List<EntryRow> _rows = [];
     private bool _refreshing;
+    private readonly SkinEditorPanel _skin;
 
     public InterfaceEditorView(ProjectWorkspace workspace)
     {
@@ -73,6 +74,8 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
         save.Name = "SaveInterfacePanelButton";
         right.Children.Add(save);
         right.Children.Add(message);
+        _skin = new SkinEditorPanel(workspace) { Margin = new Thickness(0, 24, 0, 0) };
+        right.Children.Add(_skin);
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("245,*"), Margin = new Thickness(20) };
         grid.Children.Add(left);
         var scroll = new ScrollViewer { Content = right };
@@ -90,7 +93,11 @@ public sealed class InterfaceEditorView : UserControl, IRetirable
     /// <summary>Stops following the project (the editor that built this view was replaced).</summary>
     public void Retire() => ViewModel.Retire();
 
-    public void Refresh() => ViewModel.Refresh();
+    public void Refresh()
+    {
+        ViewModel.Refresh();
+        _skin.Load();
+    }
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {

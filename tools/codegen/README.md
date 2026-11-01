@@ -8,15 +8,17 @@ a committed file is not what its generator makes.
 |---|---|---|
 | `crates/farm-cart-schema/src/cart_generated.rs`, `save_generated.rs` | `flatc --rust` 25.2.10 over `schemas/*.fbs` ([schemas/README.md](../../schemas/README.md)) | a `.fbs` change |
 | `src/FarmEngine.Authoring/SchemaJson.fs` (the JSON decoders and encoders of the schema records) | `dotnet fsi tools/codegen/schema-json.fsx` (loads `Schema.fs` and reflects over its records; no build needed) | a schema record or union change |
+| `schemas/project.schema.json` (a JSON Schema of a single-file project, for editors and other tools) | `dotnet fsi tools/codegen/project-schema.fsx` (loads `Schema.fs` and `SchemaConstants.fs`, like `schema-json.fsx`) | a schema record, its doc comments or a vocabulary in `SchemaConstants.fs` change |
 | The codec and JSON-key tables in `src/FarmEngine.Authoring.Net/RecordJson.fs` | `python3 tools/codegen/record-json.py` (reads the decoders and encoders in `SchemaJson.fs`) | a `SchemaJson.fs` change |
 | `src/FarmEngine.Authoring.Net/RecordWith.fs` (the `WithField` extensions the C# app builds records with) | `dotnet build -c Release src/FarmEngine.Authoring && dotnet fsi tools/codegen/record-with.fsx` (reflects over the built schema records) | a schema record change |
 
-A schema change is: edit `Schema.fs`, then run the last three in table order
+A schema change is: edit `Schema.fs`, then run the last four in table order
 (`SchemaJson.fs` first, since `RecordJson.fs` is read from it).
 
 ```sh
 tools/codegen/check.sh                  # check all four (downloads flatc on x86_64 Linux)
 dotnet fsi tools/codegen/schema-json.fsx --check
+dotnet fsi tools/codegen/project-schema.fsx --check
 python3 tools/codegen/record-json.py --check
 dotnet fsi tools/codegen/record-with.fsx --check
 ```
@@ -62,3 +64,31 @@ parity tests (`fixtures/parity`, `crates/farm-sim/tests/fsharp_parity.rs`)
 check that Rust reads and writes every F# field. They do not compare the
 defaults of missing keys; that would need a Rust-side table from record names
 to serde types, which is left for when the Rust schema is generated too.
+
+## project.schema.json
+
+`project-schema.fsx` writes a [JSON Schema](https://json-schema.org) (draft
+2020-12) of a single-file project, so a text editor can complete and check a
+project file and other tools can read the format
+([docs/PROJECT-FILES.md](../../docs/PROJECT-FILES.md)). From the same records
+`schema-json.fsx` reads:
+
+- one `$defs` entry per record and union `GameProject` reaches, its
+  properties in field order under their JSON keys (the `[<JsonKey>]`
+  exceptions, such as `targetNPCId` and `selectedNPCId`, included);
+- the records' and fields' `///` doc comments as `description`s;
+- a field documented "One of `X`" takes `X.All` from `SchemaConstants.fs`:
+  an `enum` when loading refuses other values (`SchemaChecks.fs` checks
+  `X.All`), otherwise an `enum` suggested next to any string (tile types,
+  tools and crop qualities can be extended, and content packs carry outcome
+  types of their own);
+- a primitive field's value in the record's `Default` as its `default`; no key
+  is required but `schemaVersion` and a union case's `type`;
+- `additionalProperties: true` for a record with an `Extra` field, `false`
+  for the others (which drop undeclared keys, so an unknown key is a typo).
+
+The folder layout's `project.json` lists scenes, NPCs, dialogues and items by
+file path, and its scenes keep a `tileGrid`, so the schema checks the single
+file (`farmc convert` makes one). `ProjectSchemaTests` checks that the schema
+has every record key and that the templates, the loadable fixture projects and
+`docs/examples/willow-lane` match it.

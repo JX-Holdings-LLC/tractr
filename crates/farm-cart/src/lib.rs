@@ -9,6 +9,7 @@
 pub const CART_FORMAT: u32 = 3;
 
 pub mod cartridge;
+pub mod migrations;
 pub mod save;
 pub mod save_file;
 

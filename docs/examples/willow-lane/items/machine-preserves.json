@@ -1,0 +1,9 @@
+{
+  "id": "machine-preserves",
+  "name": "Preserves Jar",
+  "description": "Turns crops into preserves worth more",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 9,
+  "value": 200
+}

@@ -15,7 +15,9 @@ For creators: no code needed.
 |---|---|
 | [Install and update](INSTALL.md) | install Tractr on Windows, Linux or macOS, keep it up to date, and find your files |
 | [Creator guide](CREATOR-GUIDE.md) | build a game: maps, people, quests, events, the farm, sound, art and every Edit Mode tab. The editor shows it under **Help → Creator Guide** (F1) |
+| [Authoring at scale](AUTHORING-AT-SCALE.md) | write dialogue as text, edit content as tables and CSV, make bulk edits and templates, and translate your game |
 | [Export Game](EXPORT.md) | ship your game for Windows, Linux, the Steam Deck and the web, on Steam or itch.io |
+| [Project files](PROJECT-FILES.md) | edit a project outside the editor: the folder and single-file layouts, the JSON Schema, a worked example and `farmc` |
 | [The game player](PLAYER.md) | know what your players get: controls, settings, saves, screenshots, crash logs and command-line options |
 | [Troubleshooting](TROUBLESHOOTING.md) | fix something that doesn't work |
 

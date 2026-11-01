@@ -293,6 +293,28 @@ fn emotes_show_over_their_actor_for_their_seconds() {
 }
 
 #[test]
+fn animate_plays_a_clip_on_its_actor_for_its_seconds() {
+    let (ctx, mut state) = playing(json!([
+        {"type": "animate", "actor": "npc-test", "animation": "wave", "seconds": 0.5},
+        {"type": "animate", "actor": "player", "animation": "hold-up", "wait": false},
+        {"type": "animate", "actor": "player"},
+        set_flag("done"),
+        {"type": "wait", "seconds": 1},
+    ]));
+    tick(&ctx, &mut state, 1);
+    let shown = view(&ctx, &state);
+    assert_eq!(shown.animations.len(), 1);
+    assert_eq!((shown.animations[0].actor.as_str(), shown.animations[0].clip.as_str()), ("npc-test", "wave"));
+    tick(&ctx, &mut state, 4);
+    assert_eq!(view(&ctx, &state).animations[0].elapsed, 4);
+    // Half a second, then the player's clip starts without waiting; one without a clip is skipped.
+    tick(&ctx, &mut state, 6);
+    assert!(flag_is_true(&state, "done"));
+    let shown = view(&ctx, &state);
+    assert!(shown.animations.iter().any(|animation| animation.actor == "player" && animation.clip == "hold-up"));
+}
+
+#[test]
 fn the_camera_pans_follows_and_returns_to_the_player() {
     let (ctx, mut state) = playing(json!([
         {"type": "camera", "x": 0, "y": 0, "seconds": 1},

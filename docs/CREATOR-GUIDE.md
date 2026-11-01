@@ -122,6 +122,21 @@ The side panel holds the tools (drag its edge to make it wider):
   below shows every door of the scene; **Duplicate** starts a copy of a door
   on the next free tile, ready to adjust and save.
 
+#### Importing maps from Tiled and LDtk
+
+**Import map** in the scene panel turns a Tiled map (`.tmx`, `.tmj`, with
+its tilesets) or an LDtk level (choose it and **Import level** when the
+project has several) into a scene of up to 512 tiles a side. Tile layers fill
+the background, overlay, object and extra layers; each tile becomes a terrain
+(matched by a `terrain` property such as `terrain=soil`, else made with the
+tile's art), with `walkable`, `plantable` and `water` from its properties.
+Objects become doors, the player start, characters and their schedule
+stops, nodes, machines, lights and event tiles by their type. The message
+lists what didn't map, with the file and the tile; Problems opens the scene
+there. **Re-import map** reads the file again: tiles and markers follow the
+file, crops and soil stay. [Importing art and maps](IMPORTING.md) lists every
+property.
+
 #### Working from the keyboard
 
 Click the map or Tab to it, move the gold editing cursor with the **arrow
@@ -259,7 +274,10 @@ vocabulary; change any of it in the Content tab.
   tool.
 - **Item kinds** (the item's type) say what items of the kind do: planted
   (seeds), fertilize, equipped as a tool, **eaten** for energy (the item's own
-  energy, or the kind's), placed, given as gifts, sold to shops.
+  energy, or the kind's), placed, given as gifts, sold to shops. The built-in
+  `food` kind is for cooked dishes: eaten for the item's own energy (give
+  each dish its energy), and it can be given and sold. The templates' cooked
+  dishes (Veggie Soup, Fruit Tart) are food.
 - **Crop qualities** are the tiers a harvest comes out at, ranked in list
   order: each has its price, yield and mutation-chance multipliers, its stars
   and colour. Fertilized soil plants at the second tier, and every three
@@ -295,6 +313,12 @@ opens a menu, and requirements that name what doesn't exist.
 An NPC has a place to stand, a daily **Schedule** (a row per stop: the time
 of day, the scene and the tile), patrol waypoints, gift tastes, a birthday
 and dialogue. In the game the dialogue box shows the NPC's art.
+
+An NPC without art of its own is drawn with a built-in look its appearance
+names: `farmer`, `merchant` or `villager`. Another name is guessed from its
+words (one with "farm" or "elder" in it looks like the farmer, "shop",
+"vendor" or "merchant" like the merchant, anything else like the villager),
+and Problems adds a tip that names the look the NPC falls back to.
 
 #### Daily lines
 
@@ -371,6 +395,22 @@ first five can name a subject (the crop or item, the NPC, the quest, the
 building kind, the bundle, the achievement or the monster); without one the
 event fires for any.
 
+An event that is not repeatable fires once in a game: the engine remembers
+that it ran (the `event:<id>:fired` flag). A repeatable event fires every
+time its trigger happens and its conditions hold.
+
+#### The first time the player enters a scene
+
+To greet the player the first time they walk into a scene, give an event the
+scene, the `enter` trigger, no tile condition, and leave it not repeatable: it
+fires on the first step in the scene and never again. If it has to stay
+repeatable (say, so a later outcome can arm it again), give it a `flag`
+condition that needs a flag of your own to be false, and an outcome that sets
+that flag: the first run sets it, and the condition stops every run after.
+Problems only warns that an `enter` event "fires on every step" when it is
+repeatable and nothing stops it like this. An `enter` event with a tile or
+region condition fires when the player steps there instead.
+
 **Conditions** check tiles, items, flags, the day, the season, the year, the
 time, quests, friendship and the weather, and also:
 
@@ -439,7 +479,9 @@ until it ends, and the clock follows the pause in modals setting.
 - **move**: walks the player or an NPC to a tile (waiting for them to arrive,
   unless told not to); **face** turns them; **emote** shows a bubble over them
   (`exclaim`, `question`, `heart`, `music`, `anger`, `sweat`, `sleep`,
-  `idea`).
+  `idea`); **animate** plays a named clip of their art (an action clip
+  such as `hold-up`, or any clip) for some seconds (1 by default), waiting
+  for it unless told not to.
 - **wait**: pauses for some seconds.
 - **camera**: pans to a tile or follows a character; a camera step with
   neither returns to the player. **fade**: fades the screen out to a colour,
@@ -814,12 +856,104 @@ preview** holds a frame. Then **Assign artwork** to the player, a map brush
 (with its tile behavior), an NPC, an item, a crop, a node, an animal or a
 machine. Mark pixel art as **Crisp pixel art** so it stays sharp.
 
+**Import Aseprite** takes a `.aseprite` file, or the JSON (and PNG) of an
+Aseprite sprite sheet export: each tag becomes a clip with its frame
+durations, each slice a single frame (icons, portraits), and tag names become
+clip names (`walk_down` is `walk-down`). Check the names in the preview, pick
+the asset's type and **Import**. When the file changes, the editor imports it
+again into the same asset, so whatever uses it keeps it; clips you added by
+hand stay ([Importing art and maps](IMPORTING.md)).
+
 Art for the player or an NPC turns and walks when its clips are named by
 direction (`idle-down`, `idle-left`, `walk-up`, `walk-right`…, with `idle`
 and `walk` for any direction): walking, a schedule and a cutscene's **face**
 and **move** steps pick the clip. A game without art of its own still looks
 like a game: Tractr's built-in pixel-art pack draws tiles, crops, trees,
 machines, animals and walking characters, and any art you assign wins.
+
+#### Art sizes
+
+The built-in pack is drawn at 32 pixels per tile, and creator art that
+stands on the map follows the same rule, so a frame drawn at the same pixel
+size as the built-in art comes out the same size:
+
+- Art for something standing on a tile (the player, NPCs, animals,
+  monsters, crops, dropped items, nodes and machines): a frame up to 32×32
+  pixels is scaled to fill the tile. A larger frame is drawn at 32 pixels
+  per tile, centred on the tile and standing on its bottom edge: a 32×48
+  character stands a tile and a half tall, like the built-in ones, and a
+  64×64 frame covers 2×2 tiles. For high-resolution art set the asset's
+  **pixels per tile** (`pixelsPerTile`, for example 64 for art drawn at
+  twice the size): every frame of that asset is then drawn at that scale.
+- Ground tiles, overlays and extra layers fill their tile. Buildings fit
+  their footprint plus one tile above it.
+
+| What | Size | Notes |
+|---|---|---|
+| Ground tile, overlay | 32×32 | Scaled to fill the tile. Terrains that join up use an `autotile` clip of 16 frames. |
+| Player, NPC | 32×48 | The built-in characters' size: 1.5 tiles tall. Clips by direction: `idle-down`, `idle-left`, `idle-right`, `idle-up`, `walk-down`, … (`idle` and `walk` for any direction). |
+| Crop | 32×48 (up to 32×32 fills the tile) | A clip named `growth` with one frame per growth stage, in order: a newly planted crop shows the first frame, and the last frame stays for any later stage. |
+| Item, node, machine, animal, monster | 32×32 (larger: 32 pixels per tile) | Built-in crops, machines and animals are 32×48, trees 32×64. |
+| Tall object (a terrain with **Tall**) | 32 × (32 + 32 × tall) | Tall is a whole number of tiles, 0 to 8. The art fits a box one tile wide and 1 + tall tiles high, standing on the tile's bottom edge, so a 1.5-tile prop (32×48) uses tall 1; pad it to 32×64 only if you want it to fill the box when the art is resized. |
+| Dialogue portrait | square, 48×48 | The portrait (or, without one, the NPC's art) is fitted into 48×48 inside a circle of 25 pixels radius: keep the face in the centre. Whole-number scales keep pixel art crisp. |
+| Export icon | PNG, at least 256×256 | Settings → Export. |
+
+#### Character looks and layers
+
+An NPC without art of its own uses the built-in art of its **Appearance**:
+the hand-drawn `farmer`, `merchant` and `villager`, or one of the base
+characters in built-in colours, `fisher`, `miner`, `baker`, `doctor`,
+`blacksmith`, `noble`, `gardener` and `sailor` (an appearance that contains
+one of these names picks it). An NPC's **Look** (`look`: `skin`, `hair`,
+`shirt`, `pants` and `accent`, each `#rrggbb`) draws it as the base
+character in those colours, the same colours the player's character
+creator picks, over its appearance's colours: so two NPCs with the same
+appearance can still look different.
+
+A *layered character* is a stack of layer sheets drawn in order, for
+example body, eyes, hair, top, bottom, shoes, hat and accessory. Every layer
+is an artwork with the same clip names and frame layout (all `walk-left`
+clips have the same frames), and each layer can have a colour it is
+multiplied with: draw a layer in light greys and colour it per character.
+An NPC's `layers` and the project's `playerLayers` replace their art when
+not empty. A piece of clothing's **Wear → Layer** (`wear.layer`, an artwork
+id) is drawn over the player while worn, trousers first, then the shirt,
+then the hat, tinted with the item's wear colour; it works over the
+built-in player too when it has the built-in sheet's layout (32×48 frames).
+Layers of different sizes stand on the same bottom edge, centred. The game
+composes each frame of a character once and reuses it, so a character with
+many layers costs no more to draw than one with a single sprite.
+
+#### Action animations
+
+The player's art (its first layer, for a layered player) can have *action
+clips* the game plays by itself:
+
+- Using a tool plays `use-<action>-<direction>` (`use-till-down`,
+  `use-water-left`, `use-break-up`…, the action being the tool's), else
+  `use-<action>`, else `use-<direction>` or `use`. A fishing rod tries
+  `fish-cast-<direction>` and `fish-cast` first.
+- Eating or using an item plays `eat-<direction>`, `eat`, then the `use`
+  clips.
+- A cutscene's **animate** step plays any named clip on the player or an
+  NPC.
+
+Without a matching clip the character keeps its walk frame and nothing
+changes. A clip's options:
+
+- **Lock movement** (`lockMovement`): the player stays in place, and further
+  tool presses wait, until the clip ends.
+- **Impact frame** (`impactFrame`, 0 for the first frame): the tool's effect
+  (tilled soil, a watered tile, a broken rock) happens when this frame
+  shows; without one it happens at once.
+- **Effect** (`effect`): `flash` (blinks), `shake` (a pixel left and right)
+  or `squash` (squashed down for a moment at the impact frame).
+- **Hold item** (`holdItem`): the item eaten is drawn over the character's
+  head.
+
+All timing comes from the frames' ticks, not from the frame rate, so a
+recorded playthrough plays back the same. The built-in characters have no
+action clips.
 
 ### Workshop
 
@@ -840,6 +974,25 @@ it shows, and entries: a label, what it shows (text, money, energy, day, an
 item count, a flag or an action button), and for items and actions a pick
 from your game's list. Installed packs with the UI panels permission add
 theirs after yours (see [Mods](#mods)).
+
+The interface skin gives the game its own look. **Import font** adds a
+TrueType or OpenType file; pick it as the heading, body or number font
+(numbers: money, the clock, quantities). Colours replace the theme's (text,
+accent, warning, panel and the rest), as `#rrggbb` or `#rrggbbaa`. Panel art
+is an image drawn in nine parts, its corners kept at their size and its edges
+stretched: one for panels, the HUD, buttons (and their hover, pressed and
+disabled looks), slots, tooltips, the dialogue box and the portrait frame,
+with the edge width in the image's pixels and a scale. Icons replace the
+HUD's money, energy, season, weather and time labels and the toolbar's
+buttons. Layout puts the HUD at the top or bottom, hides the toolbar or the
+clock (or shows a 24-hour one), moves the dialogue box to the top and sets
+the portrait size. The title screen can have background art or a scene of
+the game behind it, a logo in place of the name, and its menu on the left,
+right or at the bottom. **Save skin** applies it; **Reset to built-in look**
+removes it. The player's text size and readable font still apply on top.
+Problems lists a skin part that would keep the built-in look (missing art, a
+file that is not a font, a colour that doesn't read), and checks the game's
+text against the skin's fonts.
 
 ### Mods
 
@@ -897,7 +1050,50 @@ event messages, a minigame's own prompt) shows as you wrote it.
 The Problems tab checks the whole project: missing references, unreachable
 content and settings that would break the game. **Errors block export**;
 warnings and tips help you improve the game. **Go to** jumps to the entry or
-scene that needs a fix.
+scene that needs a fix. `farmc check` lists the same problems from the
+command line ([Export from the command line](EXPORT.md#export-from-the-command-line)).
+
+It also follows the whole game, from what gives each item, flag, quest and
+building to what uses it (shops, crops and their seeds, recipes, drops, fish,
+animals, rewards, events, conversations; ingredients, quest objectives,
+gifts, collections, bundles, building materials):
+
+- an item nothing gives, as a warning when something needs it (a recipe, a
+  quest, a bundle, a building), and recipes and quests that can never be
+  finished because of it;
+- quest prerequisites that go round in a circle, or wait for a quest that
+  nothing starts;
+- as tips: items nothing uses and that sell for nothing, items every way to
+  get needs something the game never gives, quests nothing starts, and
+  recipes or seasonal quests whose ingredient only comes in another season.
+
+With pack plugins installed these are tips only: a plugin can give items and
+start quests in ways the checks cannot see.
+
+### Updates and old saves
+
+Players keep their saves when you ship an update. Export Game remembers which
+items and places the version it exported had; when one of them is gone from
+the project, Problems warns that saves from that version still hold it, until
+a save migration says what becomes of it. A migration renames an old id to a
+new one (an item or a scene), replaces each old item with a number of another,
+or removes it and pays the player for it. Deleting an item the last export
+shipped records a migration that pays its value; you can change it to a
+rename. The player applies the migrations when it loads an older save and
+tells the player once what changed.
+
+The project's `saveMigrations` list holds the rules:
+
+```json
+"saveMigrations": [
+  { "kind": "item", "from": "copper-can", "to": "watering-can" },
+  { "kind": "item", "from": "berry", "to": "blueberry", "quantity": 2 },
+  { "kind": "item", "from": "moon-dust", "money": 10, "name": "Moon Dust" },
+  { "kind": "scene", "from": "scene-old-mill", "to": "scene-mill", "x": 4, "y": 6 }
+]
+```
+
+A rule only applies while the game has nothing under its old id.
 
 ### If something goes wrong
 
@@ -928,8 +1124,23 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
   NPCs, the mine floor), so the next playtest starts right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
+- **States**: play from one of the project's test states, or save the
+  running game as one.
 
 Plugins that fail show their errors in the debug drawer and as toasts.
+
+### Test states
+
+A test state is a named moment of the game to test from: a date and time,
+a scene and tile, flags and variables, quest statuses, friendship, the
+inventory and money. Save one from a playtest with **States**, then play from
+it whenever you need that moment again: it starts a new game of the project
+as it is now and puts it there, so the state keeps working while you edit the
+content. Test states stay in the project; they are never part of an exported
+game. Problems warns about a state that names a scene, item, quest or NPC the
+game no longer has. The same states run outside the editor with
+`--test-state` ([the game player](PLAYER.md#test-states)), so a build server can
+start a replay or a screenshot from them.
 
 ## 4. Share your game
 
@@ -971,10 +1182,15 @@ Shortcuts** lists the editor's shortcuts too.
 
 ## More
 
+- [Authoring at scale](AUTHORING-AT-SCALE.md): dialogue scripts, content
+  tables and CSV, bulk edits, templates and translating your game.
 - [Export Game](EXPORT.md): settings, what an exported game contains and how
   to ship it on Steam or itch.io.
 - [The game player](PLAYER.md): the player's screens, settings, saves and
   command-line options.
+- [Project files](PROJECT-FILES.md): the two file layouts of a project, its
+  JSON Schema and a worked example, for editing projects by hand or with
+  other tools.
 - [Content packs](PACKS.md) and [Pack plugins](PLUGINS.md): extend a game
   with packs and small JavaScript programs.
 - [Troubleshooting](TROUBLESHOOTING.md): when something doesn't work.

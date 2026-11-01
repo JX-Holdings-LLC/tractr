@@ -246,8 +246,9 @@ type internal Context =
         BundleIds: System.Collections.Generic.HashSet<string>
         AchievementIds: System.Collections.Generic.HashSet<string>
         MailIds: System.Collections.Generic.HashSet<string>
-        /// Flags something can set: `setFlag`/`clearFlag` and the variable outcomes, dialogue `eventFlag`s, the
-        /// project's flag table and every event's auto-managed fired flag.
+        /// Flags something can set: `setFlag`/`clearFlag` and the variable outcomes wherever outcomes
+        /// live, dialogue `eventFlag`s, the project's flag table and every event's auto-managed fired
+        /// flag.
         KnownFlags: System.Collections.Generic.HashSet<string>
     }
 
@@ -266,6 +267,41 @@ module internal Context =
             | EventOutcomeTypes.SetVariable
             | EventOutcomeTypes.AddVariable -> o.Variable
             | _ -> None)
+
+    /// Every flag set anywhere outcomes live, found by walking the project's JSON: an object
+    /// whose `type` is `setFlag`/`clearFlag` (its `flagName`) or `setVariable`/`addVariable` (its
+    /// `variable`), and every `eventFlag` text. This reaches the outcomes the typed walk in
+    /// `create` lists and any other place that holds them (cutscene `outcomes` steps, quest
+    /// `onFail`, festival `onMiss`, heart events, achievements, packs' content, …), so a flag a
+    /// new outcome list sets is never reported as "nothing ever sets". Scene tile grids hold
+    /// no outcomes and are skipped.
+    let private flagsInJson (add: string -> unit) (root: Json) =
+        let rec walk (json: Json) =
+            match json with
+            | JObject members ->
+                let text key =
+                    members
+                    |> List.tryPick (fun (k, v) ->
+                        match v with
+                        | JString s when k = key && s.Length > 0 -> Some s
+                        | _ -> None)
+
+                match text "type" with
+                | Some(EventOutcomeTypes.SetFlag | EventOutcomeTypes.ClearFlag) -> text "flagName" |> Option.iter add
+                | Some(EventOutcomeTypes.SetVariable | EventOutcomeTypes.AddVariable) -> text "variable" |> Option.iter add
+                | _ -> ()
+
+                text "eventFlag" |> Option.iter add
+
+                for key, value in members do
+                    if key <> "tiles" && key <> "dataUrl" then
+                        walk value
+            | JArray items ->
+                for item in items do
+                    walk item
+            | _ -> ()
+
+        walk root
 
     let create (project: GameProject) : Context =
         let scenes = Dictionary<string, Scene>()
@@ -304,6 +340,8 @@ module internal Context =
 
         add (project.Dialogues |> Seq.collect dialogueFlags)
         add (project.Npcs |> Seq.collect (fun n -> n.Dialogue |> Seq.collect dialogueFlags))
+        // Everywhere else outcomes live (cutscene steps, quest onFail, festival onMiss, …).
+        flagsInJson (fun flag -> flags.Add flag |> ignore) (SchemaJson.encodeGameProject project)
 
         {
             Project = project

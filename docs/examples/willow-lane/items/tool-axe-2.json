@@ -1,0 +1,14 @@
+{
+  "id": "tool-axe-2",
+  "name": "Copper Axe",
+  "description": "Fells trees in fewer swings",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 400,
+  "toolType": "axe",
+  "toolPower": 2,
+  "toolTier": 2,
+  "durability": 200,
+  "maxDurability": 200
+}

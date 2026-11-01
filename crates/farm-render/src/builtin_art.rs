@@ -227,6 +227,7 @@ impl BuiltinArt {
             source_y: Some(f64::from(entry.y) + f64::from(line) * f64::from(entry.h)),
             frame: f64::from(column),
             row: f64::from(line),
+            pixels_per_tile: None,
         }
     }
 

@@ -23,7 +23,9 @@ module ProjectJson =
         | Ok json -> ProjectLoad.loadProject json
         | Error message -> unreadable "Project data" message
 
-    /// `loadProject` over JSON text.
+    /// `loadProject` over JSON text: the core's `ProjectLoad.loadProjectText` (in
+    /// `FarmEngine.Authoring.dll`, the entry point a script that references only that assembly
+    /// uses), forwarded here.
     let loadProjectText (json: string) : LoadResult<GameProject> = ProjectLoad.loadProjectText json
 
     /// A project as a System.Text.Json node (members in schema order).

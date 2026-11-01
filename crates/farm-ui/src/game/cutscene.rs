@@ -108,7 +108,7 @@ fn draw_line(
     let bottom = ui.safe_area().bottom();
     let height = content_height.min((bottom - bottom_margin - 12.0).max(120.0));
     let card = Rect::new((screen.width - width) / 2.0, (bottom - bottom_margin - height).max(12.0), width, height);
-    ui.panel(card, colors.panel, colors.panel_border, 12.0, true);
+    ui.skinned_panel(crate::skin::Part::Dialogue, card, colors.panel, colors.panel_border, 12.0, true);
     if line.options.is_empty() {
         // Clicking or tapping the box moves on (keys are the host's).
         let state =

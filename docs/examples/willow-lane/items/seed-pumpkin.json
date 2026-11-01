@@ -1,0 +1,10 @@
+{
+  "id": "seed-pumpkin",
+  "name": "Pumpkin Seeds",
+  "description": "Plant these to grow pumpkin",
+  "type": "seed",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 50,
+  "cropType": "pumpkin"
+}

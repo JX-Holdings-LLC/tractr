@@ -697,6 +697,16 @@ and SlainCondition =
     static member Default: SlainCondition = { MonsterId = ""; Min = 1.0 }
 
 /// Today is an NPC's birthday; an empty `NpcId`: anyone's (M6).
+/// A plugin condition (#239): what the pack plugin that defines `Condition` (`packId:name`, or a project
+/// script's plain name) answers for `Args`. False without that plugin.
+and PluginCondition =
+    {
+        Condition: string
+        Args: Json option
+    }
+
+    static member Default: PluginCondition = { Condition = ""; Args = None }
+
 and BirthdayCondition =
     {
         NpcId: string
@@ -808,10 +818,28 @@ and AnimationClip =
         Loop: bool
         /// 1..1024 frames.
         Frames: ArtFrame list
+        /// An action clip (#235: `use-till-down`, `eat`, …) keeps the player in place until it ends.
+        LockMovement: bool option
+        /// An action clip's impact frame (0 = the first): the tool's effect applies when it shows;
+        /// absent: at once. int, nonnegative.
+        ImpactFrame: float option
+        /// A drawing effect while the clip plays: one of `ClipEffects`.
+        Effect: string option
+        /// The item the action is about (eaten, held up) is drawn over the character.
+        HoldItem: bool option
     }
 
     /// A `AnimationClip` with every field at its schema default.
-    static member Default: AnimationClip = { Name = ""; Loop = true; Frames = [] }
+    static member Default: AnimationClip =
+        {
+            Name = ""
+            Loop = true
+            Frames = []
+            LockMovement = None
+            ImpactFrame = None
+            Effect = None
+            HoldItem = None
+        }
 
 /// Rectangles are in source pixels; display size remains independent of art resolution.
 and ArtFrame =
@@ -1270,6 +1298,9 @@ and CustomAsset =
         TileType: string option
         /// Present when the image is an animated sprite sheet (M7).
         Sheet: SpriteSheet option
+        /// How many of the image's pixels make one tile when it stands on the map (#215); absent:
+        /// frames up to 32×32 fill the tile, larger ones are drawn at 32 pixels per tile. int, positive.
+        PixelsPerTile: float option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1286,6 +1317,36 @@ and CustomAsset =
             DataUrl = ""
             TileType = None
             Sheet = None
+            PixelsPerTile = None
+            Extra = []
+        }
+
+/// Where an art asset or a scene was imported from (Aseprite, Tiled, LDtk), so importing the file
+/// again updates it in place. Only the editor reads it; no game does.
+and ImportSource =
+    {
+        /// One of `ImportKinds`.
+        Kind: string
+        /// The asset id (Aseprite) or scene id (Tiled, LDtk) the import made.
+        TargetId: string
+        /// The file, as the creator picked it.
+        Path: string
+        /// LDtk: the level's identifier.
+        Level: string option
+        /// Aseprite: each tag or slice name and the clip it became.
+        Names: ((string * string) list) option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `ImportSource` with every field at its schema default.
+    static member Default: ImportSource =
+        {
+            Kind = ""
+            TargetId = ""
+            Path = ""
+            Level = None
+            Names = None
             Extra = []
         }
 
@@ -1316,6 +1377,8 @@ and CustomCropDefinition =
         Requirements: GrowthRequirements option
         /// The light it gives at night once grown (M8: glowing crops).
         Light: LightSource option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1340,6 +1403,7 @@ and CustomCropDefinition =
             HarvestItemId = None
             Requirements = None
             Light = None
+            Tags = None
             Extra = []
         }
 
@@ -1386,10 +1450,12 @@ and CutsceneChoice =
         Text: string
         /// The label of the step to go on from; empty: the next step.
         Goto: string
+        /// A stable id for the answer, so translations keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `CutsceneChoice` with every field at its schema default.
-    static member Default: CutsceneChoice = { Text = ""; Goto = "" }
+    static member Default: CutsceneChoice = { Text = ""; Goto = ""; Id = None }
 
 /// One step of a cutscene. Like an outcome, one flat object whose `type` (one of
 /// `CutsceneStepTypes`) says which fields apply.
@@ -1433,6 +1499,10 @@ and CutsceneStep =
         Outcomes: EventOutcome list
         /// A move waits for the actor to arrive before the next step (absent: it waits).
         Wait: bool option
+        /// The clip an `animate` step plays on its actor (#235).
+        Animation: string option
+        /// A stable id for the step's text, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `CutsceneStep` with every field at its schema default.
@@ -1457,6 +1527,8 @@ and CutsceneStep =
             SoundId = None
             Outcomes = []
             Wait = None
+            Animation = None
+            Id = None
         }
 
 and Dialogue =
@@ -1507,6 +1579,8 @@ and DialogueOption =
         RequiresFriendship: float option
         /// Choosing this option performs a creator-defined action.
         ActionId: string option
+        /// A stable id for the option, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -1529,6 +1603,7 @@ and DialogueOption =
             OfferQuestId = None
             RequiresFriendship = None
             ActionId = None
+            Id = None
             Extra = []
         }
 
@@ -1636,6 +1711,8 @@ and ExportSettings =
         PixelScale: string
         Credits: string option
         Targets: string list
+        /// The ids the last Export Game shipped (#242): what saves of that version can hold.
+        ExportedIds: ExportedIds option
     }
 
     /// A `ExportSettings` with every field at its schema default.
@@ -1652,6 +1729,25 @@ and ExportSettings =
             PixelScale = "integer"
             Credits = None
             Targets = [ "windows-x64"; "linux-x64" ]
+            ExportedIds = None
+        }
+
+/// The ids an exported version of the game had (#242), so Problems can tell which removed ids
+/// players' saves still hold.
+and ExportedIds =
+    {
+        /// The game version that was exported.
+        Version: string
+        Items: string list
+        Scenes: string list
+    }
+
+    /// A `ExportedIds` with every field at its schema default.
+    static member Default: ExportedIds =
+        {
+            Version = ""
+            Items = []
+            Scenes = []
         }
 
 /// Default window for a standalone exported game.
@@ -1682,6 +1778,8 @@ and FishTable =
         /// Chance (0..1) a cast catches junk instead of rolling the table.
         JunkChance: float
         JunkItemId: string option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         Filter: FishingFilter option
@@ -1698,6 +1796,7 @@ and FishTable =
             Entries = []
             JunkChance = 0.15
             JunkItemId = None
+            Tags = None
             Extra = []
             Filter = None
             Layered = None
@@ -1777,6 +1876,8 @@ and GameContent =
         Mail: (MailDefinition list) option
         /// Monsters (M7).
         Monsters: (MonsterDefinition list) option
+        /// Rules for saves written before a game update (#242); absent when there are none.
+        SaveMigrations: (SaveMigration list) option
     }
 
     /// A `GameContent` with every field at its schema default.
@@ -1817,6 +1918,7 @@ and GameContent =
             Achievements = None
             Mail = None
             Monsters = None
+            SaveMigrations = None
         }
 
 and GameEvent =
@@ -1886,6 +1988,119 @@ and GamePanelEntry =
     /// A `GamePanelEntry` with every field at its schema default.
     static member Default: GamePanelEntry = { Label = ""; Kind = ""; Value = "" }
 
+/// The look of a game's interface: its fonts, panel art, icons, colours, layout and title screen.
+/// Absent parts keep the built-in look; the player's text size and readable-font settings apply on
+/// top.
+and UiSkin =
+    {
+        /// A `font` asset for headings, titles and buttons; absent: the built-in font.
+        HeadingFont: string option
+        /// A `font` asset for body text.
+        BodyFont: string option
+        /// A `font` asset for numbers (money, the clock, quantities).
+        NumberFont: string option
+        /// Colours by palette role (`UiPaletteRoles`): `#rrggbb` or `#rrggbbaa`.
+        Colors: ((string * string) list) option
+        /// 9-slice art by part (`UiSkinParts`).
+        Panels: ((string * UiNineSlice) list) option
+        /// Icons by name (`UiSkinIcons`).
+        Icons: ((string * VisualRef) list) option
+        Layout: UiLayout option
+        Title: UiTitleScreen option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `UiSkin` with every field at its schema default.
+    static member Default: UiSkin =
+        {
+            HeadingFont = None
+            BodyFont = None
+            NumberFont = None
+            Colors = None
+            Panels = None
+            Icons = None
+            Layout = None
+            Title = None
+            Extra = []
+        }
+
+/// A piece of panel art drawn in nine parts: the corners keep their size, the edges stretch along
+/// one side and the middle both ways.
+and UiNineSlice =
+    {
+        /// The image (an asset, and a frame of it for a part of a sheet).
+        Visual: VisualRef
+        /// Source pixels of each edge that do not stretch. int, nonnegative.
+        Left: float
+        /// int, nonnegative.
+        Top: float
+        /// int, nonnegative.
+        Right: float
+        /// int, nonnegative.
+        Bottom: float
+        /// UI pixels per source pixel of the edges. 1..8.
+        Scale: float option
+    }
+
+    /// A `UiNineSlice` with every field at its schema default.
+    static member Default: UiNineSlice =
+        {
+            Visual = VisualRef.Default
+            Left = 0.0
+            Top = 0.0
+            Right = 0.0
+            Bottom = 0.0
+            Scale = None
+        }
+
+/// Where the interface puts things.
+and UiLayout =
+    {
+        /// One of `UiHudPositions`; absent: top.
+        HudPosition: string option
+        /// Show the toolbar buttons (bag, quests, crafting, menu); absent: shown.
+        Toolbar: bool option
+        /// One of `UiClockStyles`; absent: `12h`.
+        ClockStyle: string option
+        /// One of `UiDialoguePositions`; absent: bottom.
+        DialoguePosition: string option
+        /// The side of a portrait in the dialogue box, in UI pixels. int, 32..160; absent: 48.
+        PortraitSize: float option
+    }
+
+    /// A `UiLayout` with every field at its schema default.
+    static member Default: UiLayout =
+        {
+            HudPosition = None
+            Toolbar = None
+            ClockStyle = None
+            DialoguePosition = None
+            PortraitSize = None
+        }
+
+/// The title screen: what is behind it, the logo and where the menu sits.
+and UiTitleScreen =
+    {
+        /// Art covering the screen; absent: the game's start scene.
+        Background: VisualRef option
+        /// A scene drawn behind the menu instead of the start scene.
+        Scene: string option
+        /// Art drawn in place of the game's name.
+        Logo: VisualRef option
+        /// One of `UiMenuPositions`; absent: center.
+        MenuPosition: string option
+    }
+
+    /// A `UiTitleScreen` with every field at its schema default.
+    static member Default: UiTitleScreen =
+        {
+            Background = None
+            Scene = None
+            Logo = None
+            MenuPosition = None
+        }
+
 and GameProject =
     {
         /// int.
@@ -1919,8 +2134,12 @@ and GameProject =
         CustomAssets: CustomAsset list
         CustomCrops: (CustomCropDefinition list) option
         PlayerVisual: VisualRef option
+        /// The player as a stack of layer sheets (#234), replacing `playerVisual` when not empty.
+        PlayerLayers: (CharacterLayer list) option
         Graphics: GraphicsSettings option
         GamePanels: (GamePanel list) option
+        /// The look of the game's interface (`UiSkin`); absent: the built-in look.
+        UiSkin: UiSkin option
         CurrentSeason: string
         CurrentDay: float
         /// 1-based day within `CurrentSeason` (mirrors GameState.clock.dayOfSeason). Absent when
@@ -1947,6 +2166,8 @@ and GameProject =
         Minigames: MinigameDef list
         /// Installed content packs (M5). Array order = load order.
         ContentPacks: PackInstallation list
+        /// The creator's own scripts (#241): trusted plugins of the game itself, which use the game's ids as written.
+        Scripts: (ProjectScript list) option
         /// The project's terrains (M1), beside and over the built-in ones.
         Terrains: (TerrainDefinition list) option
         /// The project's tools (M1), beside and over the built-in ones.
@@ -1975,6 +2196,12 @@ and GameProject =
         Mail: (MailDefinition list) option
         /// Monsters (M7).
         Monsters: (MonsterDefinition list) option
+        /// Rules for saves written before a game update (#242), compiled into the content.
+        SaveMigrations: (SaveMigration list) option
+        /// Named states a playtest can start from (#229); never compiled into a cartridge.
+        TestStates: (TestState list) option
+        /// The files art and scenes were imported from (Aseprite, Tiled, LDtk), for re-import.
+        Imports: (ImportSource list) option
         /// Optional native export identity, window and target settings (additive to schema v8).
         Export: ExportSettings option
         /// Serialized PRNG state so play sessions resume deterministically (additive, optional).
@@ -1993,6 +2220,11 @@ and GameProject =
         /// the shipping log, collections, bundles, achievements, mail, monsters and health).
         /// Only the engine reads it.
         KeptState: Json option
+        /// The game's own text in other languages: one table per language (the project's
+        /// `settings.locale` is the source).
+        Translations: (TranslationTable list) option
+        /// Saved entries (or groups of entries) to make new ones from.
+        ContentTemplates: (ContentTemplate list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2022,8 +2254,10 @@ and GameProject =
             CustomAssets = []
             CustomCrops = None
             PlayerVisual = None
+            PlayerLayers = None
             Graphics = None
             GamePanels = None
+            UiSkin = None
             CurrentSeason = ""
             CurrentDay = 0.0
             CurrentDayOfSeason = None
@@ -2044,6 +2278,7 @@ and GameProject =
             Actions = []
             Minigames = []
             ContentPacks = []
+            Scripts = None
             Terrains = None
             Tools = None
             ItemCategories = None
@@ -2058,6 +2293,9 @@ and GameProject =
             Achievements = None
             Mail = None
             Monsters = None
+            SaveMigrations = None
+            TestStates = None
+            Imports = None
             Export = None
             RngState = None
             CurrentWeatherId = None
@@ -2065,8 +2303,58 @@ and GameProject =
             MineDeepestFloor = None
             QuarantinedItems = None
             KeptState = None
+            Translations = None
+            ContentTemplates = None
             Extra = []
         }
+
+/// The game's text in one language, by the stable key of each text field
+/// (`item:hoe:name`, `npc:bram:line:l-3f2a`, see `Translations.catalog`).
+and TranslationTable =
+    {
+        /// A locale code (`es`, `pt-BR`).
+        Locale: string
+        Strings: (string * TranslatedText) list
+    }
+
+    /// A `TranslationTable` with every field at its schema default.
+    static member Default: TranslationTable = { Locale = ""; Strings = [] }
+
+/// One translated text and a hash of the source text it was translated from, so a changed
+/// source shows as a stale translation.
+and TranslatedText =
+    {
+        Text: string
+        /// The first 8 bytes of the SHA-256 of the source text, in hex; empty: unknown.
+        Source: string
+    }
+
+    /// A `TranslatedText` with every field at its schema default.
+    static member Default: TranslatedText = { Text = ""; Source = "" }
+
+/// A saved entry, or a group of entries (a seed, its crop and its harvest), to make new ones from.
+and ContentTemplate =
+    {
+        Id: string
+        Name: string
+        /// The entries, each with its category (`items`, `crops`, `recipes`, …).
+        Entries: ContentTemplateEntry list
+    }
+
+    /// A `ContentTemplate` with every field at its schema default.
+    static member Default: ContentTemplate = { Id = ""; Name = ""; Entries = [] }
+
+/// One entry of a template: its category and the entry as the project stores it.
+and ContentTemplateEntry =
+    {
+        /// One of `ContentTables.Categories` (`items`, `crops`, `recipes`, `shops`, `fishTables`,
+        /// `nodeTypes`, `machineTypes`, `npcs`, `quests`).
+        Kind: string
+        Entry: Json option
+    }
+
+    /// A `ContentTemplateEntry` with every field at its schema default.
+    static member Default: ContentTemplateEntry = { Kind = ""; Entry = None }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
 and GameWords =
@@ -2180,7 +2468,7 @@ and InventorySlot =
         }
 
 /// A kind of item (M1) and what items of it do. The built-in kinds are seed, tool, crop, gift,
-/// quest, fertilizer, material and fish.
+/// quest, fertilizer, material, fish and food (edible, for the item's own energy).
 and ItemCategoryDefinition =
     {
         Id: string
@@ -2251,6 +2539,8 @@ and Item =
         Wear: WearDefinition option
         /// Health it restores when eaten, with combat on (M7). int.
         Health: float option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         FishingGear: FishingGear option
@@ -2279,6 +2569,7 @@ and Item =
             Buffs = None
             Wear = None
             Health = None
+            Tags = None
             Extra = []
             FishingGear = None
         }
@@ -2321,6 +2612,8 @@ and MachineTypeDefinition =
         AreaEffects: (AreaEffect list) option
         /// The light it gives at night (M8).
         Light: LightSource option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
         FishProduction: FishProduction option
@@ -2342,6 +2635,7 @@ and MachineTypeDefinition =
             Gate = None
             AreaEffects = None
             Light = None
+            Tags = None
             Extra = []
             FishProduction = None
         }
@@ -2564,6 +2858,8 @@ and NodeTypeDefinition =
         Light: LightSource option
         /// Undeclared keys, in order.
         Seasons: (string list) option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         Extra: (string * Json) list
     }
 
@@ -2582,6 +2878,7 @@ and NodeTypeDefinition =
             BlocksMovement = true
             Light = None
             Seasons = None
+            Tags = None
             Extra = []
         }
 
@@ -2616,6 +2913,14 @@ and Npc =
         Portraits: (NpcPortrait list) option
         /// The NPC can be dated and married, when the game allows it (M4).
         Romanceable: bool option
+        /// Colours for the built-in base character (#216): an NPC with a look and no art of its
+        /// own is drawn as the base character in these colours.
+        Look: PlayerLook option
+        /// The NPC as a stack of layer sheets (#234), drawn in order; replaces its visual and
+        /// built-in art when not empty.
+        Layers: (CharacterLayer list) option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2642,8 +2947,24 @@ and Npc =
             Lines = None
             Portraits = None
             Romanceable = None
+            Look = None
+            Layers = None
+            Tags = None
             Extra = []
         }
+
+/// One layer of a layered character (#234): a custom asset whose clips have the same names and
+/// frame layout as the character's other layers, optionally tinted.
+and CharacterLayer =
+    {
+        /// The layer's art (a custom asset id).
+        AssetId: string
+        /// A `#rrggbb` the layer is multiplied with.
+        Color: string option
+    }
+
+    /// A `CharacterLayer` with every field at its schema default.
+    static member Default: CharacterLayer = { AssetId = ""; Color = None }
 
 /// TS `NPCSchema.birthday` (inline object).
 and NpcBirthday =
@@ -2891,6 +3212,15 @@ and PackPermissions =
         /// (`lantern-catch`); minigame defs play one as `packId:name` (docs/PLUGINS.md). None and
         /// empty both allow none.
         Minigames: (string list) option
+        /// What the pack's plugins may read of the game (#237): `player`, `world`, `people`,
+        /// `content`, and `any` for the game's and other packs' flags. None and empty allow no reads.
+        Read: (string list) option
+        /// Entity types the pack's plugins may define (#238), by local name.
+        Entities: (string list) option
+        /// Item-use handlers the pack's plugins may define (#238), by local name.
+        ItemUses: (string list) option
+        /// Game screens the pack's plugins may add (#240), by local name.
+        Screens: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2903,6 +3233,10 @@ and PackPermissions =
             UiPanels = false
             Mutations = None
             Minigames = None
+            Read = None
+            Entities = None
+            ItemUses = None
+            Screens = None
             Extra = []
         }
 
@@ -2942,6 +3276,19 @@ and PackPlugin =
         /// set = intersection with manifest permissions.minigames.
         Minigames: (string list) option
         Source: string
+        /// Conditions this plugin defines (`api.condition(name, …)`, #239), with their argument forms.
+        Conditions: (PluginFunction list) option
+        /// Outcomes this plugin defines (`api.outcome(name, …)`, #239).
+        Outcomes: (PluginFunction list) option
+        /// Entity types this plugin defines (`api.entity`, #238); effective set = intersection with
+        /// manifest permissions.entities.
+        Entities: (string list) option
+        /// Item-use handlers this plugin defines (`api.itemUse`, #238); effective set =
+        /// intersection with manifest permissions.itemUses.
+        ItemUses: (string list) option
+        /// Game screens this plugin adds (`api.screen`, #240); effective set = intersection with
+        /// manifest permissions.screens.
+        Screens: (PluginScreen list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -2954,6 +3301,77 @@ and PackPlugin =
             Hooks = []
             Minigames = None
             Source = ""
+            Conditions = None
+            Outcomes = None
+            Entities = None
+            ItemUses = None
+            Screens = None
+            Extra = []
+        }
+
+/// A condition or outcome a plugin defines (#239): its local name, how the editor shows it, and its arguments.
+and PluginFunction =
+    {
+        Name: string
+        Label: string option
+        Description: string option
+        Args: PluginArgument list
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginFunction` with every field at its schema default.
+    static member Default: PluginFunction =
+        {
+            Name = ""
+            Label = None
+            Description = None
+            Args = []
+            Extra = []
+        }
+
+/// One argument of a plugin condition or outcome (#239).
+and PluginArgument =
+    {
+        Name: string
+        Label: string option
+        /// `text`, `number`, `integer`, `bool` or `id` (`PluginArgumentTypes`).
+        Type: string
+        /// For an `id`: the content it names (`item`, `npc`, `quest`, …).
+        Kind: string option
+        /// May be left out.
+        Optional: bool
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginArgument` with every field at its schema default.
+    static member Default: PluginArgument =
+        {
+            Name = ""
+            Label = None
+            Type = ""
+            Kind = None
+            Optional = false
+            Extra = []
+        }
+
+/// A game screen a plugin adds (#240): its local name, its title, and an optional hotkey.
+and PluginScreen =
+    {
+        Name: string
+        Title: string option
+        Hotkey: string option
+        /// Undeclared keys, in order.
+        Extra: (string * Json) list
+    }
+
+    /// A `PluginScreen` with every field at its schema default.
+    static member Default: PluginScreen =
+        {
+            Name = ""
+            Title = None
+            Hotkey = None
             Extra = []
         }
 
@@ -3194,6 +3612,43 @@ and ProgressionSettings =
 
     static member Default: ProgressionSettings = { Limits = None; Skills = None }
 
+/// A project script (#241): JavaScript of the game itself (one `scripts/<id>.js` file in a project folder),
+/// with a pack plugin's API but trusted. Its plugin id is `script/<id>`.
+and ProjectScript =
+    {
+        Id: string
+        Name: string option
+        /// The body of `function (api) { … }`.
+        Source: string
+        /// Off: the script does not run.
+        Disabled: bool
+    }
+
+    /// A `ProjectScript` with every field at its schema default.
+    static member Default: ProjectScript =
+        {
+            Id = ""
+            Name = None
+            Source = ""
+            Disabled = false
+        }
+
+/// Budgets of a project's scripts (#241), in fuel (docs/PLUGINS.md "Limits"); None keeps the pack plugin default.
+and ScriptSettings =
+    {
+        FuelPerCall: float option
+        FuelPerSecond: float option
+        InitFuel: float option
+    }
+
+    /// A `ScriptSettings` with every field at its schema default.
+    static member Default: ScriptSettings =
+        {
+            FuelPerCall = None
+            FuelPerSecond = None
+            InitFuel = None
+        }
+
 and ProjectSettings =
     {
         Movement: MovementConfig
@@ -3230,6 +3685,8 @@ and ProjectSettings =
         /// Limits for permanent player upgrades.
         Progression: ProgressionLimits option
         SkillDefinitions: (SkillDefinition list) option
+        /// Budgets of the project's own scripts (#241); None: the pack plugin defaults.
+        Scripts: ScriptSettings option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
@@ -3254,6 +3711,7 @@ and ProjectSettings =
             Combat = None
             Progression = None
             SkillDefinitions = None
+            Scripts = None
         }
 
 and RequestBoard =
@@ -3321,6 +3779,8 @@ and Quest =
         DeadlineDays: float option
         DeadlineDay: float option
         OnFail: (EventOutcome list) option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3344,6 +3804,7 @@ and Quest =
             DeadlineDays = None
             DeadlineDay = None
             OnFail = None
+            Tags = None
             Extra = []
         }
 
@@ -3438,6 +3899,8 @@ and RecipeDefinition =
         /// Hand-craftable only while near a machine providing this station category.
         RequiresStationCategory: string option
         Unlock: RecipeUnlock option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3454,6 +3917,7 @@ and RecipeDefinition =
             Category = "crafting"
             RequiresStationCategory = None
             Unlock = None
+            Tags = None
             Extra = []
         }
 
@@ -3596,8 +4060,9 @@ and Scene =
         Monsters: (MonsterSpawn list) option
         /// Its extra layers beyond background, overlay and object, in drawing order (M8).
         Layers: (SceneLayer list) option
-        /// Undeclared keys, in order.
+        /// Forage that spawns in it each morning.
         ForageSpawns: (ForageSpawnTable list) option
+        /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
 
@@ -3731,6 +4196,8 @@ and ShopDefinition =
         KeeperNpcId: string option
         PriceModifiers: (ShopPriceModifier list) option
         Saturation: ShopSaturation option
+        /// Labels for finding and selecting entries (bulk edits, tables, templates); the game ignores them.
+        Tags: (string list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -3753,6 +4220,7 @@ and ShopDefinition =
             KeeperNpcId = None
             PriceModifiers = None
             Saturation = None
+            Tags = None
             Extra = []
         }
 
@@ -3791,6 +4259,122 @@ and SkillState =
 
     /// A `SkillState` with every field at its schema default.
     static member Default: SkillState = { Xp = 0.0; Level = 0.0 }
+
+/// A rule a game update carries for saves written before it (#242): an old item or scene id
+/// renamed (`To`), an item replaced by `Quantity` of another, or removed and paid for (`Money`
+/// a unit). Applied when such a save loads, while the game has no content under `From`.
+and SaveMigration =
+    {
+        /// One of `SaveMigrationKinds`.
+        Kind: string
+        From: string
+        To: string option
+        /// Units of `To` for each unit of `From` (items). int, positive.
+        Quantity: float option
+        /// Gold paid for each unit of a removed item (items without `To`).
+        Money: float option
+        /// Where a player in a moved scene lands (scenes; their own tile when absent). int.
+        X: float option
+        /// int.
+        Y: float option
+        /// The old name, for the notice players read.
+        Name: string option
+    }
+
+    /// A `SaveMigration` with every field at its schema default.
+    static member Default: SaveMigration =
+        {
+            Kind = ""
+            From = ""
+            To = None
+            Quantity = None
+            Money = None
+            X = None
+            Y = None
+            Name = None
+        }
+
+/// A named game state a playtest or a headless run starts from (#229), applied after New Game
+/// on the current content. Everything is optional: what a state leaves out stays as New Game made
+/// it. Quest statuses are set as they are (no rewards or outcomes run).
+and TestState =
+    {
+        Id: string
+        Name: string
+        Description: string option
+        /// Absolute day (1 is the first day). int, positive.
+        Day: float option
+        Season: string option
+        /// int, positive.
+        DayOfSeason: float option
+        /// int, positive.
+        Year: float option
+        /// Minute of the day (480 is 8:00). int.
+        Time: float option
+        Weather: string option
+        SceneId: string option
+        /// The player's tile (the scene's centre when absent). int.
+        X: float option
+        /// int.
+        Y: float option
+        /// One of `Directions`.
+        Facing: string option
+        /// Flags set (`true`) or cleared (`false`).
+        [<JsonDecode "(Decode.dict Decode.flagValue) (key :: path) value">]
+        Flags: (string * Json) list
+        /// Variables: flags holding a number or a text.
+        [<JsonDecode "(Decode.dict Decode.flagValue) (key :: path) value">]
+        Variables: (string * Json) list
+        /// Quest statuses by quest id (one of `QuestStatuses`).
+        Quests: (string * string) list
+        /// Friendship points by NPC id (125 a heart). int.
+        Friendship: (string * float) list
+        /// The whole inventory, replacing New Game's.
+        Inventory: (TestStateItem list) option
+        /// int, nonnegative.
+        Money: float option
+    }
+
+    /// A `TestState` with every field at its schema default.
+    static member Default: TestState =
+        {
+            Id = ""
+            Name = ""
+            Description = None
+            Day = None
+            Season = None
+            DayOfSeason = None
+            Year = None
+            Time = None
+            Weather = None
+            SceneId = None
+            X = None
+            Y = None
+            Facing = None
+            Flags = []
+            Variables = []
+            Quests = []
+            Friendship = []
+            Inventory = None
+            Money = None
+        }
+
+and TestStateItem =
+    {
+        ItemId: string
+        /// int, positive.
+        Quantity: float
+        /// A crop quality other than normal.
+        Quality: string option
+    }
+
+    /// A `TestStateItem` with every field at its schema default.
+    static member Default: TestStateItem =
+        {
+            ItemId = ""
+            Quantity = 1.0
+            Quality = None
+        }
 
 /// Sprite-sheet slicing metadata (M7). A sheet is a grid: columns = walk frames, rows = directions (down, left, right, up) when `directional`. Assets without this stay static images; games with zero art still render via the colored-rectangle fallback.
 and SpriteSheet =
@@ -4221,6 +4805,8 @@ and NpcLine =
         Expression: string option
         /// How often the line comes up next to the others that hold (absent: 1). int.
         Weight: float option
+        /// A stable id for the line, so translations and scripts keep finding it when it moves (absent: its place).
+        Id: string option
     }
 
     /// A `NpcLine` with every field at its schema default.
@@ -4230,6 +4816,7 @@ and NpcLine =
             Conditions = []
             Expression = None
             Weight = None
+            Id = None
         }
 
 /// A portrait an NPC shows in the dialogue box for an expression (M4).
@@ -4351,6 +4938,9 @@ and WearDefinition =
         Color: string option
         /// Art drawn over the player (a hat), facing like the player.
         Visual: VisualRef option
+        /// A layer sheet (a custom asset id, #234) drawn over the character while worn, with the
+        /// same clips and frame layout as the character's art; tinted with `color` when set.
+        Layer: string option
     }
 
     /// A `WearDefinition` with every field at its schema default.
@@ -4359,6 +4949,7 @@ and WearDefinition =
             Slot = ""
             Color = None
             Visual = None
+            Layer = None
         }
 
 /// Player entered a tile (or region when x2/y2 present).
@@ -4618,6 +5209,7 @@ and [<RequireQualifiedAccess>] EventCondition =
     | Slain of SlainCondition
     | Birthday of BirthdayCondition
     | Weekday of WeekdayCondition
+    | Plugin of PluginCondition
 
     /// The `type` discriminator.
     member this.Type =
@@ -4657,6 +5249,7 @@ and [<RequireQualifiedAccess>] EventCondition =
         | Slain _ -> "slain"
         | Birthday _ -> "birthday"
         | Weekday _ -> "weekday"
+        | Plugin _ -> "plugin"
 
 
 and ForageSpawnTable =

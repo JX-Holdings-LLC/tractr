@@ -218,6 +218,35 @@ module internal ChecksContent =
                     )
                 | Some _ -> ())
 
+    /// An NPC without its own art is drawn with a built-in look its `appearance` names; one
+    /// that names none falls back to a guessed sheet (`BuiltinLooks.npcSheet`) without a word in
+    /// the game, so say which.
+    let private npcLooks (context: Context) (sink: Sink) =
+        context.Project.Npcs
+        |> Seq.iteri (fun i npc ->
+            if
+                npc.Visual.IsNone
+                && npc.Appearance.Length > 0
+                && (BuiltinLooks.exactNpcSheet npc.Appearance).IsNone
+                && npc.Look.IsNone
+                && (npc.Layers |> Option.defaultValue []).IsEmpty
+                && not (
+                    CharacterArt.colouredAppearances
+                    |> List.exists (fun name -> npc.Appearance.ToLowerInvariant().Contains name)
+                )
+            then
+                sink.Info(
+                    "npc.appearanceFallback",
+                    sprintf "npcs[%d].appearance" i,
+                    sprintf
+                        "NPC \"%s\" has appearance \"%s\", which names no built-in look, so it is drawn as %s (built-in looks: %s)"
+                        npc.Name
+                        npc.Appearance
+                        (BuiltinLooks.npcSheet npc.Appearance)
+                        (CharacterArt.builtinAppearances |> String.concat ", "),
+                    Some(NavigationTarget.Npc npc.Id)
+                ))
+
     let private quests (context: Context) (sink: Sink) =
         context.Project.Quests
         |> Seq.iteri (fun i quest ->
@@ -325,6 +354,32 @@ module internal ChecksContent =
                 | QuestObjectiveTypes.Slay when not (hasValue objective.TargetMonsterId) -> noTarget "targetMonsterId"
                 | QuestObjectiveTypes.Bundle when not (hasValue objective.TargetBundleId) -> noTarget "targetBundleId"
                 | _ -> ()))
+
+    /// Whether content of `kind` (a plugin argument's `kind`) has `id`; `None` for kinds that are not checked.
+    let private pluginIdExists (context: Context) (kind: string) (id: string) : bool option =
+        let has (ids: System.Collections.Generic.HashSet<string>) = Some(ids.Contains id)
+
+        match kind with
+        | "item" -> has context.ItemIds
+        | "npc" -> has context.NpcIds
+        | "quest" -> has context.QuestIds
+        | "shop" -> has context.ShopIds
+        | "action" -> has context.ActionIds
+        | "minigame" -> has context.MinigameIds
+        | "machineType" -> has context.MachineTypeIds
+        | "nodeType" -> has context.NodeTypeIds
+        | "crop" -> has context.CropIds
+        | "animalSpecies" -> has context.SpeciesIds
+        | "scene" -> Some(context.Scenes.ContainsKey id)
+        | "weather" -> has context.WeatherIds
+        | "building" -> has context.BuildingIds
+        | "monster" -> has context.MonsterIds
+        | "collection" -> has context.CollectionIds
+        | "bundle" -> has context.BundleIds
+        | "achievement" -> has context.AchievementIds
+        | "mail" -> has context.MailIds
+        | "cutscene" -> has context.CutsceneIds
+        | _ -> None
 
     /// The condition/outcome vocabulary shared by events, actions and minigame tiers (event-forms.tsx).
     /// `sceneId` is the scene tile conditions and tile outcomes are checked against (empty = any).
@@ -553,6 +608,21 @@ module internal ChecksContent =
                         sprintf "%s counts slain missing monster \"%s\"" label s.MonsterId,
                         target
                     )
+            // Plugin conditions (#239): like built-ins, their arguments must fit their form.
+            | EventCondition.Plugin p ->
+                for problem in PluginExtensions.checkUse context.Project "condition" p.Condition p.Args (pluginIdExists context) do
+                    let at =
+                        if problem.Path = "" then
+                            cpath + ".condition"
+                        else
+                            cpath + "." + problem.Path
+
+                    let message = label + ": " + problem.Message
+
+                    if problem.IsError then
+                        sink.Error(sprintf "%s.%s" family problem.Code, at, message, target)
+                    else
+                        sink.Warning(sprintf "%s.%s" family problem.Code, at, message, target)
             | _ -> ())
 
     let private outcomes
@@ -862,6 +932,30 @@ module internal ChecksContent =
             | EventOutcomeTypes.AddMaxHealth -> needs "amount" outcome.Amount.IsSome
             | EventOutcomeTypes.ApplyBuff -> needs "buff" outcome.Buff.IsSome
             | EventOutcomeTypes.ModifyHealth -> needs "amount" outcome.Amount.IsSome
+            // Plugin outcomes (#239).
+            | EventOutcomeTypes.Plugin ->
+                let name =
+                    outcome.Extra
+                    |> List.tryFind (fun (key, _) -> key = "pluginOutcome")
+                    |> Option.bind (snd >> Json.asString)
+                    |> Option.defaultValue ""
+
+                let args =
+                    outcome.Extra |> List.tryFind (fun (key, _) -> key = "args") |> Option.map snd
+
+                for problem in PluginExtensions.checkUse context.Project "outcome" name args (pluginIdExists context) do
+                    let at =
+                        if problem.Path = "" then
+                            opath + ".pluginOutcome"
+                        else
+                            opath + "." + problem.Path
+
+                    let message = label + ": " + problem.Message
+
+                    if problem.IsError then
+                        sink.Error(sprintf "%s.%s" family problem.Code, at, message, target)
+                    else
+                        sink.Warning(sprintf "%s.%s" family problem.Code, at, message, target)
             | _ -> ())
 
     let private events (context: Context) (sink: Sink) =
@@ -882,7 +976,23 @@ module internal ChecksContent =
                     | EventCondition.InteractTile _ -> true
                     | _ -> false)
 
-            if event.Trigger = EventTriggers.Enter && not hasTile then
+            // An event that fires once (not repeatable, or its outcomes set a flag its own
+            // conditions need false, or clear one they need true) runs on the first step and
+            // never again: the "first time entering a scene" pattern, not a mistake.
+            let firesOnce =
+                not event.Repeatable
+                || event.Conditions
+                   |> List.exists (fun c ->
+                       match c with
+                       | EventCondition.Flag f when f.Flag.Length > 0 ->
+                           event.Outcomes
+                           |> List.exists (fun o ->
+                               o.FlagName = Some f.Flag
+                               && ((o.Type = EventOutcomeTypes.SetFlag && not f.Value)
+                                   || (o.Type = EventOutcomeTypes.ClearFlag && f.Value)))
+                       | _ -> false)
+
+            if event.Trigger = EventTriggers.Enter && not hasTile && not firesOnce then
                 sink.Warning(
                     "event.enterWithoutTile",
                     path + ".conditions",
@@ -1522,7 +1632,12 @@ module internal ChecksContent =
                                     target
                                 )
 
-            if minigame.ResultTiers.IsEmpty then
+            // The fishing minigame's score decides the cast's catch (the engine's built-in
+            // binding), so it does something without tiers.
+            if
+                minigame.ResultTiers.IsEmpty
+                && minigame.Id <> ExtensibilitySchema.FishingMinigameId
+            then
                 sink.Warning(
                     "minigame.noTiers",
                     path + ".resultTiers",
@@ -2075,7 +2190,28 @@ module internal ChecksContent =
 
                     clip.Frames
                     |> Seq.iteri (fun k f ->
-                        frame (sprintf "%s.animations[%d].frames[%d]" path c k) f a.Id (sprintf "%s / %s / frame %d" a.Name clip.Name (k + 1)) target))
+                        frame (sprintf "%s.animations[%d].frames[%d]" path c k) f a.Id (sprintf "%s / %s / frame %d" a.Name clip.Name (k + 1)) target)
+
+                    // Action clips (#235).
+                    match clip.ImpactFrame with
+                    | Some impact when impact < 0.0 || impact >= float clip.Frames.Length ->
+                        sink.Error(
+                            "graphics.impactOutside",
+                            sprintf "%s.animations[%d].impactFrame" path c,
+                            sprintf "%s / %s: the impact frame %g is not one of its %d frames (0 is the first)" a.Name clip.Name impact clip.Frames.Length,
+                            target
+                        )
+                    | _ -> ()
+
+                    match clip.Effect with
+                    | Some effect when not (List.contains effect ClipEffects.All) ->
+                        sink.Error(
+                            "graphics.unknownEffect",
+                            sprintf "%s.animations[%d].effect" path c,
+                            sprintf "%s / %s: unknown effect %s (one of %s)" a.Name clip.Name effect (String.concat ", " ClipEffects.All),
+                            target
+                        )
+                    | _ -> ())
 
             match a.Sheet, a.Width, a.Height with
             | Some sheet, Some width, Some height when
@@ -2089,6 +2225,41 @@ module internal ChecksContent =
 
         project.Npcs
         |> Seq.iteri (fun i n -> visual (sprintf "npcs[%d].visual" i) n.Visual n.Name (Some(NavigationTarget.Npc n.Id)))
+
+        // Layered characters (#234) and NPC looks (#216).
+        let layerAsset (path: string) (assetId: string) (label: string) (target: NavigationTarget option) =
+            if not (assets.ContainsKey assetId) then
+                sink.Error("graphics.missingAsset", path, sprintf "%s: missing layer artwork %s" label assetId, target)
+
+        let layerColor (path: string) (color: string option) (label: string) (target: NavigationTarget option) =
+            match color with
+            | Some c when not (CharacterArt.isHexColor c) -> sink.Error("graphics.badColor", path, sprintf "%s: %s is not a #rrggbb colour" label c, target)
+            | _ -> ()
+
+        let layers (path: string) (stack: CharacterLayer list option) (label: string) (target: NavigationTarget option) =
+            defaultArg stack []
+            |> List.iteri (fun j layer ->
+                layerAsset (sprintf "%s[%d].assetId" path j) layer.AssetId label target
+                layerColor (sprintf "%s[%d].color" path j) layer.Color label target)
+
+        layers "playerLayers" project.PlayerLayers "Player" (Some NavigationTarget.Settings)
+
+        project.Npcs
+        |> Seq.iteri (fun i n ->
+            let target = Some(NavigationTarget.Npc n.Id)
+            layers (sprintf "npcs[%d].layers" i) n.Layers n.Name target
+
+            match n.Look with
+            | None -> ()
+            | Some look ->
+                for key, value in CharacterArt.lookParts look do
+                    layerColor (sprintf "npcs[%d].look.%s" i key) value n.Name target)
+
+        project.Items
+        |> Seq.iteri (fun i d ->
+            match d.Wear |> Option.bind (fun wear -> wear.Layer) with
+            | Some assetId -> layerAsset (sprintf "items[%d].wear.layer" i) assetId d.Name (Some(NavigationTarget.Item d.Id))
+            | None -> ())
 
         project.Items
         |> Seq.iteri (fun i d -> visual (sprintf "items[%d].visual" i) d.Visual d.Name (Some(NavigationTarget.Item d.Id)))
@@ -2287,6 +2458,20 @@ module internal ChecksContent =
                         "pack.unknownMutation",
                         sprintf "%s.pack.manifest.permissions.mutations[%d]" path k,
                         sprintf "Pack \"%s\" asks for plugin capability \"%s\", which this engine does not know (it is ignored)" manifest.Name entry,
+                        target
+                    ))
+            // Reads (#237): the scopes the read API knows.
+            manifest.Permissions.Read
+            |> Option.defaultValue []
+            |> List.iteri (fun k entry ->
+                if not (List.contains (entry.Trim()) PluginExtensions.ReadScopes) then
+                    sink.Warning(
+                        "pack.unknownRead",
+                        sprintf "%s.pack.manifest.permissions.read[%d]" path k,
+                        sprintf
+                            "Pack \"%s\" asks to read \"%s\", which this engine does not know (it is ignored; use player, world, people, content or any)"
+                            manifest.Name
+                            entry,
                         target
                     ))
             // Minigame kinds: names like pack ids; a plugin defines only what the manifest allows.
@@ -2570,6 +2755,7 @@ module internal ChecksContent =
         items context sink
         crops context sink
         npcs context sink
+        npcLooks context sink
         quests context sink
         events context sink
         heartEvents context sink

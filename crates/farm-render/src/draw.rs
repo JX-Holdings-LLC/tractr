@@ -61,13 +61,27 @@ pub enum FontId {
     ReadableRegular,
     /// Atkinson Hyperlegible Bold.
     ReadableBold,
+    /// A game's own font (an interface skin's TrueType or OpenType file), by the slot
+    /// [`crate::text::register_font`] gave it. An unknown slot draws in Inter Regular.
+    Custom(u16),
 }
 
 impl FontId {
+    /// A number for the font, unique among fonts (cache keys).
+    pub fn code(self) -> u32 {
+        match self {
+            FontId::Regular => 0,
+            FontId::Bold => 1,
+            FontId::ReadableRegular => 2,
+            FontId::ReadableBold => 3,
+            FontId::Custom(slot) => 16 + u32::from(slot),
+        }
+    }
+
     /// The Atkinson Hyperlegible face of the same weight (readable faces map to themselves).
     pub fn readable(self) -> FontId {
         match self {
-            FontId::Regular | FontId::ReadableRegular => FontId::ReadableRegular,
+            FontId::Regular | FontId::ReadableRegular | FontId::Custom(_) => FontId::ReadableRegular,
             FontId::Bold | FontId::ReadableBold => FontId::ReadableBold,
         }
     }

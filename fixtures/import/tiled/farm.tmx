@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="4" height="3" tilewidth="16" tileheight="16" infinite="0">
+ <tileset firstgid="1" source="tiles.tsx"/>
+ <layer id="1" name="Ground" width="4" height="3">
+  <data encoding="csv">
+1,1,3,3,
+1,2,3,3,
+3,3,3,9
+</data>
+ </layer>
+ <layer id="2" name="Objects" width="4" height="3">
+  <data encoding="csv">
+0,0,0,4,
+0,0,0,0,
+0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="Treetops" width="4" height="3">
+  <properties>
+   <property name="above" type="bool" value="true"/>
+  </properties>
+  <data encoding="csv">
+0,0,0,0,
+0,0,0,4,
+0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="Markers">
+  <object id="1" name="to-town" type="door" x="48" y="32" width="16" height="16">
+   <properties>
+    <property name="to" value="town"/>
+    <property name="toX" type="int" value="5"/>
+    <property name="toY" type="int" value="6"/>
+   </properties>
+  </object>
+  <object id="2" name="start" type="player" x="16" y="16"/>
+  <object id="3" name="mira" type="npc" x="0" y="32"/>
+  <object id="4" type="schedule" x="32" y="0">
+   <properties>
+    <property name="npc" value="mira"/>
+    <property name="time" value="8:30"/>
+   </properties>
+  </object>
+  <object id="5" type="light" x="0" y="0">
+   <properties>
+    <property name="radius" type="int" value="4"/>
+    <property name="color" value="#ffcc88"/>
+   </properties>
+  </object>
+  <object id="6" name="welcome" type="event" x="0" y="0" width="32" height="16"/>
+  <object id="7" name="rock" type="node" x="32" y="16">
+   <properties>
+    <property name="node" value="node-rock"/>
+   </properties>
+  </object>
+  <object id="8" name="mystery" type="statue" x="16" y="0"/>
+ </objectgroup>
+</map>

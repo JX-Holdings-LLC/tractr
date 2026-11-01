@@ -135,6 +135,7 @@ public sealed partial class ArtEditorView : UserControl, IRetirable
         _workspace.ProjectChanged -= OnProjectChanged;
         _model.Retire();
         StopSound();
+        StopWatching();
     }
 
     private void OnProjectChanged(object? sender, ProjectChangedEventArgs e)
@@ -440,6 +441,7 @@ public sealed partial class ArtEditorView : UserControl, IRetirable
 
     public void Refresh()
     {
+        SyncWatchers();
         if (_workspace.Current is not { } project) return;
         _unusedConfirm.IsVisible = false;
         _refreshing = true;

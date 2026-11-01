@@ -312,6 +312,8 @@ pub struct Player {
     title_state: Option<(GameState, GraphicsSource)>,
     /// The game's own sounds and music, decoded when it loaded (M2).
     audio: AudioAssets,
+    /// The interface skin's fonts, registered when the game loaded: font asset id → font.
+    skin_fonts: Vec<(String, farm_render::FontId)>,
     sounds: Vec<SoundRequest>,
     requests: Vec<PlayerRequest>,
     poisoned: Option<String>,
@@ -413,12 +415,18 @@ impl Player {
             settings.display.integer_scaling = def.info.pixel_scale.as_deref() != Some("fit");
             settings
         });
-        let mut ui = Ui::new(options.theme);
+        // The skin's palette over the host's theme (#236).
+        let theme = match &def.presentation.ui_skin {
+            Some(skin) => farm_ui::skin::apply_palette(options.theme, skin),
+            None => options.theme,
+        };
+        let mut ui = Ui::new(theme);
         ui.set_reduced_motion(settings.accessibility.reduced_motion);
         ui.set_readable_font(settings.accessibility.readable_font);
         ui.set_lang(Lang::resolve(&settings.language, options.system_locale.as_deref(), &def.content.settings.locale));
         let assets = Arc::new(assets);
         let audio = AudioAssets::load(&def.presentation.custom_assets, &assets);
+        let skin_fonts = skin_fonts(&def.presentation, &assets);
         let mut player = Self {
             mode: options.mode,
             def,
@@ -440,6 +448,7 @@ impl Player {
             router: InputRouter::new(),
             host_view: HostView::default(),
             audio,
+            skin_fonts,
             renderer: FrameRenderer::new(assets),
             ui_list: DrawList::new(),
             world: None,
@@ -713,7 +722,7 @@ impl Player {
             Panel::Inventory => Some(BindAction::Inventory.canonical_key()),
             Panel::Quests => Some(BindAction::Quests.canonical_key()),
             Panel::Crafting => Some(BindAction::Craft.canonical_key()),
-            Panel::Goals | Panel::Mail => None,
+            Panel::Goals | Panel::Mail | Panel::Plugin => None,
         });
         let close_own = own_key.is_some_and(|key| input.game_pressed.iter().any(|pressed| pressed == key));
         // The goals and mail panels open from the game (no engine modal over it) in games that
@@ -730,6 +739,15 @@ impl Player {
             })
             .filter(|panel| self.game_ui.panel == Some(*panel) || (self.game_ui.panel.is_none() && free))
             .collect();
+        // A plugin screen's hotkey opens it (or closes it again) when nothing else is open (#240).
+        let plugin_screen = session
+            .plugin_screens()
+            .iter()
+            .find(|screen| {
+                screen.hotkey.as_ref().is_some_and(|key| input.game_pressed.iter().any(|pressed| pressed == key))
+            })
+            .cloned()
+            .filter(|_| self.game_ui.panel.is_none() && free || self.game_ui.panel == Some(Panel::Plugin));
         // Interact presses carry what the player holds for planting.
         let planting = &self.game_ui.planting;
         session.set_planting(Some((planting.seed.clone(), planting.fertilizer.clone())));
@@ -751,6 +769,15 @@ impl Player {
         for panel in host_panels {
             self.toggle_panel(panel);
         }
+        if let Some(screen) = plugin_screen {
+            let same = self.game_ui.plugin_screen.as_ref().is_some_and(|open| open.hook == screen.hook);
+            if self.game_ui.panel == Some(Panel::Plugin) && same {
+                self.game_ui.panel = None;
+            } else {
+                self.open_plugin_screen(&screen.hook, &screen.title);
+            }
+        }
+        self.refresh_plugin_screen();
         for (toggle, panel) in [
             (toggles.inventory, Panel::Inventory),
             (toggles.quests, Panel::Quests),
@@ -761,6 +788,29 @@ impl Player {
             }
         }
         self.drain_session_events();
+    }
+
+    /// Open the plugin screen of `hook` (#240).
+    pub fn open_plugin_screen(&mut self, hook: &str, title: &str) {
+        self.game_ui.plugin_screen = Some(farm_ui::game::PluginScreenView {
+            hook: hook.to_owned(),
+            title: title.to_owned(),
+            content: Err(String::new()),
+        });
+        self.game_ui.panel = Some(Panel::Plugin);
+        if let Some(game) = self.game.as_mut() {
+            game.session.release_input();
+        }
+        self.refresh_plugin_screen();
+    }
+
+    /// While a plugin screen is open, ask its `draw` for what it shows now.
+    fn refresh_plugin_screen(&mut self) {
+        if self.game_ui.panel != Some(Panel::Plugin) {
+            return;
+        }
+        let (Some(game), Some(screen)) = (self.game.as_mut(), self.game_ui.plugin_screen.as_mut()) else { return };
+        screen.content = game.session.draw_plugin_screen(&screen.hook);
     }
 
     fn toggle_panel(&mut self, panel: Panel) {
@@ -888,6 +938,7 @@ impl Player {
         game.graphics.refresh_live_state(content, state);
         // Walking on its own or in a cutscene (`shell_snapshot` knows both).
         let moving = snapshot.player.moving;
+        snapshot.player.action = session.action_view();
         apply_graphics(&mut snapshot, &game.graphics, scene, state.clock.tick as f64, moving);
         Some((snapshot, world, target))
     }
@@ -908,7 +959,16 @@ impl Player {
         // The title screen shows the start of the game behind the menu.
         if self.screens.first() == Some(&Screen::Title) {
             let (state, graphics) = self.title_state.get_or_insert_with(|| {
-                let state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
+                let mut state = state::create_game_state_from_start(&self.def.start, self.seed.as_deref());
+                // The skin's title scene, seen from its middle.
+                let title_scene =
+                    self.def.presentation.ui_skin.as_ref().and_then(|skin| skin.title.as_ref()?.scene.clone());
+                if let Some(scene) = title_scene.and_then(|id| state.world.scenes.iter().find(|scene| scene.id == id)) {
+                    let (id, w, h) = (scene.id.clone(), scene.width, scene.height);
+                    state.player.scene_id = id;
+                    state.player.x = units::tile_center(w / 2);
+                    state.player.y = units::tile_center(h / 2);
+                }
                 let graphics = GraphicsSource::from_state(&self.def.presentation, &self.def.content, &state);
                 (state, graphics)
             });
@@ -1009,6 +1069,15 @@ impl Player {
             self.settings.accessibility.text_size,
             self.time,
         );
+        // The skin, resolved against this frame's images (an evicted image is fetched again).
+        if let Some(skin) = &self.def.presentation.ui_skin {
+            let pixel_art = self.def.presentation.graphics.as_ref().is_none_or(|graphics| graphics.pixel_art);
+            let fonts = &self.skin_fonts;
+            let resolved = farm_ui::Skin::resolve(skin, &self.def.art, &mut self.renderer.ui_images, pixel_art, |id| {
+                fonts.iter().find(|(asset, _)| asset == id).map(|(_, font)| *font)
+            });
+            self.ui.set_skin(resolved);
+        }
 
         // The game and its HUD (under any shell screen).
         let mut game_actions = Vec::new();
@@ -1061,12 +1130,16 @@ impl Player {
                 };
                 shell::pause(&mut self.ui, &view)
             }
-            Some(Screen::Settings) => shell::settings(
-                &mut self.ui,
-                &mut self.settings_screen,
-                &mut self.settings,
-                self.mode == PlayerMode::Embedded,
-            ),
+            Some(Screen::Settings) => {
+                let game_languages: Vec<String> = self.def.presentation.content_strings.keys().cloned().collect();
+                shell::settings(
+                    &mut self.ui,
+                    &mut self.settings_screen,
+                    &mut self.settings,
+                    self.mode == PlayerMode::Embedded,
+                    &game_languages,
+                )
+            }
             Some(Screen::Credits) => {
                 let info = &self.def.info;
                 let view = CreditsView {
@@ -1135,6 +1208,14 @@ impl Player {
                 if let Some(game) = self.game.as_ref() {
                     self.game_ui.planting.toggle(game.session.content(), &item_id);
                 }
+            }
+            GameAction::PluginScreen { hook, action } => {
+                self.ui_sound();
+                if let Some(game) = self.game.as_mut() {
+                    game.session.plugin_screen_action(&hook, &action);
+                }
+                self.refresh_plugin_screen();
+                self.drain_session_events();
             }
         }
     }
@@ -1310,9 +1391,27 @@ impl Player {
         }
     }
 
+    /// The locale the game's own text is shown in (#228): the player's language, else the
+    /// system's, where the game is translated into it; None for the game's own text.
+    pub fn content_locale(&self) -> Option<String> {
+        self.def.presentation.content_locale(&self.settings.language, self.system_locale.as_deref())
+    }
+
+    /// The game's content with its text in [`Self::content_locale`].
+    fn game_content(&self) -> farm_sim::GameContent {
+        self.def.presentation.localized(&self.def.content, self.content_locale().as_deref())
+    }
+
     fn apply_settings(&mut self) {
         // Messages sent before the next frame (an autosave toast) use the new language already.
         self.ui.set_lang(self.lang());
+        // The game's own text follows the language too, in a game already running (#228).
+        if !self.def.presentation.content_strings.is_empty() && self.game.is_some() {
+            let content = self.game_content();
+            if let Some(game) = self.game.as_mut() {
+                game.session.set_content_text(content);
+            }
+        }
         self.ui.set_readable_font(self.settings.accessibility.readable_font);
         let fullscreen = self.settings.display.fullscreen;
         if self.mode == PlayerMode::Standalone {
@@ -1337,11 +1436,16 @@ impl Player {
     fn attach(&mut self, mut session: PlaySession, slot: u32, play_seconds: f64) {
         let plugins = match &self.def.project {
             Some(project) => crate::plugins::for_project(project, self.plugin_options.clone()),
-            None => crate::plugins::for_cartridge(&self.def.plugins, self.plugin_options.clone()),
+            None => crate::plugins::for_cartridge(
+                &self.def.plugins,
+                self.plugin_options.clone(),
+                session.content().settings.scripts.as_ref(),
+            ),
         };
         session.set_plugins(plugins);
         session.set_reduced_motion(self.settings.accessibility.reduced_motion);
         let graphics = GraphicsSource::from_state(&self.def.presentation, session.content(), session.state());
+        session.set_action_art(farm_render::actions::player_asset(&graphics).cloned());
         for error in session.plugin_errors() {
             self.plugin_error_toast(&error);
         }
@@ -1352,7 +1456,7 @@ impl Player {
     }
 
     fn start_game(&mut self, slot: u32) {
-        let session = PlaySession::new_game(self.def.content.clone(), &self.def.start, self.seed.as_deref());
+        let session = PlaySession::new_game(self.game_content(), &self.def.start, self.seed.as_deref());
         self.attach(session, slot, 0.0);
         // A game that asks for its player's name and colours (M4), or for one of its farm
         // layouts (M5), waits behind the creator.
@@ -1490,7 +1594,7 @@ impl Player {
             },
         };
         let (state, warnings, play_seconds) = loaded;
-        self.attach(PlaySession::new(self.def.content.clone(), state), slot, play_seconds);
+        self.attach(PlaySession::new(self.game_content(), state), slot, play_seconds);
         for warning in warnings {
             self.game_ui.toasts.push(warning, ToastKind::Info);
         }
@@ -1601,6 +1705,22 @@ impl Player {
         self.with_game(|game| game.session.debug(action))?;
         self.drain_session_events();
         Ok(())
+    }
+
+    /// Starts a new game at once, as New Game in the first free slot would but without a slot
+    /// (no autosaves): screenshot runs that start from a test state.
+    pub fn start_new_game(&mut self) -> Result<(), PlayerError> {
+        if let Some(message) = &self.poisoned {
+            return Err(PlayerError::Poisoned(message.clone()));
+        }
+        match catch_unwind(AssertUnwindSafe(|| self.start_game(0))) {
+            Ok(()) => Ok(()),
+            Err(panic) => {
+                let message = panic_message(&*panic);
+                self.poisoned = Some(message.clone());
+                Err(PlayerError::Engine(message))
+            }
+        }
     }
 
     /// Replaces the live state (the debug drawer's write path).
@@ -1835,6 +1955,29 @@ fn confirm_view(kind: Confirmation, lang: Lang) -> ConfirmView {
         }
     };
     ConfirmView { title: lang.tr(title).to_owned(), message, confirm: lang.tr(confirm).to_owned() }
+}
+
+/// Registers the fonts an interface skin names (#236): each `font` asset's file, from the
+/// cartridge's asset table or a `data:` URL, as a font `farm_render::text` draws with. A file
+/// that is not a font is left out (the skin then draws that text in the built-in font).
+fn skin_fonts(presentation: &Presentation, assets: &AssetTable) -> Vec<(String, farm_render::FontId)> {
+    let Some(skin) = &presentation.ui_skin else { return Vec::new() };
+    let wanted = [&skin.heading_font, &skin.body_font, &skin.number_font];
+    let mut fonts = Vec::new();
+    for id in wanted.into_iter().flatten() {
+        if fonts.iter().any(|(known, _)| known == id) {
+            continue;
+        }
+        let Some(asset) = presentation.custom_assets.iter().find(|asset| asset.id == *id) else { continue };
+        let bytes = match assets.resolve(&asset.data_url) {
+            Some(asset) => Some(asset.data.clone()),
+            None => farm_render::images::data_url_bytes(&asset.data_url),
+        };
+        if let Some(font) = bytes.and_then(|bytes| farm_render::text::register_font(&bytes)) {
+            fonts.push((id.clone(), font));
+        }
+    }
+    fonts
 }
 
 #[cfg(test)]

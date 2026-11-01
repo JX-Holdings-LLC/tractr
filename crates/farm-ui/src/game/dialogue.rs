@@ -7,6 +7,7 @@
 use super::{draw_sprite, GameAction, GameView};
 use crate::icons::{self, Icon};
 use crate::layout::{Align, RectExt};
+use crate::skin::Part;
 use crate::ui::{HitKind, Ui, WidgetId};
 use crate::widgets::{Button, ButtonKind};
 use farm_render::{resolve_visual, FontId, ImageStore, Rect, SnapshotSprite, TextAlign};
@@ -27,7 +28,14 @@ pub(crate) fn portrait_sprite(view: &GameView<'_>, npc: &Npc, expression: Option
     portrait
         .and_then(|portrait| resolve_visual(view.art.assets, Some(&portrait.visual), 0.0, "down", false))
         .or_else(|| resolve_visual(view.art.assets, npc.visual.as_ref(), 0.0, "down", false))
-        .or_else(|| view.art.builtin.and_then(|art| art.npc(Some(npc.appearance.as_str()), Some("down"), 0.0, false)))
+        .or_else(|| {
+            // The built-in art, recoloured by the NPC's look (#216).
+            let appearance = Some(npc.appearance.as_str());
+            let key = farm_render::look::npc_look_key(npc.look.as_ref(), appearance);
+            view.art.builtin.and_then(|art| {
+                farm_render::look::npc_sprite(art, appearance, key.as_deref(), Some("down"), 0.0, false)
+            })
+        })
 }
 
 pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, actions: &mut Vec<GameAction>) {
@@ -61,11 +69,15 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     ui.blocker(screen);
 
     let width = 680.0f32.min(screen.width - 32.0);
-    let text_x = 20.0 + 56.0 + 16.0;
+    // The portrait's side (the skin's layout; 48 by default) and its circle around it.
+    let layout = ui.skin().layout;
+    let side = layout.portrait_size;
+    let circle = side + 8.0;
+    let text_x = 20.0 + circle + 16.0;
     let text_width = width - text_x - 20.0;
     let name_height = ui.line_height(16.5);
     let text_height = ui.paragraph_height(text, TEXT_SIZE, FontId::Regular, text_width);
-    let header_height = (name_height + 4.0 + text_height).max(56.0);
+    let header_height = (name_height + 4.0 + text_height).max(circle);
     let option_width = width - 40.0;
     let option_heights: Vec<f32> = if options.is_empty() {
         vec![ui.button_height(OPTION_SIZE) + 6.0]
@@ -88,8 +100,13 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     // many options scroll inside the card.
     let bottom = ui.safe_area().bottom();
     let height = content_height.min((bottom - bottom_margin - 12.0).max(120.0));
-    let card = Rect::new((screen.width - width) / 2.0, (bottom - bottom_margin - height).max(12.0), width, height);
-    ui.panel(card, colors.panel, colors.panel_border, 12.0, true);
+    let card_y = if layout.dialogue_top {
+        ui.safe_area().y + bottom_margin.min(48.0)
+    } else {
+        (bottom - bottom_margin - height).max(12.0)
+    };
+    let card = Rect::new((screen.width - width) / 2.0, card_y, width, height);
+    ui.skinned_panel(Part::Dialogue, card, colors.panel, colors.panel_border, 12.0, true);
     ui.blocker(card);
     let scrolls = content_height > height + 0.5;
     let top = if scrolls {
@@ -100,20 +117,29 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
     };
 
     // Portrait and text.
-    let portrait = Rect::new(card.x + 20.0, top, 56.0, 56.0);
-    ui.list_mut().fill_circle(portrait.x + 28.0, portrait.y + 28.0, 28.0, colors.secondary);
+    let portrait = Rect::new(card.x + 20.0, top, circle, circle);
+    let half = circle / 2.0;
+    let framed = ui.skin().part(Part::PortraitFrame).is_some();
+    if !framed {
+        ui.list_mut().fill_circle(portrait.x + half, portrait.y + half, half, colors.secondary);
+    }
     let sprite = npc.and_then(|npc| portrait_sprite(view, npc, view.overlay.dialogue_expression.as_deref()));
     let drawn = sprite.is_some_and(|sprite| {
-        ui.list_mut().fill_circle(portrait.x + 28.0, portrait.y + 28.0, 25.0, colors.row);
-        // 48 px: the built-in 32×48 characters draw 1:1, crisp.
-        draw_sprite(ui, images, &sprite, portrait.centered(48.0, 48.0), view.art.pixel_art)
+        if !framed {
+            ui.list_mut().fill_circle(portrait.x + half, portrait.y + half, half - 3.0, colors.row);
+        }
+        // 48 px by default: the built-in 32×48 characters draw 1:1, crisp.
+        draw_sprite(ui, images, &sprite, portrait.centered(side, side), view.art.pixel_art)
     });
+    if framed {
+        ui.skin_part(Part::PortraitFrame, portrait);
+    }
     if !drawn {
-        ui.list_mut().fill_circle(portrait.x + 28.0, portrait.y + 28.0, 28.0, colors.secondary);
+        ui.list_mut().fill_circle(portrait.x + half, portrait.y + half, half, colors.secondary);
         icons::draw(
             ui.list_mut(),
             Icon::Person,
-            portrait.centered(30.0, 30.0),
+            portrait.centered(side * 0.625, side * 0.625),
             farm_render::Color::WHITE,
             colors.secondary,
         );

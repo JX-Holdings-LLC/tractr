@@ -267,6 +267,15 @@ pub enum EventCondition {
         #[serde(default)]
         weekday_ids: Vec<String>,
     },
+    /// A plugin condition (#239): what the pack plugin that defines `condition` (`packId:name`,
+    /// `api.condition(name, …)`) answers for `args`. False without that plugin.
+    #[serde(rename = "plugin")]
+    Plugin {
+        #[serde(default)]
+        condition: String,
+        #[serde(default, skip_serializing_if = "Value::is_null")]
+        args: Value,
+    },
     #[serde(rename = "perk")]
     Perk {
         #[serde(default)]
@@ -348,6 +357,7 @@ impl EventCondition {
             Self::Building { .. } => "building",
             Self::Slain { .. } => "slain",
             Self::Birthday { .. } => "birthday",
+            Self::Plugin { .. } => "plugin",
         }
     }
 }
@@ -415,6 +425,9 @@ pub mod event_outcome_types {
     pub const ADD_MAX_HEALTH: &str = "addMaxHealth";
     pub const APPLY_BUFF: &str = "applyBuff";
     pub const MODIFY_HEALTH: &str = "modifyHealth";
+    /// A plugin outcome (#239): `pluginOutcome` (`packId:name`) with `args`, kept in the
+    /// outcome's extra keys.
+    pub const PLUGIN: &str = "plugin";
 
     pub const ALL: &[&str] = &[
         MESSAGE,
@@ -460,6 +473,7 @@ pub mod event_outcome_types {
         ADD_MAX_ENERGY,
         ADD_MAX_HEALTH,
         APPLY_BUFF,
+        PLUGIN,
     ];
 }
 
@@ -512,11 +526,12 @@ pub enum OutcomeKind {
     AddMaxEnergy,
     AddMaxHealth,
     ApplyBuff,
+    Plugin,
 }
 
 impl OutcomeKind {
     /// Every kind, in [`event_outcome_types::ALL`] order.
-    pub const ALL: [OutcomeKind; 43] = [
+    pub const ALL: [OutcomeKind; 44] = [
         Self::Message,
         Self::ModifyFriendship,
         Self::ModifyEnergy,
@@ -560,6 +575,7 @@ impl OutcomeKind {
         Self::AddMaxEnergy,
         Self::AddMaxHealth,
         Self::ApplyBuff,
+        Self::Plugin,
     ];
 
     /// The authored `type` literal (one of [`event_outcome_types`]).
@@ -608,6 +624,7 @@ impl OutcomeKind {
             Self::AddMaxEnergy => t::ADD_MAX_ENERGY,
             Self::AddMaxHealth => t::ADD_MAX_HEALTH,
             Self::ApplyBuff => t::APPLY_BUFF,
+            Self::Plugin => t::PLUGIN,
             Self::ModifyHealth => t::MODIFY_HEALTH,
         }
     }

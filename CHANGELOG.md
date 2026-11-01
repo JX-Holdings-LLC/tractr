@@ -1,5 +1,113 @@
 # Changelog
 
+## 0.12.0
+
+Authoring without the editor:
+
+- `farmc new <template> <folder>`, `farmc check <project> [--json]` and
+  `farmc convert <project> --out <path>` create projects from templates, run
+  Problems (exit 1 on errors) and convert between a project folder and a
+  single file.
+- `FarmEngine.Authoring.Net` gains `ProjectFiles` to read and write project
+  folders and files; `ProjectFolder` gains `ofList`, `loadList`,
+  `joinListText` and `toSingleFileText`.
+- A JSON Schema of project files (`schemas/project.schema.json`), a worked
+  example project (`docs/examples/willow-lane`) and a Project files page.
+
+Authoring at scale:
+
+- Dialogue scripts: write an NPC's dialogue and lines, or cutscenes, as text
+  (**Edit as script**). Project folders keep them as
+  `scripts/<npc>.dialogue`, and mistakes and Problems are reported by line.
+  One condition text (`flag x, season spring, morning, hearts bram 2..`)
+  serves lines, answers, cutscene jumps, events and quests.
+- Content tables for items, crops, recipes, shop stock, fish tables and node
+  drops, with profit columns, inline edits, pastes, and CSV export and import
+  that shows a diff before applying.
+- Bulk edits (`= 50`, `× 1.1`, `+ 1`, `+ summer`) over a selection, tags on
+  content entries, and templates that make many entries or groups at once.
+- Translations of a game's own text: one table per language, CSV and PO
+  export and import, and Problems for missing, stale, undrawable and
+  substitution mistakes. Players pick the language in Settings →
+  Accessibility → Language.
+
+Bringing your own art:
+
+- Creator art larger than a tile (characters, crops, items, nodes, machines,
+  monsters) is drawn at the built-in pack's 32 px per tile instead of being
+  squeezed into one tile; an asset's `pixelsPerTile` sets the scale for
+  high-resolution art. The Creator Guide has an Art sizes table.
+- NPCs can have a `look` (skin, hair, shirt, trousers, accent) that recolours
+  the base character, and there are eight new built-in appearances: fisher,
+  miner, baker, doctor, blacksmith, noble, gardener and sailor.
+- Layered characters: `Npc.layers`, `playerLayers` and the clothing option
+  `wear.layer`, each layer optionally tinted, composed once per frame and
+  cached.
+- Action animations: tool, eat and fishing clips with lock movement, an
+  impact frame, effects and a held item; a tool's effect applies at the
+  impact frame. Cutscenes gain an `animate` step.
+- Import Aseprite sprite sheets (`.aseprite`, or the sheet JSON and PNG):
+  tags become clips with their frame durations, slices become single frames,
+  and a changed file re-imports into the same asset.
+- Import Tiled (`.tmx`/`.tmj`, with external tilesets) and LDtk levels as
+  scenes: tiles map to terrains by property, objects become doors, the
+  player start, NPCs and schedule stops, nodes, machines, lights and event
+  tiles, and re-import keeps crops and soil.
+- Interface skins: the game's own fonts, colours, 9-slice panel and button
+  art, HUD and toolbar icons, layout options and title screen, checked in
+  Problems; the readable font and text size still apply.
+
+Bringing your own code:
+
+- Plugins can read the game while their handlers run (`api.state`), within
+  the manifest's new `permissions.read`.
+- Packs can add conditions and outcomes that events, dialogue, quests, mail
+  and actions use like built-ins (`api.condition`, `api.outcome`, type
+  `plugin`); Problems checks their arguments.
+- Plugins can put entities in the world, run timers and handle item use
+  (`spawnEntity`, `updateEntity`, `removeEntity`, `startTimer`,
+  `cancelTimer`, `useActionId: "plugin:…"`), and add game screens built from
+  the game's own widgets (`api.screen`).
+- Projects can hold trusted scripts (`scripts`, `settings.scripts`) with the
+  game's own ids and their own budgets; an overrun is an error, not a strike.
+  TypeScript typings for the plugin API are in
+  `docs/plugin-api/tractr-plugins.d.ts`.
+- The plugin guest is ABI 2 (host calls); the plugin API is compiled into
+  the sandbox image once.
+
+Testing, balancing and shipping:
+
+- `farm-player` takes `--test-state`, `--start-scene`, `--start-at`,
+  `--facing`, `--time` and `--day` for headless and screenshot runs; the
+  headless report lists quests, flags, variables and money, and replays can
+  take debug shortcuts and `expect` entries that fail the run.
+- Play Mode has a **States** menu to save the running game as a test state
+  and play from one later. Test states stay in the project, are never
+  exported, and Problems flags states that name missing content.
+- `farm-bench lab`: a balancing lab that runs scripted strategies on the
+  real engine over many seeds, with CSV export and findings (dominant crops,
+  recipes that lose money, items nobody buys).
+- Problems follows the whole game's content graph: items nothing gives,
+  recipes and quests gated behind them, circular or dead-end quest
+  prerequisites, plus tips for unused or unobtainable items, quests nothing
+  starts and season mismatches.
+- Save migrations: rename, replace or remove items and move scenes for saves
+  from earlier versions; the player says once what changed. Export Game
+  remembers what it shipped, Problems warns about removed ids without a rule,
+  and deleting a shipped item records a migration that pays its value.
+
+Fixes and smaller changes:
+
+- A built-in `food` item kind; the templates' Veggie Soup and Fruit Tart are
+  food and restore 40 and 60 energy.
+- Problems counts flags set in cutscene outcome steps, quest `onFail`,
+  festival `onMiss` and other outcome lists as set.
+- An `enter` event that can fire only once no longer gets "fires on every
+  step".
+- The fishing minigame no longer warns about missing result tiers, so the
+  templates start with no warnings.
+- New tip when an NPC's appearance names no built-in look.
+
 ## 0.11.2
 
 - Publish fewer release files, and say which one to download. Releases no

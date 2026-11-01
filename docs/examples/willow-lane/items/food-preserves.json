@@ -1,0 +1,9 @@
+{
+  "id": "food-preserves",
+  "name": "Preserves",
+  "description": "Sweet preserved produce",
+  "type": "crop",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 120
+}

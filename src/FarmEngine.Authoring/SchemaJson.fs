@@ -265,13 +265,21 @@ module SchemaJson =
         let mutable vName = ""
         let mutable vLoop = true
         let mutable vFrames = []
+        let mutable vLockMovement = None
+        let mutable vImpactFrame = None
+        let mutable vEffect = None
+        let mutable vHoldItem = None
         for (key, value) in members do
             match key with
             | "name" -> vName <- Decode.string (key :: path) value
             | "loop" -> vLoop <- Decode.boolean (key :: path) value
             | "frames" -> vFrames <- (Decode.list decodeArtFrame) (key :: path) value
+            | "lockMovement" -> vLockMovement <- Decode.optional Decode.boolean (key :: path) value
+            | "impactFrame" -> vImpactFrame <- Decode.optional Decode.number (key :: path) value
+            | "effect" -> vEffect <- Decode.optional Decode.string (key :: path) value
+            | "holdItem" -> vHoldItem <- Decode.optional Decode.boolean (key :: path) value
             | _ -> ()
-        { Name = vName; Loop = vLoop; Frames = vFrames }
+        { Name = vName; Loop = vLoop; Frames = vFrames; LockMovement = vLockMovement; ImpactFrame = vImpactFrame; Effect = vEffect; HoldItem = vHoldItem }
 
     and encodeAnimationClip (value: AnimationClip) : Json =
         JObject(
@@ -279,6 +287,18 @@ module SchemaJson =
                 yield "name", JString value.Name
                 yield "loop", JBool value.Loop
                 yield "frames", (Encode.list encodeArtFrame) value.Frames
+                match value.LockMovement with
+                | Some v -> yield "lockMovement", JBool v
+                | None -> ()
+                match value.ImpactFrame with
+                | Some v -> yield "impactFrame", JNumber v
+                | None -> ()
+                match value.Effect with
+                | Some v -> yield "effect", JString v
+                | None -> ()
+                match value.HoldItem with
+                | Some v -> yield "holdItem", JBool v
+                | None -> ()
             ]
         )
 
@@ -721,6 +741,27 @@ module SchemaJson =
             ]
         )
 
+    and decodeCharacterLayer (path: Path) (json: Json) : CharacterLayer =
+        let members = Decode.object path json
+        let mutable vAssetId = ""
+        let mutable vColor = None
+        for (key, value) in members do
+            match key with
+            | "assetId" -> vAssetId <- Decode.string (key :: path) value
+            | "color" -> vColor <- Decode.optional Decode.string (key :: path) value
+            | _ -> ()
+        { AssetId = vAssetId; Color = vColor }
+
+    and encodeCharacterLayer (value: CharacterLayer) : Json =
+        JObject(
+            [
+                yield "assetId", JString value.AssetId
+                match value.Color with
+                | Some v -> yield "color", JString v
+                | None -> ()
+            ]
+        )
+
     and decodeCollectionDefinition (path: Path) (json: Json) : CollectionDefinition =
         let members = Decode.object path json
         let mutable vId = ""
@@ -842,6 +883,49 @@ module SchemaJson =
                 yield "content", encodePackContent value.Content
                 yield "plugins", (Encode.list encodePackPlugin) value.Plugins
                 yield! value.Extra
+            ]
+        )
+
+    and decodeContentTemplate (path: Path) (json: Json) : ContentTemplate =
+        let members = Decode.object path json
+        let mutable vId = ""
+        let mutable vName = ""
+        let mutable vEntries = []
+        for (key, value) in members do
+            match key with
+            | "id" -> vId <- Decode.string (key :: path) value
+            | "name" -> vName <- Decode.string (key :: path) value
+            | "entries" -> vEntries <- (Decode.list decodeContentTemplateEntry) (key :: path) value
+            | _ -> ()
+        { Id = vId; Name = vName; Entries = vEntries }
+
+    and encodeContentTemplate (value: ContentTemplate) : Json =
+        JObject(
+            [
+                yield "id", JString value.Id
+                yield "name", JString value.Name
+                yield "entries", (Encode.list encodeContentTemplateEntry) value.Entries
+            ]
+        )
+
+    and decodeContentTemplateEntry (path: Path) (json: Json) : ContentTemplateEntry =
+        let members = Decode.object path json
+        let mutable vKind = ""
+        let mutable vEntry = None
+        for (key, value) in members do
+            match key with
+            | "kind" -> vKind <- Decode.string (key :: path) value
+            | "entry" -> vEntry <- Decode.optional Decode.json (key :: path) value
+            | _ -> ()
+        { Kind = vKind; Entry = vEntry }
+
+    and encodeContentTemplateEntry (value: ContentTemplateEntry) : Json =
+        JObject(
+            [
+                yield "kind", JString value.Kind
+                match value.Entry with
+                | Some v -> yield "entry", v
+                | None -> ()
             ]
         )
 
@@ -1091,6 +1175,7 @@ module SchemaJson =
         let mutable vDataUrl = ""
         let mutable vTileType = None
         let mutable vSheet = None
+        let mutable vPixelsPerTile = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -1103,8 +1188,9 @@ module SchemaJson =
             | "dataUrl" -> vDataUrl <- Decode.string (key :: path) value
             | "tileType" -> vTileType <- Decode.optional Decode.string (key :: path) value
             | "sheet" -> vSheet <- Decode.optional decodeSpriteSheet (key :: path) value
+            | "pixelsPerTile" -> vPixelsPerTile <- Decode.optional Decode.number (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Type = vType; Width = vWidth; Height = vHeight; Animations = vAnimations; DataUrl = vDataUrl; TileType = vTileType; Sheet = vSheet; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Type = vType; Width = vWidth; Height = vHeight; Animations = vAnimations; DataUrl = vDataUrl; TileType = vTileType; Sheet = vSheet; PixelsPerTile = vPixelsPerTile; Extra = List.ofSeq extra }
 
     and encodeCustomAsset (value: CustomAsset) : Json =
         JObject(
@@ -1127,6 +1213,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Sheet with
                 | Some v -> yield "sheet", encodeSpriteSheet v
+                | None -> ()
+                match value.PixelsPerTile with
+                | Some v -> yield "pixelsPerTile", JNumber v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -1151,6 +1240,7 @@ module SchemaJson =
         let mutable vHarvestItemId = None
         let mutable vRequirements = None
         let mutable vLight = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -1171,8 +1261,9 @@ module SchemaJson =
             | "harvestItemId" -> vHarvestItemId <- Decode.optional Decode.string (key :: path) value
             | "requirements" -> vRequirements <- Decode.optional decodeGrowthRequirements (key :: path) value
             | "light" -> vLight <- Decode.optional decodeLightSource (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Visual = vVisual; SeedCost = vSeedCost; BaseHarvestValue = vBaseHarvestValue; GrowthDays = vGrowthDays; Stages = vStages; Seasons = vSeasons; RegrowthDays = vRegrowthDays; CanRegrow = vCanRegrow; MultiTile = vMultiTile; MutationChance = vMutationChance; YieldMin = vYieldMin; YieldMax = vYieldMax; HarvestItemId = vHarvestItemId; Requirements = vRequirements; Light = vLight; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Visual = vVisual; SeedCost = vSeedCost; BaseHarvestValue = vBaseHarvestValue; GrowthDays = vGrowthDays; Stages = vStages; Seasons = vSeasons; RegrowthDays = vRegrowthDays; CanRegrow = vCanRegrow; MultiTile = vMultiTile; MutationChance = vMutationChance; YieldMin = vYieldMin; YieldMax = vYieldMax; HarvestItemId = vHarvestItemId; Requirements = vRequirements; Light = vLight; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeCustomCropDefinition (value: CustomCropDefinition) : Json =
         JObject(
@@ -1210,6 +1301,9 @@ module SchemaJson =
                 match value.Light with
                 | Some v -> yield "light", encodeLightSource v
                 | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
+                | None -> ()
                 yield! value.Extra
             ]
         )
@@ -1245,18 +1339,23 @@ module SchemaJson =
         let members = Decode.object path json
         let mutable vText = ""
         let mutable vGoto = ""
+        let mutable vId = None
         for (key, value) in members do
             match key with
             | "text" -> vText <- Decode.string (key :: path) value
             | "goto" -> vGoto <- Decode.string (key :: path) value
+            | "id" -> vId <- Decode.optional Decode.string (key :: path) value
             | _ -> ()
-        { Text = vText; Goto = vGoto }
+        { Text = vText; Goto = vGoto; Id = vId }
 
     and encodeCutsceneChoice (value: CutsceneChoice) : Json =
         JObject(
             [
                 yield "text", JString value.Text
                 yield "goto", JString value.Goto
+                match value.Id with
+                | Some v -> yield "id", JString v
+                | None -> ()
             ]
         )
 
@@ -1281,6 +1380,8 @@ module SchemaJson =
         let mutable vSoundId = None
         let mutable vOutcomes = []
         let mutable vWait = None
+        let mutable vAnimation = None
+        let mutable vId = None
         for (key, value) in members do
             match key with
             | "type" -> vType <- Decode.string (key :: path) value
@@ -1302,8 +1403,10 @@ module SchemaJson =
             | "soundId" -> vSoundId <- Decode.optional Decode.string (key :: path) value
             | "outcomes" -> vOutcomes <- (Decode.list decodeEventOutcome) (key :: path) value
             | "wait" -> vWait <- Decode.optional Decode.boolean (key :: path) value
+            | "animation" -> vAnimation <- Decode.optional Decode.string (key :: path) value
+            | "id" -> vId <- Decode.optional Decode.string (key :: path) value
             | _ -> ()
-        { Type = vType; Label = vLabel; Actor = vActor; X = vX; Y = vY; Direction = vDirection; Emote = vEmote; Seconds = vSeconds; Text = vText; Speaker = vSpeaker; Expression = vExpression; Options = vOptions; Goto = vGoto; Conditions = vConditions; Mode = vMode; Color = vColor; SoundId = vSoundId; Outcomes = vOutcomes; Wait = vWait }
+        { Type = vType; Label = vLabel; Actor = vActor; X = vX; Y = vY; Direction = vDirection; Emote = vEmote; Seconds = vSeconds; Text = vText; Speaker = vSpeaker; Expression = vExpression; Options = vOptions; Goto = vGoto; Conditions = vConditions; Mode = vMode; Color = vColor; SoundId = vSoundId; Outcomes = vOutcomes; Wait = vWait; Animation = vAnimation; Id = vId }
 
     and encodeCutsceneStep (value: CutsceneStep) : Json =
         JObject(
@@ -1356,6 +1459,12 @@ module SchemaJson =
                 yield "outcomes", (Encode.list encodeEventOutcome) value.Outcomes
                 match value.Wait with
                 | Some v -> yield "wait", JBool v
+                | None -> ()
+                match value.Animation with
+                | Some v -> yield "animation", JString v
+                | None -> ()
+                match value.Id with
+                | Some v -> yield "id", JString v
                 | None -> ()
             ]
         )
@@ -1428,6 +1537,7 @@ module SchemaJson =
         let mutable vOfferQuestId = None
         let mutable vRequiresFriendship = None
         let mutable vActionId = None
+        let mutable vId = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -1446,8 +1556,9 @@ module SchemaJson =
             | "offerQuestId" -> vOfferQuestId <- Decode.optional Decode.string (key :: path) value
             | "requiresFriendship" -> vRequiresFriendship <- Decode.optional Decode.number (key :: path) value
             | "actionId" -> vActionId <- Decode.optional Decode.string (key :: path) value
+            | "id" -> vId <- Decode.optional Decode.string (key :: path) value
             | _ -> extra.Add((key, value))
-        { Text = vText; NextDialogueId = vNextDialogueId; GiveItem = vGiveItem; GiveItemQuantity = vGiveItemQuantity; TakeMoney = vTakeMoney; GiveMoney = vGiveMoney; EventFlag = vEventFlag; Once = vOnce; HiddenIfFlag = vHiddenIfFlag; RequiresItem = vRequiresItem; RequiresFlag = vRequiresFlag; OpenShopId = vOpenShopId; OfferQuestId = vOfferQuestId; RequiresFriendship = vRequiresFriendship; ActionId = vActionId; Extra = List.ofSeq extra }
+        { Text = vText; NextDialogueId = vNextDialogueId; GiveItem = vGiveItem; GiveItemQuantity = vGiveItemQuantity; TakeMoney = vTakeMoney; GiveMoney = vGiveMoney; EventFlag = vEventFlag; Once = vOnce; HiddenIfFlag = vHiddenIfFlag; RequiresItem = vRequiresItem; RequiresFlag = vRequiresFlag; OpenShopId = vOpenShopId; OfferQuestId = vOfferQuestId; RequiresFriendship = vRequiresFriendship; ActionId = vActionId; Id = vId; Extra = List.ofSeq extra }
 
     and encodeDialogueOption (value: DialogueOption) : Json =
         JObject(
@@ -1494,6 +1605,9 @@ module SchemaJson =
                 | None -> ()
                 match value.ActionId with
                 | Some v -> yield "actionId", JString v
+                | None -> ()
+                match value.Id with
+                | Some v -> yield "id", JString v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -1675,6 +1789,7 @@ module SchemaJson =
         let mutable vPixelScale = "integer"
         let mutable vCredits = None
         let mutable vTargets = [ "windows-x64"; "linux-x64" ]
+        let mutable vExportedIds = None
         for (key, value) in members do
             match key with
             | "title" -> vTitle <- Decode.optional Decode.string (key :: path) value
@@ -1688,8 +1803,9 @@ module SchemaJson =
             | "pixelScale" -> vPixelScale <- Decode.string (key :: path) value
             | "credits" -> vCredits <- Decode.optional Decode.string (key :: path) value
             | "targets" -> vTargets <- (Decode.list Decode.string) (key :: path) value
+            | "exportedIds" -> vExportedIds <- Decode.optional decodeExportedIds (key :: path) value
             | _ -> ()
-        { Title = vTitle; ExecutableName = vExecutableName; Version = vVersion; GameId = vGameId; Author = vAuthor; Company = vCompany; IconAssetId = vIconAssetId; Window = vWindow; PixelScale = vPixelScale; Credits = vCredits; Targets = vTargets }
+        { Title = vTitle; ExecutableName = vExecutableName; Version = vVersion; GameId = vGameId; Author = vAuthor; Company = vCompany; IconAssetId = vIconAssetId; Window = vWindow; PixelScale = vPixelScale; Credits = vCredits; Targets = vTargets; ExportedIds = vExportedIds }
 
     and encodeExportSettings (value: ExportSettings) : Json =
         JObject(
@@ -1719,6 +1835,9 @@ module SchemaJson =
                 | Some v -> yield "credits", JString v
                 | None -> ()
                 yield "targets", (Encode.list JString) value.Targets
+                match value.ExportedIds with
+                | Some v -> yield "exportedIds", encodeExportedIds v
+                | None -> ()
             ]
         )
 
@@ -1741,6 +1860,28 @@ module SchemaJson =
                 yield "width", (float >> JNumber) value.Width
                 yield "height", (float >> JNumber) value.Height
                 yield "fullscreen", JBool value.Fullscreen
+            ]
+        )
+
+    and decodeExportedIds (path: Path) (json: Json) : ExportedIds =
+        let members = Decode.object path json
+        let mutable vVersion = ""
+        let mutable vItems = []
+        let mutable vScenes = []
+        for (key, value) in members do
+            match key with
+            | "version" -> vVersion <- Decode.string (key :: path) value
+            | "items" -> vItems <- (Decode.list Decode.string) (key :: path) value
+            | "scenes" -> vScenes <- (Decode.list Decode.string) (key :: path) value
+            | _ -> ()
+        { Version = vVersion; Items = vItems; Scenes = vScenes }
+
+    and encodeExportedIds (value: ExportedIds) : Json =
+        JObject(
+            [
+                yield "version", JString value.Version
+                yield "items", (Encode.list JString) value.Items
+                yield "scenes", (Encode.list JString) value.Scenes
             ]
         )
 
@@ -1986,6 +2127,7 @@ module SchemaJson =
         let mutable vEntries = []
         let mutable vJunkChance = 0.15
         let mutable vJunkItemId = None
+        let mutable vTags = None
         let mutable vFilter = None
         let mutable vLayered = None
         let extra = ResizeArray<string * Json>()
@@ -1998,10 +2140,11 @@ module SchemaJson =
             | "entries" -> vEntries <- (Decode.list decodeFishTableEntry) (key :: path) value
             | "junkChance" -> vJunkChance <- Decode.number (key :: path) value
             | "junkItemId" -> vJunkItemId <- Decode.optional Decode.string (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "filter" -> vFilter <- Decode.optional decodeFishingFilter (key :: path) value
             | "layered" -> vLayered <- Decode.optional Decode.boolean (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Seasons = vSeasons; SceneIds = vSceneIds; Entries = vEntries; JunkChance = vJunkChance; JunkItemId = vJunkItemId; Filter = vFilter; Layered = vLayered; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Seasons = vSeasons; SceneIds = vSceneIds; Entries = vEntries; JunkChance = vJunkChance; JunkItemId = vJunkItemId; Tags = vTags; Filter = vFilter; Layered = vLayered; Extra = List.ofSeq extra }
 
     and encodeFishTable (value: FishTable) : Json =
         JObject(
@@ -2018,6 +2161,9 @@ module SchemaJson =
                 yield "junkChance", JNumber value.JunkChance
                 match value.JunkItemId with
                 | Some v -> yield "junkItemId", JString v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 match value.Filter with
                 | Some v -> yield "filter", encodeFishingFilter v
@@ -2267,6 +2413,7 @@ module SchemaJson =
         let mutable vAchievements = None
         let mutable vMail = None
         let mutable vMonsters = None
+        let mutable vSaveMigrations = None
         for (key, value) in members do
             match key with
             | "contentVersion" -> vContentVersion <- Decode.number (key :: path) value
@@ -2304,8 +2451,9 @@ module SchemaJson =
             | "achievements" -> vAchievements <- Decode.optional (Decode.list decodeAchievementDefinition) (key :: path) value
             | "mail" -> vMail <- Decode.optional (Decode.list decodeMailDefinition) (key :: path) value
             | "monsters" -> vMonsters <- Decode.optional (Decode.list decodeMonsterDefinition) (key :: path) value
+            | "saveMigrations" -> vSaveMigrations <- Decode.optional (Decode.list decodeSaveMigration) (key :: path) value
             | _ -> ()
-        { ContentVersion = vContentVersion; Crops = vCrops; Items = vItems; Npcs = vNpcs; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Events = vEvents; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; Scenes = vScenes; StartSceneId = vStartSceneId; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters }
+        { ContentVersion = vContentVersion; Crops = vCrops; Items = vItems; Npcs = vNpcs; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Events = vEvents; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; Scenes = vScenes; StartSceneId = vStartSceneId; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; SaveMigrations = vSaveMigrations }
 
     and encodeGameContent (value: GameContent) : Json =
         JObject(
@@ -2360,6 +2508,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Monsters with
                 | Some v -> yield "monsters", (Encode.list encodeMonsterDefinition) v
+                | None -> ()
+                match value.SaveMigrations with
+                | Some v -> yield "saveMigrations", (Encode.list encodeSaveMigration) v
                 | None -> ()
             ]
         )
@@ -2486,8 +2637,10 @@ module SchemaJson =
         let mutable vCustomAssets = []
         let mutable vCustomCrops = None
         let mutable vPlayerVisual = None
+        let mutable vPlayerLayers = None
         let mutable vGraphics = None
         let mutable vGamePanels = None
+        let mutable vUiSkin = None
         let mutable vCurrentSeason = ""
         let mutable vCurrentDay = 0.0
         let mutable vCurrentDayOfSeason = None
@@ -2508,6 +2661,7 @@ module SchemaJson =
         let mutable vActions = []
         let mutable vMinigames = []
         let mutable vContentPacks = []
+        let mutable vScripts = None
         let mutable vTerrains = None
         let mutable vTools = None
         let mutable vItemCategories = None
@@ -2522,6 +2676,9 @@ module SchemaJson =
         let mutable vAchievements = None
         let mutable vMail = None
         let mutable vMonsters = None
+        let mutable vSaveMigrations = None
+        let mutable vTestStates = None
+        let mutable vImports = None
         let mutable vExport = None
         let mutable vRngState = None
         let mutable vCurrentWeatherId = None
@@ -2529,6 +2686,8 @@ module SchemaJson =
         let mutable vMineDeepestFloor = None
         let mutable vQuarantinedItems = None
         let mutable vKeptState = None
+        let mutable vTranslations = None
+        let mutable vContentTemplates = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -2554,8 +2713,10 @@ module SchemaJson =
             | "customAssets" -> vCustomAssets <- (Decode.list decodeCustomAsset) (key :: path) value
             | "customCrops" -> vCustomCrops <- Decode.optional (Decode.list decodeCustomCropDefinition) (key :: path) value
             | "playerVisual" -> vPlayerVisual <- Decode.optional decodeVisualRef (key :: path) value
+            | "playerLayers" -> vPlayerLayers <- Decode.optional (Decode.list decodeCharacterLayer) (key :: path) value
             | "graphics" -> vGraphics <- Decode.optional decodeGraphicsSettings (key :: path) value
             | "gamePanels" -> vGamePanels <- Decode.optional (Decode.list decodeGamePanel) (key :: path) value
+            | "uiSkin" -> vUiSkin <- Decode.optional decodeUiSkin (key :: path) value
             | "currentSeason" -> vCurrentSeason <- Decode.string (key :: path) value
             | "currentDay" -> vCurrentDay <- Decode.number (key :: path) value
             | "currentDayOfSeason" -> vCurrentDayOfSeason <- Decode.optional Decode.number (key :: path) value
@@ -2576,6 +2737,7 @@ module SchemaJson =
             | "actions" -> vActions <- (Decode.list decodeActionDef) (key :: path) value
             | "minigames" -> vMinigames <- (Decode.list decodeMinigameDef) (key :: path) value
             | "contentPacks" -> vContentPacks <- (Decode.list decodePackInstallation) (key :: path) value
+            | "scripts" -> vScripts <- Decode.optional (Decode.list decodeProjectScript) (key :: path) value
             | "terrains" -> vTerrains <- Decode.optional (Decode.list decodeTerrainDefinition) (key :: path) value
             | "tools" -> vTools <- Decode.optional (Decode.list decodeToolDefinition) (key :: path) value
             | "itemCategories" -> vItemCategories <- Decode.optional (Decode.list decodeItemCategoryDefinition) (key :: path) value
@@ -2590,6 +2752,9 @@ module SchemaJson =
             | "achievements" -> vAchievements <- Decode.optional (Decode.list decodeAchievementDefinition) (key :: path) value
             | "mail" -> vMail <- Decode.optional (Decode.list decodeMailDefinition) (key :: path) value
             | "monsters" -> vMonsters <- Decode.optional (Decode.list decodeMonsterDefinition) (key :: path) value
+            | "saveMigrations" -> vSaveMigrations <- Decode.optional (Decode.list decodeSaveMigration) (key :: path) value
+            | "testStates" -> vTestStates <- Decode.optional (Decode.list decodeTestState) (key :: path) value
+            | "imports" -> vImports <- Decode.optional (Decode.list decodeImportSource) (key :: path) value
             | "export" -> vExport <- Decode.optional decodeExportSettings (key :: path) value
             | "rngState" -> vRngState <- Decode.optional decodeRngState (key :: path) value
             | "currentWeatherId" -> vCurrentWeatherId <- Decode.optional Decode.string (key :: path) value
@@ -2597,8 +2762,10 @@ module SchemaJson =
             | "mineDeepestFloor" -> vMineDeepestFloor <- Decode.optional Decode.number (key :: path) value
             | "quarantinedItems" -> vQuarantinedItems <- Decode.optional (Decode.list decodeInventorySlot) (key :: path) value
             | "keptState" -> vKeptState <- Decode.optional Decode.json (key :: path) value
+            | "translations" -> vTranslations <- Decode.optional (Decode.list decodeTranslationTable) (key :: path) value
+            | "contentTemplates" -> vContentTemplates <- Decode.optional (Decode.list decodeContentTemplate) (key :: path) value
             | _ -> extra.Add((key, value))
-        { SchemaVersion = vSchemaVersion; Id = vId; Name = vName; Version = vVersion; Scenes = vScenes; Npcs = vNpcs; Items = vItems; Events = vEvents; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Player = vPlayer; EventFlags = vEventFlags; StartSceneId = vStartSceneId; Mode = vMode; SelectedTileType = vSelectedTileType; SelectedTileVisual = vSelectedTileVisual; SelectedNpcId = vSelectedNpcId; SelectedItemId = vSelectedItemId; CustomAssets = vCustomAssets; CustomCrops = vCustomCrops; PlayerVisual = vPlayerVisual; Graphics = vGraphics; GamePanels = vGamePanels; CurrentSeason = vCurrentSeason; CurrentDay = vCurrentDay; CurrentDayOfSeason = vCurrentDayOfSeason; CurrentTimeMinutes = vCurrentTimeMinutes; CurrentYear = vCurrentYear; GameStartTime = vGameStartTime; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; Animals = vAnimals; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; ContentPacks = vContentPacks; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Buildings = vBuildings; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; Export = vExport; RngState = vRngState; CurrentWeatherId = vCurrentWeatherId; SocialState = vSocialState; MineDeepestFloor = vMineDeepestFloor; QuarantinedItems = vQuarantinedItems; KeptState = vKeptState; Extra = List.ofSeq extra }
+        { SchemaVersion = vSchemaVersion; Id = vId; Name = vName; Version = vVersion; Scenes = vScenes; Npcs = vNpcs; Items = vItems; Events = vEvents; Dialogues = vDialogues; Quests = vQuests; RequestBoards = vRequestBoards; Player = vPlayer; EventFlags = vEventFlags; StartSceneId = vStartSceneId; Mode = vMode; SelectedTileType = vSelectedTileType; SelectedTileVisual = vSelectedTileVisual; SelectedNpcId = vSelectedNpcId; SelectedItemId = vSelectedItemId; CustomAssets = vCustomAssets; CustomCrops = vCustomCrops; PlayerVisual = vPlayerVisual; PlayerLayers = vPlayerLayers; Graphics = vGraphics; GamePanels = vGamePanels; UiSkin = vUiSkin; CurrentSeason = vCurrentSeason; CurrentDay = vCurrentDay; CurrentDayOfSeason = vCurrentDayOfSeason; CurrentTimeMinutes = vCurrentTimeMinutes; CurrentYear = vCurrentYear; GameStartTime = vGameStartTime; Shops = vShops; NodeTypes = vNodeTypes; Settings = vSettings; Recipes = vRecipes; MachineTypes = vMachineTypes; Weather = vWeather; AnimalSpecies = vAnimalSpecies; Animals = vAnimals; FishTables = vFishTables; Mine = vMine; Mines = vMines; Actions = vActions; Minigames = vMinigames; ContentPacks = vContentPacks; Scripts = vScripts; Terrains = vTerrains; Tools = vTools; ItemCategories = vItemCategories; CropQualities = vCropQualities; CropMutations = vCropMutations; Cutscenes = vCutscenes; HeartEvents = vHeartEvents; BuildingTypes = vBuildingTypes; Buildings = vBuildings; Collections = vCollections; Bundles = vBundles; Achievements = vAchievements; Mail = vMail; Monsters = vMonsters; SaveMigrations = vSaveMigrations; TestStates = vTestStates; Imports = vImports; Export = vExport; RngState = vRngState; CurrentWeatherId = vCurrentWeatherId; SocialState = vSocialState; MineDeepestFloor = vMineDeepestFloor; QuarantinedItems = vQuarantinedItems; KeptState = vKeptState; Translations = vTranslations; ContentTemplates = vContentTemplates; Extra = List.ofSeq extra }
 
     and encodeGameProject (value: GameProject) : Json =
         JObject(
@@ -2637,11 +2804,17 @@ module SchemaJson =
                 match value.PlayerVisual with
                 | Some v -> yield "playerVisual", encodeVisualRef v
                 | None -> ()
+                match value.PlayerLayers with
+                | Some v -> yield "playerLayers", (Encode.list encodeCharacterLayer) v
+                | None -> ()
                 match value.Graphics with
                 | Some v -> yield "graphics", encodeGraphicsSettings v
                 | None -> ()
                 match value.GamePanels with
                 | Some v -> yield "gamePanels", (Encode.list encodeGamePanel) v
+                | None -> ()
+                match value.UiSkin with
+                | Some v -> yield "uiSkin", encodeUiSkin v
                 | None -> ()
                 yield "currentSeason", JString value.CurrentSeason
                 yield "currentDay", JNumber value.CurrentDay
@@ -2667,6 +2840,9 @@ module SchemaJson =
                 yield "actions", (Encode.list encodeActionDef) value.Actions
                 yield "minigames", (Encode.list encodeMinigameDef) value.Minigames
                 yield "contentPacks", (Encode.list encodePackInstallation) value.ContentPacks
+                match value.Scripts with
+                | Some v -> yield "scripts", (Encode.list encodeProjectScript) v
+                | None -> ()
                 match value.Terrains with
                 | Some v -> yield "terrains", (Encode.list encodeTerrainDefinition) v
                 | None -> ()
@@ -2709,6 +2885,15 @@ module SchemaJson =
                 match value.Monsters with
                 | Some v -> yield "monsters", (Encode.list encodeMonsterDefinition) v
                 | None -> ()
+                match value.SaveMigrations with
+                | Some v -> yield "saveMigrations", (Encode.list encodeSaveMigration) v
+                | None -> ()
+                match value.TestStates with
+                | Some v -> yield "testStates", (Encode.list encodeTestState) v
+                | None -> ()
+                match value.Imports with
+                | Some v -> yield "imports", (Encode.list encodeImportSource) v
+                | None -> ()
                 match value.Export with
                 | Some v -> yield "export", encodeExportSettings v
                 | None -> ()
@@ -2729,6 +2914,12 @@ module SchemaJson =
                 | None -> ()
                 match value.KeptState with
                 | Some v -> yield "keptState", v
+                | None -> ()
+                match value.Translations with
+                | Some v -> yield "translations", (Encode.list encodeTranslationTable) v
+                | None -> ()
+                match value.ContentTemplates with
+                | Some v -> yield "contentTemplates", (Encode.list encodeContentTemplate) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -2903,6 +3094,40 @@ module SchemaJson =
             ]
         )
 
+    and decodeImportSource (path: Path) (json: Json) : ImportSource =
+        let members = Decode.object path json
+        let mutable vKind = ""
+        let mutable vTargetId = ""
+        let mutable vPath = ""
+        let mutable vLevel = None
+        let mutable vNames = None
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "kind" -> vKind <- Decode.string (key :: path) value
+            | "targetId" -> vTargetId <- Decode.string (key :: path) value
+            | "path" -> vPath <- Decode.string (key :: path) value
+            | "level" -> vLevel <- Decode.optional Decode.string (key :: path) value
+            | "names" -> vNames <- Decode.optional (Decode.dict Decode.string) (key :: path) value
+            | _ -> extra.Add((key, value))
+        { Kind = vKind; TargetId = vTargetId; Path = vPath; Level = vLevel; Names = vNames; Extra = List.ofSeq extra }
+
+    and encodeImportSource (value: ImportSource) : Json =
+        JObject(
+            [
+                yield "kind", JString value.Kind
+                yield "targetId", JString value.TargetId
+                yield "path", JString value.Path
+                match value.Level with
+                | Some v -> yield "level", JString v
+                | None -> ()
+                match value.Names with
+                | Some v -> yield "names", (Encode.dict JString) v
+                | None -> ()
+                yield! value.Extra
+            ]
+        )
+
     and decodeInventorySlot (path: Path) (json: Json) : InventorySlot =
         let members = Decode.object path json
         let mutable vItem = Item.Default
@@ -2949,6 +3174,7 @@ module SchemaJson =
         let mutable vBuffs = None
         let mutable vWear = None
         let mutable vHealth = None
+        let mutable vTags = None
         let mutable vFishingGear = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
@@ -2973,9 +3199,10 @@ module SchemaJson =
             | "buffs" -> vBuffs <- Decode.optional (Decode.list decodeBuffDefinition) (key :: path) value
             | "wear" -> vWear <- Decode.optional decodeWearDefinition (key :: path) value
             | "health" -> vHealth <- Decode.optional Decode.number (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "fishingGear" -> vFishingGear <- Decode.optional decodeFishingGear (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Visual = vVisual; Description = vDescription; Type = vType; Stackable = vStackable; MaxStack = vMaxStack; Value = vValue; CropType = vCropType; ToolType = vToolType; ToolPower = vToolPower; ToolTier = vToolTier; Durability = vDurability; MaxDurability = vMaxDurability; UseActionId = vUseActionId; ConsumeOnUse = vConsumeOnUse; Energy = vEnergy; Buffs = vBuffs; Wear = vWear; Health = vHealth; FishingGear = vFishingGear; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Visual = vVisual; Description = vDescription; Type = vType; Stackable = vStackable; MaxStack = vMaxStack; Value = vValue; CropType = vCropType; ToolType = vToolType; ToolPower = vToolPower; ToolTier = vToolTier; Durability = vDurability; MaxDurability = vMaxDurability; UseActionId = vUseActionId; ConsumeOnUse = vConsumeOnUse; Energy = vEnergy; Buffs = vBuffs; Wear = vWear; Health = vHealth; Tags = vTags; FishingGear = vFishingGear; Extra = List.ofSeq extra }
 
     and encodeItem (value: Item) : Json =
         JObject(
@@ -3025,6 +3252,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Health with
                 | Some v -> yield "health", JNumber v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 match value.FishingGear with
                 | Some v -> yield "fishingGear", encodeFishingGear v
@@ -3136,6 +3366,7 @@ module SchemaJson =
         let mutable vGate = None
         let mutable vAreaEffects = None
         let mutable vLight = None
+        let mutable vTags = None
         let mutable vFishProduction = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
@@ -3153,9 +3384,10 @@ module SchemaJson =
             | "gate" -> vGate <- Decode.optional Decode.boolean (key :: path) value
             | "areaEffects" -> vAreaEffects <- Decode.optional (Decode.list decodeAreaEffect) (key :: path) value
             | "light" -> vLight <- Decode.optional decodeLightSource (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "fishProduction" -> vFishProduction <- Decode.optional decodeFishProduction (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Visual = vVisual; Description = vDescription; Color = vColor; ItemId = vItemId; BlocksMovement = vBlocksMovement; StationCategories = vStationCategories; Storage = vStorage; Shipping = vShipping; Gate = vGate; AreaEffects = vAreaEffects; Light = vLight; FishProduction = vFishProduction; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Visual = vVisual; Description = vDescription; Color = vColor; ItemId = vItemId; BlocksMovement = vBlocksMovement; StationCategories = vStationCategories; Storage = vStorage; Shipping = vShipping; Gate = vGate; AreaEffects = vAreaEffects; Light = vLight; Tags = vTags; FishProduction = vFishProduction; Extra = List.ofSeq extra }
 
     and encodeMachineTypeDefinition (value: MachineTypeDefinition) : Json =
         JObject(
@@ -3186,6 +3418,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Light with
                 | Some v -> yield "light", encodeLightSource v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 match value.FishProduction with
                 | Some v -> yield "fishProduction", encodeFishProduction v
@@ -3689,6 +3924,7 @@ module SchemaJson =
         let mutable vBlocksMovement = true
         let mutable vLight = None
         let mutable vSeasons = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -3704,8 +3940,9 @@ module SchemaJson =
             | "blocksMovement" -> vBlocksMovement <- Decode.boolean (key :: path) value
             | "light" -> vLight <- Decode.optional decodeLightSource (key :: path) value
             | "seasons" -> vSeasons <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Visual = vVisual; Health = vHealth; RequiredTool = vRequiredTool; RequiredToolTier = vRequiredToolTier; Drops = vDrops; RespawnDays = vRespawnDays; Color = vColor; BlocksMovement = vBlocksMovement; Light = vLight; Seasons = vSeasons; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Visual = vVisual; Health = vHealth; RequiredTool = vRequiredTool; RequiredToolTier = vRequiredToolTier; Drops = vDrops; RespawnDays = vRespawnDays; Color = vColor; BlocksMovement = vBlocksMovement; Light = vLight; Seasons = vSeasons; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeNodeTypeDefinition (value: NodeTypeDefinition) : Json =
         JObject(
@@ -3730,6 +3967,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Seasons with
                 | Some v -> yield "seasons", (Encode.list JString) v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -3756,6 +3996,9 @@ module SchemaJson =
         let mutable vLines = None
         let mutable vPortraits = None
         let mutable vRomanceable = None
+        let mutable vLook = None
+        let mutable vLayers = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -3778,8 +4021,11 @@ module SchemaJson =
             | "lines" -> vLines <- Decode.optional (Decode.list decodeNpcLine) (key :: path) value
             | "portraits" -> vPortraits <- Decode.optional (Decode.list decodeNpcPortrait) (key :: path) value
             | "romanceable" -> vRomanceable <- Decode.optional Decode.boolean (key :: path) value
+            | "look" -> vLook <- Decode.optional decodePlayerLook (key :: path) value
+            | "layers" -> vLayers <- Decode.optional (Decode.list decodeCharacterLayer) (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Visual = vVisual; X = vX; Y = vY; SceneId = vSceneId; Dialogue = vDialogue; CanMove = vCanMove; MovePattern = vMovePattern; WanderRadius = vWanderRadius; PatrolPoints = vPatrolPoints; Schedule = vSchedule; Schedules = vSchedules; GiftTastes = vGiftTastes; Birthday = vBirthday; Appearance = vAppearance; Lines = vLines; Portraits = vPortraits; Romanceable = vRomanceable; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Visual = vVisual; X = vX; Y = vY; SceneId = vSceneId; Dialogue = vDialogue; CanMove = vCanMove; MovePattern = vMovePattern; WanderRadius = vWanderRadius; PatrolPoints = vPatrolPoints; Schedule = vSchedule; Schedules = vSchedules; GiftTastes = vGiftTastes; Birthday = vBirthday; Appearance = vAppearance; Lines = vLines; Portraits = vPortraits; Romanceable = vRomanceable; Look = vLook; Layers = vLayers; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeNpc (value: Npc) : Json =
         JObject(
@@ -3825,6 +4071,15 @@ module SchemaJson =
                 match value.Romanceable with
                 | Some v -> yield "romanceable", JBool v
                 | None -> ()
+                match value.Look with
+                | Some v -> yield "look", encodePlayerLook v
+                | None -> ()
+                match value.Layers with
+                | Some v -> yield "layers", (Encode.list encodeCharacterLayer) v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
+                | None -> ()
                 yield! value.Extra
             ]
         )
@@ -3854,14 +4109,16 @@ module SchemaJson =
         let mutable vConditions = []
         let mutable vExpression = None
         let mutable vWeight = None
+        let mutable vId = None
         for (key, value) in members do
             match key with
             | "text" -> vText <- Decode.string (key :: path) value
             | "conditions" -> vConditions <- (Decode.list decodeEventCondition) (key :: path) value
             | "expression" -> vExpression <- Decode.optional Decode.string (key :: path) value
             | "weight" -> vWeight <- Decode.optional Decode.number (key :: path) value
+            | "id" -> vId <- Decode.optional Decode.string (key :: path) value
             | _ -> ()
-        { Text = vText; Conditions = vConditions; Expression = vExpression; Weight = vWeight }
+        { Text = vText; Conditions = vConditions; Expression = vExpression; Weight = vWeight; Id = vId }
 
     and encodeNpcLine (value: NpcLine) : Json =
         JObject(
@@ -3873,6 +4130,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Weight with
                 | Some v -> yield "weight", JNumber v
+                | None -> ()
+                match value.Id with
+                | Some v -> yield "id", JString v
                 | None -> ()
             ]
         )
@@ -4229,6 +4489,10 @@ module SchemaJson =
         let mutable vUiPanels = false
         let mutable vMutations = None
         let mutable vMinigames = None
+        let mutable vRead = None
+        let mutable vEntities = None
+        let mutable vItemUses = None
+        let mutable vScreens = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -4237,8 +4501,12 @@ module SchemaJson =
             | "uiPanels" -> vUiPanels <- Decode.boolean (key :: path) value
             | "mutations" -> vMutations <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "minigames" -> vMinigames <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "read" -> vRead <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "entities" -> vEntities <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "itemUses" -> vItemUses <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "screens" -> vScreens <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Hooks = vHooks; ContentInject = vContentInject; UiPanels = vUiPanels; Mutations = vMutations; Minigames = vMinigames; Extra = List.ofSeq extra }
+        { Hooks = vHooks; ContentInject = vContentInject; UiPanels = vUiPanels; Mutations = vMutations; Minigames = vMinigames; Read = vRead; Entities = vEntities; ItemUses = vItemUses; Screens = vScreens; Extra = List.ofSeq extra }
 
     and encodePackPermissions (value: PackPermissions) : Json =
         JObject(
@@ -4251,6 +4519,18 @@ module SchemaJson =
                 | None -> ()
                 match value.Minigames with
                 | Some v -> yield "minigames", (Encode.list JString) v
+                | None -> ()
+                match value.Read with
+                | Some v -> yield "read", (Encode.list JString) v
+                | None -> ()
+                match value.Entities with
+                | Some v -> yield "entities", (Encode.list JString) v
+                | None -> ()
+                match value.ItemUses with
+                | Some v -> yield "itemUses", (Encode.list JString) v
+                | None -> ()
+                match value.Screens with
+                | Some v -> yield "screens", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -4301,6 +4581,11 @@ module SchemaJson =
         let mutable vHooks = []
         let mutable vMinigames = None
         let mutable vSource = ""
+        let mutable vConditions = None
+        let mutable vOutcomes = None
+        let mutable vEntities = None
+        let mutable vItemUses = None
+        let mutable vScreens = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -4309,8 +4594,13 @@ module SchemaJson =
             | "hooks" -> vHooks <- (Decode.list Decode.string) (key :: path) value
             | "minigames" -> vMinigames <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | "source" -> vSource <- Decode.string (key :: path) value
+            | "conditions" -> vConditions <- Decode.optional (Decode.list decodePluginFunction) (key :: path) value
+            | "outcomes" -> vOutcomes <- Decode.optional (Decode.list decodePluginFunction) (key :: path) value
+            | "entities" -> vEntities <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "itemUses" -> vItemUses <- Decode.optional (Decode.list Decode.string) (key :: path) value
+            | "screens" -> vScreens <- Decode.optional (Decode.list decodePluginScreen) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Hooks = vHooks; Minigames = vMinigames; Source = vSource; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Hooks = vHooks; Minigames = vMinigames; Source = vSource; Conditions = vConditions; Outcomes = vOutcomes; Entities = vEntities; ItemUses = vItemUses; Screens = vScreens; Extra = List.ofSeq extra }
 
     and encodePackPlugin (value: PackPlugin) : Json =
         JObject(
@@ -4324,6 +4614,21 @@ module SchemaJson =
                 | Some v -> yield "minigames", (Encode.list JString) v
                 | None -> ()
                 yield "source", JString value.Source
+                match value.Conditions with
+                | Some v -> yield "conditions", (Encode.list encodePluginFunction) v
+                | None -> ()
+                match value.Outcomes with
+                | Some v -> yield "outcomes", (Encode.list encodePluginFunction) v
+                | None -> ()
+                match value.Entities with
+                | Some v -> yield "entities", (Encode.list JString) v
+                | None -> ()
+                match value.ItemUses with
+                | Some v -> yield "itemUses", (Encode.list JString) v
+                | None -> ()
+                match value.Screens with
+                | Some v -> yield "screens", (Encode.list encodePluginScreen) v
+                | None -> ()
                 yield! value.Extra
             ]
         )
@@ -4494,6 +4799,99 @@ module SchemaJson =
             ]
         )
 
+    and decodePluginArgument (path: Path) (json: Json) : PluginArgument =
+        let members = Decode.object path json
+        let mutable vName = ""
+        let mutable vLabel = None
+        let mutable vType = ""
+        let mutable vKind = None
+        let mutable vOptional = false
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "name" -> vName <- Decode.string (key :: path) value
+            | "label" -> vLabel <- Decode.optional Decode.string (key :: path) value
+            | "type" -> vType <- Decode.string (key :: path) value
+            | "kind" -> vKind <- Decode.optional Decode.string (key :: path) value
+            | "optional" -> vOptional <- Decode.boolean (key :: path) value
+            | _ -> extra.Add((key, value))
+        { Name = vName; Label = vLabel; Type = vType; Kind = vKind; Optional = vOptional; Extra = List.ofSeq extra }
+
+    and encodePluginArgument (value: PluginArgument) : Json =
+        JObject(
+            [
+                yield "name", JString value.Name
+                match value.Label with
+                | Some v -> yield "label", JString v
+                | None -> ()
+                yield "type", JString value.Type
+                match value.Kind with
+                | Some v -> yield "kind", JString v
+                | None -> ()
+                yield "optional", JBool value.Optional
+                yield! value.Extra
+            ]
+        )
+
+    and decodePluginFunction (path: Path) (json: Json) : PluginFunction =
+        let members = Decode.object path json
+        let mutable vName = ""
+        let mutable vLabel = None
+        let mutable vDescription = None
+        let mutable vArgs = []
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "name" -> vName <- Decode.string (key :: path) value
+            | "label" -> vLabel <- Decode.optional Decode.string (key :: path) value
+            | "description" -> vDescription <- Decode.optional Decode.string (key :: path) value
+            | "args" -> vArgs <- (Decode.list decodePluginArgument) (key :: path) value
+            | _ -> extra.Add((key, value))
+        { Name = vName; Label = vLabel; Description = vDescription; Args = vArgs; Extra = List.ofSeq extra }
+
+    and encodePluginFunction (value: PluginFunction) : Json =
+        JObject(
+            [
+                yield "name", JString value.Name
+                match value.Label with
+                | Some v -> yield "label", JString v
+                | None -> ()
+                match value.Description with
+                | Some v -> yield "description", JString v
+                | None -> ()
+                yield "args", (Encode.list encodePluginArgument) value.Args
+                yield! value.Extra
+            ]
+        )
+
+    and decodePluginScreen (path: Path) (json: Json) : PluginScreen =
+        let members = Decode.object path json
+        let mutable vName = ""
+        let mutable vTitle = None
+        let mutable vHotkey = None
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "name" -> vName <- Decode.string (key :: path) value
+            | "title" -> vTitle <- Decode.optional Decode.string (key :: path) value
+            | "hotkey" -> vHotkey <- Decode.optional Decode.string (key :: path) value
+            | _ -> extra.Add((key, value))
+        { Name = vName; Title = vTitle; Hotkey = vHotkey; Extra = List.ofSeq extra }
+
+    and encodePluginScreen (value: PluginScreen) : Json =
+        JObject(
+            [
+                yield "name", JString value.Name
+                match value.Title with
+                | Some v -> yield "title", JString v
+                | None -> ()
+                match value.Hotkey with
+                | Some v -> yield "hotkey", JString v
+                | None -> ()
+                yield! value.Extra
+            ]
+        )
+
     and decodeProductProgress (path: Path) (json: Json) : ProductProgress =
         let members = Decode.object path json
         let mutable vDays = 0.0
@@ -4558,6 +4956,33 @@ module SchemaJson =
             ]
         )
 
+    and decodeProjectScript (path: Path) (json: Json) : ProjectScript =
+        let members = Decode.object path json
+        let mutable vId = ""
+        let mutable vName = None
+        let mutable vSource = ""
+        let mutable vDisabled = false
+        for (key, value) in members do
+            match key with
+            | "id" -> vId <- Decode.string (key :: path) value
+            | "name" -> vName <- Decode.optional Decode.string (key :: path) value
+            | "source" -> vSource <- Decode.string (key :: path) value
+            | "disabled" -> vDisabled <- Decode.boolean (key :: path) value
+            | _ -> ()
+        { Id = vId; Name = vName; Source = vSource; Disabled = vDisabled }
+
+    and encodeProjectScript (value: ProjectScript) : Json =
+        JObject(
+            [
+                yield "id", JString value.Id
+                match value.Name with
+                | Some v -> yield "name", JString v
+                | None -> ()
+                yield "source", JString value.Source
+                yield "disabled", JBool value.Disabled
+            ]
+        )
+
     and decodeProjectSettings (path: Path) (json: Json) : ProjectSettings =
         let members = Decode.object path json
         let mutable vMovement = MovementConfig.Default
@@ -4579,6 +5004,7 @@ module SchemaJson =
         let mutable vCombat = None
         let mutable vProgression = None
         let mutable vSkillDefinitions = None
+        let mutable vScripts = None
         for (key, value) in members do
             match key with
             | "movement" -> vMovement <- decodeMovementConfig (key :: path) value
@@ -4600,8 +5026,9 @@ module SchemaJson =
             | "combat" -> vCombat <- Decode.optional decodeCombatSettings (key :: path) value
             | "progression" -> vProgression <- Decode.optional decodeProgressionLimits (key :: path) value
             | "skillDefinitions" -> vSkillDefinitions <- Decode.optional (Decode.list decodeSkillDefinition) (key :: path) value
+            | "scripts" -> vScripts <- Decode.optional decodeScriptSettings (key :: path) value
             | _ -> ()
-        { Movement = vMovement; EnergyEnabled = vEnergyEnabled; MaxEnergy = vMaxEnergy; CollapseEnergyFraction = vCollapseEnergyFraction; CollapseMoneyPenalty = vCollapseMoneyPenalty; Time = vTime; Calendar = vCalendar; SkillsEnabled = vSkillsEnabled; SkillLevelCurve = vSkillLevelCurve; Locale = vLocale; ShowMadeWithCredit = vShowMadeWithCredit; Words = vWords; Atmosphere = vAtmosphere; Relationships = vRelationships; CharacterCreator = vCharacterCreator; Farm = vFarm; Combat = vCombat; Progression = vProgression; SkillDefinitions = vSkillDefinitions }
+        { Movement = vMovement; EnergyEnabled = vEnergyEnabled; MaxEnergy = vMaxEnergy; CollapseEnergyFraction = vCollapseEnergyFraction; CollapseMoneyPenalty = vCollapseMoneyPenalty; Time = vTime; Calendar = vCalendar; SkillsEnabled = vSkillsEnabled; SkillLevelCurve = vSkillLevelCurve; Locale = vLocale; ShowMadeWithCredit = vShowMadeWithCredit; Words = vWords; Atmosphere = vAtmosphere; Relationships = vRelationships; CharacterCreator = vCharacterCreator; Farm = vFarm; Combat = vCombat; Progression = vProgression; SkillDefinitions = vSkillDefinitions; Scripts = vScripts }
 
     and encodeProjectSettings (value: ProjectSettings) : Json =
         JObject(
@@ -4641,6 +5068,9 @@ module SchemaJson =
                 match value.SkillDefinitions with
                 | Some v -> yield "skillDefinitions", (Encode.list encodeSkillDefinition) v
                 | None -> ()
+                match value.Scripts with
+                | Some v -> yield "scripts", encodeScriptSettings v
+                | None -> ()
             ]
         )
 
@@ -4662,6 +5092,7 @@ module SchemaJson =
         let mutable vDeadlineDays = None
         let mutable vDeadlineDay = None
         let mutable vOnFail = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -4681,8 +5112,9 @@ module SchemaJson =
             | "deadlineDays" -> vDeadlineDays <- Decode.optional Decode.number (key :: path) value
             | "deadlineDay" -> vDeadlineDay <- Decode.optional Decode.number (key :: path) value
             | "onFail" -> vOnFail <- Decode.optional (Decode.list decodeEventOutcome) (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Description = vDescription; Giver = vGiver; Status = vStatus; Objectives = vObjectives; Rewards = vRewards; Prerequisites = vPrerequisites; AutoStart = vAutoStart; Repeatable = vRepeatable; AvailableSeasons = vAvailableSeasons; AvailableFromDay = vAvailableFromDay; AvailableToDay = vAvailableToDay; DeadlineDays = vDeadlineDays; DeadlineDay = vDeadlineDay; OnFail = vOnFail; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Description = vDescription; Giver = vGiver; Status = vStatus; Objectives = vObjectives; Rewards = vRewards; Prerequisites = vPrerequisites; AutoStart = vAutoStart; Repeatable = vRepeatable; AvailableSeasons = vAvailableSeasons; AvailableFromDay = vAvailableFromDay; AvailableToDay = vAvailableToDay; DeadlineDays = vDeadlineDays; DeadlineDay = vDeadlineDay; OnFail = vOnFail; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeQuest (value: Quest) : Json =
         JObject(
@@ -4722,6 +5154,9 @@ module SchemaJson =
                 | None -> ()
                 match value.OnFail with
                 | Some v -> yield "onFail", (Encode.list encodeEventOutcome) v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -4872,6 +5307,7 @@ module SchemaJson =
         let mutable vCategory = "crafting"
         let mutable vRequiresStationCategory = None
         let mutable vUnlock = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -4884,8 +5320,9 @@ module SchemaJson =
             | "category" -> vCategory <- Decode.string (key :: path) value
             | "requiresStationCategory" -> vRequiresStationCategory <- Decode.optional Decode.string (key :: path) value
             | "unlock" -> vUnlock <- Decode.optional decodeRecipeUnlock (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Inputs = vInputs; Outputs = vOutputs; ProcessingMinutes = vProcessingMinutes; MachineTypeId = vMachineTypeId; Category = vCategory; RequiresStationCategory = vRequiresStationCategory; Unlock = vUnlock; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Inputs = vInputs; Outputs = vOutputs; ProcessingMinutes = vProcessingMinutes; MachineTypeId = vMachineTypeId; Category = vCategory; RequiresStationCategory = vRequiresStationCategory; Unlock = vUnlock; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeRecipeDefinition (value: RecipeDefinition) : Json =
         JObject(
@@ -4904,6 +5341,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Unlock with
                 | Some v -> yield "unlock", encodeRecipeUnlock v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -5155,6 +5595,55 @@ module SchemaJson =
             ]
         )
 
+    and decodeSaveMigration (path: Path) (json: Json) : SaveMigration =
+        let members = Decode.object path json
+        let mutable vKind = ""
+        let mutable vFrom = ""
+        let mutable vTo = None
+        let mutable vQuantity = None
+        let mutable vMoney = None
+        let mutable vX = None
+        let mutable vY = None
+        let mutable vName = None
+        for (key, value) in members do
+            match key with
+            | "kind" -> vKind <- Decode.string (key :: path) value
+            | "from" -> vFrom <- Decode.string (key :: path) value
+            | "to" -> vTo <- Decode.optional Decode.string (key :: path) value
+            | "quantity" -> vQuantity <- Decode.optional Decode.number (key :: path) value
+            | "money" -> vMoney <- Decode.optional Decode.number (key :: path) value
+            | "x" -> vX <- Decode.optional Decode.number (key :: path) value
+            | "y" -> vY <- Decode.optional Decode.number (key :: path) value
+            | "name" -> vName <- Decode.optional Decode.string (key :: path) value
+            | _ -> ()
+        { Kind = vKind; From = vFrom; To = vTo; Quantity = vQuantity; Money = vMoney; X = vX; Y = vY; Name = vName }
+
+    and encodeSaveMigration (value: SaveMigration) : Json =
+        JObject(
+            [
+                yield "kind", JString value.Kind
+                yield "from", JString value.From
+                match value.To with
+                | Some v -> yield "to", JString v
+                | None -> ()
+                match value.Quantity with
+                | Some v -> yield "quantity", JNumber v
+                | None -> ()
+                match value.Money with
+                | Some v -> yield "money", JNumber v
+                | None -> ()
+                match value.X with
+                | Some v -> yield "x", JNumber v
+                | None -> ()
+                match value.Y with
+                | Some v -> yield "y", JNumber v
+                | None -> ()
+                match value.Name with
+                | Some v -> yield "name", JString v
+                | None -> ()
+            ]
+        )
+
     and decodeScene (path: Path) (json: Json) : Scene =
         let members = Decode.object path json
         let mutable vId = ""
@@ -5310,6 +5799,34 @@ module SchemaJson =
             ]
         )
 
+    and decodeScriptSettings (path: Path) (json: Json) : ScriptSettings =
+        let members = Decode.object path json
+        let mutable vFuelPerCall = None
+        let mutable vFuelPerSecond = None
+        let mutable vInitFuel = None
+        for (key, value) in members do
+            match key with
+            | "fuelPerCall" -> vFuelPerCall <- Decode.optional Decode.number (key :: path) value
+            | "fuelPerSecond" -> vFuelPerSecond <- Decode.optional Decode.number (key :: path) value
+            | "initFuel" -> vInitFuel <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { FuelPerCall = vFuelPerCall; FuelPerSecond = vFuelPerSecond; InitFuel = vInitFuel }
+
+    and encodeScriptSettings (value: ScriptSettings) : Json =
+        JObject(
+            [
+                match value.FuelPerCall with
+                | Some v -> yield "fuelPerCall", JNumber v
+                | None -> ()
+                match value.FuelPerSecond with
+                | Some v -> yield "fuelPerSecond", JNumber v
+                | None -> ()
+                match value.InitFuel with
+                | Some v -> yield "initFuel", JNumber v
+                | None -> ()
+            ]
+        )
+
     and decodeShopClosedOn (path: Path) (json: Json) : ShopClosedOn =
         let members = Decode.object path json
         let mutable vWeekdays = []
@@ -5349,6 +5866,7 @@ module SchemaJson =
         let mutable vKeeperNpcId = None
         let mutable vPriceModifiers = None
         let mutable vSaturation = None
+        let mutable vTags = None
         let extra = ResizeArray<string * Json>()
         for (key, value) in members do
             match key with
@@ -5367,8 +5885,9 @@ module SchemaJson =
             | "keeperNpcId" -> vKeeperNpcId <- Decode.optional Decode.string (key :: path) value
             | "priceModifiers" -> vPriceModifiers <- Decode.optional (Decode.list decodeShopPriceModifier) (key :: path) value
             | "saturation" -> vSaturation <- Decode.optional decodeShopSaturation (key :: path) value
+            | "tags" -> vTags <- Decode.optional (Decode.list Decode.string) (key :: path) value
             | _ -> extra.Add((key, value))
-        { Id = vId; Name = vName; Stock = vStock; SellPriceMultiplier = vSellPriceMultiplier; BuysItems = vBuysItems; RepairsTools = vRepairsTools; RepairCostPerPoint = vRepairCostPerPoint; Buildings = vBuildings; Animals = vAnimals; ToolUpgrades = vToolUpgrades; Hours = vHours; ClosedOn = vClosedOn; KeeperNpcId = vKeeperNpcId; PriceModifiers = vPriceModifiers; Saturation = vSaturation; Extra = List.ofSeq extra }
+        { Id = vId; Name = vName; Stock = vStock; SellPriceMultiplier = vSellPriceMultiplier; BuysItems = vBuysItems; RepairsTools = vRepairsTools; RepairCostPerPoint = vRepairCostPerPoint; Buildings = vBuildings; Animals = vAnimals; ToolUpgrades = vToolUpgrades; Hours = vHours; ClosedOn = vClosedOn; KeeperNpcId = vKeeperNpcId; PriceModifiers = vPriceModifiers; Saturation = vSaturation; Tags = vTags; Extra = List.ofSeq extra }
 
     and encodeShopDefinition (value: ShopDefinition) : Json =
         JObject(
@@ -5403,6 +5922,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Saturation with
                 | Some v -> yield "saturation", encodeShopSaturation v
+                | None -> ()
+                match value.Tags with
+                | Some v -> yield "tags", (Encode.list JString) v
                 | None -> ()
                 yield! value.Extra
             ]
@@ -5814,6 +6336,126 @@ module SchemaJson =
             ]
         )
 
+    and decodeTestState (path: Path) (json: Json) : TestState =
+        let members = Decode.object path json
+        let mutable vId = ""
+        let mutable vName = ""
+        let mutable vDescription = None
+        let mutable vDay = None
+        let mutable vSeason = None
+        let mutable vDayOfSeason = None
+        let mutable vYear = None
+        let mutable vTime = None
+        let mutable vWeather = None
+        let mutable vSceneId = None
+        let mutable vX = None
+        let mutable vY = None
+        let mutable vFacing = None
+        let mutable vFlags = []
+        let mutable vVariables = []
+        let mutable vQuests = []
+        let mutable vFriendship = []
+        let mutable vInventory = None
+        let mutable vMoney = None
+        for (key, value) in members do
+            match key with
+            | "id" -> vId <- Decode.string (key :: path) value
+            | "name" -> vName <- Decode.string (key :: path) value
+            | "description" -> vDescription <- Decode.optional Decode.string (key :: path) value
+            | "day" -> vDay <- Decode.optional Decode.number (key :: path) value
+            | "season" -> vSeason <- Decode.optional Decode.string (key :: path) value
+            | "dayOfSeason" -> vDayOfSeason <- Decode.optional Decode.number (key :: path) value
+            | "year" -> vYear <- Decode.optional Decode.number (key :: path) value
+            | "time" -> vTime <- Decode.optional Decode.number (key :: path) value
+            | "weather" -> vWeather <- Decode.optional Decode.string (key :: path) value
+            | "sceneId" -> vSceneId <- Decode.optional Decode.string (key :: path) value
+            | "x" -> vX <- Decode.optional Decode.number (key :: path) value
+            | "y" -> vY <- Decode.optional Decode.number (key :: path) value
+            | "facing" -> vFacing <- Decode.optional Decode.string (key :: path) value
+            | "flags" -> vFlags <- (Decode.dict Decode.flagValue) (key :: path) value
+            | "variables" -> vVariables <- (Decode.dict Decode.flagValue) (key :: path) value
+            | "quests" -> vQuests <- (Decode.dict Decode.string) (key :: path) value
+            | "friendship" -> vFriendship <- (Decode.dict Decode.number) (key :: path) value
+            | "inventory" -> vInventory <- Decode.optional (Decode.list decodeTestStateItem) (key :: path) value
+            | "money" -> vMoney <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { Id = vId; Name = vName; Description = vDescription; Day = vDay; Season = vSeason; DayOfSeason = vDayOfSeason; Year = vYear; Time = vTime; Weather = vWeather; SceneId = vSceneId; X = vX; Y = vY; Facing = vFacing; Flags = vFlags; Variables = vVariables; Quests = vQuests; Friendship = vFriendship; Inventory = vInventory; Money = vMoney }
+
+    and encodeTestState (value: TestState) : Json =
+        JObject(
+            [
+                yield "id", JString value.Id
+                yield "name", JString value.Name
+                match value.Description with
+                | Some v -> yield "description", JString v
+                | None -> ()
+                match value.Day with
+                | Some v -> yield "day", JNumber v
+                | None -> ()
+                match value.Season with
+                | Some v -> yield "season", JString v
+                | None -> ()
+                match value.DayOfSeason with
+                | Some v -> yield "dayOfSeason", JNumber v
+                | None -> ()
+                match value.Year with
+                | Some v -> yield "year", JNumber v
+                | None -> ()
+                match value.Time with
+                | Some v -> yield "time", JNumber v
+                | None -> ()
+                match value.Weather with
+                | Some v -> yield "weather", JString v
+                | None -> ()
+                match value.SceneId with
+                | Some v -> yield "sceneId", JString v
+                | None -> ()
+                match value.X with
+                | Some v -> yield "x", JNumber v
+                | None -> ()
+                match value.Y with
+                | Some v -> yield "y", JNumber v
+                | None -> ()
+                match value.Facing with
+                | Some v -> yield "facing", JString v
+                | None -> ()
+                yield "flags", (Encode.dict id) value.Flags
+                yield "variables", (Encode.dict id) value.Variables
+                yield "quests", (Encode.dict JString) value.Quests
+                yield "friendship", (Encode.dict JNumber) value.Friendship
+                match value.Inventory with
+                | Some v -> yield "inventory", (Encode.list encodeTestStateItem) v
+                | None -> ()
+                match value.Money with
+                | Some v -> yield "money", JNumber v
+                | None -> ()
+            ]
+        )
+
+    and decodeTestStateItem (path: Path) (json: Json) : TestStateItem =
+        let members = Decode.object path json
+        let mutable vItemId = ""
+        let mutable vQuantity = 1.0
+        let mutable vQuality = None
+        for (key, value) in members do
+            match key with
+            | "itemId" -> vItemId <- Decode.string (key :: path) value
+            | "quantity" -> vQuantity <- Decode.number (key :: path) value
+            | "quality" -> vQuality <- Decode.optional Decode.string (key :: path) value
+            | _ -> ()
+        { ItemId = vItemId; Quantity = vQuantity; Quality = vQuality }
+
+    and encodeTestStateItem (value: TestStateItem) : Json =
+        JObject(
+            [
+                yield "itemId", JString value.ItemId
+                yield "quantity", JNumber value.Quantity
+                match value.Quality with
+                | Some v -> yield "quality", JString v
+                | None -> ()
+            ]
+        )
+
     and decodeTile (path: Path) (json: Json) : Tile =
         let members = Decode.object path json
         let mutable vX = 0.0
@@ -6139,6 +6781,203 @@ module SchemaJson =
             ]
         )
 
+    and decodeTranslatedText (path: Path) (json: Json) : TranslatedText =
+        let members = Decode.object path json
+        let mutable vText = ""
+        let mutable vSource = ""
+        for (key, value) in members do
+            match key with
+            | "text" -> vText <- Decode.string (key :: path) value
+            | "source" -> vSource <- Decode.string (key :: path) value
+            | _ -> ()
+        { Text = vText; Source = vSource }
+
+    and encodeTranslatedText (value: TranslatedText) : Json =
+        JObject(
+            [
+                yield "text", JString value.Text
+                yield "source", JString value.Source
+            ]
+        )
+
+    and decodeTranslationTable (path: Path) (json: Json) : TranslationTable =
+        let members = Decode.object path json
+        let mutable vLocale = ""
+        let mutable vStrings = []
+        for (key, value) in members do
+            match key with
+            | "locale" -> vLocale <- Decode.string (key :: path) value
+            | "strings" -> vStrings <- (Decode.dict decodeTranslatedText) (key :: path) value
+            | _ -> ()
+        { Locale = vLocale; Strings = vStrings }
+
+    and encodeTranslationTable (value: TranslationTable) : Json =
+        JObject(
+            [
+                yield "locale", JString value.Locale
+                yield "strings", (Encode.dict encodeTranslatedText) value.Strings
+            ]
+        )
+
+    and decodeUiLayout (path: Path) (json: Json) : UiLayout =
+        let members = Decode.object path json
+        let mutable vHudPosition = None
+        let mutable vToolbar = None
+        let mutable vClockStyle = None
+        let mutable vDialoguePosition = None
+        let mutable vPortraitSize = None
+        for (key, value) in members do
+            match key with
+            | "hudPosition" -> vHudPosition <- Decode.optional Decode.string (key :: path) value
+            | "toolbar" -> vToolbar <- Decode.optional Decode.boolean (key :: path) value
+            | "clockStyle" -> vClockStyle <- Decode.optional Decode.string (key :: path) value
+            | "dialoguePosition" -> vDialoguePosition <- Decode.optional Decode.string (key :: path) value
+            | "portraitSize" -> vPortraitSize <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { HudPosition = vHudPosition; Toolbar = vToolbar; ClockStyle = vClockStyle; DialoguePosition = vDialoguePosition; PortraitSize = vPortraitSize }
+
+    and encodeUiLayout (value: UiLayout) : Json =
+        JObject(
+            [
+                match value.HudPosition with
+                | Some v -> yield "hudPosition", JString v
+                | None -> ()
+                match value.Toolbar with
+                | Some v -> yield "toolbar", JBool v
+                | None -> ()
+                match value.ClockStyle with
+                | Some v -> yield "clockStyle", JString v
+                | None -> ()
+                match value.DialoguePosition with
+                | Some v -> yield "dialoguePosition", JString v
+                | None -> ()
+                match value.PortraitSize with
+                | Some v -> yield "portraitSize", JNumber v
+                | None -> ()
+            ]
+        )
+
+    and decodeUiNineSlice (path: Path) (json: Json) : UiNineSlice =
+        let members = Decode.object path json
+        let mutable vVisual = VisualRef.Default
+        let mutable vLeft = 0.0
+        let mutable vTop = 0.0
+        let mutable vRight = 0.0
+        let mutable vBottom = 0.0
+        let mutable vScale = None
+        for (key, value) in members do
+            match key with
+            | "visual" -> vVisual <- decodeVisualRef (key :: path) value
+            | "left" -> vLeft <- Decode.number (key :: path) value
+            | "top" -> vTop <- Decode.number (key :: path) value
+            | "right" -> vRight <- Decode.number (key :: path) value
+            | "bottom" -> vBottom <- Decode.number (key :: path) value
+            | "scale" -> vScale <- Decode.optional Decode.number (key :: path) value
+            | _ -> ()
+        { Visual = vVisual; Left = vLeft; Top = vTop; Right = vRight; Bottom = vBottom; Scale = vScale }
+
+    and encodeUiNineSlice (value: UiNineSlice) : Json =
+        JObject(
+            [
+                yield "visual", encodeVisualRef value.Visual
+                yield "left", JNumber value.Left
+                yield "top", JNumber value.Top
+                yield "right", JNumber value.Right
+                yield "bottom", JNumber value.Bottom
+                match value.Scale with
+                | Some v -> yield "scale", JNumber v
+                | None -> ()
+            ]
+        )
+
+    and decodeUiSkin (path: Path) (json: Json) : UiSkin =
+        let members = Decode.object path json
+        let mutable vHeadingFont = None
+        let mutable vBodyFont = None
+        let mutable vNumberFont = None
+        let mutable vColors = None
+        let mutable vPanels = None
+        let mutable vIcons = None
+        let mutable vLayout = None
+        let mutable vTitle = None
+        let extra = ResizeArray<string * Json>()
+        for (key, value) in members do
+            match key with
+            | "headingFont" -> vHeadingFont <- Decode.optional Decode.string (key :: path) value
+            | "bodyFont" -> vBodyFont <- Decode.optional Decode.string (key :: path) value
+            | "numberFont" -> vNumberFont <- Decode.optional Decode.string (key :: path) value
+            | "colors" -> vColors <- Decode.optional (Decode.dict Decode.string) (key :: path) value
+            | "panels" -> vPanels <- Decode.optional (Decode.dict decodeUiNineSlice) (key :: path) value
+            | "icons" -> vIcons <- Decode.optional (Decode.dict decodeVisualRef) (key :: path) value
+            | "layout" -> vLayout <- Decode.optional decodeUiLayout (key :: path) value
+            | "title" -> vTitle <- Decode.optional decodeUiTitleScreen (key :: path) value
+            | _ -> extra.Add((key, value))
+        { HeadingFont = vHeadingFont; BodyFont = vBodyFont; NumberFont = vNumberFont; Colors = vColors; Panels = vPanels; Icons = vIcons; Layout = vLayout; Title = vTitle; Extra = List.ofSeq extra }
+
+    and encodeUiSkin (value: UiSkin) : Json =
+        JObject(
+            [
+                match value.HeadingFont with
+                | Some v -> yield "headingFont", JString v
+                | None -> ()
+                match value.BodyFont with
+                | Some v -> yield "bodyFont", JString v
+                | None -> ()
+                match value.NumberFont with
+                | Some v -> yield "numberFont", JString v
+                | None -> ()
+                match value.Colors with
+                | Some v -> yield "colors", (Encode.dict JString) v
+                | None -> ()
+                match value.Panels with
+                | Some v -> yield "panels", (Encode.dict encodeUiNineSlice) v
+                | None -> ()
+                match value.Icons with
+                | Some v -> yield "icons", (Encode.dict encodeVisualRef) v
+                | None -> ()
+                match value.Layout with
+                | Some v -> yield "layout", encodeUiLayout v
+                | None -> ()
+                match value.Title with
+                | Some v -> yield "title", encodeUiTitleScreen v
+                | None -> ()
+                yield! value.Extra
+            ]
+        )
+
+    and decodeUiTitleScreen (path: Path) (json: Json) : UiTitleScreen =
+        let members = Decode.object path json
+        let mutable vBackground = None
+        let mutable vScene = None
+        let mutable vLogo = None
+        let mutable vMenuPosition = None
+        for (key, value) in members do
+            match key with
+            | "background" -> vBackground <- Decode.optional decodeVisualRef (key :: path) value
+            | "scene" -> vScene <- Decode.optional Decode.string (key :: path) value
+            | "logo" -> vLogo <- Decode.optional decodeVisualRef (key :: path) value
+            | "menuPosition" -> vMenuPosition <- Decode.optional Decode.string (key :: path) value
+            | _ -> ()
+        { Background = vBackground; Scene = vScene; Logo = vLogo; MenuPosition = vMenuPosition }
+
+    and encodeUiTitleScreen (value: UiTitleScreen) : Json =
+        JObject(
+            [
+                match value.Background with
+                | Some v -> yield "background", encodeVisualRef v
+                | None -> ()
+                match value.Scene with
+                | Some v -> yield "scene", JString v
+                | None -> ()
+                match value.Logo with
+                | Some v -> yield "logo", encodeVisualRef v
+                | None -> ()
+                match value.MenuPosition with
+                | Some v -> yield "menuPosition", JString v
+                | None -> ()
+            ]
+        )
+
     and decodeVisualRef (path: Path) (json: Json) : VisualRef =
         let members = Decode.object path json
         let mutable vAssetId = ""
@@ -6170,13 +7009,15 @@ module SchemaJson =
         let mutable vSlot = ""
         let mutable vColor = None
         let mutable vVisual = None
+        let mutable vLayer = None
         for (key, value) in members do
             match key with
             | "slot" -> vSlot <- Decode.string (key :: path) value
             | "color" -> vColor <- Decode.optional Decode.string (key :: path) value
             | "visual" -> vVisual <- Decode.optional decodeVisualRef (key :: path) value
+            | "layer" -> vLayer <- Decode.optional Decode.string (key :: path) value
             | _ -> ()
-        { Slot = vSlot; Color = vColor; Visual = vVisual }
+        { Slot = vSlot; Color = vColor; Visual = vVisual; Layer = vLayer }
 
     and encodeWearDefinition (value: WearDefinition) : Json =
         JObject(
@@ -6187,6 +7028,9 @@ module SchemaJson =
                 | None -> ()
                 match value.Visual with
                 | Some v -> yield "visual", encodeVisualRef v
+                | None -> ()
+                match value.Layer with
+                | Some v -> yield "layer", JString v
                 | None -> ()
             ]
         )
@@ -7060,6 +7904,29 @@ module SchemaJson =
             ]
         )
 
+    and decodePluginCondition (path: Path) (json: Json) : PluginCondition =
+        let members = Decode.object path json
+        let mutable vCondition = ""
+        let mutable vArgs = None
+        for (key, value) in members do
+            match key with
+            | "condition" -> vCondition <- Decode.string (key :: path) value
+            | "args" -> vArgs <- Decode.optional Decode.json (key :: path) value
+            | "type" -> ()
+            | _ -> ()
+        { Condition = vCondition; Args = vArgs }
+
+    and encodePluginCondition (value: PluginCondition) : Json =
+        JObject(
+            [
+                yield "type", JString "plugin"
+                yield "condition", JString value.Condition
+                match value.Args with
+                | Some v -> yield "args", v
+                | None -> ()
+            ]
+        )
+
     and decodeEventCondition (path: Path) (json: Json) : EventCondition =
         match Decode.discriminator path json with
         | "enterTile" -> EventCondition.EnterTile(decodeEnterTileCondition path json)
@@ -7097,6 +7964,7 @@ module SchemaJson =
         | "slain" -> EventCondition.Slain(decodeSlainCondition path json)
         | "birthday" -> EventCondition.Birthday(decodeBirthdayCondition path json)
         | "weekday" -> EventCondition.Weekday(decodeWeekdayCondition path json)
+        | "plugin" -> EventCondition.Plugin(decodePluginCondition path json)
         | other -> Decode.unknownDiscriminator path other
 
     and encodeEventCondition (value: EventCondition) : Json =
@@ -7136,3 +8004,4 @@ module SchemaJson =
         | EventCondition.Slain c -> encodeSlainCondition c
         | EventCondition.Birthday c -> encodeBirthdayCondition c
         | EventCondition.Weekday c -> encodeWeekdayCondition c
+        | EventCondition.Plugin c -> encodePluginCondition c
