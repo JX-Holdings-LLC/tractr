@@ -636,15 +636,14 @@ module Translations =
     // ── Compiling ──────────────────────────────────────────────────────────
 
     /// The tables the cartridge carries: every language's translated texts by key (stale ones
-    /// too: an older translation reads better than none).
+    /// too: an older translation reads better than none; a key the game lacks does nothing).
+    /// Rust `Presentation::from_project` makes the same from project JSON.
     let contentStrings (project: GameProject) : (string * (string * string) list) list =
-        let known = catalog project |> List.map (fun f -> f.Key) |> HashSet
-
         defaultArg project.Translations []
         |> List.filter (fun t -> t.Locale <> "" && t.Locale <> project.Settings.Locale)
         |> List.map (fun t ->
             t.Locale,
             t.Strings
-            |> List.filter (fun (k, v) -> v.Text <> "" && known.Contains k)
+            |> List.filter (fun (_, v) -> v.Text <> "")
             |> List.map (fun (k, v) -> k, v.Text))
         |> List.filter (fun (_, strings) -> not strings.IsEmpty)
