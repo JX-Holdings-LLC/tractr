@@ -36,7 +36,7 @@ jobs:
           rustc --version
 
       - name: Install cargo-deny and cargo-machete
-        uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+        uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2
 
@@ -57,7 +57,7 @@ jobs:
           $json.sdk.rollForward = 'disable'
           $json | ConvertTo-Json -Depth 5 | Set-Content global.json
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           global-json-file: global.json
 

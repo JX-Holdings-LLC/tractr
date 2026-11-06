@@ -213,7 +213,7 @@ jobs:
       run: echo "version=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/"/, "", $3); print $3; exit }' Cargo.lock)"
         >> "$GITHUB_OUTPUT"
     - name: Install wasm-bindgen-cli
-      uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0
+      uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2
       with:
         tool: wasm-bindgen@${{ steps.wasm-bindgen.outputs.version }}
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -261,7 +261,7 @@ jobs:
         $json = Get-Content global.json -Raw | ConvertFrom-Json
         $json.sdk.rollForward = 'disable'
         $json | ConvertTo-Json -Depth 5 | Set-Content global.json
-    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       with:
         global-json-file: global.json
     - name: System packages
@@ -330,7 +330,7 @@ jobs:
         sdk['sdk']['rollForward'] = 'disable'
         path.write_text(json.dumps(sdk))
         PYSDK
-    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       with:
         global-json-file: global.json
     - run: rustup toolchain install
@@ -455,7 +455,7 @@ jobs:
         $json = Get-Content global.json -Raw | ConvertFrom-Json
         $json.sdk.rollForward = 'disable'
         $json | ConvertTo-Json -Depth 5 | Set-Content global.json
-    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+    - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
       with:
         global-json-file: global.json
     - name: Rust toolchain
