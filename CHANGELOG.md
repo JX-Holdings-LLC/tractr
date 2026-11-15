@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.1
+
+- Fix the Mac editor, which macOS refused to open with *"Tractr is damaged
+  and can't be opened"*. The app had no code signature at all; without Apple
+  credentials a release now signs it ad-hoc, so macOS blocks only the first
+  launch and **System Settings → Privacy & Security → Open Anyway** allows
+  it. Every Mac package's signature is checked before it is published.
+
 ## 0.12.0
 
 Authoring without the editor:

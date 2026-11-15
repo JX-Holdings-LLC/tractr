@@ -562,7 +562,7 @@ jobs:
       - run: dotnet build -c Release -p:CargoProfile=dev
       - run: dotnet test -c Release --no-build
       - run: tools/ci/golden-guard.sh fixtures
-      - name: Package the macOS app (unsigned test build)
+      - name: Package the macOS app (ad-hoc signed test build)
         shell: bash
         run: |
           rid=osx-arm64
@@ -575,8 +575,9 @@ jobs:
           dotnet tool install -g vpk --version "$vpk_version"
           vpk --yes --skip-updates pack --packId Tractr --packVersion "$version" --packDir publish \
             --runtime "$rid" --channel "$rid" --mainExe Tractr --packTitle Tractr --noInst \
-            --bundleId com.jxholdings.tractr --icon "$RUNNER_TEMP/Tractr.icns" --outputDir Releases
-      - name: Upload unsigned Mac test package
+            --bundleId com.jxholdings.tractr --icon "$RUNNER_TEMP/Tractr.icns" --signAppIdentity - \
+            --outputDir Releases
+      - name: Upload ad-hoc signed Mac test package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: Tractr-mac-test-${{ matrix.os }}-${{ github.sha }}
