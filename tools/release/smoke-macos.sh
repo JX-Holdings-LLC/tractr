@@ -26,8 +26,10 @@ test -s "$app/Contents/MacOS/libfarm_ffi.dylib"
 if [[ -n "$version" ]]; then
   python3 "$(dirname "$0")/verify-templates.py" "$app/Contents/MacOS/players" "$version"
 fi
+# Every package is signed, ad-hoc when there is no Developer ID: macOS calls a downloaded app
+# whose signature is missing or broken "damaged" and will not open it.
+codesign --verify --deep --strict --verbose=2 "$app"
 if [[ "$signature" == --require-signature ]]; then
-  codesign --verify --deep --strict --verbose=2 "$app"
   xcrun stapler validate "$app"
   spctl --assess --type execute --verbose=2 "$app"
 fi

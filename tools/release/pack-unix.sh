@@ -40,11 +40,15 @@ else
   trap 'rm -rf "$icon_dir"' EXIT
   python3 tools/release/macos-icon.py src/Tractr.App/Assets/app-icon-256.png "$icon_dir/Tractr.icns"
   args+=(--noInst --bundleId com.jxholdings.tractr --icon "$icon_dir/Tractr.icns")
-  # apple-signing.sh sets MACOS_SIGNING; dry runs and releases without Apple credentials are unsigned.
+  # apple-signing.sh sets MACOS_SIGNING. Dry runs and releases without Apple credentials are
+  # ad-hoc signed (identity "-"): macOS calls a downloaded app with no signature "damaged" and
+  # offers no way to open it, while an ad-hoc signed one can be allowed in System Settings.
   if [[ "${MACOS_SIGNING:-false}" == true ]]; then
     : "${MACOS_SIGN_IDENTITY:?Signing requires a Developer ID Application identity}"
     : "${MACOS_KEYCHAIN:?Signing requires the signing keychain}"
     args+=(--signAppIdentity "$MACOS_SIGN_IDENTITY" --notaryProfile tractr-notary --keychain "$MACOS_KEYCHAIN")
+  else
+    args+=(--signAppIdentity -)
   fi
 fi
 vpk --yes --skip-updates "${args[@]}"

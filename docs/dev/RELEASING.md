@@ -347,9 +347,9 @@ xkbcommon-X11, a desktop display and FUSE 2 for the AppImage. Development `-dev`
 packages are not runtime requirements. Test on a clean Ubuntu 22.04/24.04 system,
 not just the build runner.
 
-The macOS PR jobs also publish, package and launch an unsigned app for a short
+The macOS PR jobs also publish, package and launch an ad-hoc signed app for a short
 startup check. These smoke bundles do not include all offline export templates
-and are not release deliverables. Download the unsigned `Tractr-mac-test-*`
+and are not release deliverables. Download the `Tractr-mac-test-*`
 artifacts from the PR's CI run to test startup and editor behavior before merging;
 `macos-15` is Apple Silicon and `macos-15-intel` is Intel. CI uploads the ZIP before
 the startup check so a failed check does not hide the package needed to debug it.
@@ -358,7 +358,7 @@ For complete Mac and Linux test packages, run **Release** on `main` with
 `dry_run=true` and download its `editor-osx-arm64`, `editor-osx-x64` and
 `editor-linux-x64` artifacts. Dry runs do not require Apple signing credentials
 and do not publish a release. Completed packages are retained even when a smoke
-check fails; that failure still prevents publication. Downloaded unsigned Mac
+check fails; that failure still prevents publication. Downloaded ad-hoc signed Mac
 apps may require a local Gatekeeper exception for testing.
 
 `editor-unix` builds on matching native runners (Linux x64, macOS arm64 and
@@ -369,7 +369,10 @@ AppImage and extracts and launches each Mac ZIP using the same startup script
 as PR CI. The Mac gate rechecks all offline templates inside the extracted app;
 signed releases additionally require strict code-signature verification, a valid
 stapled notarization ticket and Gatekeeper assessment. A failure blocks artifact
-collection and publication. Unsigned dry runs skip only the signature checks.
+collection and publication. Without a Developer ID the app is signed ad-hoc
+(`codesign -s -`), because macOS reports a downloaded app with no signature as
+"damaged" and offers no way to open it; those builds are checked with
+`codesign --verify --deep --strict` and skip only notarization and Gatekeeper.
 The final inventory requires every editor package and feed;
 a missing platform cannot silently produce a Windows-only release.
 
@@ -392,8 +395,8 @@ To sign and notarize the macOS editor, provision these secrets in the protected
 The job imports them into a temporary keychain, lets Velopack sign with hardened
 runtime entitlements, notarize, staple and assess the app, then deletes the
 keychain and temporary credential files even on failure. No credentials are
-needed for unsigned dry runs. Like Windows without `WINDOWS_SIGN_PARAMS`, a live
-release with none of these secrets warns and publishes the Mac editor unsigned:
+needed for dry runs. Like Windows without `WINDOWS_SIGN_PARAMS`, a live
+release with none of these secrets warns and publishes the Mac editor ad-hoc signed:
 it still passes the template and startup checks, but Gatekeeper blocks the first
 launch until the user allows it in System Settings > Privacy & Security. A live
 release with only some of them fails. Only the `.app` ZIP is distributed, so no
@@ -402,7 +405,7 @@ Developer ID Installer certificate is needed.
 Before publishing the first release on either platform:
 
 1. Run the complete release workflow with `dry_run=true` and inspect all required
-   assets, checksums and test results. The Mac dry-run ZIP is unsigned.
+   assets, checksums and test results. The Mac dry-run ZIP is ad-hoc signed.
 2. On both Mac architectures, validate the app with Gatekeeper (signed and
    notarized once Apple credentials are provisioned),
    launch from Applications, open/save a project, test Command shortcuts and

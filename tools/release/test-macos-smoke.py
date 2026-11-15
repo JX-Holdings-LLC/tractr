@@ -52,10 +52,14 @@ class MacSmokeTest(unittest.TestCase):
             args.append('--require-signature')
         return subprocess.run(args, env=self.env, capture_output=True, text=True, timeout=10)
 
-    def test_unsigned_dry_run_launches_without_signing_tools(self):
+    def test_ad_hoc_signed_package_checks_only_the_signature(self):
         result = self.run_gate()
         self.assertEqual(0, result.returncode, result.stderr)
-        self.assertFalse((self.root / 'calls').exists())
+        self.assertEqual(['codesign'], (self.root / 'calls').read_text().splitlines())
+
+    def test_broken_signature_blocks_an_ad_hoc_signed_package(self):
+        self.env['FAIL_TOOL'] = 'codesign'
+        self.assertNotEqual(0, self.run_gate().returncode)
 
     def test_live_release_requires_all_signature_checks(self):
         result = self.run_gate(signed=True)

@@ -379,7 +379,7 @@ jobs:
         Path('release-notes.md').write_text(notes, encoding='utf-8')
         PY
         dotnet tool install -g vpk --version "$VPK_VERSION"
-    # Without any Apple credentials this warns and packages the Mac editor unsigned.
+    # Without any Apple credentials this warns and the Mac editor is signed ad-hoc, not notarized.
     - name: Import Apple signing and notarization credentials
       if: runner.os == 'macOS' && !inputs.dry_run
       shell: bash

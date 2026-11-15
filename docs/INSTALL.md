@@ -56,9 +56,18 @@ On Ubuntu 24.04 the first and last are called `libasound2t64` and
    [`Tractr-osx-x64-Portable.zip`](https://github.com/JX-Holdings-LLC/tractr/releases/latest/download/Tractr-osx-x64-Portable.zip) for an
    Intel Mac.
 2. Unzip it and move `Tractr.app` to Applications.
-3. Until the Mac app is signed and notarized, macOS blocks the first launch:
-   open **System Settings → Privacy & Security** and choose **Open Anyway**
-   for Tractr.
+3. Open Tractr. Until the Mac app is notarized by Apple, macOS blocks the
+   first launch (*"Apple could not verify…"*): choose **Done**, open
+   **System Settings → Privacy & Security**, scroll to **Security** and
+   choose **Open Anyway** for Tractr.
+
+Tractr 0.12.0 and older say *"Tractr is damaged and can't be opened"*
+instead and offer no **Open Anyway**. Download the latest version, or allow
+the copy you have in Terminal:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Tractr.app
+```
 
 The Mac editor uses Command where this documentation says Ctrl. It exports
 Windows, Linux and web games; a macOS game target is not available yet.
