@@ -1,80 +1,61 @@
 # Tractr roadmap
 
-What Tractr does today, and what comes next. Finished work is recorded in
-[CHANGELOG.md](CHANGELOG.md); this page looks ahead.
+A creator should be able to ship a multi-season village farming RPG or an alien greenhouse economy from the same 2D engine. The village tests whether the genre systems work together for a full game. The greenhouse tests whether a creator actually owns the rules, art and interface. A small custom minigame in each tests the boundary between the editor and code.
 
-## Where Tractr is
+## Where creators can start today
 
-Tractr makes complete 2D farming games without code. The editor covers
-maps (up to 512×512 tiles, with layers, autotiling, tall objects and
-lights), a world vocabulary creators define themselves (terrains, tools,
-item kinds, crop qualities, the sky), crops, animals, machines and
-buildings, fishing, forage and mines, people with routines, relationships
-and heart events, quests, request boards, festivals and cutscenes, events
-with conditions and outcomes, skills, perks and buffs, long-term goals,
-optional combat, custom art and sound, and content packs with sandboxed
-plugins. Projects are folders that teams can keep in git. Export Game builds
-Windows and Linux games (Steam Deck ready) and a web demo, all running the
-same deterministic Rust player as the editor's Play Mode. The
-[Creator guide](docs/CREATOR-GUIDE.md) describes all of it.
+The baseline is **0.12.1**, reviewed at `c249cd7`. Creators can already paint and link maps, import Tiled and LDtk scenes, import Aseprite clips and audio, layer characters, animate tools and skin fonts, panels, slots and HUD icons. They can author crops, animals, machines, shops, fishing, mines, combat, schedules, relationships, festivals and quests. Dialogue supports branches, conditions and translations. Cutscenes support actors, camera, choices, audio, animation and skip behavior. Content tables, bulk edits, test states and a command-line balancing lab already exist. [Creator guide](docs/CREATOR-GUIDE.md) · [Authoring at scale](docs/AUTHORING-AT-SCALE.md)
 
-## Next
+Creators can ship JavaScript project scripts and sandboxed content packs. Code can read state, define conditions and outcomes, create entities and timers, display widget-based screens, and run minigames. The editor ships on macOS as well as Windows and Linux. **Game exports** cover Windows, Linux/Steam Deck and a web demo. Open tracker tickets overlap the 0.12 release, so check each ticket's remaining acceptance criteria before scheduling it. [Release history](CHANGELOG.md) · [Plugin API](docs/PLUGINS.md) · [Export guide](docs/EXPORT.md) · [Full-game tracker](https://github.com/JX-Holdings-LLC/tractr/issues/224)
 
-### Playing together
+## 1. Fix what creators cannot trust today
 
-- [ ] **Local and online co-op.** The deterministic engine and its command
-  log are a good base for lockstep multiplayer: a shared farm, separate
-  inventories and energy, and a split-screen or networked player.
+The Linux editor opened and a Fixture Farm Linux export matched the reference cartridge and replay. A second check used a copy of Willow Lane with a project script granting one Carp on day start and a Carp Stew recipe consuming it. The exercise used the windowed player, its autosaves, the headless player and the authoring CLI. On Linux, 1,162 .NET tests and 1,242 Rust tests passed. The Rust run used a virtual display and software Vulkan, with 5 tests marked ignored. Windows, macOS and browser builds were outside this hands-on check.
 
-### Shipping games
+| Priority and evidence | What a creator sees | Acceptance check |
+|---|---|---|
+| P0 · Reproduced across quit and Continue | In the windowed game, sleeping twice produced a day-three autosave with one Carp. Restoring the day-two autosave and sleeping once produced a day-three autosave with zero. Morning autosave writes game state while the reward is still queued for the next tick. A player loses a scripted reward by continuing from a normal save. [Session timing](crates/farm-player/src/session.rs) · [Autosave](crates/farm-player/src/player.rs) | Persist pending effects or save at a settled simulation boundary. Compare uninterrupted and resumed games after the same inputs. Each morning reward arrives exactly once, including after repeated loads. |
+| P0 · Reproduced in the player CLI | The compiled cartridge contains the script. After sleep and 20 ticks, the headless save reaches day two with an empty inventory and no warning. The replay steps the simulation directly and misses the plugin host used by the player. A scripted game's regression test can pass while testing different rules. [Headless runner](crates/farm-player/src/headless.rs) · [Player session](crates/farm-player/src/player.rs) | Run the same scripted morning in Play Mode, a standalone game and headless replay. All three grant exactly one Carp, retain it on reload and agree on gameplay state. Keep existing simulation-only golden replays reproducible. |
+| P1 · Reproduced in the authoring CLI | On the same project, `farmc check` reports two warnings, including “Recipe \"Carp Stew\" can never be made.” The graph accounts for enabled pack plugins when deciding certainty but overlooks project scripts. Creators may redesign valid progression to silence Problems. [Graph checks](src/FarmEngine.Authoring/ChecksGraph.fs) | Allow a creator to declare a scripted source, or report an unknown source with an explanation. Keep the warning for a genuinely unreachable recipe in a data-only game. |
+| P1 · Documented export behavior | Keeping playtest changes can put test progress into the opening of the shipped game. A late-game save is a poor way to discover a broken first day. [Export internals](docs/dev/EXPORT-INTERNALS.md#open-questions) | Author a starting kit and spawn, keep a late-game edit, then export. New Game starts at the authored opening. Deliberately promoting a test state to the opening is an explicit, previewable action. |
+| P2 · Reported in the previous roadmap, needs a visual regression check | Starting buildings appear in play but lack an Edit Mode preview. Goals and Mail can push the toolbar onto a second row at 1280×800. These affect map placement and handheld usability. [Previous roadmap](https://github.com/JX-Holdings-LLC/tractr/blob/c249cd781284775ff76bb38ef94d2fa6f7bade46/ROADMAP.md) | Compare the footprint of a starter barn in Edit and Play. Capture the full toolbar at 1280×800 with both features on, and reach every action by controller at larger text sizes. |
 
-- [ ] **macOS games.** An `.app` export target, with signing and
-  notarization by the creator's own Apple Developer account
-  ([Export internals](docs/dev/EXPORT-INTERNALS.md#open-questions)).
-- [ ] **Steamworks.** Achievements (projects already store a `steamId`), the
-  overlay and Steam Input, as an optional player feature with its own
-  template.
-- [ ] **A clean start state.** An explicit "a new game starts here" state, so
-  playtest changes kept with Keep changes don't ship as a game's opening.
-- [ ] **Player-installed mods** for exported games.
-- [ ] **Web demo options**, such as ending the demo after a number of days.
+## 2. Milestones and release gates
 
-### The editor
+The order reflects dependencies. Work on assets and narrative tools can proceed alongside simulation changes once the project format and regression examples are agreed. Use the village and greenhouse as small playable examples from milestone A onward, expanding both as features land. The gates below are proposed release criteria.
 
-- [ ] **Localization** of the rest of the editor UI (tabs, forms and
-  Problems) and of the Creator guide. The game's interface and the engine's
-  own messages are translated already.
-- [ ] **Farm-building polish**: Edit Mode draws the buildings a game starts
-  with (they show in play); the game's toolbar keeps one row at 1280×800 when
-  a game has Goals and Mail.
-- [ ] **Code signing** of the Windows installer and notarization of the Mac
-  app ([Releasing](docs/dev/RELEASING.md#unsigned-builds-and-smartscreen)).
-- [ ] **A balancing lab**: run thousands of seeds through the engine and
-  chart gold per day per crop or strategy, flagging dominant crops.
-- [ ] **Text beyond Latin, Greek and Cyrillic** in the game's fonts, and
-  right-to-left text.
+| Milestone | What to build and why | How a creator proves it works |
+|---|---|---|
+| **A. Make the rules belong to the project** | Separate date rollover, recovery, collapse and teleportation. Make farming, stamina, sleep and combat selectable. Add typed player, scene and object properties with units, bounds and threshold effects. Connect them to existing conditions, saves and HUD widgets. A calendar reskin alone cannot model two greenhouses with different atmospheres. | An artist builds a continuously running workshop with no forced bedtime. Next they build two greenhouses with independent pressure and a player with both oxygen and stamina. Cross midnight and reload mid-shift. Existing farm projects retain their authored behavior. |
+| **B. Give crafting the depth farming already has** | Extend exact-item recipes with tagged alternatives, catalysts, fuel, quality transfer, shared unlock conditions and persistent queues. Add reusable interactive behaviors with instance-local state. Connect outputs to shops, orders, tool upgrades and relationships so production can sustain a whole campaign. | One recipe accepts two kinds of ore, retains the forge tool, consumes fuel and transfers quality. Queue jobs in two furnaces, fill the output inventory, save and reload. Each machine resumes its own job and quantities balance. |
+| **C. Give creators ownership of every visible surface** | Build on existing importers and skins with a searchable asset/reference browser, batch replacement, missing-art reports and preview of reimports. Add an editable layout and data bindings for built-in screens, starting with inventory, hotbar, crafting, shop and dialogue. Include slot groups, focus order, tooltips and text scaling. Extend replacement coverage to terrain, crop stages, people, portraits, tools, item icons, buildings, effects, pointers, title art, fonts and audio. | Reskin one project as a space settlement. Reimport a taller character and an animated crop without breaking references. Replace the backpack with a controller-navigable cargo grid and a custom detail pane. Audit the exported game for stock art, text or sounds the creator did not choose. |
+| **D. Direct stories and scenes at production scale** | Keep script and form editing. Add a linked dialogue graph and scene timeline with a stage preview, camera tracks, actor blocking and audio cues. Show callers, unreachable branches and the conditions behind each choice. Let a writer jump to a named test state and preview a translation in context. | Stage a festival across two maps. A relationship and a quest change its dialogue and ending. Play, skip and replay every branch, verify rewards occur once, and check long translated text, portrait changes, actor positions and camera framing in the exported scene. |
+| **E. Make unusual mechanics easy to add and explain** | Package the existing typed API, project scripts, screens and minigame hooks into a create/run/test workflow with runnable examples and source-linked errors. Add deterministic decision hooks before weather, growth, price and depletion take effect. Specify ordering, conflicts and fallback. Add a no-code trace for event conditions, queued jobs and state changes. The existing weather notification arrives after the night has applied its effects. | A plugin author builds a pollination minigame using custom art, scoring and an inventory reward. A second extension changes a storm before it waters crops. A designer binds both in the editor, sees why a trigger failed, and gets the same results after reload, replay and export. [Hook timing](docs/PLUGINS.md#timing) |
+| **F. Prove a full game can ship and survive updates** | Maintain two playable reference projects, named late-game test states and old release saves. Use the existing balancing lab and progression graph to check economies and quest gates. Expand item/scene migration coverage to NPCs, crops, quests and extension-owned state. Profile saves and large frames on target hardware. | Play from a blank save through a full village year with seasons, crops, animals, upgrades, mining/fishing, marriage or another relationship arc, and a festival payoff. Complete a production chain on the alien planet, including a scripted minigame. Export both, update each with renamed content, then resume old saves with their inventory, story and machine state intact. |
 
-### The player
+Relevant open design work covers [system selection](https://github.com/JX-Holdings-LLC/tractr/issues/243), [environmental properties](https://github.com/JX-Holdings-LLC/tractr/issues/244), [reusable behaviors](https://github.com/JX-Holdings-LLC/tractr/issues/245), [crafting rules](https://github.com/JX-Holdings-LLC/tractr/issues/246), [rule replacement](https://github.com/JX-Holdings-LLC/tractr/issues/247) and [runtime debugging](https://github.com/JX-Holdings-LLC/tractr/issues/248).
 
-- [ ] **GPU effects**: season palette swaps and weather particles as passes
-  of the wgpu renderer, each with a CPU equivalent or a clear "GPU only"
-  rule; drawing circles, strokes and blurs in the shader instead of as
-  CPU-rasterized sprites; and the GPU path for the editor's Play Mode.
-- [ ] **Gamepad rebinding** in the controls menu (keys are rebindable today).
-- [ ] **Faster large frames**: capping the UI's internal resolution,
-  skipping unchanged menu frames and upscaling straight into the window's
-  buffer.
+### Measure whether development gets quicker
 
-### The engine
+Give a first-time creator the Starter Farm, a sprite sheet and a written recipe. Ask them to add an animated crop, process its harvest, have a villager request the result, and export a playable build. Record elapsed time, manual edits outside the editor and points where they need help on 0.12.1. Repeat with new creators after milestones B–E. For a developer, repeat the exercise with a custom minigame that grants the reward. Use those observed times to set release targets. Shipping a feature only helps if creators can find and use it.
 
-- [ ] **Saving off the simulation thread**, to meet the 1 ms save budget.
-- [ ] The **Future** designs in [Architecture](docs/dev/ARCHITECTURE.md#future-not-built):
-  interned cartridge content, a condition and dialogue language, units of
-  measure on authored quantities, and generated FFI bindings.
+### Shipping and longer-term work
 
-## Proposing something
+- **Accessibility and distribution.** Carry forward controller rebinding, broader font coverage and right-to-left text, editor and guide localization, Windows signing, Mac notarization, macOS game export, Steamworks and configurable web demo endings. Test the actual exported packages with keyboard and controller.
+- **Performance.** Measure save stalls against the existing 1 ms simulation-thread budget. Move save I/O off that thread and check interrupted writes. Profile large UI frames before adding upscaling, unchanged-frame reuse and GPU effects. Compare CPU and GPU output, including editor Play Mode.
+- **After the single-player gates.** Player-installed mods need discoverability, compatibility and recovery when a mod is removed. Local and online co-op need separate player state, shared-inventory conflict handling and replay coverage for extensions. Revisit console export with a platform partner and a target game. Track interned cartridge content, authored units, condition-language work and generated bindings as enabling engineering. [Architecture](docs/dev/ARCHITECTURE.md#future-not-built) · [Console export discussion](https://github.com/JX-Holdings-LLC/tractr/issues/202)
 
-Open an [issue](https://github.com/JX-Holdings-LLC/tractr/issues) that says
-what a creator or player would be able to do. For engine work, the
-[architecture checklist](docs/dev/ARCHITECTURE.md#checklist-adding-an-editor-feature)
-says where each part of a feature goes.
+## 3. Engine comparison for a 2D farming and crafting game
+
+“Built in” means a creator gets the workflow with the engine. Teams using a general engine can build these capabilities or adopt third-party packages. The final Tractr row is a target assessed by the release gates above.
+
+| Engine | Farm, craft and social simulation | Art, inventory and UI | Dialogue and scenes | Custom code and principal trade-off |
+|---|---|---|---|---|
+| **Tractr 0.12.1** | Built-in crops, animals, crafting, machines, schedules, romance, quests and festivals. Fixed assumptions remain around sleep and production. | Aseprite, Tiled/LDtk, layered people, custom assets and UI skins. Built-in inventory layout choices are limited. | Branching scripts, localized text, linked maps and step-based cutscenes. | JavaScript project scripts, pack plugins, screens, entities and minigames. Hook timing and headless coverage constrain some mechanics. |
+| **Godot** | Team builds or adopts the simulation, content schema and save model. | Tilemaps, animation, Control nodes and themes give direct layout control. | Scene composition and AnimationPlayer are built in. The team chooses dialogue and quest tooling. | GDScript, C# and native extensions give broad control. The team owns the integration. [Godot documentation](https://docs.godotengine.org/en/stable/) |
+| **Unity** | Team integrates its own systems or third-party farming and narrative packages. | 2D tilemaps, sprites, animation and UI frameworks support bespoke screens. | Scene editor, Timeline and Cinemachine support staging. Writers need a dialogue workflow. | C#, packages and editor tooling support highly custom systems. The team maintains the connections among packages, content and saves. [Unity manual](https://docs.unity3d.com/Manual/) |
+| **GameMaker** | Objects and events support a custom simulation. The team supplies seasonal, relationship and crafting rules. | Sprite and room editors suit 2D worlds. The team designs inventory and HUD behavior. | Rooms and Sequences support staging. Branching narrative and quest data need project tooling. | GML and extensions suit bespoke 2D mechanics. Large content sets need authoring tools or imports. [GameMaker manual](https://manual.gamemaker.io/) |
+| **MonoGame** | Code-first framework. The team owns the simulation, persistence and content tools. | Content pipeline, rendering and input primitives let developers define every screen. | Team supplies a map editor, dialogue editor and scene playback or integrates external tools. | C# gives control over the game loop. This is the framework used by Stardew Valley and has the largest tooling burden in this comparison. [MonoGame showcase](https://monogame.net/showcase/) |
+| **Tractr after milestones A–F** | Configurable systems, environmental resources, flexible production and two completed reference games. | Replaceable presentation plus editable built-in layouts, custom bindings and accessible navigation. | Writer scripts, linked graph, staged scene preview and branch tests share one story model. | A creator can add a minigame, custom screen or simulation rule and verify it in the exported game. The specialization is 2D farming and crafting. |
+
+For the first delivery, fix the lost morning reward, scripted replay and clean export start. Then build one alien greenhouse from imported art through harvest, refining, sale and reload. It is small enough to finish and forces the rules, assets, UI and extension API to work together before the team commits to a year's worth of content.
