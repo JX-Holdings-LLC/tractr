@@ -14,8 +14,8 @@ use crate::snapshot::{
 use farm_sim::cutscenes::{self, CutsceneView};
 use farm_sim::farming::crops;
 use farm_sim::schema::{
-    directions, soil_states, tile_types, wear_slots, AtmosphereSettings, BuildingDefinition, GameContent, GameProject,
-    GameState, LightSource, Scene,
+    directions, soil_states, tile_types, wear_slots, AtmosphereSettings, BuildingDefinition, BuildingState,
+    GameContent, GameProject, GameState, LightSource, Scene,
 };
 use farm_sim::units::{self, MicroMinutes};
 use farm_sim::vocabulary;
@@ -496,35 +496,9 @@ pub fn shell_snapshot(
             }
         })
         .collect();
-    let standing: Vec<(i32, i32, &BuildingDefinition)> = state
-        .buildings
-        .iter()
-        .filter(|building| building.scene_id == scene.id && building.built())
-        .filter_map(|building| {
-            last_by_id(&content.building_types, &building.building_id, |d| &d.id).map(|d| (building.x, building.y, d))
-        })
-        .collect();
+    let standing = standing_buildings(content, &state.buildings, &scene.id);
     let lights = scene_lights(content, scene, &standing, window);
-    let buildings = state
-        .buildings
-        .iter()
-        .filter(|building| building.scene_id == scene.id)
-        .filter_map(|building| {
-            let definition = last_by_id(&content.building_types, &building.building_id, |d| &d.id)?;
-            let (width, height) = definition.size();
-            Some(SnapshotBuilding {
-                x: building.x,
-                y: building.y,
-                width,
-                height,
-                visual: definition.visual.clone(),
-                sprite: None,
-                color: definition.color.clone(),
-                scaffold: !building.built(),
-                door: definition.interior_scene_id.is_some().then(|| definition.door_offset()),
-            })
-        })
-        .collect();
+    let buildings = scene_buildings(content, &state.buildings, &scene.id);
 
     let hat_visual = farm_sim::wardrobe::worn_in(state, wear_slots::HAT)
         .and_then(|worn| worn.item.wear.as_ref())
@@ -585,6 +559,46 @@ fn cutscene_actor(view: Option<&CutsceneView>, actor: &str) -> Option<(String, b
     Some((actor.direction.clone(), actor.moving))
 }
 
+/// The buildings of `scene_id` (M5) as the world draws them, in Play Mode and in Edit Mode alike:
+/// each kind's footprint at its place, a scaffold while it is being built, the door of one with
+/// an interior. A building of a kind the game lacks is left out.
+fn scene_buildings(content: &GameContent, buildings: &[BuildingState], scene_id: &str) -> Vec<SnapshotBuilding> {
+    buildings
+        .iter()
+        .filter(|building| building.scene_id == scene_id)
+        .filter_map(|building| {
+            let definition = last_by_id(&content.building_types, &building.building_id, |d| &d.id)?;
+            let (width, height) = definition.size();
+            Some(SnapshotBuilding {
+                x: building.x,
+                y: building.y,
+                width,
+                height,
+                visual: definition.visual.clone(),
+                sprite: None,
+                color: definition.color.clone(),
+                scaffold: !building.built(),
+                door: definition.interior_scene_id.is_some().then(|| definition.door_offset()),
+            })
+        })
+        .collect()
+}
+
+/// The finished buildings of `scene_id` with their kinds, for the lights they give.
+fn standing_buildings<'a>(
+    content: &'a GameContent,
+    buildings: &[BuildingState],
+    scene_id: &str,
+) -> Vec<(i32, i32, &'a BuildingDefinition)> {
+    buildings
+        .iter()
+        .filter(|building| building.scene_id == scene_id && building.built())
+        .filter_map(|building| {
+            last_by_id(&content.building_types, &building.building_id, |d| &d.id).map(|d| (building.x, building.y, d))
+        })
+        .collect()
+}
+
 /// Port of `ShellSnapshot.BuildEditorSnapshot`: the authored `scene` of `project` with 1px grid
 /// seams and the grid overlay, NPCs and animals at their authored positions, and items hidden
 /// under the player and NPCs. `content` supplies the merged crop, node, machine and species
@@ -642,6 +656,7 @@ pub fn editor_snapshot_window(
 
     // The player marker only belongs on its own scene.
     let on_scene = player.scene_id == scene.id;
+    let start_buildings = project.buildings.as_deref().unwrap_or_default();
     WorldSnapshot {
         width: scene.width,
         height: scene.height,
@@ -657,9 +672,11 @@ pub fn editor_snapshot_window(
         tiles,
         npcs,
         monsters: Vec::new(),
-        buildings: Vec::new(),
+        // The buildings a new game starts with stand where play puts them, so a map is laid
+        // out around their footprints.
+        buildings: scene_buildings(content, start_buildings, &scene.id),
         // The sky preview shows them at night (M8).
-        lights: scene_lights(content, scene, &[], window),
+        lights: scene_lights(content, scene, &standing_buildings(content, start_buildings, &scene.id), window),
         player: SnapshotEntity {
             x: if on_scene { tiles_of(player.x) } else { -1000.0 },
             y: if on_scene { tiles_of(player.y) } else { -1000.0 },
@@ -701,6 +718,58 @@ mod tests {
         assert!(!view.grid_overlay);
         assert!(view.atmosphere.is_some());
         assert_eq!(farm_sim::hash_state(&state), before);
+    }
+
+    /// A starter barn (3×2, with a door) stands on the same tiles in Edit Mode as in play, so a
+    /// map can be laid out around it; one still being built shows its scaffold in both.
+    #[test]
+    fn starting_buildings_have_the_same_footprint_in_edit_mode_and_in_play() {
+        let mut project = starter();
+        let scene_id = project.scenes[0].id.clone();
+        project.building_types = Some(vec![serde_json::from_value(serde_json::json!({
+            "id": "barn", "name": "Barn", "color": "#aa3322", "width": 3, "height": 2,
+            "door": { "x": 1, "y": 1 }, "interiorSceneId": scene_id
+        }))
+        .unwrap()]);
+        let building = |id: &str, x: i32, days_left: u32| -> BuildingState {
+            serde_json::from_value(serde_json::json!({
+                "id": id, "buildingId": "barn", "sceneId": scene_id, "x": x, "y": 3, "daysLeft": days_left
+            }))
+            .unwrap()
+        };
+        project.buildings = Some(vec![building("starter-barn", 4, 0), building("new-barn", 9, 2)]);
+        let content = farm_sim::state::create_content_from_project(&project);
+        let state = farm_sim::state::create_game_state(&project, None);
+        let play = shell_snapshot(
+            &content,
+            &state,
+            &state.world.scenes[0],
+            &SnapshotOptions { tile_size: 32.0, ..Default::default() },
+        );
+        let edit = editor_snapshot(&project, &content, &project.scenes[0], 32.0, 12.0);
+        assert_eq!(edit.buildings, play.buildings);
+        assert_eq!(edit.buildings.len(), 2);
+        let barn = &edit.buildings[0];
+        assert_eq!((barn.x, barn.y, barn.width, barn.height), (4, 3, 3, 2));
+        assert_eq!(barn.door, Some((1, 1)));
+        assert!(!barn.scaffold && edit.buildings[1].scaffold);
+        // Another scene has none of them, and the footprint is painted: Edit Mode's raster
+        // differs from the same map without the barn exactly inside the footprints.
+        if let Some(other) = project.scenes.get(1) {
+            assert!(editor_snapshot(&project, &content, other, 32.0, 12.0).buildings.is_empty());
+        }
+        let mut without = project.clone();
+        without.buildings = None;
+        let bare = editor_snapshot(&without, &content, &without.scenes[0], 32.0, 12.0);
+        assert!(bare.buildings.is_empty());
+        let (with_barn, no_barn) = (crate::render_to_pixmap(&edit, 1.0), crate::render_to_pixmap(&bare, 1.0));
+        let tile = |x: i32, y: i32| -> bool {
+            // Whether any pixel of the tile differs.
+            let (left, top) = ((12.0 + f64::from(x) * 32.0) as u32, (12.0 + f64::from(y) * 32.0) as u32);
+            (top..top + 32).any(|py| (left..left + 32).any(|px| with_barn.pixel(px, py) != no_barn.pixel(px, py)))
+        };
+        assert!(tile(5, 3) && tile(4, 4) && tile(6, 4), "the barn's tiles are drawn");
+        assert!(!tile(1, 8), "tiles away from the buildings are as they were");
     }
 
     #[test]

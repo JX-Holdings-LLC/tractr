@@ -173,14 +173,47 @@ let ``every template and every loadable fixture project matches the schema`` () 
 
     Assert.True(checkedCount >= 5, sprintf "only %d fixture projects checked" checkedCount)
 
-[<Fact>]
-let ``the worked example matches the schema as a single file`` () =
-    match ProjectFiles.readSingleFileText (repo [ "docs"; "examples"; "willow-lane" ]) with
+[<Theory>]
+[<InlineData("willow-lane"); InlineData("pressure-works")>]
+let ``the worked examples match the schema as single files`` (name: string) =
+    match ProjectFiles.readSingleFileText (repo [ "docs"; "examples"; name ]) with
     | Ok text ->
         match Json.parse text with
-        | Ok json -> assertValid "docs/examples/willow-lane" json
+        | Ok json -> assertValid ("docs/examples/" + name) json
         | Error message -> failwith message
     | Error errors -> failwith (String.concat "\n" errors)
+
+/// Pressure Works (#243, #244): a workshop without sleep or farming whose greenhouses keep their
+/// own pressure. It loads without errors or warnings, and its cartridge is the one the player's
+/// tests replay (`crates/farm-player/tests/examples.rs`); after an intended change, record it
+/// with FARM_RECORD_CARTRIDGES=1.
+[<Fact>]
+let ``the pressure works example has no problems and its cartridge is current`` () =
+    let project =
+        match ProjectFiles.load (repo [ "docs"; "examples"; "pressure-works" ]) with
+        | Ok project -> project
+        | Error errors -> failwith (String.concat "\n" errors)
+
+    let problems =
+        Problems.collect project |> List.filter (fun p -> p.Severity <> Severity.Info)
+
+    Assert.True(problems.IsEmpty, sprintf "%A" (problems |> List.map (fun p -> p.Code, p.Message)))
+    let rules = project.Settings.Rules |> Option.get
+    Assert.Equal(Some SleepPolicies.None, rules.Sleep)
+    Assert.Equal(Some false, rules.Farming)
+    Assert.Equal<string list>([ "pressure"; "oxygen" ], defaultArg project.Properties [] |> List.map (fun p -> p.Id))
+
+    let path = repo [ "fixtures"; "golden"; "cartridges"; "pressure-works.cart" ]
+
+    let bytes = CartridgeCompiler.Compile project
+
+    if Environment.GetEnvironmentVariable "FARM_RECORD_CARTRIDGES" = "1" then
+        File.WriteAllBytes(path, bytes)
+
+    Assert.True(
+        File.Exists path && File.ReadAllBytes path = bytes,
+        "fixtures/golden/cartridges/pressure-works.cart is not what docs/examples/pressure-works compiles to (FARM_RECORD_CARTRIDGES=1 records it)"
+    )
 
 /// The record types `GameProject` reaches, by name.
 let private reachableRecords () =

@@ -1,0 +1,45 @@
+{
+  "id": "greenhouse-a",
+  "name": "Greenhouse A",
+  "width": 12,
+  "height": 12,
+  "tileGrid": {
+    "palette": [
+      {
+        "type": "grass",
+        "background": "grass",
+        "overlay": null,
+        "object": null,
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      }
+    ],
+    "rows": [
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0"
+    ]
+  },
+  "transitions": [
+    {
+      "fromX": 5,
+      "fromY": 11,
+      "toSceneId": "scene-main",
+      "toX": 2,
+      "toY": 1
+    }
+  ],
+  "npcs": [],
+  "events": [],
+  "indoor": true
+}

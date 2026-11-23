@@ -182,8 +182,7 @@ pub fn read(ctx: &EngineContext, state: &GameState, name: &str) -> Option<i64> {
 /// The value of `definition` for the HUD and other readers without an engine context: the
 /// player's, or (scene scope) that of the scene the player is in; `None` for an object property
 /// or a scene without it.
-pub fn value_in_view(content: &GameContent, state: &GameState, definition: &PropertyDefinition) -> Option<i64> {
-    let _ = content;
+pub fn value_in_view(state: &GameState, definition: &PropertyDefinition) -> Option<i64> {
     match definition.scope.as_str() {
         property_scopes::PLAYER => Some(clamp(definition, stored(state, &definition.id).unwrap_or(definition.initial))),
         property_scopes::SCENE => {

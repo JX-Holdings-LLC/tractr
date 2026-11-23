@@ -1,0 +1,9 @@
+{
+  "id": "bar-copper",
+  "name": "Copper Bar",
+  "description": "A smelted copper ingot",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 45
+}

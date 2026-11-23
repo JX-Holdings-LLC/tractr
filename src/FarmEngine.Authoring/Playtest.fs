@@ -490,7 +490,7 @@ module Playtest =
             }
             {
                 Label = "Money"
-                Text = sprintf "%d" (int64 project.Player.Money |> int)
+                Text = string (int64 project.Player.Money)
             }
             {
                 Label = "Inventory"

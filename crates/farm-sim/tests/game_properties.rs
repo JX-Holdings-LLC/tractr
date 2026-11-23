@@ -253,14 +253,24 @@ fn an_hour_moves_a_property_by_its_rate_at_any_clock_speed() {
 
 #[test]
 fn a_nights_sleep_passes_for_properties_too() {
-    // The same greenhouses in a game with beds: sleeping from 6:00 to 6:00 is a day of leaking.
-    let (ctx, mut state) = greenhouses(|project| project.settings.rules = None);
+    // The same greenhouses in a game with beds, leaking 1 an hour.
+    let (ctx, mut state) = greenhouses(|project| {
+        project.settings.rules = None;
+        project.properties.as_mut().unwrap()[0].rates[0].per_hour = -MILLI;
+    });
     hours(&ctx, &mut state, 2);
-    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 78);
+    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 88);
+    // Asleep from 8:00 to 6:00: 22 more hours of leaking.
     apply_command(&ctx, &mut state, &Command::Sleep);
     assert_eq!(state.clock.day, 2);
-    // 8:00 to 6:00 is 22 hours: 78 − 132.
-    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 0);
+    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 66);
+    // Back to bed the minute they got up: a whole day.
+    apply_command(&ctx, &mut state, &Command::Sleep);
+    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 42);
+    // Staying up to the day's end (2:00) and collapsing skips the four hours to 6:00.
+    hours(&ctx, &mut state, 20);
+    assert_eq!(state.clock.day, 4);
+    assert_eq!(read(&ctx, &state, "pressure@greenhouse-a"), 42 - 20 - 4);
 }
 
 #[test]

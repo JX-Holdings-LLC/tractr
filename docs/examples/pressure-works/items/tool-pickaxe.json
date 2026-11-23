@@ -1,0 +1,13 @@
+{
+  "id": "tool-pickaxe",
+  "name": "Pickaxe",
+  "description": "Break rocks and mine ore",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 150,
+  "toolType": "pickaxe",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

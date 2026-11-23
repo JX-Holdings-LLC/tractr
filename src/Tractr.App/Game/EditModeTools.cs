@@ -48,10 +48,11 @@ public sealed partial class EditModeView
     private readonly TextBox _sceneFoliage = new() { Name = "SceneFoliageTint", Width = 90, PlaceholderText = "#rrggbb" };
     private readonly TextBox _sceneDaylight = new() { Name = "SceneDaylight", AcceptsReturn = true, MinHeight = 54, PlaceholderText = "360 #ffd8a0" };
     private readonly CheckBox _sceneAllSeasons = new() { Name = "SceneAllSeasons", Content = EditorStrings.Get("scene.allSeasons") };
+    private readonly TextBox _sceneProperties = new() { Name = "SceneProperties", PlaceholderText = "pressure 40, power 10" };
     private readonly TextBox _sceneMonsters = new() { Name = "SceneMonsters", AcceptsReturn = true, MinHeight = 40, PlaceholderText = EditorStrings.Get("scene.monstersPlaceholder") };
     private readonly TextBox _sceneLayers = new() { Name = "SceneLayers", AcceptsReturn = true, MinHeight = 40, PlaceholderText = EditorStrings.Get("scene.layersPlaceholder") };
     /// <summary>The surroundings' text fields as last shown, so a project change refreshes only the untouched ones.</summary>
-    private (string Temperature, string Tags, string Foliage, string Daylight, string Monsters, string Layers) _shownSurroundings;
+    private (string Temperature, string Tags, string Foliage, string Daylight, string Monsters, string Layers, string Properties) _shownSurroundings;
     private readonly Button _removeDoor = new() { Name = "RemoveDoorButton", Content = "Remove door" };
     private readonly StackPanel _transitionList = new() { Name = "TransitionList", Spacing = 6 };
     private readonly TextBlock _transitionCount = Ui.Text("", "muted", "small");
@@ -412,6 +413,10 @@ public sealed partial class EditModeView
         side.Children.Add(Ui.HStack(8, Ui.Text(EditorStrings.Get("scene.temperature"), "muted", "small"), _sceneTemperature, Ui.Text(EditorStrings.Get("common.foliageTint"), "muted", "small"), _sceneFoliage));
         side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.tags"), "muted", "small"), _sceneTags));
         side.Children.Add(Ui.VStack(3, Ui.Text(EditorStrings.Get("scene.daylight"), "muted", "small"), _sceneDaylight));
+        // What the scene's properties start at (#244), saved with the surroundings.
+        AutomationProperties.SetName(_sceneProperties, "Scene property start values");
+        ToolTip.SetTip(_sceneProperties, "What this scene's properties start at, when not at the property's own start value: a property id and a number each (pressure 40, power 10). Properties are made in Settings. Saved with the surroundings.");
+        side.Children.Add(Ui.VStack(3, Ui.Text("Properties start at", "muted", "small"), _sceneProperties));
         // The monsters the scene has each morning (M7), saved with the surroundings.
         AutomationProperties.SetName(_sceneMonsters, EditorStrings.Get("scene.monstersName"));
         ToolTip.SetTip(_sceneMonsters, EditorStrings.Get("scene.monstersTip"));
@@ -437,13 +442,15 @@ public sealed partial class EditModeView
             Foliage: look?.FoliageTint.OrNull() ?? "",
             Daylight: look is null ? "" : SettingsForm.DaylightText(look.Daylight),
             Monsters: SettingsForm.MonsterSpawnsText(scene.Monsters.OrEmpty()),
-            Layers: SettingsForm.SceneLayersText(scene.Layers.OrEmpty()));
+            Layers: SettingsForm.SceneLayersText(scene.Layers.OrEmpty()),
+            Properties: SettingsForm.ScenePropertiesText(scene));
         if (sceneChanged || _sceneTemperature.Text == _shownSurroundings.Temperature) _sceneTemperature.Text = stored.Temperature;
         if (sceneChanged || _sceneTags.Text == _shownSurroundings.Tags) _sceneTags.Text = stored.Tags;
         if (sceneChanged || _sceneFoliage.Text == _shownSurroundings.Foliage) _sceneFoliage.Text = stored.Foliage;
         if (sceneChanged || _sceneDaylight.Text == _shownSurroundings.Daylight) _sceneDaylight.Text = stored.Daylight;
         if (sceneChanged || _sceneMonsters.Text == _shownSurroundings.Monsters) _sceneMonsters.Text = stored.Monsters;
         if (sceneChanged || _sceneLayers.Text == _shownSurroundings.Layers) _sceneLayers.Text = stored.Layers;
+        if (sceneChanged || (_sceneProperties.Text ?? "") == _shownSurroundings.Properties) _sceneProperties.Text = stored.Properties;
         _shownSurroundings = stored;
 
         var music = scene.Music.OrNull() ?? "";
@@ -473,8 +480,10 @@ public sealed partial class EditModeView
             var atmosphere = scene.Atmosphere.OrNull();
             IEnumerable<MonsterSpawn> monsters = scene.Monsters.OrEmpty();
             IEnumerable<SceneLayer> layers = scene.Layers.OrEmpty();
+            var properties = SettingsForm.SceneProperties(SettingsForm.ScenePropertiesText(scene));
             if (fields)
             {
+                properties = SettingsForm.SceneProperties(_sceneProperties.Text);
                 var warmth = (_sceneTemperature.Text ?? "").Trim();
                 temperature = warmth.Length == 0 ? null
                     : double.TryParse(warmth, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) ? value
@@ -490,6 +499,7 @@ public sealed partial class EditModeView
                 Edits.SetSceneEnvironment(scene.Id, dark ?? scene.Dark.OrNullable() == true, temperature, tags, music ?? scene.Music.OrNull(), atmosphere),
                 Edits.SetSceneMonsters(scene.Id, monsters),
                 Edits.SetSceneLayers(scene.Id, layers),
+                Edits.SetSceneProperties(scene.Id, properties),
             ]));
             if (fields) ViewModel.Message = saved ? EditorStrings.Format("scene.savedSurroundings", scene.Name) : EditorStrings.Get("common.noChanges");
         }

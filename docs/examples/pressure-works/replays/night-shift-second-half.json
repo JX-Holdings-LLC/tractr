@@ -1,0 +1,11 @@
+{
+  "inputs": [
+    { "kind": "command", "command": { "type": "performAction", "actionId": "pump" } },
+    { "kind": "tick", "ticks": 2400 }
+  ],
+  "expect": [
+    { "variable": "pressure@greenhouse-a", "value": 18 },
+    { "variable": "pressure@greenhouse-b", "value": 0 },
+    { "variable": "oxygen", "value": 0 }
+  ]
+}

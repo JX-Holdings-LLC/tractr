@@ -65,6 +65,20 @@ keyboard. F5 and F6 always switch modes.
 you return to Edit Mode, unless **Keep changes** was on
 ([Play Mode](CREATOR-GUIDE.md#3-playtest-in-play-mode)).
 
+**My exported game starts in the middle of my playtest**, or a kept playtest
+is not in the export. A playtest kept with **Keep changes** is stored beside
+the game's opening and is never exported: New Game starts from what you
+authored. A project whose opening was played into by an older Tractr still
+has that progress in it; **Settings → Opening** shows what New Game starts
+with, and Export Game says so before it builds
+([the opening](CREATOR-GUIDE.md#the-opening-and-a-kept-playtest)).
+
+**A recipe "can never be made", but my script gives the ingredient.**
+Problems cannot follow code. It counts a project script as a source of the
+items and quests whose ids the script writes as text (`'carp'`), and says so
+once on the item. Write the id out in the script rather than building it
+from pieces.
+
 **A sound or music file doesn't play.** Tractr plays Ogg Vorbis and PCM WAV
 up to 10 minutes. Ogg Opus, compressed WAV and damaged files are Problems
 errors; convert them (Audacity exports Ogg Vorbis).

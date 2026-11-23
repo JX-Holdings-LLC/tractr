@@ -1,0 +1,9 @@
+{
+  "id": "feed-hay",
+  "name": "Hay",
+  "description": "Animal feed — one serving a day keeps them happy",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 3
+}

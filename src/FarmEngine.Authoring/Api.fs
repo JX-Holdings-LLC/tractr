@@ -94,6 +94,10 @@ type Edits =
     static member SetSceneMonsters(sceneId: string, monsters: seq<MonsterSpawn>) : Edit =
         SetSceneMonsters(sceneId, List.ofSeq monsters)
 
+    /// What the scene's properties start at (#244).
+    static member SetSceneProperties(sceneId: string, values: seq<struct (string * float)>) : Edit =
+        SetSceneProperties(sceneId, values |> Seq.map (fun (struct (id, value)) -> id, value) |> List.ofSeq)
+
     /// The scene's extra layers (M8).
     static member SetSceneForageSpawns(sceneId: string, tables: seq<ForageSpawnTable>) : Edit =
         SetSceneForageSpawns(sceneId, List.ofSeq tables)
@@ -1397,6 +1401,31 @@ type SettingsForm =
             }
 
     /// A scene's monster spawns as text, one per line (`SettingsForms.monsterSpawnsText`).
+    /// A scene's property start values as text: `pressure 40, power 10` (#244).
+    static member ScenePropertiesText(scene: Scene) : string =
+        defaultArg scene.Properties []
+        |> List.map (fun (id, value) -> sprintf "%s %s" id (JsNumber.format value))
+        |> String.concat ", "
+
+    /// A scene's property start values from their text; throws `FormatException` naming the entry.
+    static member SceneProperties(text: string | null) : IReadOnlyList<struct (string * float)> =
+        (match text with
+         | null -> ""
+         | text -> text)
+            .Split(
+                [| ','; '\n' |],
+                System.StringSplitOptions.RemoveEmptyEntries
+                ||| System.StringSplitOptions.TrimEntries
+            )
+        |> Array.map (fun entry ->
+            match entry.Split([| ' '; '=' |], System.StringSplitOptions.RemoveEmptyEntries) with
+            | [| id; number |] ->
+                match System.Double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture) with
+                | true, value when not (System.Double.IsNaN value || System.Double.IsInfinity value) -> struct (id, value)
+                | _ -> raise (System.FormatException(sprintf "\"%s\": %s is not a number" entry number))
+            | _ -> raise (System.FormatException(sprintf "\"%s\": write a property id and what it starts at here, like pressure 40" entry)))
+        :> IReadOnlyList<struct (string * float)>
+
     static member MonsterSpawnsText(spawns: seq<MonsterSpawn>) : string =
         SettingsForms.monsterSpawnsText (List.ofSeq spawns)
 

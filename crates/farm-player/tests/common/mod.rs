@@ -138,6 +138,44 @@ pub fn scene(name: &str) -> Player {
             player
         }
         "hud" => new_game(&stores),
+        // Goals and Mail (M6) on the toolbar: at 1280×800 the whole bar stays on one row.
+        "hud-goals-mail" => {
+            let mut project = starter();
+            let item = project.items[0].id.clone();
+            project.collections = Some(vec![serde_json::from_value(
+                serde_json::json!({ "id": "museum", "name": "Museum", "items": [item] }),
+            )
+            .unwrap()]);
+            project.mail = Some(vec![serde_json::from_value(
+                serde_json::json!({ "id": "welcome", "subject": "Welcome", "text": "Hello." }),
+            )
+            .unwrap()]);
+            new_game_of(&stores, &project)
+        }
+        // A workshop that never sleeps (#243) with its own meters (#244): no Sleep button, the
+        // player's oxygen and the scene's pressure beside energy.
+        "hud-properties" => {
+            let mut project = starter();
+            let scene = project.scenes[0].id.clone();
+            project.settings.rules = Some(farm_sim::schema::GameRules {
+                sleep: Some("none".into()),
+                farming: Some(false),
+                ..Default::default()
+            });
+            project.properties = Some(vec![
+                serde_json::from_value(serde_json::json!({
+                    "id": "oxygen", "name": "Oxygen", "scope": "player", "unit": "%", "initial": 64,
+                    "hud": "meter", "color": "#4aa3df"
+                }))
+                .unwrap(),
+                serde_json::from_value(serde_json::json!({
+                    "id": "pressure", "name": "Pressure", "scope": "scene", "unit": "kPa", "initial": 87,
+                    "scenes": [scene], "hud": "number"
+                }))
+                .unwrap(),
+            ]);
+            new_game_of(&stores, &project)
+        }
         "skinned-title" => stores.standalone(&skinned()),
         "skinned-hud" => new_game_of(&stores, &skinned()),
         "skinned-dialogue" => {

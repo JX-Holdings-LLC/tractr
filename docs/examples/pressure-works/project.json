@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 3,
+  "id": "pressure-works",
+  "name": "Pressure Works",
+  "version": "1.0",
+  "scenes": [
+    "scenes/scene-main.json",
+    "scenes/greenhouse-a.json",
+    "scenes/greenhouse-b.json"
+  ],
+  "npcs": [],
+  "items": [
+    "items/tool-axe.json",
+    "items/tool-pickaxe.json",
+    "items/tool-axe-2.json",
+    "items/tool-pickaxe-2.json",
+    "items/material-wood.json",
+    "items/material-stone.json",
+    "items/material-fiber.json",
+    "items/fertilizer-basic.json",
+    "items/fertilizer-quality.json",
+    "items/gift-flower.json",
+    "items/tool-fishing-rod.json",
+    "items/fish-carp.json",
+    "items/fish-perch.json",
+    "items/fish-catfish.json",
+    "items/junk-boot.json",
+    "items/feed-hay.json",
+    "items/ore-copper.json",
+    "items/ore-iron.json",
+    "items/gem-quartz.json",
+    "items/bar-copper.json",
+    "items/bar-iron.json",
+    "items/machine-furnace.json",
+    "items/machine-preserves.json"
+  ],
+  "events": [],
+  "dialogues": [],
+  "quests": [],
+  "player": {
+    "x": 5,
+    "y": 5,
+    "direction": "down",
+    "sceneId": "scene-main",
+    "inventory": [],
+    "maxInventorySize": 20,
+    "money": 100,
+    "activeQuests": [],
+    "completedQuests": []
+  },
+  "eventFlags": {},
+  "startSceneId": "scene-main",
+  "mode": "tiles",
+  "selectedTileType": "grass",
+  "selectedNPCId": null,
+  "selectedItemId": null,
+  "customAssets": [],
+  "currentSeason": "spring",
+  "currentDay": 1,
+  "currentTimeMinutes": 360,
+  "currentYear": 1,
+  "gameStartTime": 1790000000000,
+  "shops": [
+    {
+      "id": "shop-general",
+      "name": "General Store",
+      "stock": [
+        {
+          "itemId": "fertilizer-basic"
+        },
+        {
+          "itemId": "fertilizer-quality",
+          "dailyLimit": 5
+        },
+        {
+          "itemId": "tool-axe"
+        },
+        {
+          "itemId": "tool-pickaxe"
+        },
+        {
+          "itemId": "tool-axe-2"
+        },
+        {
+          "itemId": "tool-pickaxe-2"
+        },
+        {
+          "itemId": "tool-fishing-rod"
+        },
+        {
+          "itemId": "feed-hay"
+        },
+        {
+          "itemId": "machine-furnace"
+        },
+        {
+          "itemId": "machine-preserves"
+        }
+      ],
+      "sellPriceMultiplier": 1,
+      "buysItems": true,
+      "repairsTools": true,
+      "repairCostPerPoint": 0.5
+    }
+  ],
+  "nodeTypes": [],
+  "settings": {
+    "movement": {
+      "playerSpeed": 4.5
+    },
+    "energyEnabled": true,
+    "maxEnergy": 100,
+    "collapseEnergyFraction": 0.5,
+    "collapseMoneyPenalty": 50,
+    "time": {
+      "dayStartMinute": 360,
+      "dayEndMinute": 1560,
+      "minutesPerRealSecond": 1
+    },
+    "calendar": {
+      "seasons": [
+        {
+          "id": "spring",
+          "name": "Spring",
+          "days": 28
+        },
+        {
+          "id": "summer",
+          "name": "Summer",
+          "days": 28
+        },
+        {
+          "id": "fall",
+          "name": "Fall",
+          "days": 28
+        },
+        {
+          "id": "winter",
+          "name": "Winter",
+          "days": 28
+        }
+      ],
+      "festivals": [],
+      "weekdays": [
+        {
+          "id": "monday",
+          "name": "Monday"
+        },
+        {
+          "id": "tuesday",
+          "name": "Tuesday"
+        },
+        {
+          "id": "wednesday",
+          "name": "Wednesday"
+        },
+        {
+          "id": "thursday",
+          "name": "Thursday"
+        },
+        {
+          "id": "friday",
+          "name": "Friday"
+        },
+        {
+          "id": "saturday",
+          "name": "Saturday"
+        },
+        {
+          "id": "sunday",
+          "name": "Sunday"
+        }
+      ]
+    },
+    "skillsEnabled": true,
+    "skillLevelCurve": [
+      0,
+      50,
+      150,
+      300,
+      500,
+      750,
+      1050,
+      1400,
+      1800,
+      2250
+    ],
+    "locale": "en",
+    "showMadeWithCredit": false,
+    "rules": {
+      "sleep": "none",
+      "exhaustion": "rest",
+      "farming": false
+    }
+  },
+  "recipes": [],
+  "machineTypes": [],
+  "weather": {
+    "types": [
+      {
+        "id": "sun",
+        "name": "Sunny",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": null
+      },
+      {
+        "id": "rain",
+        "name": "Rain",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "rain"
+      },
+      {
+        "id": "storm",
+        "name": "Storm",
+        "watersOutdoorSoil": true,
+        "cropDamageChance": 0.03,
+        "npcsStayInside": true,
+        "overlay": "rain"
+      },
+      {
+        "id": "snow",
+        "name": "Snow",
+        "watersOutdoorSoil": false,
+        "cropDamageChance": 0,
+        "npcsStayInside": false,
+        "overlay": "snow"
+      }
+    ],
+    "table": {
+      "spring": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "summer": [
+        {
+          "weatherId": "sun",
+          "weight": 7
+        },
+        {
+          "weatherId": "rain",
+          "weight": 1
+        },
+        {
+          "weatherId": "storm",
+          "weight": 2
+        }
+      ],
+      "fall": [
+        {
+          "weatherId": "sun",
+          "weight": 6
+        },
+        {
+          "weatherId": "rain",
+          "weight": 3
+        },
+        {
+          "weatherId": "storm",
+          "weight": 1
+        }
+      ],
+      "winter": [
+        {
+          "weatherId": "sun",
+          "weight": 5
+        },
+        {
+          "weatherId": "snow",
+          "weight": 5
+        }
+      ]
+    }
+  },
+  "animalSpecies": [],
+  "animals": [],
+  "fishTables": [],
+  "mine": {
+    "enabled": false,
+    "floors": 20,
+    "floorWidth": 14,
+    "floorHeight": 12,
+    "bands": [],
+    "ladderChance": 0.18,
+    "elevatorEvery": 5
+  },
+  "actions": [
+    {
+      "id": "pump",
+      "name": "Run the pump",
+      "description": "",
+      "conditions": [
+        {
+          "type": "scene",
+          "sceneIds": [
+            "greenhouse-a",
+            "greenhouse-b"
+          ]
+        }
+      ],
+      "failMessage": "There is nothing to pump here.",
+      "outcomes": [
+        {
+          "type": "addVariable",
+          "amount": 30,
+          "variable": "pressure"
+        },
+        {
+          "type": "message",
+          "message": "The pump hisses."
+        }
+      ],
+      "energyCost": 5,
+      "hotkey": "p"
+    }
+  ],
+  "minigames": [],
+  "contentPacks": [],
+  "properties": [
+    {
+      "id": "pressure",
+      "name": "Pressure",
+      "scope": "scene",
+      "unit": "kPa",
+      "min": 0,
+      "max": 100,
+      "initial": 90,
+      "scenes": [
+        "greenhouse-a",
+        "greenhouse-b"
+      ],
+      "rates": [
+        {
+          "perHour": -6,
+          "conditions": []
+        }
+      ],
+      "thresholds": [
+        {
+          "compare": "lt",
+          "value": 50,
+          "message": "A greenhouse is losing pressure!",
+          "outcomes": [
+            {
+              "type": "addVariable",
+              "amount": 1,
+              "variable": "alarms"
+            }
+          ]
+        }
+      ],
+      "hud": "number"
+    },
+    {
+      "id": "oxygen",
+      "name": "Oxygen",
+      "scope": "player",
+      "unit": "%",
+      "min": 0,
+      "max": 100,
+      "initial": 100,
+      "rates": [
+        {
+          "perHour": -30,
+          "conditions": [
+            {
+              "type": "scene",
+              "sceneIds": [
+                "greenhouse-a",
+                "greenhouse-b"
+              ]
+            },
+            {
+              "type": "variable",
+              "name": "pressure",
+              "compare": "lt",
+              "value": 50
+            }
+          ]
+        },
+        {
+          "perHour": 60,
+          "conditions": [
+            {
+              "type": "not",
+              "conditions": [
+                {
+                  "type": "all",
+                  "conditions": [
+                    {
+                      "type": "scene",
+                      "sceneIds": [
+                        "greenhouse-a",
+                        "greenhouse-b"
+                      ]
+                    },
+                    {
+                      "type": "variable",
+                      "name": "pressure",
+                      "compare": "lt",
+                      "value": 50
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "thresholds": [
+        {
+          "compare": "le",
+          "value": 0,
+          "message": "You are out of air!",
+          "outcomes": [
+            {
+              "type": "modifyEnergy",
+              "amount": -25
+            }
+          ]
+        }
+      ],
+      "hud": "meter",
+      "color": "#4aa3df"
+    }
+  ]
+}

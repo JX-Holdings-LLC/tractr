@@ -720,3 +720,117 @@ fn failed_request_log_shows_deadline_and_actual_rolled_objective() {
     assert!(texts.iter().any(|text| text.contains("Collect 9 ×")), "{texts:?}");
     assert!(!texts.iter().any(|text| text.contains("Outdated template target")), "{texts:?}");
 }
+
+/// A game with goals (a collection) and mail, like the full farming sample.
+fn with_goals_and_mail(project: &mut farm_sim::GameProject) {
+    let item = project.items[0].id.clone();
+    project.collections =
+        Some(vec![
+            serde_json::from_value(serde_json::json!({ "id": "museum", "name": "Museum", "items": [item] })).unwrap()
+        ]);
+    project.mail = Some(vec![serde_json::from_value(
+        serde_json::json!({ "id": "welcome", "subject": "Welcome", "text": "Hello." }),
+    )
+    .unwrap()]);
+}
+
+/// #5 of the roadmap's fixes: with Goals and Mail the toolbar no longer drops to a second row
+/// at 1280×800. Every button is there, on the stats' row, inside the screen.
+#[test]
+fn goals_and_mail_keep_the_toolbar_on_one_row_at_1280x800() {
+    let mut fixture = Fixture::with(with_goals_and_mail);
+    fixture.size = (1280.0, 800.0);
+    fixture.idle();
+    fixture.idle();
+    let keys = ["inventory", "quests", "craft", "goals", "mail", "sleep", "menu"];
+    let tools: Vec<_> = keys
+        .iter()
+        .map(|key| fixture.ui.last_rect(WidgetId::new("hud").with(*key)).unwrap_or_else(|| panic!("no {key} button")))
+        .collect();
+    let row = tools[0].y;
+    assert!(tools.iter().all(|rect| (rect.y - row).abs() < 0.5), "one row: {tools:?}");
+    assert!(tools.iter().all(|rect| rect.x >= 0.0 && rect.right() <= 1280.0), "{tools:?}");
+    for (a, b) in tools.iter().zip(tools.iter().skip(1)) {
+        assert!(a.right() <= b.x, "{a:?} overlaps {b:?}");
+    }
+    // The stats share the row: the bar is one row high (its bottom is where toasts start).
+    assert!(fixture.game_ui.toasts.top < 70.0, "the bar is one row: toasts start at {}", fixture.game_ui.toasts.top);
+    // The buttons still do their jobs.
+    assert_eq!(fixture.click(WidgetId::new("hud").with("goals")), [GameAction::TogglePanel(Panel::Goals)]);
+    assert_eq!(fixture.click(WidgetId::new("hud").with("mail")), [GameAction::TogglePanel(Panel::Mail)]);
+    assert_eq!(command(&fixture.click(WidgetId::new("hud").with("sleep"))), Some(&Command::Sleep));
+
+    // Larger text keeps the words and wraps instead: nothing is cut off or lost.
+    fixture.text_scale = 1.4;
+    fixture.idle();
+    fixture.idle();
+    let larger: Vec<_> =
+        keys.iter().map(|key| fixture.ui.last_rect(WidgetId::new("hud").with(*key)).unwrap()).collect();
+    assert!(larger.iter().all(|rect| rect.x >= 0.0 && rect.right() <= 1280.0), "{larger:?}");
+    assert!(fixture.texts().iter().any(|text| text == "Goals"), "{:?}", fixture.texts());
+}
+
+/// A game without sleep or farming (#243) has no Sleep button and no hints for their keys.
+#[test]
+fn the_hud_follows_the_games_rules() {
+    let mut fixture = Fixture::with(|project| {
+        project.settings.rules = Some(farm_sim::schema::GameRules {
+            sleep: Some("none".into()),
+            farming: Some(false),
+            ..Default::default()
+        });
+    });
+    fixture.size = (1920.0, 1080.0);
+    fixture.idle();
+    fixture.idle();
+    assert!(fixture.ui.last_rect(WidgetId::new("hud").with("sleep")).is_none());
+    assert!(fixture.ui.last_rect(WidgetId::new("hud").with("menu")).is_some());
+    let texts = fixture.texts();
+    assert!(!texts.iter().any(|text| text.starts_with("Sleep") || text == "Water" || text == "Till"), "{texts:?}");
+    // The classic game has all three.
+    let mut classic = Fixture::starter();
+    classic.size = (1920.0, 1080.0);
+    classic.idle();
+    classic.idle();
+    let texts = classic.texts();
+    assert!(
+        texts.iter().any(|text| text.starts_with("Sleep")) && texts.iter().any(|text| text == "Water"),
+        "{texts:?}"
+    );
+}
+
+/// Properties (#244) with a HUD style show beside energy: the player's, and the value of the
+/// scene the player is in.
+#[test]
+fn properties_show_on_the_hud() {
+    let mut fixture = Fixture::with(|project| {
+        let scene = project.scenes[0].id.clone();
+        project.properties = Some(vec![
+            serde_json::from_value(serde_json::json!({
+                "id": "oxygen", "name": "Oxygen", "scope": "player", "unit": "%", "initial": 80, "hud": "meter"
+            }))
+            .unwrap(),
+            serde_json::from_value(serde_json::json!({
+                "id": "pressure", "name": "Pressure", "scope": "scene", "unit": "kPa", "initial": 55,
+                "scenes": [scene], "hud": "number"
+            }))
+            .unwrap(),
+            serde_json::from_value(serde_json::json!({ "id": "hidden", "name": "Hidden", "scope": "player" })).unwrap(),
+        ]);
+    });
+    fixture.size = (1920.0, 1080.0);
+    fixture.idle();
+    fixture.idle();
+    let texts = fixture.texts();
+    for expected in ["Oxygen:", "80%", "Pressure:", "55 kPa", "Energy:"] {
+        assert!(texts.iter().any(|text| text == expected), "{expected} missing from {texts:?}");
+    }
+    assert!(!texts.iter().any(|text| text.starts_with("Hidden")), "{texts:?}");
+    // The HUD follows the value, and a scene without the property shows none.
+    fixture.state.flags.insert("oxygen".into(), serde_json::json!(12.5));
+    fixture.state.player.scene_id = "somewhere-else".into();
+    fixture.idle();
+    let texts = fixture.texts();
+    assert!(texts.iter().any(|text| text == "12%"), "{texts:?}");
+    assert!(!texts.iter().any(|text| text == "Pressure:"), "{texts:?}");
+}

@@ -567,7 +567,9 @@ is what that building becomes, with its own interior, cost and nights; what
 stood inside stays where the new floor has room. The player's house
 upgrades the same way: add it under **Content → Placed buildings** (its kind,
 scene, top-left tile, with **Pick on map**, and its authored interior
-scene), and its upgrade replaces that scene's floor.
+scene), and its upgrade replaces that scene's floor. Buildings a new game
+starts with are drawn on the map in Edit Mode on the tiles they stand on in
+play, so you can lay out paths and fields around their footprints.
 
 Tick **All seasons (greenhouse)** in a scene's panel (a greenhouse's
 interior) and crops are planted and grow there in any season.
@@ -1032,7 +1034,13 @@ The Settings tab holds what applies to the whole game, in sections:
 - **Mine**: the original mine and its depth bands.
 - **People**, **Farm** and **Combat**: relationships and the character
   creator, the farm scene and layouts, and combat.
+- **Rules**: whether the game has sleep and farming, and what the end of a
+  day and of the player's energy do ([Rules](#rules-games-that-are-not-farms)).
+- **Properties**: numbers the game keeps and shows, such as a player's
+  oxygen or a greenhouse's pressure ([Properties](#properties)).
 - **Player progression**: upgrade limits and skills.
+- **Opening**: what New Game starts with, and the playtest kept beside it
+  ([Playtest in Play Mode](#3-playtest-in-play-mode)).
 - **Export**: what the exported game shows: its title, executable name,
   version, author, company, game id (made once and read-only: it keeps
   players' save folders stable), icon, window size, pixel scale, fullscreen and credits
@@ -1044,6 +1052,80 @@ change it in the game's **Settings → Accessibility → Language**. The engine'
 own messages follow it too ("Not enough money!", the built-in minigames'
 prompts and buttons, save-load notices); what you write (names, dialogue,
 event messages, a minigame's own prompt) shows as you wrote it.
+
+### Rules: games that are not farms
+
+A classic farming day does four things at once when it ends: the date rolls
+over and the night's work is done (crops grow, machines finish, animals age,
+shops restock, schedules pick their day), the player recovers, a player who
+stayed up too long pays the collapse penalty, and the morning starts at the
+day's start. Tick **This game has its own rules: sleep, the day's end,
+exhaustion, farming** under **Rules** and each of those is its own choice.
+A project that leaves the switch off plays exactly as before.
+
+- **Sleep**. *Required* is the classic day: it ends in bed or in a collapse.
+  *Optional* keeps sleeping (a night's sleep still restores everything), but a
+  day nobody slept through just rolls over at the day's end: no penalty, and
+  the player carries on where they stand. *None* is a game without sleep: the
+  clock runs round the whole day, the date rolls over at midnight, the Sleep
+  button and its key are gone, and what the player had open stays open.
+- **Day End** and **Exhaustion** override what the sleep choice implies:
+  the day's end can collapse the player or only roll the date, and an empty
+  energy bar can collapse the player or leave them worn out. A worn-out
+  player keeps walking and talking, but tools and actions that cost energy
+  do nothing until some energy returns (food, an outcome, the next rollover).
+- **Rollover Energy Fraction** is the share of the player's energy a rollover
+  nobody slept through gives back, from 0 to 1. Left empty it is nothing
+  where the player may sleep and all of it where nobody sleeps.
+- **Farming** off removes tilling, watering, planting and harvesting, their
+  key hints, and crop growth: crops painted on a map are scenery.
+- **Collapse Wake** is where a collapse puts the player (a scene and tile);
+  without one they come to where they fell.
+
+**Workshop: no sleep, no farming** fills the form for a crafting game that
+runs round the clock. Stamina is **Energy enabled** in Gameplay, and combat
+has its own section, so farming, stamina, sleep and combat are each on or
+off by themselves. Machines keep working through a midnight nobody slept:
+their jobs finish by the clock, whatever rolls the date.
+
+### Properties
+
+A property is a number the game keeps for you and can show on the HUD: the
+player's oxygen, a greenhouse's pressure, a tank's charge. Add them under
+**Properties** in Settings (**Add property**, then **Save properties**).
+Each has:
+
+- an **id** and a name, and a **Scope**: the player has one value, every
+  scene has its own, or every placed machine has its own (**Scenes** and
+  **Objects** limit a scene's or a machine's property to some of them);
+- a least and a most (**Min**, **Max**) no change can pass, what it starts
+  at (**Initial**), and a **Unit** written after the number;
+- **Rates**: a change per in-game hour (negative drains, positive
+  recovers) while the rate's conditions hold. The rates that hold add up, and
+  a night's sleep counts the hours it skips;
+- **Thresholds**: outcomes (and a message) that run once each time the value
+  crosses a line, such as oxygen reaching 0 or pressure falling below 50;
+- **Hud**: a meter or a number beside energy. The HUD shows the player's
+  properties and those of the scene the player is in.
+
+A property is a variable with rules, so everything that works with
+variables works with it: the **Variable compares** condition reads it, and
+the **Set variable** and **Add to variable** outcomes change it (within its
+bounds, with its thresholds). Use the property's id as the variable's name.
+For a scene's property the id alone means the scene the player is in, and
+`pressure@scene-greenhouse-b` names another scene's; for a machine's it means
+the machine the player faces. A scene that lacks the property reads 0.
+Inside a property's own rates and thresholds, another property's id means
+the same scene or machine, so "oxygen drains while `pressure` is below 50"
+follows the player from room to room.
+
+Two scenes can start the same property at different values: type them in the
+scene panel's **Properties start at** box (`pressure 40, power 10`) and
+**Save surroundings**. A crop can need a property in a range to grow
+(`requirements.properties`, with a `property` id and `min` or `max`): a crop
+in a greenhouse that lost its pressure waits, like one that is too cold.
+Values are saved with the game's other variables, so they survive saving and
+loading, and scripts read and write them as variables.
 
 ### Problems
 
@@ -1121,13 +1203,31 @@ you started, so your farm isn't trampled by testing. The Play Mode toolbar has:
 - **Keep changes**: keep what happened in the playtest when you return: the
   world, the player, flags, the date, and what was open or under way (a
   dialogue or shop, a cutscene that was playing, today's purchases, walking
-  NPCs, the mine floor), so the next playtest starts right there.
+  NPCs, the mine floor), so the next playtest goes on right there.
 - **Debug**: add money, restore energy, skip a day or an hour, change the
   season, give seeds or materials, teleport to a scene and set flags.
-- **States**: play from one of the project's test states, or save the
-  running game as one.
+- **States**: **Play from the opening** starts a new game the way an
+  exported game does; below it, play from one of the project's test states,
+  or save the running game as one.
 
 Plugins that fail show their errors in the debug drawer and as toasts.
+
+### The opening and a kept playtest
+
+What you author in Edit Mode is the **opening**: the map, the player's
+starting kit and place, the date. New Game starts from it, in Play Mode and
+in every exported game. A kept playtest is stored beside the opening, never
+over it: a late-game playtest you kept to go on testing does not become the
+first day of the game you ship. Maps you edit after keeping a playtest show
+as edited when it goes on (what was played on those maps is dropped), and
+maps you left alone keep what the playtest did to them.
+
+**Settings → Opening** lists what a new game starts with, and, when a
+playtest is kept, where it left off and what would change if it became the
+opening. **Make the kept playtest the opening** does that on purpose (shaping
+the first day by playing it, say); **Discard the kept playtest** forgets it.
+Both are one undo step. Export Game and `farmc export` say what New Game
+starts with, so progress in the opening is seen before a build is shared.
 
 ### Test states
 

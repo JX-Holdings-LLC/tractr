@@ -324,12 +324,16 @@ through `IUrlLauncher.OpenFolder`.
   ([steamworks-rs](https://crates.io/crates/steamworks)): a template variant
   that ships Valve's redistributable library, plus the achievements' `steamId`
   the project already stores.
-- **Start state vs. playtest state.** The project mixes the authored start
-  state with state kept from playtests (**Keep changes** writes the day,
-  season, animals, friendships and more back into the project), and the
-  cartridge's start section is built from the project as it is. An exported
-  game needs an explicit "a new game starts here" state, so that a kept
-  playtest doesn't ship as the opening of the game.
+- **Start state vs. playtest state.** Settled: the project's own fields are
+  the opening, and the cartridge's start section is built from them alone.
+  **Keep changes** stores the playtest's final state in `keptPlaytest`
+  (F# `Playtest.keep`), which only the editor's next playtest reads
+  (`Playtest.resume`: the kept state on today's project, with scenes edited
+  since taken as authored). Making it the opening is `Playtest.promote`, an
+  explicit step the Settings tab previews. A project whose opening an older
+  version played into still carries that state; Problems notes it
+  (`export.openingPlayed`) and Export Game and `farmc export` print what New
+  Game starts with.
 - **Player-installed mods** for exported games: see
   [Architecture](ARCHITECTURE.md#open-questions-and-settled-decisions).
 - **Web demo limits.** Should the web target offer a "the demo ends after

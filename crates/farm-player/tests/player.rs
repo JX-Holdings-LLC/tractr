@@ -553,6 +553,51 @@ fn pad_to(player: &mut Player, direction: GamepadButton, target: WidgetId) {
     panic!("the D-pad never reached {target:?}");
 }
 
+/// A gamepad has no button left for Goals and Mail (M6), and the toolbar is the mouse's: the
+/// pause menu offers both, at the default and at a larger text size.
+#[test]
+fn a_gamepad_reaches_goals_and_mail_through_the_pause_menu() {
+    let mut project = common::starter();
+    let item = project.items[0].id.clone();
+    project.collections =
+        Some(vec![
+            serde_json::from_value(serde_json::json!({ "id": "museum", "name": "Museum", "items": [item] })).unwrap()
+        ]);
+    project.mail = Some(vec![serde_json::from_value(
+        serde_json::json!({ "id": "welcome", "subject": "Welcome", "text": "Hello." }),
+    )
+    .unwrap()]);
+    for text_size in [1.0, 1.5] {
+        let stores = Stores::new();
+        let mut player = stores.standalone(&project);
+        let mut settings = player.settings().clone();
+        settings.accessibility.text_size = text_size;
+        player.set_settings(settings);
+        idle(&mut player, 1);
+        pad(&mut player, GamepadButton::South);
+        assert_eq!(player.screen(), ScreenKind::Playing);
+        for (entry, panel) in [("Goals", Panel::Goals), ("Mail", Panel::Mail)] {
+            pad(&mut player, GamepadButton::Start);
+            assert_eq!(player.screen(), ScreenKind::Pause);
+            pad_to(&mut player, GamepadButton::DpadDown, WidgetId::new("pause").with(entry));
+            pad(&mut player, GamepadButton::South);
+            assert_eq!(player.screen(), ScreenKind::Playing, "{entry} at text size {text_size}");
+            assert_eq!(player.panel(), Some(panel));
+            // B closes the panel again.
+            pad(&mut player, GamepadButton::East);
+            assert_eq!(player.panel(), None);
+        }
+    }
+    // A game without goals or mail has neither entry.
+    let stores = Stores::new();
+    let mut player = new_game(&stores);
+    press(&mut player, "escape");
+    assert_eq!(player.screen(), ScreenKind::Pause);
+    assert!(player.widget_rect(WidgetId::new("pause").with("Goals")).is_none());
+    assert!(player.widget_rect(WidgetId::new("pause").with("Mail")).is_none());
+    assert!(player.widget_rect(WidgetId::new("pause").with("Settings")).is_some());
+}
+
 #[test]
 fn a_gamepad_enters_and_leaves_the_rebind_prompt() {
     let stores = Stores::new();

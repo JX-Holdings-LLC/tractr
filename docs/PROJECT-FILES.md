@@ -126,3 +126,9 @@ Copy it, open it in the editor, or check and convert it:
 dotnet run --project src/FarmEngine.Cli -- check docs/examples/willow-lane
 dotnet run --project src/FarmEngine.Cli -- convert docs/examples/willow-lane --out willow-lane.json
 ```
+
+[`docs/examples/pressure-works`](examples/pressure-works) is a second one: a
+workshop that never sleeps, with two greenhouses that each keep their own
+pressure and a player who has oxygen beside energy. It shows a project's
+`settings.rules` and `properties`, and comes with headless replays that play
+it across midnight and through a save and a load.

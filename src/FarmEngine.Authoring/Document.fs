@@ -55,6 +55,7 @@ module Document =
             EditScenes.setSceneEnvironment sceneId dark temperature tags music atmosphere project
         | SetSceneAllSeasons(sceneId, allSeasons) -> EditScenes.setSceneAllSeasons sceneId allSeasons project
         | SetSceneMonsters(sceneId, monsters) -> EditScenes.setSceneMonsters sceneId monsters project
+        | SetSceneProperties(sceneId, values) -> EditScenes.setSceneProperties sceneId values project
         | SetSceneLayers(sceneId, layers) -> EditScenes.setSceneLayers sceneId layers project
         | SetSceneForageSpawns(sceneId, tables) -> EditScenes.setSceneForageSpawns sceneId tables project
         | ResizeScene(sceneId, width, height) -> EditScenes.resizeScene sceneId width height project

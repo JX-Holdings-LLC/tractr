@@ -1,0 +1,51 @@
+{
+  "id": "scene-main",
+  "name": "Workshop",
+  "width": 12,
+  "height": 12,
+  "tileGrid": {
+    "palette": [
+      {
+        "type": "grass",
+        "background": "grass",
+        "overlay": null,
+        "object": null,
+        "collision": false,
+        "soilMoisture": 0,
+        "soilFertility": 0
+      }
+    ],
+    "rows": [
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0",
+      "12*0"
+    ]
+  },
+  "transitions": [
+    {
+      "fromX": 2,
+      "fromY": 0,
+      "toSceneId": "greenhouse-a",
+      "toX": 5,
+      "toY": 10
+    },
+    {
+      "fromX": 9,
+      "fromY": 0,
+      "toSceneId": "greenhouse-b",
+      "toX": 5,
+      "toY": 10
+    }
+  ],
+  "npcs": [],
+  "events": []
+}

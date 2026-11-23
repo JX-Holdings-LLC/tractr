@@ -81,6 +81,8 @@ type Edit =
     | SetSceneAllSeasons of sceneId: string * allSeasons: bool
     /// The monsters the scene has each morning (M7); none is absent.
     | SetSceneMonsters of sceneId: string * monsters: MonsterSpawn list
+    /// What the scene's properties start at (#244), by property id; an empty list: each property's own start value.
+    | SetSceneProperties of sceneId: string * values: (string * float) list
     /// The scene's extra layers (M8); none is absent. A layer left out takes what was painted on
     /// it with it.
     | SetSceneLayers of sceneId: string * layers: SceneLayer list

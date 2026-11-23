@@ -127,7 +127,7 @@ fn a_continuous_day_does_not_close_what_the_player_has_open() {
         project.settings.time.pause_in_modals = Some(false);
     });
     let shop = ctx.content.shops[0].id.clone();
-    state.shop = Some(farm_sim::schema::ShopSession { shop_id: shop, ..Default::default() });
+    state.shop = Some(farm_sim::schema::ShopSession { shop_id: shop });
     run_to_next_day(&ctx, &mut state);
     assert!(state.shop.is_some(), "midnight passes over an open shop");
     // A classic collapse closes it.
@@ -135,7 +135,7 @@ fn a_continuous_day_does_not_close_what_the_player_has_open() {
         fast(project);
         project.settings.time.pause_in_modals = Some(false);
     });
-    state.shop = Some(farm_sim::schema::ShopSession { shop_id: ctx.content.shops[0].id.clone(), ..Default::default() });
+    state.shop = Some(farm_sim::schema::ShopSession { shop_id: ctx.content.shops[0].id.clone() });
     run_to_next_day(&ctx, &mut state);
     assert!(state.shop.is_none());
 }
@@ -313,8 +313,10 @@ fn rules_read_and_write_as_project_json() {
     assert_eq!(serde_json::to_value(&rules).unwrap(), json);
     // Nothing set writes nothing, and an unknown word keeps the classic rule.
     assert_eq!(serde_json::to_value(GameRules::default()).unwrap(), serde_json::json!({}));
-    let mut settings = farm_sim::schema::ProjectSettings::default();
-    settings.rules = Some(GameRules { sleep: Some("sometimes".into()), ..GameRules::default() });
+    let settings = farm_sim::schema::ProjectSettings {
+        rules: Some(GameRules { sleep: Some("sometimes".into()), ..GameRules::default() }),
+        ..Default::default()
+    };
     assert_eq!(Rules::of(&settings), Rules::CLASSIC);
     assert_eq!(serde_json::to_value(farm_sim::schema::ProjectSettings::default()).unwrap().get("rules"), None);
 }

@@ -358,6 +358,19 @@ module internal EditScenes =
                     { scene with Monsters = value })
             project
 
+    /// What a scene's properties start at (#244); none: each property's own start value.
+    let setSceneProperties (sceneId: string) (values: (string * float) list) (project: GameProject) =
+        let value = if values.IsEmpty then None else Some values
+
+        Proj.mapScene
+            sceneId
+            (fun scene ->
+                if scene.Properties = value then
+                    scene
+                else
+                    { scene with Properties = value })
+            project
+
     let setSceneForageSpawns (sceneId: string) (tables: ForageSpawnTable list) (project: GameProject) =
         let value = if tables.IsEmpty then None else Some tables
 

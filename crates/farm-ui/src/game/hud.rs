@@ -348,7 +348,7 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang, clock_style: crate::ski
     // The game's own properties (#244): the player's, and those of the scene the player is in.
     for definition in &content.properties {
         let Some(style) = definition.hud.as_deref() else { continue };
-        let Some(value) = farm_sim::properties::value_in_view(content, state, definition) else { continue };
+        let Some(value) = farm_sim::properties::value_in_view(state, definition) else { continue };
         let milli = i64::from(farm_sim::units::MILLI_ONE);
         let unit = match definition.unit.as_deref().filter(|unit| !unit.is_empty()) {
             // "72%", but "72 kPa".

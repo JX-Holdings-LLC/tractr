@@ -285,7 +285,7 @@ pub fn handle_sleep(ctx: &EngineContext, state: &mut GameState) -> Effects {
 
 /// The clock reached the end of what a day holds (#243): a collapse where the day's end
 /// collapses, else the date rolls over under the player, who carries on. A continuous game
-/// (`in_day`: the minutes of its day, in micro-minutes) keeps the time that ran past midnight.
+/// keeps the time that ran past midnight.
 pub fn end_day(ctx: &EngineContext, state: &mut GameState) -> Effects {
     let rules = crate::schema::Rules::of(&ctx.content.settings);
     if rules.day_end_collapses {
@@ -354,10 +354,12 @@ pub fn roll_day(ctx: &EngineContext, state: &mut GameState, roll: DayRoll) -> Ef
     // The hours a night skips (bed or collapse to the morning) pass for the game's properties
     // too (#244); a date that rolls over under a running clock skips none.
     if roll.carry.is_none() {
+        // From now to the next day's start: a whole day for a player who goes to bed the
+        // minute they got up, nothing when the day's end is the next day's start.
         let time = time_config(&settings.time);
         let day = time.minutes_per_day();
-        let now = units::whole_minute(state.clock.time_minutes) % day;
-        let skipped = (day + time.day_start_minute % day - now) % day;
+        let awake = units::whole_minute(state.clock.time_minutes).saturating_sub(time.day_start_minute);
+        let skipped = day.saturating_sub(awake);
         effects.extend(crate::properties::advance_skipped(ctx, state, skipped));
     }
 

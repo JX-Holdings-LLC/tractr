@@ -1,0 +1,9 @@
+{
+  "id": "material-wood",
+  "name": "Wood",
+  "description": "Sturdy timber from trees and stumps",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 5
+}

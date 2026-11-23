@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.13.0
+
+Fixes to what creators could not trust (roadmap section 1):
+
+- A scripted morning reward is no longer lost by continuing from the day's
+  autosave. What project scripts and plugins answer to a new day is applied
+  as that day starts, and anything still queued is applied before a save is
+  written, so each reward arrives exactly once however often a save is
+  loaded.
+- `farm-player --headless` runs the game's project scripts and pack plugins,
+  through the same session as the window and Play Mode, so a scripted game's
+  replay tests the rules it ships with. The report lists `pluginErrors`. A
+  game without plugins replays as before, hash for hash.
+- Problems no longer says a recipe "can never be made" when a project script
+  gives its ingredient: a script that names an item or quest id counts as its
+  source, reported once as code Problems cannot follow
+  (`graph.itemScriptSource`). A data-only game keeps its warnings.
+- **Keep changes** keeps a playtest beside the game's opening instead of
+  over it. New Game, `farmc` and Export Game start from what was authored;
+  the next playtest goes on from the kept one, **States → Play from the
+  opening** starts a new game, and **Settings → Opening** previews and
+  applies **Make the kept playtest the opening**. Export Game and
+  `farmc export` say what New Game starts with.
+- Buildings a new game starts with are drawn in Edit Mode on the tiles they
+  stand on in play.
+- The game's top bar keeps its stats and whole toolbar on one row at 1280×800
+  with Goals and Mail (icon buttons when labels do not fit; larger text keeps
+  the labels and wraps), and the pause menu has Goals and Mail, so a gamepad
+  reaches them.
+
+Rules that belong to the project (roadmap milestone A):
+
+- **Settings → Rules** separates what a classic night does at once: the date
+  rolling over with the night's work, recovery, the collapse penalty and
+  where the player wakes. Sleep can be required, optional (a day nobody slept
+  through rolls over without a collapse) or absent (the clock runs round the
+  whole day and the date rolls at midnight). Running out of energy can leave
+  the player worn out instead of ending the day, a collapse can wake them at
+  a chosen tile, and farming can be turned off. With stamina and combat,
+  which already had switches, farming, stamina, sleep and combat are each
+  selectable; **Workshop: no sleep, no farming** sets up a crafting game.
+  Projects without rules play exactly as before.
+- **Settings → Properties**: typed numbers for the player, for each scene or
+  for each placed machine, with a unit, bounds, a start value (a scene can
+  have its own), hourly rates that apply while their conditions hold, and
+  thresholds that run outcomes when crossed. They are variables, so the
+  variable condition and the set and add variable outcomes work with them,
+  they are saved with the game, and scripts read and write them. The HUD
+  shows them as meters or numbers beside energy, and a crop can need one
+  within a range to grow.
+- Project files gain `settings.rules`, `properties`, a scene's `properties`
+  and `keptPlaytest`; games that use none of them keep their state hashes.
+
 ## 0.12.2
 
 - Rewrite the roadmap around customizable farming and crafting games: three

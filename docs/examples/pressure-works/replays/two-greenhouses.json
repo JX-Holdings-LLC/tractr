@@ -1,0 +1,11 @@
+{
+  "seed": "shift",
+  "testState": { "id": "in-b", "sceneId": "greenhouse-b", "x": 5, "y": 5 },
+  "inputs": [{ "kind": "tick", "ticks": 2400 }],
+  "expect": [
+    { "scene": "greenhouse-b" },
+    { "variable": "oxygen", "value": 40 },
+    { "variable": "pressure@greenhouse-b", "value": 28 },
+    { "variable": "pressure@greenhouse-a", "value": 78 }
+  ]
+}
