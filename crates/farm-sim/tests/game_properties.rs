@@ -335,6 +335,23 @@ fn a_machines_property_is_its_own() {
     // Each machine charges from when it was placed.
     assert_eq!(read(&ctx, &state, &format!("charge@{scene}:1,1")), 30);
     assert_eq!(read(&ctx, &state, &format!("charge@{scene}:3,1")), 10);
+    // The id alone is the machine the player faces: an action reads and changes that one.
+    assert_eq!(properties::read(&ctx, &state, "charge"), None, "facing no machine");
+    state.player.x = units::tile_center(3);
+    state.player.y = units::tile_center(2);
+    state.player.direction = "up".into();
+    assert_eq!(read(&ctx, &state, "charge"), 10);
+    let top_up = outcome(serde_json::json!({ "type": "addVariable", "variable": "charge", "amount": 5 }));
+    farm_sim::events::apply_outcomes(&ctx, &mut state, std::slice::from_ref(&top_up), 0);
+    assert_eq!(read(&ctx, &state, &format!("charge@{scene}:3,1")), 15);
+    assert_eq!(read(&ctx, &state, &format!("charge@{scene}:1,1")), 30);
+    let drain = outcome(serde_json::json!({ "type": "addVariable", "variable": "charge", "amount": -5 }));
+    farm_sim::events::apply_outcomes(&ctx, &mut state, std::slice::from_ref(&drain), 0);
+    // A write to a machine that is not there changes nothing, and is not a plain variable.
+    let nowhere =
+        outcome(serde_json::json!({ "type": "setVariable", "variable": format!("charge@{scene}:5,1"), "amount": 9 }));
+    farm_sim::events::apply_outcomes(&ctx, &mut state, std::slice::from_ref(&nowhere), 0);
+    assert!(!state.flags.contains_key(&format!("charge@{scene}:5,1")));
     // A tile without a machine has none, and a machine that is taken away takes its value.
     assert_eq!(properties::read(&ctx, &state, &format!("charge@{scene}:5,1")), None);
     let index = state.world.scenes.iter().position(|s| s.id == scene).unwrap();
@@ -342,6 +359,43 @@ fn a_machines_property_is_its_own() {
     hours(&ctx, &mut state, 1);
     assert!(!state.flags.contains_key(&format!("charge@{scene}:1,1")));
     assert_eq!(read(&ctx, &state, &format!("charge@{scene}:3,1")), 20);
+}
+
+/// A machine's rate can read the scene it stands in: a tank charges only while its greenhouse
+/// holds pressure.
+#[test]
+fn a_machines_rate_reads_its_own_scene() {
+    let (ctx, mut state) = greenhouses(|project| {
+        project.properties.as_mut().unwrap()[0].rates.clear();
+        project.properties.as_mut().unwrap().push(PropertyDefinition {
+            id: "charge".into(),
+            name: "Charge".into(),
+            scope: "object".into(),
+            initial: 0,
+            rates: vec![PropertyRate {
+                per_hour: 10 * MILLI,
+                conditions: vec![EventCondition::Not { conditions: vec![variable("pressure", "lt", 50)] }],
+            }],
+            ..PropertyDefinition::default()
+        });
+    });
+    let machine = ctx.content.machine_types[0].id.clone();
+    for scene in ["greenhouse-a", "greenhouse-b"] {
+        let scene = state.world.scenes.iter_mut().find(|s| s.id == scene).unwrap();
+        scene.tiles[1][1].machine =
+            Some(farm_sim::schema::TileMachine { type_id: machine.clone(), ..Default::default() });
+    }
+    // The player is in neither greenhouse: each tank reads its own room (90 kPa and 40 kPa).
+    hours(&ctx, &mut state, 3);
+    assert_eq!(read(&ctx, &state, "charge@greenhouse-a:1,1"), 30);
+    assert_eq!(read(&ctx, &state, "charge@greenhouse-b:1,1"), 0);
+    // The HUD's reader: the player's value, the scene's where the player is, none elsewhere.
+    let pressure = &ctx.content.properties[0];
+    assert_eq!(properties::value_in_view(&state, pressure), None);
+    enter(&mut state, "greenhouse-b");
+    assert_eq!(properties::value_in_view(&state, pressure), Some(40 * MILLI));
+    assert!(properties::value_in_view(&state, &ctx.content.properties[1]).is_some(), "the player's oxygen");
+    assert_eq!(properties::value_in_view(&state, &ctx.content.properties[2]), None);
 }
 
 #[test]
