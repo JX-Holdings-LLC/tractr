@@ -10,7 +10,9 @@
 //! - Plugins see every step's hook events (engine hooks, then one `onEffect` per effect), and
 //!   their mutations enter the command log at one fixed point per tick (right before it), so a
 //!   mutation answering tick `k` applies before tick `k + 1` at any frame rate, and a replay of
-//!   the command log is deterministic.
+//!   the command log is deterministic. A step that starts a new day settles at once
+//!   ([`PlaySession::settle`]): what plugins answer to the morning is in the state before the
+//!   host autosaves it, so a game continued from that save has the morning's rewards exactly once.
 //! - Minigames are hosted here: the UI forwards presses and choices, and a finished minigame
 //!   enters the command log exactly once as `resolveMinigame`. A kind a pack plugin defines runs
 //!   in the plugin sandbox ([`SessionPlugins::start_minigame`]), one `update` and `draw` per
@@ -283,7 +285,16 @@ pub struct PlaySession {
     action: Option<crate::actions::Playback>,
     /// The plugin screens the game can open (#240).
     plugin_screens: Vec<PluginScreenEntry>,
+    /// True while [`Self::settle`] runs (a settling step that starts a day does not nest).
+    settling: bool,
+    /// Every step's effects since [`Self::record_effects`], for hosts that report them (the
+    /// headless run); `None`: not kept.
+    recorded: Option<Vec<Effect>>,
 }
+
+/// Rounds [`PlaySession::settle`] drains at most. Chains of plugin reactions end at the
+/// runtime's mutation depth (three links), so this is never reached by a working host.
+const SETTLE_ROUNDS: usize = 8;
 
 /// Commands kept for crash reports.
 pub const RECENT_COMMANDS: usize = 64;
@@ -330,6 +341,8 @@ impl PlaySession {
             action_art: None,
             action: None,
             plugin_screens: Vec::new(),
+            settling: false,
+            recorded: None,
         }
     }
 
@@ -403,11 +416,16 @@ impl PlaySession {
     pub fn new_game(content: GameContent, start: &StartState, seed: Option<&str>) -> Self {
         let game_state = state::create_game_state_from_start(start, seed);
         let mut session = Self::new(content, game_state);
-        // Hook events of the auto-start stay on the bus until plugins attach (see
-        // [`Self::set_plugins`]), as the web and C# bridges listen before the game starts.
-        quests::auto_start_quests(&session.ctx, &mut session.state);
-        session.sync_minigame();
+        session.auto_start_quests();
         session
+    }
+
+    /// Begins the quests that start on their own, as hosts do at game start. Their hook events
+    /// stay on the bus until plugins attach (see [`Self::set_plugins`]), as the web and C#
+    /// bridges listen before the game starts.
+    pub fn auto_start_quests(&mut self) {
+        quests::auto_start_quests(&self.ctx, &mut self.state);
+        self.sync_minigame();
     }
 
     /// Attach the plugin sandbox. Each plugin first hears `onLoad` with the data it saved in
@@ -622,6 +640,68 @@ impl PlaySession {
         if let Some(plugins) = self.plugins.as_mut() {
             plugins.restore_rebuilt(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
         }
+    }
+
+    /// Applies every queued plugin mutation now, and the mutations those steps set off, until
+    /// none is left: the state then holds everything plugins have answered so far. The session
+    /// settles by itself after a step that starts a new day; hosts call this before they write
+    /// the state somewhere it outlives the session (a save, a kept playtest, a report), because
+    /// the queue is not part of the state and a mutation still in it would be lost.
+    pub fn settle(&mut self) {
+        if self.settling || self.plugins.is_none() {
+            return;
+        }
+        self.settling = true;
+        for _ in 0..SETTLE_ROUNDS {
+            let drained = self.plugins.as_mut().map(|plugins| plugins.drain_commands()).unwrap_or_default();
+            if drained.is_empty() {
+                break;
+            }
+            for (command, depth) in drained {
+                self.run_step(&command, depth.saturating_add(1));
+            }
+        }
+        if let Some(plugins) = self.plugins.as_mut() {
+            plugins.restore_rebuilt(&self.state.plugin_data, GameView { ctx: &self.ctx, state: &self.state });
+        }
+        self.settling = false;
+    }
+
+    /// Advances the simulation `ticks` ticks without a display frame or input, one tick at a
+    /// time with the plugin mutations before each, exactly as [`Self::update`] does (the
+    /// headless run and tests).
+    pub fn step_ticks(&mut self, ticks: u64) {
+        for _ in 0..ticks {
+            self.apply_plugin_mutations();
+            let effects = engine::advance_tick(&self.ctx, &mut self.state, 1);
+            self.after_step(effects, 0);
+        }
+    }
+
+    /// Keeps every later step's effects for [`Self::take_effects`].
+    pub fn record_effects(&mut self) {
+        self.recorded.get_or_insert_with(Vec::new);
+    }
+
+    /// The effects recorded since the last call, in order.
+    pub fn take_effects(&mut self) -> Vec<Effect> {
+        self.recorded.as_mut().map(std::mem::take).unwrap_or_default()
+    }
+
+    /// Puts the game in a test state (#229) and answers what the game lacks for it.
+    pub fn apply_test_state(&mut self, test: &farm_sim::schema::TestState) -> Vec<String> {
+        let notes = farm_sim::test_states::apply_test_state(&self.ctx, &mut self.state, test);
+        self.after_debug();
+        notes
+    }
+
+    /// Runs a headless debug shortcut (`farm_sim::test_states::DebugOp`) as a step plugins hear,
+    /// and answers what it could not apply.
+    pub fn apply_debug_op(&mut self, op: &farm_sim::test_states::DebugOp) -> Vec<String> {
+        let (effects, notes) = farm_sim::test_states::apply_debug(&self.ctx, &mut self.state, op);
+        self.after_step(effects, 0);
+        self.after_debug();
+        notes
     }
 
     /// One display frame: sync the held movement intent, advance the fixed-timestep
@@ -846,6 +926,8 @@ impl PlaySession {
             DebugAction::SkipDay => {
                 game_time::perform_sleep(&self.ctx, &mut self.state, game_time::SleepOptions { collapsed: false });
                 self.dispatch_hooks(&[], 0);
+                // A morning like any other: what plugins answer to it is in the state at once.
+                self.settle();
             }
             DebugAction::ApplyTestState { state } => {
                 // What the game lacks is skipped; the creator reads why (Problems lists it too).
@@ -855,6 +937,11 @@ impl PlaySession {
             }
             DebugAction::AddMoney { .. } | DebugAction::AddMinutes { .. } => {}
         }
+        self.after_debug();
+    }
+
+    /// The state changed under the session (debug tooling): nothing interpolates across it.
+    fn after_debug(&mut self) {
         self.prev_player = None;
         self.prev_camera = None;
         self.sync_minigame();
@@ -882,6 +969,10 @@ impl PlaySession {
 
     fn after_step(&mut self, effects: Vec<Effect>, depth: u32) {
         self.dispatch_hooks(&effects, depth);
+        if let Some(recorded) = self.recorded.as_mut() {
+            recorded.extend(effects.iter().cloned());
+        }
+        let day_started = effects.iter().any(|effect| matches!(effect, Effect::DayStarted { .. }));
         for effect in &effects {
             if let Some(cue) = farm_runtime::audio::sfx_for_effect(effect) {
                 self.events.push(SessionEvent::Sound { cue: cue.to_owned() });
@@ -921,6 +1012,11 @@ impl PlaySession {
             }
         }
         self.sync_minigame();
+        // The morning's answers (a script's daily reward) enter the state with the morning, so
+        // the autosave the host writes on `DayStarted` holds them.
+        if day_started {
+            self.settle();
+        }
     }
 
     /// Engine hooks of the step, then one `onEffect` per effect (the order plugins see on the

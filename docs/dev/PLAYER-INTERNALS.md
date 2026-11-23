@@ -13,7 +13,10 @@ exported game, and the same player runs the editor's Play Mode through
   settings and credits around the game (the *game shell*, drawn by
   `farm-ui`). Keyboard, mouse and gamepads work everywhere.
 - **Headless.** `--headless` replays commands without a window and prints a
-  JSON report; CI and the export checks use it.
+  JSON report; CI and the export checks use it. It runs the same
+  `PlaySession` as the window (`headless::run_session_inputs`), with the
+  cartridge's plugins attached, so scripted games replay with their own rules;
+  a cartridge without plugins replays exactly as `farm_sim::replay` does.
 - **Screenshots.** `--screenshot` renders frames without a window and writes
   a PNG; the screenshot goldens and store pictures use it.
 
@@ -143,6 +146,9 @@ The game has three save slots. **New Game** starts in the first free slot (or
 asks for one), and the game **autosaves each morning** to its slot, as farming
 games do. The pause menu saves to any slot (another game's slot asks first) and
 loads any slot. **Continue** on the title screen loads the most recent save.
+Before a save is written the session applies the plugin mutations still
+queued (`PlaySession::settle`; a morning is settled by the session itself),
+so a scripted reward is in the save or not yet given, never lost between.
 
 A save is the binary `FGSV` format (`schemas/save.fbs`): a header (game id,
 game version, cartridge hash), a preview the slot list reads without loading

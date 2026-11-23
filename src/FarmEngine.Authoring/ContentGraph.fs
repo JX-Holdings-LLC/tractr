@@ -23,7 +23,7 @@ type GraphLink =
     {
         /// What gives or takes it: `shop`, `crop`, `recipe`, `drop`, `monster`, `fish`, `animal`,
         /// `mine`, `quest`, `outcome`, `dialogue`, `mail`, `start`, `placed`, `upgrade`, `board`,
-        /// `autoStart` (sources); `ingredient`, `objective`, `gift`, `collection`, `bundle`,
+        /// `autoStart`, `script` (sources; a `script` source is a guess: the script's code names the id); `ingredient`, `objective`, `gift`, `collection`, `bundle`,
         /// `building`, `upgrade`, `seed`, `condition`, `prerequisite`, `machine`, `use` (uses).
         Via: string
         /// The id of the giver or taker (a shop, a recipe, a quest…), empty for `start`.
@@ -383,6 +383,31 @@ module ContentGraph =
                 for key in [ "requiresFlag"; "hiddenIfFlag"; "visibleFlag" ] do
                     text key fields
                     |> Option.iter (fun id -> used flag id (link "condition" "" "Checked in a conversation or panel" [] []))
+
+        // ── Project scripts (#241): what their code names ──
+        // A script gives items and starts quests in code the graph cannot follow. An id the code
+        // writes as a text ('carp', "carp" or `carp`) is taken as something the script may give:
+        // an unknown source, which the checks report as such instead of "nothing gives it".
+        let scripts =
+            orEmpty project.Scripts
+            |> List.filter (fun script -> not script.Disabled && script.Id.Trim() <> "" && script.Source <> "")
+
+        if not (List.isEmpty scripts) then
+            let names' (script: ProjectScript) (id: string) =
+                id <> ""
+                && [ '\''; '"'; '`' ]
+                   |> List.exists (fun quote -> script.Source.Contains(string quote + id + string quote, StringComparison.Ordinal))
+
+            let scriptName (script: ProjectScript) = defaultArg script.Name script.Id
+
+            for script in scripts do
+                for i in content.Items do
+                    if names' script i.Id then
+                        source item i.Id (link "script" script.Id (sprintf "Named by the script %s (it may give it)" (scriptName script)) [] [])
+
+                for q in content.Quests do
+                    if names' script q.Id then
+                        source GraphKinds.Quest q.Id (link "script" script.Id (sprintf "Named by the script %s (it may start it)" (scriptName script)) [] [])
 
         // ── Entries ──
         let keys =

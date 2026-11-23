@@ -226,7 +226,9 @@ covers what an exported game contains.
 - **Plugin hooks.** Plugin mutations are queued and come back as
   commands (`PluginMutationQueue`), drained right before each tick
   (`PlaySession` advances one tick at a time, so they do not depend on the
-  frame rate). The engine lets `onWeatherRoll` listeners return an override
+  frame rate). The queue is not part of the state, so the session settles it
+  (`PlaySession::settle`) after a step that starts a day, and hosts settle
+  before they write a save: a save never loses a queued mutation. The engine lets `onWeatherRoll` listeners return an override
   *during* the nightly step, but plugins never do. So `farm-plugins`' `PluginRuntime` dispatches
   `onWeatherRoll` after the step like any other hook, and installs no
   `WeatherRollListener`; the Problems panel warns about plugins that listen

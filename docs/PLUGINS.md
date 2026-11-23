@@ -494,6 +494,16 @@ Player-installed mods stay in the pack tier; only the project holds scripts.
   order they arrived. The game advances one tick at a time, so this does not
   depend on the frame rate: the same input gives the same game at 30 and at
   144 frames per second.
+- **A morning is settled at once.** Answers to the step that starts a new day
+  (`onDayEnd`, `onDayStart`, the morning's `onEffect`s) run as soon as that
+  step ends, and so do the answers to those. The game autosaves each morning,
+  and that save already holds the morning's rewards: a player who continues
+  from it gets each of them exactly once. Anything still queued when the
+  player saves by hand is applied before the save is written, too.
+- **Headless replays run your code.** `farm-player --headless` loads the
+  cartridge's project scripts and pack plugins and steps the game the same
+  way, so a replay tests the rules the game ships with
+  ([Checking a game](PLAYER.md#checking-a-game-with---headless)).
 - **Chains stop.** A step caused by a plugin mutation does not fire
   `onCommand` or `onEffect`, and mutations three reactions deep are dropped
   (a plugin answering a mutation's hook, another answering that, and so on).

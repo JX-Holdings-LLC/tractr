@@ -105,6 +105,78 @@ let ``an ingredient nothing gives gates its recipe and is a warning`` () =
     Assert.DoesNotContain(after, fun p -> p.Code <> "graph.itemNoUse" && p.Message.Contains "Moon")
 
 [<Fact>]
+let ``a project script that names an item is its unknown source, and a data-only game keeps its warning`` () =
+    let project =
+        template "blank"
+        |> withItem (item "carp" "Carp")
+        |> withItem (item "carp-stew" "Carp Stew")
+
+    let project =
+        { project with
+            Recipes = project.Recipes @ [ recipe "cook-carp-stew" [ "carp" ] "carp-stew" ]
+        }
+
+    let script source =
+        { ProjectScript.Default with
+            Id = "morning-catch"
+            Source = source
+        }
+
+    let gives =
+        "api.on('onDayStart', function () { return [{ type: 'giveItem', itemId: 'carp', quantity: 1 }]; });"
+
+    // Data only: the recipe can never be made, as before.
+    let dataOnly = codes "graph." project
+    Assert.Contains(dataOnly, fun p -> p.Code = "graph.recipeGated" && p.Severity = Severity.Warning)
+    Assert.Contains(dataOnly, fun p -> p.Code = "graph.itemNoSource" && p.Message.Contains "Carp" && p.Severity = Severity.Warning)
+    Assert.DoesNotContain(dataOnly, fun p -> p.Message.Contains "script")
+
+    // The script gives the carp: no warning, and one note that says the source is code.
+    let scripted =
+        { project with
+            Scripts = Some [ script gives ]
+        }
+
+    let graph = codes "graph." scripted
+    Assert.DoesNotContain(graph, fun p -> p.Code = "graph.recipeGated" || p.Code = "graph.itemNoSource" && p.Message.Contains "\"Carp\"")
+    Assert.DoesNotContain(graph, fun p -> p.Severity <> Severity.Info && p.Message.Contains "Carp")
+
+    let note =
+        graph |> List.filter (fun p -> p.Code = "graph.itemScriptSource") |> List.exactlyOne
+
+    Assert.Equal(Severity.Info, note.Severity)
+    Assert.Contains("morning-catch", note.Message)
+
+    let entry =
+        ContentGraph.ofProject scripted
+        |> ContentGraph.tryFind GraphKinds.Item "carp"
+        |> Option.get
+
+    Assert.Equal("script", (List.exactlyOne entry.Sources).Via)
+
+    // A script that does not name the carp, or one that is off, leaves the warning, with how to declare it.
+    for other in
+        [
+            script "api.on('onDayStart', function () { return [{ type: 'giveMoney', amount: 5 }]; });"
+            { script gives with Disabled = true }
+        ] do
+        let graph =
+            codes
+                "graph."
+                { project with
+                    Scripts = Some [ other ]
+                }
+
+        Assert.Contains(graph, fun p -> p.Code = "graph.recipeGated" && p.Severity = Severity.Warning)
+
+        let noSource =
+            graph
+            |> List.find (fun p -> p.Code = "graph.itemNoSource" && p.Message.Contains "\"Carp\"")
+
+        Assert.Equal(Severity.Warning, noSource.Severity)
+        Assert.Equal(not other.Disabled, noSource.Message.Contains "in quotes")
+
+[<Fact>]
 let ``circular and dead-end quest prerequisites are found`` () =
     let quest id prerequisites autoStart =
         { Quest.Default with

@@ -6,7 +6,9 @@ open FarmEngine.Schemas
 /// nothing uses), quest prerequisites that loop or wait on a quest nothing starts, recipes and
 /// quests gated behind an item the game never gives, and season mismatches. Plugins can give
 /// items and start quests in ways the graph cannot see, so with pack plugins installed every
-/// graph finding is info.
+/// graph finding is info. A project script (#241) counts as a source of the items and quests its
+/// code names: the graph reports that source as unknown (`graph.itemScriptSource`) instead of
+/// calling what depends on it unreachable, and a data-only game keeps its warnings.
 module internal ChecksGraph =
     let private needingKinds =
         set [ "ingredient"; "objective"; "bundle"; "building"; "upgrade"; "collection" ]
@@ -42,6 +44,17 @@ module internal ChecksGraph =
         let hasSources kind id =
             entryOf kind id |> Option.exists (fun e -> not (List.isEmpty e.Sources))
 
+        let scriptsRun =
+            defaultArg project.Scripts []
+            |> List.exists (fun script -> not script.Disabled && script.Id.Trim() <> "" && script.Source <> "")
+
+        // What a creator with scripts needs to know when the graph still finds no source.
+        let scriptHint =
+            if scriptsRun then
+                " If a project script gives it, write its id in the script as a text (in quotes): Problems then counts the script as a source."
+            else
+                ""
+
         // Items.
         for item in content.Items do
             let entry = entryOf GraphKinds.Item item.Id
@@ -62,7 +75,18 @@ module internal ChecksGraph =
                     severity,
                     "graph.itemNoSource",
                     itemPath item.Id,
-                    sprintf "Nothing in the game gives \"%s\" (no shop, crop, recipe, drop, reward or event)%s." item.Name why,
+                    sprintf "Nothing in the game gives \"%s\" (no shop, crop, recipe, drop, reward or event)%s.%s" item.Name why scriptHint,
+                    target
+                )
+            elif needed && sources |> List.forall (fun s -> s.Via = "script") then
+                // Only code gives it: say so once, on the item, rather than warn about what needs it.
+                sink.Info(
+                    "graph.itemScriptSource",
+                    itemPath item.Id,
+                    sprintf
+                        "Only a project script gives \"%s\" (%s). Problems cannot follow code, so it takes the script's word for it: play the game to check that it does."
+                        item.Name
+                        (sources |> List.map (fun s -> s.Id) |> List.distinct |> String.concat ", "),
                     target
                 )
             elif not (obtainable GraphKinds.Item item.Id) then

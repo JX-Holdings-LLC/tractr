@@ -1612,6 +1612,8 @@ impl Player {
         let background = self.ui.theme().colors.background;
         let lang = self.ui.lang();
         let Some(game) = self.game.as_mut() else { return };
+        // Plugin mutations still queued are not part of the state: apply them, or the save loses them.
+        game.session.settle();
         let mut preview = SavePreview::of_state(game.session.state());
         preview.farm_name = self.def.info.title.clone();
         preview.play_seconds = game.play_seconds.floor();

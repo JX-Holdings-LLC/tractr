@@ -85,6 +85,56 @@ fn new_game_walk_sleep_autosave_quit_and_continue() {
     assert_eq!(player.current_slot(), Some(1));
 }
 
+/// A project script's morning reward (the roadmap's carp): the day's autosave holds it, so a game
+/// continued from any morning's save has had every reward exactly once.
+#[test]
+fn a_scripted_morning_reward_survives_quit_and_continue() {
+    let mut project = common::starter();
+    let item = project.items[0].id.clone();
+    let source = format!("api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});");
+    project.scripts = Some(vec![serde_json::from_value(serde_json::json!({ "id": "carp", "source": source })).unwrap()]);
+    let held = |state: &farm_sim::GameState| -> u32 {
+        state.player.inventory.iter().filter(|slot| slot.item.id == item).map(|slot| slot.quantity).sum()
+    };
+    let saved = |stores: &Stores, player: &Player| {
+        let bytes = farm_player::SaveStore::read(&stores.saves, 1).unwrap();
+        let content = player.session().unwrap().content();
+        let loaded = save_file::load_save_bytes(&bytes, &save_file::SaveTarget::for_project(&project, content), content);
+        assert!(loaded.ok, "{:?}", loaded.errors);
+        loaded.state.unwrap()
+    };
+
+    // Uninterrupted: two sleeps, two carp, and the day-three autosave agrees.
+    let stores = Stores::new();
+    let mut player = common::new_game_of(&stores, &project);
+    assert!(player.plugin_errors().is_empty(), "{:?}", player.plugin_errors());
+    let before = held(player.state().unwrap());
+    press(&mut player, "z");
+    let day_two = farm_player::SaveStore::read(&stores.saves, 1).unwrap();
+    assert_eq!(held(&saved(&stores, &player)), before + 1, "the day-two autosave holds the first carp");
+    press(&mut player, "z");
+    assert_eq!(player.state().unwrap().clock.day, 3);
+    assert_eq!(held(player.state().unwrap()), before + 2);
+    let uninterrupted = saved(&stores, &player);
+    assert_eq!(held(&uninterrupted), before + 2);
+
+    // Resumed: quit, Continue from the day-two autosave (twice over), sleep once.
+    for _ in 0..2 {
+        let stores = Stores::new();
+        let mut saves = stores.saves.clone();
+        farm_player::SaveStore::write(&mut saves, 1, &day_two).unwrap();
+        let mut player = stores.standalone(&project);
+        idle(&mut player, 1);
+        press(&mut player, "enter");
+        assert_eq!(player.screen(), ScreenKind::Playing);
+        assert_eq!(player.state().unwrap().clock.day, 2);
+        assert_eq!(held(player.state().unwrap()), before + 1, "loading gives nothing again");
+        press(&mut player, "z");
+        assert_eq!(held(player.state().unwrap()), before + 2);
+        assert_eq!(held(&saved(&stores, &player)), before + 2, "the resumed day-three autosave");
+    }
+}
+
 #[test]
 fn closing_the_window_during_a_game_asks_first() {
     let stores = Stores::new();
