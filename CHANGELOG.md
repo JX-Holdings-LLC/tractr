@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.2
+
+- Rewrite the roadmap around customizable farming and crafting games: three
+  reproduced problems to fix first, six milestones with acceptance checks for
+  two reference games, and a comparison with other engines. No engine or
+  editor behavior changes.
+
 ## 0.12.1
 
 - Fix the Mac editor, which macOS refused to open with *"Tractr is damaged
