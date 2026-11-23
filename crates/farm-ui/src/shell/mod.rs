@@ -31,6 +31,10 @@ pub enum ShellAction {
     Resume,
     OpenSave,
     QuitToTitle,
+    /// Close the menu and open the goals panel (M6).
+    OpenGoals,
+    /// Close the menu and open the mailbox (M6).
+    OpenMail,
     /// Leave the current screen.
     Back,
     // Save slots.

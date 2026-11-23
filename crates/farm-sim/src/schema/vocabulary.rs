@@ -336,6 +336,9 @@ pub struct GrowthRequirements {
     /// Fertilizer items it must be planted with (one of them); empty: none needed.
     pub fertilizers: Vec<String>,
     pub neighbors: Vec<NeighborRequirement>,
+    /// Properties (#244) that must be within a range for it to grow: its scene's pressure, say.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Vec<super::PropertyRange>>,
 }
 
 impl GrowthRequirements {

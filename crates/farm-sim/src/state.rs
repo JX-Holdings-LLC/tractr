@@ -89,6 +89,7 @@ pub fn create_base_content_from_project(project: &GameProject) -> GameContent {
         mail: project.mail.clone().unwrap_or_default(),
         monsters: project.monsters.clone().unwrap_or_default(),
         save_migrations: project.save_migrations.clone().unwrap_or_default(),
+        properties: project.properties.clone().unwrap_or_default(),
     }
 }
 

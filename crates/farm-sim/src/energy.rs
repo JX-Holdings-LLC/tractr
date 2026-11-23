@@ -1,13 +1,15 @@
 //! Energy (port of `Energy.cs` / energy.ts).
 //!
 //! Player energy (M2). Per-action costs come from tool definitions; hitting zero collapses the
-//! player, ending the day with a penalty. Toggleable per project (settings.energyEnabled).
+//! player, ending the day with a penalty. Toggleable per project (settings.energyEnabled). A
+//! game's rules (#243) may leave the player worn out at zero instead of collapsing them.
 
 use crate::effects::Effect;
 use crate::engine_types::{Effects, EngineContext};
 use crate::game_time::{self, SleepOptions};
 use crate::messages;
 use crate::schema::GameState;
+use crate::schema::Rules;
 use crate::schema::ToolDefinition;
 use crate::units;
 
@@ -31,8 +33,18 @@ pub fn effective_energy_cost(definition: &ToolDefinition, tier: i32) -> i32 {
     units::points(i32::try_from(whole_points.max(1)).unwrap_or(i32::MAX))
 }
 
+/// Whether the player is too worn out for something that costs `amount` energy (#243): in a
+/// game where running out does not collapse the player, nothing that costs energy works at zero.
+/// Never with energy off, for something free, or where exhaustion collapses.
+pub fn too_tired(ctx: &EngineContext, state: &GameState, amount: i32) -> bool {
+    ctx.content.settings.energy_enabled
+        && amount > 0
+        && state.player.energy <= 0
+        && !Rules::of(&ctx.content.settings).exhaustion_collapses
+}
+
 /// Spend `amount` energy (thousandths of a point); running out collapses the player, which ends
-/// the day. Nothing happens with energy off.
+/// the day, or (#243) leaves them worn out. Nothing happens with energy off.
 pub fn spend_energy(ctx: &EngineContext, state: &mut GameState, amount: i32) -> EnergySpendResult {
     if !ctx.content.settings.energy_enabled || amount <= 0 {
         return EnergySpendResult { effects: Vec::new(), collapsed: false };
@@ -42,8 +54,17 @@ pub fn spend_energy(ctx: &EngineContext, state: &mut GameState, amount: i32) -> 
     let after = before.saturating_sub(amount);
     let mut effects: Effects = Vec::new();
 
+    let rules = Rules::of(&ctx.content.settings);
     if after <= 0 {
         state.player.energy = 0;
+        if !rules.exhaustion_collapses {
+            // Worn out (#243): the day goes on, and nothing that costs energy works until some
+            // returns ([`too_tired`]). Said once, on the spend that emptied it.
+            if before > 0 {
+                effects.push(Effect::say("info", &messages::WORN_OUT));
+            }
+            return EnergySpendResult { effects, collapsed: false };
+        }
         let sleep_effects = game_time::perform_sleep(ctx, state, SleepOptions { collapsed: true });
         effects.extend(sleep_effects);
         return EnergySpendResult { effects, collapsed: true };
@@ -53,7 +74,9 @@ pub fn spend_energy(ctx: &EngineContext, state: &mut GameState, amount: i32) -> 
     let max = i64::from(state.player.max_energy);
     let divisor = i64::from(LOW_ENERGY_DIVISOR);
     if i64::from(after) * divisor <= max && i64::from(before) * divisor > max {
-        effects.push(Effect::say("info", &messages::EXHAUSTED));
+        // "Consider sleeping" only where there is sleep.
+        let warning = if rules.can_sleep { &messages::EXHAUSTED } else { &messages::GETTING_TIRED };
+        effects.push(Effect::say("info", warning));
     }
 
     state.player.energy = after;

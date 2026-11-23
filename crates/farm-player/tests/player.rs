@@ -91,15 +91,19 @@ fn new_game_walk_sleep_autosave_quit_and_continue() {
 fn a_scripted_morning_reward_survives_quit_and_continue() {
     let mut project = common::starter();
     let item = project.items[0].id.clone();
-    let source = format!("api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});");
-    project.scripts = Some(vec![serde_json::from_value(serde_json::json!({ "id": "carp", "source": source })).unwrap()]);
+    let source = format!(
+        "api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});"
+    );
+    project.scripts =
+        Some(vec![serde_json::from_value(serde_json::json!({ "id": "carp", "source": source })).unwrap()]);
     let held = |state: &farm_sim::GameState| -> u32 {
         state.player.inventory.iter().filter(|slot| slot.item.id == item).map(|slot| slot.quantity).sum()
     };
     let saved = |stores: &Stores, player: &Player| {
         let bytes = farm_player::SaveStore::read(&stores.saves, 1).unwrap();
         let content = player.session().unwrap().content();
-        let loaded = save_file::load_save_bytes(&bytes, &save_file::SaveTarget::for_project(&project, content), content);
+        let loaded =
+            save_file::load_save_bytes(&bytes, &save_file::SaveTarget::for_project(&project, content), content);
         assert!(loaded.ok, "{:?}", loaded.errors);
         loaded.state.unwrap()
     };

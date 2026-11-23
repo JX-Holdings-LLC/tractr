@@ -97,6 +97,9 @@ pub struct GameContent {
     /// Rules for saves written before a game update (#242), applied when they load.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub save_migrations: Vec<super::upkeep::SaveMigration>,
+    /// Creator-defined properties (#244).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub properties: Vec<super::PropertyDefinition>,
 }
 
 pub const CURRENT_CONTENT_VERSION: u32 = 1;

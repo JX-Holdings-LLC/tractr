@@ -178,6 +178,12 @@ fn extension_field(record: &str, field: &str) -> bool {
             | ("ProjectSettings", "scripts")
             | ("PackPermissions", "entities" | "itemUses" | "read" | "screens")
             | ("PackPlugin", "conditions" | "entities" | "itemUses" | "outcomes" | "screens")
+            // Game rules (#243), properties (#244) and the kept playtest.
+            | ("ProjectSettings", "rules")
+            | ("GameContent", "properties")
+            | ("GameProject", "properties" | "keptPlaytest")
+            | ("Scene", "properties")
+            | ("GrowthRequirements", "properties")
     )
 }
 

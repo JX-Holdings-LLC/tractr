@@ -44,6 +44,12 @@ enum StatValue {
         ratio: f32,
         text: String,
     },
+    /// A property of the game (#244): a bar like energy's, in the property's colour.
+    Meter {
+        ratio: f32,
+        text: String,
+        color: Option<Color>,
+    },
 }
 
 struct Stat {
@@ -73,7 +79,7 @@ fn stat_width(ui: &Ui, stat: &Stat) -> f32 {
         StatValue::Primary(text) | StatValue::Secondary(text) | StatValue::Plain(text) => {
             ui.measure(text, 13.0, FontId::Bold)
         }
-        StatValue::Energy { text, .. } | StatValue::Health { text, .. } => {
+        StatValue::Energy { text, .. } | StatValue::Health { text, .. } | StatValue::Meter { text, .. } => {
             ENERGY_BAR + if text.is_empty() { 0.0 } else { 8.0 + ui.measure(text, 12.0, FontId::Regular) }
         }
         StatValue::Buff { icon, text } => {
@@ -127,10 +133,13 @@ fn draw_stat(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, rect: Re
             }
             ui.label(area, text, 13.0, FontId::Bold, colors.text, Align::Start);
         }
-        StatValue::Energy { ratio, text } | StatValue::Health { ratio, text } => {
+        StatValue::Energy { ratio, text }
+        | StatValue::Health { ratio, text }
+        | StatValue::Meter { ratio, text, .. } => {
             let bar = Rect::new(x, cy - 5.0, ENERGY_BAR, 10.0);
             let color = match &stat.value {
                 StatValue::Health { .. } => HEALTH,
+                StatValue::Meter { color: Some(color), .. } => *color,
                 _ if *ratio <= 0.2 => colors.error,
                 _ => colors.primary,
             };
@@ -167,6 +176,18 @@ pub(crate) fn prompt(view: &GameView<'_>, device: InputDevice, action: BindActio
     }
 }
 
+/// How much the top bar spells out, from most to least: the first that fits on one row is used.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Density {
+    /// Stat labels, energy numbers, and toolbar buttons with their keys.
+    Full,
+    /// No "Money:", no energy numbers, no keys on the toolbar (the hint row has them).
+    Compact,
+    /// As compact, and the toolbar buttons are their icons: a game with Goals and Mail (M6)
+    /// keeps its stats and its whole toolbar on one row at 1280×800.
+    Icons,
+}
+
 /// A toolbar button: its id (widget ids), icon and label.
 struct Tool {
     key: &'static str,
@@ -175,13 +196,20 @@ struct Tool {
 }
 
 /// The toolbar buttons, left to right: Inventory, Quests, Craft, then Goals and Mail when the
-/// game has them (M6), Sleep and Menu.
-fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang, shown: bool) -> Vec<Tool> {
+/// game has them (M6), Sleep where the game has sleep (#243) and Menu.
+fn toolbar(view: &GameView<'_>, device: InputDevice, density: Density, lang: Lang, shown: bool) -> Vec<Tool> {
     let player = &view.state.player;
-    let inventory = lang.format("toolbar.inventory", &[&player.inventory.len(), &num(player.max_inventory_size)]);
+    let inventory = if density == Density::Icons {
+        // The count is what the label is for; the icon says the rest.
+        format!("{}/{}", player.inventory.len(), num(player.max_inventory_size))
+    } else {
+        lang.format("toolbar.inventory", &[&player.inventory.len(), &num(player.max_inventory_size)])
+    };
     let with_key = |key: &'static str, action: BindAction| {
+        if density == Density::Icons {
+            String::new()
         // Touch screens have no keys to name.
-        if compact || device == InputDevice::Touch {
+        } else if density == Density::Compact || device == InputDevice::Touch {
             lang.tr(key).to_owned()
         } else {
             lang.format("toolbar.withKey", &[&lang.tr(key), &prompt(view, device, action, lang)])
@@ -202,7 +230,10 @@ fn toolbar(view: &GameView<'_>, device: InputDevice, compact: bool, lang: Lang, 
     if super::has_mail(view.content) {
         tools.push(tool("mail", Icon::Mail, with_key("toolbar.mail", BindAction::Mail)));
     }
-    tools.push(tool("sleep", Icon::Moon, with_key("toolbar.sleep", BindAction::Sleep)));
+    // A game without sleep (#243) has no Sleep button.
+    if farm_sim::schema::Rules::of(&view.content.settings).can_sleep {
+        tools.push(tool("sleep", Icon::Moon, with_key("toolbar.sleep", BindAction::Sleep)));
+    }
     tools.push(tool("menu", Icon::Menu, with_key("toolbar.menu", BindAction::Menu)));
     tools
 }
@@ -314,6 +345,30 @@ fn stats(view: &GameView<'_>, compact: bool, lang: Lang, clock_style: crate::ski
             icon: Some("health"),
         });
     }
+    // The game's own properties (#244): the player's, and those of the scene the player is in.
+    for definition in &content.properties {
+        let Some(style) = definition.hud.as_deref() else { continue };
+        let Some(value) = farm_sim::properties::value_in_view(content, state, definition) else { continue };
+        let milli = i64::from(farm_sim::units::MILLI_ONE);
+        let unit = match definition.unit.as_deref().filter(|unit| !unit.is_empty()) {
+            // "72%", but "72 kPa".
+            Some(unit) if unit.chars().all(|c| !c.is_alphanumeric()) => unit.to_owned(),
+            Some(unit) => format!(" {unit}"),
+            None => String::new(),
+        };
+        let whole = |value: i64| num(value.div_euclid(milli));
+        let label = format!("{}:", definition.name);
+        let value = if style == farm_sim::schema::property_hud_styles::NUMBER {
+            StatValue::Plain(format!("{}{unit}", whole(value)))
+        } else {
+            let span = (definition.max - definition.min).max(1);
+            let ratio = ((value - definition.min) as f64 / span as f64).clamp(0.0, 1.0) as f32;
+            let text = if compact { String::new() } else { format!("{}{unit}", whole(value)) };
+            let color = definition.color.as_deref().and_then(Color::parse);
+            StatValue::Meter { ratio, text, color }
+        };
+        stats.push(Stat { label, value, icon: None });
+    }
     let now = farm_sim::crafting::absolute_minute_in(content.settings.time.minutes_per_day(), state);
     for buff in state.player.buffs.iter().filter(|buff| buff.expires_at_minute > now) {
         let minutes = (buff.expires_at_minute - now + i64::from(farm_sim::units::MINUTE) - 1)
@@ -339,22 +394,32 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
 
     // ── Stats and toolbar ──
     // Full labels when everything fits on one row; else compact labels (no "Money:", no energy
-    // numbers, no key hints on the toolbar: the hint row has them); else two rows.
+    // numbers, no key hints on the toolbar: the hint row has them); else icon buttons; else two
+    // rows of the compact labels (larger text on a small screen).
     let bar_outer = Rect::new(12.0, 10.0, screen.width - 24.0, 0.0);
     let inner_width = bar_outer.width - 24.0;
     let button_height = ui.button_height(13.0).min(ROW);
     let mut layout = None;
-    for compact in [false, true] {
-        let stats = stats(view, compact, lang, ui.skin().layout.clock);
+    // The last entry is the fallback when nothing fits on one row: compact labels on two rows.
+    // A player who asked for larger text keeps the words (and gets the two rows) rather than
+    // bare icons.
+    let icons = ui.text_scale() <= 1.0;
+    for (density, last) in
+        [(Density::Full, false), (Density::Compact, false), (Density::Icons, false), (Density::Compact, true)]
+    {
+        if density == Density::Icons && !icons {
+            continue;
+        }
+        let stats = stats(view, density != Density::Full, lang, ui.skin().layout.clock);
         let stat_sizes: Vec<(f32, f32)> = stats.iter().map(|stat| (stat_width(ui, stat), ROW)).collect();
-        let labels = toolbar(view, device, compact, lang, ui.skin().layout.toolbar);
+        let labels = toolbar(view, device, density, lang, ui.skin().layout.toolbar);
         let widths: Vec<f32> =
             labels.iter().map(|tool| ui.button_width(&Button::new(&tool.label).icon(tool.icon))).collect();
         let toolbar_width = widths.iter().sum::<f32>() + 6.0 * widths.len().saturating_sub(1) as f32;
         let stats_width: f32 =
             stat_sizes.iter().map(|(w, _)| w).sum::<f32>() + STAT_GAP * stat_sizes.len().saturating_sub(1) as f32;
         let one_row = stats_width + 24.0 + toolbar_width <= inner_width;
-        if one_row || compact {
+        if one_row || last {
             layout = Some((stats, stat_sizes, labels, widths, toolbar_width, one_row));
             break;
         }
@@ -507,6 +572,7 @@ pub(crate) fn draw(ui: &mut Ui, view: &GameView<'_>, images: &mut ImageStore, ac
 /// The controls hint row with its bottom at `floor`; returns the y just above it.
 fn hint_row(ui: &mut Ui, view: &GameView<'_>, device: InputDevice, lang: Lang, safe: Rect, floor: f32) -> f32 {
     let colors = ui.theme().colors;
+    let rules = farm_sim::schema::Rules::of(&view.content.settings);
     let hints: Vec<(String, &str)> = [
         BindAction::MoveUp,
         BindAction::Interact,
@@ -522,6 +588,12 @@ fn hint_row(ui: &mut Ui, view: &GameView<'_>, device: InputDevice, lang: Lang, s
         BindAction::Menu,
     ]
     .iter()
+    // A game without sleep or farming (#243) does not hint at their keys.
+    .filter(|action| match action {
+        BindAction::Sleep => rules.can_sleep,
+        BindAction::Water | BindAction::Till => rules.farming,
+        _ => true,
+    })
     .map(|action| (prompt(view, device, *action, lang), action.hint(lang)))
     .collect();
     let hint_sizes: Vec<(f32, f32)> = hints

@@ -197,6 +197,8 @@ type Edit =
     | SetExportSettings of settings: ExportSettings option
     /// The project's save migration rules (#242).
     | SetSaveMigrations of rules: SaveMigration list
+    /// The project's properties (#244); an empty list removes them.
+    | SetProperties of properties: PropertyDefinition list
     /// The project's test states (#229).
     | SetTestStates of states: TestState list
     /// ProjectSettingsEditor `removeSeason`: also drops festivals and weather rows of that season; refused for the last season.

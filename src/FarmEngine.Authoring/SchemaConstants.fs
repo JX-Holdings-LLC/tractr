@@ -1265,6 +1265,97 @@ module UiSkinIcons =
             "menu"
         ]
 
+/// How a game sleeps (`GameRules.Sleep`, #243).
+[<RequireQualifiedAccess>]
+module SleepPolicies =
+    /// The day ends in bed or in a collapse (the classic farming day).
+    [<Literal>]
+    let Required = "required"
+
+    /// The player may sleep; a day nobody slept through still ends and the next begins.
+    [<Literal>]
+    let Optional = "optional"
+
+    /// Nobody sleeps: the clock runs round the whole day and the date rolls over at midnight.
+    [<Literal>]
+    let None = "none"
+
+    let All: string list = [ Required; Optional; None ]
+
+/// What the clock reaching the day's end does (`GameRules.DayEnd`, #243).
+[<RequireQualifiedAccess>]
+module DayEndRules =
+    [<Literal>]
+    let Collapse = "collapse"
+
+    [<Literal>]
+    let Rollover = "rollover"
+
+    let All: string list = [ Collapse; Rollover ]
+
+/// What running out of energy does (`GameRules.Exhaustion`, #243).
+[<RequireQualifiedAccess>]
+module ExhaustionRules =
+    [<Literal>]
+    let Collapse = "collapse"
+
+    /// Nothing that costs energy works until some returns.
+    [<Literal>]
+    let Rest = "rest"
+
+    let All: string list = [ Collapse; Rest ]
+
+/// Whose a property is (`PropertyDefinition.Scope`, #244).
+[<RequireQualifiedAccess>]
+module PropertyScopes =
+    /// One value: the player's.
+    [<Literal>]
+    let Player = "player"
+
+    /// One value per scene.
+    [<Literal>]
+    let Scene = "scene"
+
+    /// One value per placed machine.
+    [<Literal>]
+    let Object = "object"
+
+    let All: string list = [ Player; Scene; Object ]
+
+/// How the HUD shows a property (`PropertyDefinition.Hud`, #244).
+[<RequireQualifiedAccess>]
+module PropertyHudStyles =
+    /// A bar from the least to the most it can be.
+    [<Literal>]
+    let Meter = "meter"
+
+    /// The number with its unit.
+    [<Literal>]
+    let Number = "number"
+
+    let All: string list = [ Meter; Number ]
+
+/// How a property threshold compares (`PropertyThreshold.Compare`, #244).
+[<RequireQualifiedAccess>]
+module PropertyComparisons =
+    /// At most.
+    [<Literal>]
+    let Le = "le"
+
+    /// Below.
+    [<Literal>]
+    let Lt = "lt"
+
+    /// At least.
+    [<Literal>]
+    let Ge = "ge"
+
+    /// Above.
+    [<Literal>]
+    let Gt = "gt"
+
+    let All: string list = [ Le; Lt; Ge; Gt ]
+
 /// Where the HUD sits (`UiLayout.HudPosition`).
 [<RequireQualifiedAccess>]
 module UiHudPositions =

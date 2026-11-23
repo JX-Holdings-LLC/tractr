@@ -168,6 +168,19 @@ pub fn handle_use_tool(ctx: &EngineContext, state: &mut GameState, tool_type: &s
         .min(i64::from(i32::MAX)) as i32;
     let area = definition.area_at(tier);
     let tool = &tool_slot.item;
+    // Worn out (#243): a tool that costs energy does nothing until some returns.
+    if energy::too_tired(ctx, state, energy_cost) {
+        return vec![Effect::say(message_levels::INFO, &messages::TOO_TIRED)];
+    }
+    // Without farming (#243) the farming tools have nothing to do.
+    if !crate::schema::Rules::of(&ctx.content.settings).farming
+        && matches!(
+            definition.action.as_str(),
+            tool_actions::WATER | tool_actions::TILL | tool_actions::PLANT | tool_actions::HARVEST
+        )
+    {
+        return vec![Effect::say(message_levels::INFO, &messages::NO_FARMING)];
+    }
     let background = ctx.terrain(&target.tile.background);
 
     let used = if definition.action == tool_actions::ATTACK {
@@ -639,6 +652,11 @@ pub fn handle_interact_with(ctx: &EngineContext, state: &mut GameState, choice: 
     }
     if mines::is_mine_floor(state, &state.player.scene_id) && (target.x, target.y) == mines::FLOOR_ENTRY {
         return mines::exit_mine(ctx, state);
+    }
+
+    // Without farming (#243) crops and soil are scenery: nothing to harvest or plant.
+    if !crate::schema::Rules::of(&ctx.content.settings).farming {
+        return Vec::new();
     }
 
     if let Some(crop) = &target.tile.crop {

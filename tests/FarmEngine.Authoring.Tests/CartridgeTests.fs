@@ -411,6 +411,148 @@ let private engineState (project: GameProject) (clock: (string * Json) list) (re
              |> Option.defaultValue value))
     )
 
+/// A playtest played late into the game: day 40, 9000 gold, a flag, the first tile's terrain changed.
+let private lateState (project: GameProject) =
+    let scenes =
+        match Json.get "scenes" (SchemaJson.encodeGameProject project) with
+        | JArray(JObject first :: rest) ->
+            let played =
+                match Json.get "tiles" (JObject first) with
+                | JArray(JArray(tile :: row) :: rows) -> JArray(JArray(Json.set "soilMoisture" (JNumber 77.0) tile :: row) :: rows)
+                | other -> other
+
+            JArray(Json.set "tiles" played (JObject first) :: rest)
+        | other -> other
+
+    engineState project [ "tick", JNumber 99999.0; "day", JNumber 40.0 ] [ "flags", JObject [ "late", JBool true ] ]
+    |> fun state ->
+        state
+        |> Json.set "world" (JObject [ "scenes", scenes ])
+        |> Json.set "player" (Json.get "player" state |> Json.set "money" (JNumber 9000.0))
+
+[<Fact>]
+let ``a kept playtest stays beside the opening and an export starts as authored`` () =
+    let project = starter ()
+    let openingStart = parse (read (CartridgeCompiler.Compile project)).StartJson
+
+    let kept =
+        match Playtest.keep project (lateState project) with
+        | Ok kept -> kept
+        | Error message -> failwith message
+    // The project's own fields, the opening, are untouched.
+    Assert.True(kept.KeptPlaytest.IsSome)
+    Assert.Equal(project, Playtest.opening kept)
+    Assert.Equal(project.CurrentDay, kept.CurrentDay)
+    Assert.Equal(project.Player.Money, kept.Player.Money)
+    // The exported cartridge (and farmc's) starts exactly as before the playtest was kept.
+    let exported = read (CartridgeCompiler.Compile kept)
+    Assert.Equal(Json.stableStringify openingStart, Json.stableStringify (parse exported.StartJson))
+    Assert.DoesNotContain("keptPlaytest", exported.StartJson)
+    Assert.DoesNotContain("keptPlaytest", exported.ContentJson)
+    // The editor's next playtest goes on from the kept one.
+    let resumed = Playtest.resume kept
+    Assert.Equal(None, resumed.KeptPlaytest)
+    Assert.Equal(40.0, resumed.CurrentDay)
+    Assert.Equal(9000.0, resumed.Player.Money)
+    Assert.Contains(("late", JBool true), resumed.EventFlags)
+    Assert.Equal(77.0, resumed.Scenes.Head.Tiles.Head.Head.SoilMoisture)
+    let start = parse (read (CartridgeCompiler.CompileForPlaytest resumed)).StartJson
+    Assert.Equal(JNumber 40.0, Json.get "currentDay" start)
+    // It round-trips through the project file.
+    match Decode.run SchemaJson.decodeGameProject (SchemaJson.encodeGameProject kept) with
+    | Ok loaded -> Assert.Equal(kept, loaded)
+    | Error message -> failwith message
+    // Keeping again replaces the kept playtest; discarding leaves the opening.
+    match Playtest.keep kept (engineState project [ "day", JNumber 3.0 ] []) with
+    | Ok again ->
+        Assert.Equal(3.0, (Playtest.resume again).CurrentDay)
+        Assert.Equal(project, Playtest.opening again)
+    | Error message -> failwith message
+
+    Assert.Equal(project, Playtest.discard kept)
+    Assert.True(Result.isError (Playtest.keep project (JString "not a state")))
+
+[<Fact>]
+let ``making a kept playtest the opening is explicit and previewed`` () =
+    let project = starter ()
+    Assert.Empty(Playtest.promotionPreview project)
+
+    let kept =
+        match Playtest.keep project (lateState project) with
+        | Ok kept -> kept
+        | Error message -> failwith message
+
+    let preview = Playtest.promotionPreview kept
+
+    let line label =
+        preview |> List.tryFind (fun (l, _, _) -> l = label)
+
+    match line "Date" with
+    | Some(_, before, after) ->
+        Assert.StartsWith("Day 1 of ", before)
+        Assert.Contains("day 40 of the game", after)
+    | None -> failwithf "no date in %A" preview
+
+    Assert.Equal(Some("Money", string (int project.Player.Money), "9000"), line "Money")
+    Assert.Equal(Some("Map", "as authored", "1 tile changed by play"), line "Map")
+    // What does not differ is not listed.
+    Assert.Equal(None, line "Player")
+    // Promoting is the old Keep changes: the opening becomes the played state, and nothing is kept beside it.
+    let promoted = Playtest.promote kept
+    Assert.Equal(None, promoted.KeptPlaytest)
+    Assert.Equal(40.0, promoted.CurrentDay)
+    let start = parse (read (CartridgeCompiler.Compile promoted)).StartJson
+    Assert.Equal(JNumber 40.0, Json.get "currentDay" start)
+    Assert.Equal(JNumber 9000.0, Json.get "money" (Json.get "player" start))
+    Assert.Empty(Playtest.promotionPreview promoted)
+    // The C# lines.
+    Assert.Contains(Playtests.OpeningLines kept, fun (line: string) -> line.StartsWith "Date: Day 1 of ")
+    Assert.Contains(Playtests.KeptLines kept, fun (line: string) -> line = "Money: 9000")
+    Assert.Contains(Playtests.PromotionPreview kept, fun (line: string) -> line.StartsWith "Money: " && line.EndsWith "\u2192 9000")
+    Assert.Empty(Playtests.KeptLines project)
+
+[<Fact>]
+let ``a kept playtest goes on with the maps as they are edited since`` () =
+    let project = starter ()
+
+    let kept =
+        match Playtest.keep project (lateState project) with
+        | Ok kept -> kept
+        | Error message -> failwith message
+
+    Assert.Empty(Playtest.editedSinceKept kept)
+    // The creator repaints the first scene and adds another one.
+    let first = kept.Scenes.Head
+
+    let repainted =
+        { first with
+            Tiles =
+                match first.Tiles with
+                | (tile :: row) :: rows -> ({ tile with SoilFertility = 5.0 } :: row) :: rows
+                | tiles -> tiles
+        }
+
+    let added =
+        { first with
+            Id = "scene-new"
+            Name = "New place"
+        }
+
+    let edited =
+        { kept with
+            Scenes = repainted :: kept.Scenes.Tail @ [ added ]
+        }
+
+    Assert.Equal<string list>([ first.Name ], Playtest.editedSinceKept edited)
+    let resumed = Playtest.resume edited
+    // The edited scene is the authored one (the edit shows; what was played on it is gone) …
+    Assert.Equal(5.0, resumed.Scenes.Head.Tiles.Head.Head.SoilFertility)
+    Assert.Equal(first.Tiles.Head.Head.SoilMoisture, resumed.Scenes.Head.Tiles.Head.Head.SoilMoisture)
+    // … the new scene is there, and the rest of the playtest goes on.
+    Assert.Contains(resumed.Scenes, fun scene -> scene.Id = "scene-new")
+    Assert.Equal(edited.Scenes.Length, resumed.Scenes.Length)
+    Assert.Equal(40.0, resumed.CurrentDay)
+
 [<Fact>]
 let ``keep changes writes flag values and the live state back as they are`` () =
     let project = starter ()

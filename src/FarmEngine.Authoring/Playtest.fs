@@ -321,3 +321,233 @@ module Playtest =
         match state with
         | JObject _ -> Decode.run SchemaJson.decodeGameProject (applyStateJson (SchemaJson.encodeGameProject project) state)
         | _ -> Error "The game state is not an object."
+
+    // ── The kept playtest: beside the authored opening, never in it ──────────────────────────
+    //
+    // Keep changes used to write the played state over the project's own fields, and those
+    // fields are what New Game starts from: a kept late-game playtest shipped as the opening of
+    // the exported game. A kept playtest now lives in `keptPlaytest`. The editor's next playtest
+    // resumes from it; the cartridge compiler, `farmc` and Export Game never read it. Making it
+    // the opening is `promote`, which the editor offers with a preview (`promotionPreview`).
+
+    /// FNV-1a (64 bit) over a scene's stable JSON: tells a scene edited since a playtest was kept.
+    let private fingerprint (scene: Json) : string =
+        let mutable hash = 14695981039346656037UL
+
+        for c in Json.stableStringify scene do
+            hash <- (hash ^^^ uint64 c) * 1099511628211UL
+
+        hash.ToString "x16"
+
+    let private idOf (value: Json) : string =
+        Json.asString (Json.get "id" value) |> Option.defaultValue ""
+
+    let private arrayOf (key: string) (value: Json) : Json list =
+        match Json.get key value with
+        | JArray items -> items
+        | _ -> []
+
+    /// The project without a kept playtest: what New Game and an export start from.
+    let opening (project: GameProject) : GameProject =
+        match project.KeptPlaytest with
+        | None -> project
+        | Some _ -> { project with KeptPlaytest = None }
+
+    /// Keep changes: the playtest's final state (the engine's `GameState` JSON) kept beside the
+    /// project, whose own fields (the opening) stay as authored. Fails when the state is not one
+    /// the project can take.
+    let keep (project: GameProject) (state: Json) : Result<GameProject, string> =
+        let authored = opening project
+
+        applyState authored state
+        |> Result.map (fun _ ->
+            let scenes =
+                arrayOf "scenes" (SchemaJson.encodeGameProject authored)
+                |> List.map (fun scene -> idOf scene, JString(fingerprint scene))
+
+            { authored with
+                KeptPlaytest = Some(JObject [ "scenes", JObject scenes; "state", state ])
+            })
+
+    /// The kept playtest's state on today's project: a scene the creator edited since the
+    /// playtest was kept, or added, is the authored one (the edit shows in the next playtest, and
+    /// what was played on that map is gone); an authored scene that is unchanged keeps what the
+    /// playtest did to it; generated scenes (mine floors) stay; a deleted scene is dropped.
+    let private keptState' (authored: GameProject) (kept: Json) : Json option =
+        match Json.get "state" kept with
+        | JObject _ as state ->
+            let prints = Json.get "scenes" kept
+            let played = arrayOf "scenes" (Json.get "world" state)
+            let authoredScenes = arrayOf "scenes" (SchemaJson.encodeGameProject authored)
+
+            let merged =
+                [
+                    for scene in authoredScenes do
+                        let id = idOf scene
+                        let unchanged = Json.get id prints = JString(fingerprint scene)
+
+                        match played |> List.tryFind (fun p -> idOf p = id) with
+                        | Some playedScene when unchanged -> yield playedScene
+                        | _ -> yield scene
+                    for scene in played do
+                        if
+                            Json.get "generated" scene = JBool true
+                            && not (authoredScenes |> List.exists (fun a -> idOf a = idOf scene))
+                        then
+                            yield scene
+                ]
+
+            Some(Json.set "world" (Json.set "scenes" (JArray merged) (Json.get "world" state)) state)
+        | _ -> None
+
+    /// The project a playtest in the editor starts from: the kept playtest on today's project,
+    /// or the opening when none is kept (or the kept one no longer fits the project).
+    let resume (project: GameProject) : GameProject =
+        let authored = opening project
+
+        match project.KeptPlaytest |> Option.bind (keptState' authored) with
+        | None -> authored
+        | Some state ->
+            match applyState authored state with
+            | Ok resumed -> resumed
+            | Error _ -> authored
+
+    /// The scenes whose map changed since the playtest was kept (their kept tiles are dropped
+    /// when the playtest resumes), by name.
+    let editedSinceKept (project: GameProject) : string list =
+        match project.KeptPlaytest with
+        | None -> []
+        | Some kept ->
+            let prints = Json.get "scenes" kept
+
+            arrayOf "scenes" (SchemaJson.encodeGameProject (opening project))
+            |> List.filter (fun scene ->
+                Json.has (idOf scene) prints
+                && Json.get (idOf scene) prints <> JString(fingerprint scene))
+            |> List.map (fun scene -> Json.asString (Json.get "name" scene) |> Option.defaultValue (idOf scene))
+
+    /// Makes the kept playtest the opening: New Game and exports then start where it left off.
+    /// The explicit step Keep changes no longer takes by itself.
+    let promote (project: GameProject) : GameProject = resume project
+
+    /// Forgets the kept playtest; the opening is untouched.
+    let discard (project: GameProject) : GameProject = opening project
+
+    // ── What a start is, in words ────────────────────────────────────────────────────────────
+
+    /// One fact of a start: `Label` ("Date"), `Text` ("Day 1 of Spring, year 1, 6:00 AM").
+    type StartFact = { Label: string; Text: string }
+
+    let private plural (count: int) (one: string) (many: string) =
+        if count = 1 then
+            sprintf "1 %s" one
+        else
+            sprintf "%d %s" count many
+
+    /// What a new game of `project` (its own fields, not a kept playtest) starts with.
+    let describe (project: GameProject) : StartFact list =
+        let calendar = (ContentCompiler.settings project).Calendar
+
+        let dayOfSeason =
+            SettingsSchema.clockDayOfSeason calendar project.CurrentSeason project.CurrentDay project.CurrentDayOfSeason
+
+        let season =
+            calendar.Seasons
+            |> List.tryFind (fun s -> s.Id = project.CurrentSeason)
+            |> Option.map (fun s -> s.Name)
+            |> Option.defaultValue project.CurrentSeason
+
+        let scene =
+            project.Scenes
+            |> List.tryFind (fun s -> s.Id = project.Player.SceneId)
+            |> Option.map (fun s -> s.Name)
+            |> Option.defaultValue project.Player.SceneId
+
+        let items = project.Player.Inventory |> List.sumBy (fun slot -> int slot.Quantity)
+
+        let questsWith (statuses: string list) =
+            project.Quests
+            |> List.filter (fun q -> List.contains q.Status statuses)
+            |> List.length
+
+        let tiles (pick: Tile -> bool) =
+            project.Scenes
+            |> List.sumBy (fun scene -> scene.Tiles |> List.sumBy (fun row -> row |> List.filter pick |> List.length))
+
+        [
+            {
+                Label = "Date"
+                Text =
+                    sprintf "Day %d of %s, year %d, %s" (int dayOfSeason) season (int project.CurrentYear) (Readouts.clock project.CurrentTimeMinutes)
+                    + (if project.CurrentDay > 1.0 then
+                           sprintf " (day %d of the game)" (int project.CurrentDay)
+                       else
+                           "")
+            }
+            {
+                Label = "Player"
+                Text = sprintf "%s at (%d, %d)" scene (int (floor project.Player.X)) (int (floor project.Player.Y))
+            }
+            {
+                Label = "Money"
+                Text = sprintf "%d" (int64 project.Player.Money |> int)
+            }
+            {
+                Label = "Inventory"
+                Text =
+                    if items = 0 then
+                        "empty"
+                    else
+                        sprintf "%s in %s" (plural items "item" "items") (plural project.Player.Inventory.Length "slot" "slots")
+            }
+            {
+                Label = "Quests"
+                Text = sprintf "%d under way, %d completed" (questsWith [ QuestStatuses.Active ]) (questsWith [ QuestStatuses.Completed ])
+            }
+            {
+                Label = "Flags and variables"
+                Text = sprintf "%d" project.EventFlags.Length
+            }
+            {
+                Label = "World"
+                Text =
+                    sprintf
+                        "%s, %s, %s, %s"
+                        (plural (tiles (fun t -> t.Crop.IsSome)) "crop" "crops")
+                        (plural project.Animals.Length "animal" "animals")
+                        (plural (defaultArg project.Buildings []).Length "building" "buildings")
+                        (plural (tiles (fun t -> t.Machine.IsSome)) "machine" "machines")
+            }
+        ]
+
+    /// What making the kept playtest the opening would change: each fact that differs, as
+    /// (label, the opening now, the opening after). Empty without a kept playtest, or when the
+    /// kept playtest starts exactly as the opening does.
+    let promotionPreview (project: GameProject) : (string * string * string) list =
+        match project.KeptPlaytest with
+        | None -> []
+        | Some _ ->
+            let before = describe (opening project)
+            let promoted = promote project
+            let after = describe promoted
+
+            let changedTiles =
+                List.zip (opening project).Scenes (promoted.Scenes |> List.truncate (opening project).Scenes.Length)
+                |> List.sumBy (fun (a, b) ->
+                    if a.Id <> b.Id || a.Tiles.Length <> b.Tiles.Length then
+                        0
+                    else
+                        List.zip a.Tiles b.Tiles
+                        |> List.sumBy (fun (rowA, rowB) ->
+                            if rowA.Length <> rowB.Length then
+                                0
+                            else
+                                List.zip rowA rowB |> List.filter (fun (x, y) -> x <> y) |> List.length))
+
+            [
+                for a, b in List.zip before after do
+                    if a.Text <> b.Text then
+                        yield a.Label, a.Text, b.Text
+                if changedTiles > 0 then
+                    yield "Map", "as authored", plural changedTiles "tile changed by play" "tiles changed by play"
+            ]

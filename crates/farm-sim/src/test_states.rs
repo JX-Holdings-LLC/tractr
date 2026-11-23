@@ -120,8 +120,7 @@ fn apply_date(ctx: &EngineContext, state: &mut GameState, test: &TestState, note
     }
     game_time::reconcile_clock(calendar, clock);
     if let Some(minute) = test.time {
-        let time = &ctx.content.settings.time;
-        let (start, end) = (time.day_start_minute, time.day_end_minute.max(time.day_start_minute));
+        let (start, end) = game_time::clock_window(ctx);
         clock.time_minutes = units::minutes(minute.clamp(start, end));
     }
 }

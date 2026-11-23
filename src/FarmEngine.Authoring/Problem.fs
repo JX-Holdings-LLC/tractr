@@ -342,6 +342,15 @@ module internal Context =
         add (project.Npcs |> Seq.collect (fun n -> n.Dialogue |> Seq.collect dialogueFlags))
         // Everywhere else outcomes live (cutscene steps, quest onFail, festival onMiss, …).
         flagsInJson (fun flag -> flags.Add flag |> ignore) (SchemaJson.encodeGameProject project)
+        // Properties (#244) are declared variables: their ids, the instance in view and, for a
+        // scene property, each scene's.
+        for property in defaultArg project.Properties [] do
+            flags.Add property.Id |> ignore
+            flags.Add(property.Id + "@here") |> ignore
+
+            if property.Scope = PropertyScopes.Scene then
+                for scene in project.Scenes do
+                    flags.Add(property.Id + "@" + scene.Id) |> ignore
 
         {
             Project = project

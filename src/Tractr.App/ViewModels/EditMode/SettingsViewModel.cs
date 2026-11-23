@@ -402,6 +402,104 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Stops following the project (the editor that built this tab was replaced).</summary>
     public void Retire() => _workspace.ProjectChanged -= OnProjectChanged;
 
+    // ---- Rules and properties ----
+    // Like Combat: the switch takes effect when clicked, and each form has its own Save.
+
+    private string _rulesMessage = "";
+    private string _propertiesMessage = "";
+
+    /// <summary>Raised when the game's rules or properties may have changed (the view rebuilds those forms).</summary>
+    public event Action? RulesChanged;
+
+    public string RulesMessage { get => _rulesMessage; private set => SetProperty(ref _rulesMessage, value); }
+
+    public string PropertiesMessage { get => _propertiesMessage; private set => SetProperty(ref _propertiesMessage, value); }
+
+    public void ReportRules(string text) => RulesMessage = text;
+
+    public void ReportProperties(string text) => PropertiesMessage = text;
+
+    /// <summary>The game's own rules (sleep, the day's end, exhaustion, farming), or null for the classic farming rules.</summary>
+    public GameRules? Rules => _workspace.Current?.Settings.Rules.OrNull();
+
+    /// <summary>The game's properties as stored.</summary>
+    public IReadOnlyList<PropertyDefinition> Properties => _workspace.Current is { } project ? SettingsForm.PropertyList(project) : [];
+
+    /// <summary>Turns the game's own rules on (the classic rules, spelled out) or off.</summary>
+    public void SetRulesOn(bool on) => ApplyRules(on ? Rules ?? SettingsForm.DefaultRules : null);
+
+    /// <summary>A workshop that never sleeps: no farming, no forced bedtime, a clock that runs round the day.</summary>
+    public void UseWorkshopRules() => ApplyRules(SettingsForm.WorkshopRules);
+
+    /// <summary>Saves the rules as the form holds them.</summary>
+    public bool SaveRules(GameRules rules) => ApplyRules(rules);
+
+    private bool ApplyRules(GameRules? rules)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.Rules(project, rules));
+        RulesMessage = saved ? _workspace.SavedText("Rules") : EditorStrings.Get("common.noChanges");
+        RulesChanged?.Invoke();
+        return saved;
+    }
+
+    /// <summary>A new property for the game's Properties section (unsaved until Save properties).</summary>
+    public PropertyDefinition? NewProperty() => _workspace.Current is { } project ? SettingsForm.NewProperty(project) : null;
+
+    /// <summary>Saves the properties as their forms hold them (one undo step).</summary>
+    public bool SaveProperties(IEnumerable<PropertyDefinition> properties)
+    {
+        if (_workspace.Current is not { } project) return false;
+        var saved = _workspace.Apply(SettingsForm.Properties(project, properties));
+        PropertiesMessage = saved ? _workspace.SavedText("Properties") : EditorStrings.Get("common.noChanges");
+        RulesChanged?.Invoke();
+        return saved;
+    }
+
+    // ---- Opening ----
+
+    /// <summary>The opening or the kept playtest changed (the tab redraws its Opening section).</summary>
+    public event Action? OpeningChanged;
+
+    /// <summary>What a new game starts with, one fact per line.</summary>
+    public IReadOnlyList<string> OpeningLines => _workspace.Current is { } project ? Playtests.OpeningLines(project) : [];
+
+    /// <summary>Whether a playtest is kept beside the opening.</summary>
+    public bool HasKeptPlaytest => _workspace.Current is { } project && Playtests.HasKept(project);
+
+    /// <summary>Where the kept playtest left off; empty without one.</summary>
+    public IReadOnlyList<string> KeptPlaytestLines => _workspace.Current is { } project ? Playtests.KeptLines(project) : [];
+
+    /// <summary>What making the kept playtest the opening would change, one fact per line.</summary>
+    public IReadOnlyList<string> PromotionPreview => _workspace.Current is { } project ? Playtests.PromotionPreview(project) : [];
+
+    /// <summary>The scenes edited since the playtest was kept.</summary>
+    public IReadOnlyList<string> EditedSinceKept => _workspace.Current is { } project ? Playtests.EditedSinceKept(project) : [];
+
+    public string OpeningMessage
+    {
+        get => _openingMessage;
+        private set => SetProperty(ref _openingMessage, value);
+    }
+
+    private string _openingMessage = "";
+
+    /// <summary>The kept playtest becomes the opening: New Game and exports start where it left off (one undo step).</summary>
+    public void PromoteKeptPlaytest()
+    {
+        if (_workspace.Current is not { } project || !Playtests.HasKept(project)) return;
+        _workspace.Apply(Edits.ReplaceProject(Playtests.Promote(project)));
+        OpeningMessage = _workspace.SavedText("The kept playtest is now the opening", "New Game and exports start there. Undo brings the earlier opening back.");
+    }
+
+    /// <summary>Forgets the kept playtest; the opening stays as it is (one undo step).</summary>
+    public void DiscardKeptPlaytest()
+    {
+        if (_workspace.Current is not { } project || !Playtests.HasKept(project)) return;
+        _workspace.Apply(Edits.ReplaceProject(Playtests.Discard(project)));
+        OpeningMessage = _workspace.SavedText("Kept playtest discarded", "The next playtest starts from the opening.");
+    }
+
     /// <summary>
     /// Reloads the sections without unsaved fields from the project (the tab is shown, the
     /// project changed). A section with unsaved fields keeps them and says so.
@@ -412,6 +510,8 @@ public sealed class SettingsViewModel : ObservableObject
         PeopleChanged?.Invoke();
         FarmChanged?.Invoke();
         CombatChanged?.Invoke();
+        RulesChanged?.Invoke();
+        OpeningChanged?.Invoke();
         var kept = new List<string>();
         foreach (var section in Enum.GetValues<SettingsSection>())
         {

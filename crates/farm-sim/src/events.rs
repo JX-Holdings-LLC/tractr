@@ -185,7 +185,14 @@ pub fn condition_holds(
         }
         EventCondition::Variable { name, compare, value, text } => match text {
             Some(text) => compares(compare, text::compare_strings(&variable_text(state, name), text)),
-            None => compares(compare, variable_number(state, name).cmp(&value.unwrap_or(0))),
+            // A property (#244) is read for the instance in view; one that is not there is 0.
+            None => {
+                let number = match crate::properties::definition(&ctx.content, property_id(name)) {
+                    Some(_) => crate::properties::read(ctx, state, name).unwrap_or(0),
+                    None => variable_number(state, name),
+                };
+                compares(compare, number.cmp(&value.unwrap_or(0)))
+            }
         },
         EventCondition::All { conditions } => conditions_hold(ctx, state, conditions, scope),
         EventCondition::Any { conditions } => {
@@ -275,6 +282,11 @@ pub fn variable_number(state: &GameState, name: &str) -> i64 {
         Some(Value::Bool(true)) => i64::from(units::MILLI_ONE),
         _ => 0,
     }
+}
+
+/// The property id a variable name starts with (`pressure@scene-b` is `pressure`).
+fn property_id(name: &str) -> &str {
+    name.split_once(crate::properties::INSTANCE_SEPARATOR).map_or(name, |(id, _)| id)
 }
 
 /// A variable as text (M3): JavaScript `String(value)`, empty when unset.
@@ -404,6 +416,12 @@ fn apply_outcome(
         }
         OutcomeKind::SetVariable => {
             let Some(variable) = non_empty(outcome.variable.as_deref()) else { return vec![] };
+            // A property (#244) takes numbers only, within its bounds, and its thresholds run.
+            if outcome.text.is_none() {
+                if let Some(effects) = crate::properties::write(ctx, state, variable, outcome.amount.unwrap_or(0)) {
+                    return effects;
+                }
+            }
             let value = match &outcome.text {
                 Some(text) => Value::String(text.clone()),
                 None => number_value(outcome.amount.unwrap_or(0)),
@@ -413,6 +431,9 @@ fn apply_outcome(
         }
         OutcomeKind::AddVariable => {
             let Some(variable) = non_empty(outcome.variable.as_deref()) else { return vec![] };
+            if let Some(effects) = crate::properties::add(ctx, state, variable, outcome.amount.unwrap_or(0)) {
+                return effects;
+            }
             let sum = variable_number(state, variable).saturating_add(outcome.amount.unwrap_or(0));
             state.flags.insert(variable.to_owned(), number_value(sum));
             vec![]
@@ -807,6 +828,13 @@ fn perform_action_detailed(
     let mut effects = Vec::new();
 
     if action.energy_cost > 0 {
+        // Worn out (#243): the action waits until some energy returns.
+        if energy::too_tired(ctx, state, action.energy_cost) {
+            return PerformActionResult {
+                effects: vec![Effect::say(message_levels::INFO, &messages::TOO_TIRED)],
+                ran: false,
+            };
+        }
         let spend = energy::spend_energy(ctx, state, action.energy_cost);
         effects.extend(spend.effects);
         if spend.collapsed {

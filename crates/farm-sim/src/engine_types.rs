@@ -85,6 +85,11 @@ pub struct EngineContext {
     pub(crate) skill_reward_runs: Cell<u32>,
     /// The plugin host's answer to plugin conditions (#239); `None`: they are all false.
     pub plugin_conditions: Option<Box<dyn PluginConditions>>,
+    /// The property instance whose own rates or thresholds are being worked out (#244): what a
+    /// bare scene or object property id means meanwhile.
+    pub(crate) property_scope: RefCell<Option<crate::properties::PropertyScope>>,
+    /// How deep threshold outcomes that cross further thresholds are nested (#244).
+    pub(crate) property_depth: Cell<u32>,
 }
 
 impl EngineContext {
@@ -100,6 +105,8 @@ impl EngineContext {
             skill_reward_depth: Cell::new(0),
             skill_reward_runs: Cell::new(0),
             plugin_conditions: None,
+            property_scope: RefCell::new(None),
+            property_depth: Cell::new(0),
         }
     }
 
@@ -115,6 +122,8 @@ impl EngineContext {
             skill_reward_depth: Cell::new(0),
             skill_reward_runs: Cell::new(0),
             plugin_conditions: None,
+            property_scope: RefCell::new(None),
+            property_depth: Cell::new(0),
         }
     }
 

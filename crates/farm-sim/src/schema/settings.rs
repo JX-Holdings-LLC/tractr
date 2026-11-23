@@ -258,6 +258,145 @@ pub struct ProjectSettings {
     /// Budgets of the project's own scripts (#241); absent: the pack plugin defaults.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scripts: Option<super::ScriptSettings>,
+    /// Which systems the game has and how its days end (#243); absent: a classic farming game.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rules: Option<GameRules>,
+}
+
+/// How a game sleeps (#243), `GameRules::sleep`.
+pub mod sleep_policies {
+    /// The day ends in bed or in a collapse (the classic farming day).
+    pub const REQUIRED: &str = "required";
+    /// The player may sleep; a day nobody slept through still ends and the next begins.
+    pub const OPTIONAL: &str = "optional";
+    /// Nobody sleeps: the clock runs round the whole day and the date rolls over at midnight.
+    pub const NONE: &str = "none";
+
+    pub const ALL: &[&str] = &[REQUIRED, OPTIONAL, NONE];
+}
+
+/// What the clock reaching the day's end does (#243), `GameRules::day_end`.
+pub mod day_end_rules {
+    /// The player collapses: the collapse penalty, part of the energy, the next morning.
+    pub const COLLAPSE: &str = "collapse";
+    /// The date rolls over and the night's work is done; the player carries on.
+    pub const ROLLOVER: &str = "rollover";
+
+    pub const ALL: &[&str] = &[COLLAPSE, ROLLOVER];
+}
+
+/// What running out of energy does (#243), `GameRules::exhaustion`.
+pub mod exhaustion_rules {
+    /// The player collapses and the day ends.
+    pub const COLLAPSE: &str = "collapse";
+    /// The player is worn out: nothing that costs energy works until some returns.
+    pub const REST: &str = "rest";
+
+    pub const ALL: &[&str] = &[COLLAPSE, REST];
+}
+
+/// A tile the player is put on (after a collapse).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct WakeSpot {
+    pub scene_id: String,
+    #[serde(with = "crate::units::int")]
+    pub x: i32,
+    #[serde(with = "crate::units::int")]
+    pub y: i32,
+}
+
+/// The rules of a game that is not (only) a classic farming game (#243): whether it has farming
+/// at all, how it sleeps, and what the end of a day and of the player's energy do. The four
+/// things a classic night does together are separate here: the date rolling over (with the
+/// night's work: crops, machines, animals, shops, schedules), recovery, the collapse penalty,
+/// and moving the player. Every part left out keeps the classic rule, so a project without
+/// `rules` plays as it always did. Stamina is `energyEnabled` and combat `combat.enabled`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct GameRules {
+    /// One of [`sleep_policies`]; absent: required.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sleep: Option<String>,
+    /// One of [`day_end_rules`]; absent: collapse when sleep is required, else rollover. A game
+    /// without sleep has no day's end: its date rolls over at midnight.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub day_end: Option<String>,
+    /// One of [`exhaustion_rules`]; absent: collapse when sleep is required, else rest.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exhaustion: Option<String>,
+    /// The fraction of the player's energy a rollover nobody slept through gives back, 0..1;
+    /// absent: none where the player may sleep, all of it where nobody sleeps.
+    #[serde(skip_serializing_if = "Option::is_none", with = "crate::units::milli::opt")]
+    pub rollover_energy_fraction: Option<u32>,
+    /// Off: no tilling, watering or planting, and crops on the map do not grow; absent: on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub farming: Option<bool>,
+    /// Where a collapse puts the player; absent: where they fell.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collapse_wake: Option<WakeSpot>,
+}
+
+/// [`GameRules`] with every default filled in: what the engine asks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rules<'a> {
+    /// The player may send `sleep`.
+    pub can_sleep: bool,
+    /// The clock runs round the whole day (no day window) and the date rolls at midnight.
+    pub continuous: bool,
+    /// The day's end (or, in a continuous game, nothing) collapses the player.
+    pub day_end_collapses: bool,
+    /// Running out of energy collapses the player; otherwise they are worn out.
+    pub exhaustion_collapses: bool,
+    /// Thousandths of the player's energy a rollover without sleep gives back.
+    pub rollover_energy: u32,
+    pub farming: bool,
+    pub collapse_wake: Option<&'a WakeSpot>,
+}
+
+impl<'a> Rules<'a> {
+    /// The classic farming game: what a project without `rules` plays.
+    pub const CLASSIC: Rules<'static> = Rules {
+        can_sleep: true,
+        continuous: false,
+        day_end_collapses: true,
+        exhaustion_collapses: true,
+        rollover_energy: 0,
+        farming: true,
+        collapse_wake: None,
+    };
+
+    /// The rules `settings` asks for. A word the engine does not know keeps the default for its
+    /// sleep policy (Problems reports it).
+    pub fn of(settings: &'a ProjectSettings) -> Self {
+        let Some(rules) = settings.rules.as_ref() else { return Rules::CLASSIC };
+        let sleep = rules.sleep.as_deref().unwrap_or(sleep_policies::REQUIRED);
+        let continuous = sleep == sleep_policies::NONE;
+        let required = !continuous && sleep != sleep_policies::OPTIONAL;
+        let day_end_collapses = !continuous
+            && match rules.day_end.as_deref() {
+                Some(day_end_rules::COLLAPSE) => true,
+                Some(day_end_rules::ROLLOVER) => false,
+                _ => required,
+            };
+        let exhaustion_collapses = match rules.exhaustion.as_deref() {
+            Some(exhaustion_rules::COLLAPSE) => true,
+            Some(exhaustion_rules::REST) => false,
+            _ => required,
+        };
+        Rules {
+            can_sleep: !continuous,
+            continuous,
+            day_end_collapses,
+            exhaustion_collapses,
+            rollover_energy: rules
+                .rollover_energy_fraction
+                .unwrap_or(if continuous { units::MILLI_ONE } else { 0 })
+                .min(units::MILLI_ONE),
+            farming: rules.farming != Some(false),
+            collapse_wake: rules.collapse_wake.as_ref(),
+        }
+    }
 }
 
 /// The words of a game (M1): what it calls money, energy and the skills, in every language.
@@ -378,6 +517,7 @@ impl Default for ProjectSettings {
             progression: None,
             skill_definitions: None,
             scripts: None,
+            rules: None,
         }
     }
 }

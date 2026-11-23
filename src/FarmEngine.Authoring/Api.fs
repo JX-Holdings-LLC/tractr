@@ -305,6 +305,66 @@ type Playtests =
         | Ok kept -> kept
         | Error message -> raise (System.FormatException message)
 
+    /// Keep changes: the project with the playtest's final state kept beside its opening (the
+    /// next playtest resumes from it; exports never read it). Throws `FormatException` when the
+    /// text is not a state the project can take.
+    static member Keep(project: GameProject, stateJson: string) : GameProject =
+        match Json.parse stateJson |> Result.bind (Playtest.keep project) with
+        | Ok kept -> kept
+        | Error message -> raise (System.FormatException message)
+
+    static member HasKept(project: GameProject) : bool = project.KeptPlaytest.IsSome
+
+    /// The project a playtest starts from: the kept playtest when there is one, else the opening.
+    static member Resume(project: GameProject) : GameProject = Playtest.resume project
+
+    /// The project without its kept playtest: what New Game and an export start from.
+    static member Opening(project: GameProject) : GameProject = Playtest.opening project
+
+    /// Makes the kept playtest the opening (explicit; preview it with `PromotionPreview`).
+    static member Promote(project: GameProject) : GameProject = Playtest.promote project
+
+    static member Discard(project: GameProject) : GameProject = Playtest.discard project
+
+    /// What a new game starts with, one "Label: text" line per fact.
+    static member OpeningLines(project: GameProject) : IReadOnlyList<string> =
+        Playtest.describe (Playtest.opening project)
+        |> List.map (fun fact -> sprintf "%s: %s" fact.Label fact.Text)
+        |> Array.ofList
+        :> IReadOnlyList<string>
+
+    /// The opening in one line, for where there is no room for the list (the export dialog).
+    static member OpeningLine(project: GameProject) : string =
+        Playtest.describe (Playtest.opening project)
+        |> List.filter (fun fact -> List.contains fact.Label [ "Date"; "Player"; "Money"; "Inventory" ])
+        |> List.map (fun fact ->
+            match fact.Label with
+            | "Money" -> fact.Text + " money"
+            | "Inventory" -> "inventory: " + fact.Text
+            | _ -> fact.Text)
+        |> String.concat " \u00b7 "
+
+    /// Where the kept playtest left off, as `OpeningLines`; empty without one.
+    static member KeptLines(project: GameProject) : IReadOnlyList<string> =
+        (if project.KeptPlaytest.IsSome then
+             Playtest.describe (Playtest.resume project)
+             |> List.map (fun fact -> sprintf "%s: %s" fact.Label fact.Text)
+         else
+             [])
+        |> Array.ofList
+        :> IReadOnlyList<string>
+
+    /// What `Promote` would change, one "Label: before → after" line per fact that differs.
+    static member PromotionPreview(project: GameProject) : IReadOnlyList<string> =
+        Playtest.promotionPreview project
+        |> List.map (fun (label, before, after) -> sprintf "%s: %s \u2192 %s" label before after)
+        |> Array.ofList
+        :> IReadOnlyList<string>
+
+    /// The scenes edited since the playtest was kept (it resumes on their authored maps).
+    static member EditedSinceKept(project: GameProject) : IReadOnlyList<string> =
+        Playtest.editedSinceKept project |> Array.ofList :> IReadOnlyList<string>
+
 [<AbstractClass; Sealed>]
 type Problems =
     static member Collect(project: GameProject) : IReadOnlyList<Problem> =
@@ -1234,6 +1294,59 @@ type SettingsForm =
 
     /// The relationship rules a game starts from when the creator turns them on (M4).
     static member DefaultRelationships: RelationshipSettings = RelationshipSettings.Default
+
+    /// The Rules section (#243): which systems the game has and how its days end (null: the
+    /// classic farming rules). One undo step; nothing changed → an empty batch.
+    static member Rules(project: GameProject, rules: GameRules | null) : Edit =
+        let settings =
+            { project.Settings with
+                Rules = Option.ofObj rules
+            }
+
+        if settings = project.Settings then
+            Batch("Rules", [])
+        else
+            SetSettings settings
+
+    /// The rules a game starts from when the creator turns its own rules on (#243): the classic
+    /// rules spelled out, so every choice shows.
+    static member DefaultRules: GameRules =
+        { GameRules.Default with
+            Sleep = Some SleepPolicies.Required
+            Farming = Some true
+        }
+
+    /// A workshop that never sleeps (#243): no farming, no forced bedtime, the clock runs round
+    /// the day, and running out of energy wears the player out instead of ending the day.
+    static member WorkshopRules: GameRules =
+        { GameRules.Default with
+            Sleep = Some SleepPolicies.None
+            Exhaustion = Some ExhaustionRules.Rest
+            Farming = Some false
+        }
+
+    /// The game's properties (#244), in order.
+    static member PropertyList(project: GameProject) : IReadOnlyList<PropertyDefinition> =
+        defaultArg project.Properties [] |> Array.ofList :> IReadOnlyList<PropertyDefinition>
+
+    /// The Properties section (#244) as one undo step; nothing changed → an empty batch.
+    static member Properties(project: GameProject, properties: seq<PropertyDefinition>) : Edit =
+        let properties = List.ofSeq properties
+
+        if properties = defaultArg project.Properties [] then
+            Batch("Properties", [])
+        else
+            SetProperties properties
+
+    /// A new property with an id the game does not have yet: the player's, 0 to 100, on the HUD.
+    static member NewProperty(project: GameProject) : PropertyDefinition =
+        let taken = defaultArg project.Properties [] |> List.map (fun p -> p.Id)
+
+        { PropertyDefinition.Default with
+            Id = Defaults.nextId "property" taken
+            Name = "New property"
+            Hud = Some PropertyHudStyles.Meter
+        }
 
     /// The Farm section (M5): the farm scene, its layouts and pests (null: none). One undo
     /// step; nothing changed → an empty batch.

@@ -297,6 +297,52 @@ module References =
 
     let private expression = "a portrait expression of the NPC (its `Portraits`)"
 
+    let private property =
+        "a property id (#244): properties are declared variables, and Problems checks that the id is one"
+
+    /// How a game sleeps, with the editor's labels (#243).
+    let sleepPolicies =
+        [
+            SleepPolicies.Required, "Required: the day ends in bed or in a collapse"
+            SleepPolicies.Optional, "Optional: a day nobody slept through still rolls over"
+            SleepPolicies.None, "None: the clock runs round the whole day"
+        ]
+
+    /// What the day's end does (#243).
+    let dayEndRules =
+        [
+            DayEndRules.Collapse, "The player collapses"
+            DayEndRules.Rollover, "The date rolls over and the player carries on"
+        ]
+
+    /// What running out of energy does (#243).
+    let exhaustionRules =
+        [
+            ExhaustionRules.Collapse, "The player collapses and the day ends"
+            ExhaustionRules.Rest, "The player is worn out until some energy returns"
+        ]
+
+    /// Whose a property is (#244).
+    let propertyScopes =
+        [
+            PropertyScopes.Player, "The player: one value"
+            PropertyScopes.Scene, "Each scene: one value per scene"
+            PropertyScopes.Object, "Each placed machine: one value per machine"
+        ]
+
+    /// How a property threshold compares, with the editor's labels (#244).
+    let propertyComparisons =
+        [
+            PropertyComparisons.Le, "≤ at most"
+            PropertyComparisons.Lt, "< below"
+            PropertyComparisons.Ge, "≥ at least"
+            PropertyComparisons.Gt, "> above"
+        ]
+
+    /// How the HUD shows a property (#244).
+    let propertyHudStyles =
+        [ PropertyHudStyles.Meter, "Meter"; PropertyHudStyles.Number, "Number" ]
+
     /// The event triggers, with the editor's labels (M3).
     let triggers =
         [
@@ -561,6 +607,20 @@ module References =
             reference "BuildingCondition" "BuildingId" ReferenceKind.Building
             optionalAs "SlainCondition" "MonsterId" ReferenceKind.Monster "(any monster)"
             optionalAs "BirthdayCondition" "NpcId" ReferenceKind.Npc "(anyone's)"
+
+            // Game rules (#243)
+            optionalOneOf "GameRules" "Sleep" sleepPolicies
+            optionalOneOf "GameRules" "DayEnd" dayEndRules
+            optionalOneOf "GameRules" "Exhaustion" exhaustionRules
+            reference "WakeSpot" "SceneId" ReferenceKind.Scene
+            // Properties (#244)
+            oneOf "PropertyDefinition" "Scope" propertyScopes
+            optionalOneOf "PropertyDefinition" "Hud" propertyHudStyles
+            list "PropertyDefinition" "Scenes" ReferenceKind.Scene
+            list "PropertyDefinition" "Objects" ReferenceKind.MachineType
+            oneOf "PropertyThreshold" "Compare" propertyComparisons
+            plain "PropertyRange" "Property" property
+            plain "Scene" "Properties" property
 
             // Combat and adventure (M7)
             optionalAs "CombatSettings" "FaintSceneId" ReferenceKind.Scene "(the start scene)"

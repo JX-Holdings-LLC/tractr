@@ -161,6 +161,9 @@ pub struct GameProject {
     /// Rules for saves written before a game update (#242), compiled into the content.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub save_migrations: Option<Vec<super::upkeep::SaveMigration>>,
+    /// Creator-defined properties (#244), compiled into the content.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Vec<super::PropertyDefinition>>,
     /// Named states a playtest can start from (#229); never part of the content.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub test_states: Option<Vec<super::upkeep::TestState>>,
@@ -185,6 +188,10 @@ pub struct GameProject {
     /// purchases, NPC walks and mine floor (see [`KeptState`]).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kept_state: Option<KeptState>,
+    /// A playtest the editor kept beside the opening (F# `Playtest.keep`): editor data. The
+    /// engine never starts a game from it; it is carried so project JSON round-trips.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kept_playtest: Option<Value>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

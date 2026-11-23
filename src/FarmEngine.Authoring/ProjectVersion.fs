@@ -45,6 +45,8 @@ module ProjectVersion =
                 "shopSales"
                 "festivalVisits"
                 "currentMineId"
+                // Game rules (#243) are `rules` above; properties (#244).
+                "properties"
             ]
 
     let private featureTypes =

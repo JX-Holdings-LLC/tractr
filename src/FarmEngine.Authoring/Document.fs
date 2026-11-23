@@ -145,6 +145,10 @@ module Document =
             { project with
                 SaveMigrations = (if List.isEmpty rules then None else Some rules)
             }
+        | SetProperties properties ->
+            { project with
+                Properties = (if List.isEmpty properties then None else Some properties)
+            }
         | SetTestStates states ->
             { project with
                 TestStates = (if List.isEmpty states then None else Some states)

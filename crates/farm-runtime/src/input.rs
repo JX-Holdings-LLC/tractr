@@ -546,7 +546,8 @@ pub mod bindings {
                 commands.push(Command::UseTool { tool: tool.to_owned() });
             }
         }
-        if input.just_pressed(SLEEP_KEY) {
+        // A game without sleep (#243) has no sleep key.
+        if input.just_pressed(SLEEP_KEY) && farm_sim::schema::Rules::of(&content.settings).can_sleep {
             commands.push(Command::Sleep);
         }
 

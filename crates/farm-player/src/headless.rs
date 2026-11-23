@@ -33,13 +33,13 @@
 //! plugins replays exactly as the engine alone does ([`run_inputs`]), which keeps the
 //! simulation-only golden replays reproducible.
 
+use crate::session::PlaySession;
 use farm_cart::save_file::{self, SaveTarget};
+use farm_plugins::PluginHostOptions;
 use farm_sim::effects::Effect;
 use farm_sim::replay::ReplayInput;
 use farm_sim::schema::{GameState, TestState};
 use farm_sim::test_states::{self, DebugOp};
-use crate::session::PlaySession;
-use farm_plugins::PluginHostOptions;
 use farm_sim::{engine, hash, state, units, EngineContext};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -439,8 +439,7 @@ pub fn run_loaded(
     let mut preview = save_file::SavePreview::of_state(game_state);
     preview.farm_name = cart.info.title.clone();
     let save_binary = save_file::write_save_binary(game_state, &target, &preview);
-    let mut report =
-        report(session.context(), game_state, target, content_hash, state_hash, effects, warnings, notes);
+    let mut report = report(session.context(), game_state, target, content_hash, state_hash, effects, warnings, notes);
     report.plugin_errors = plugin_errors;
     Ok(HeadlessRun { report, save_json, save_binary })
 }
@@ -633,8 +632,9 @@ mod tests {
     fn scripted() -> (farm_cart::LoadedCartridge, String) {
         let mut cart = farm_cart::load_cartridge(CART).unwrap();
         let item = cart.content.items[0].id.clone();
-        let source =
-            format!("api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});");
+        let source = format!(
+            "api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});"
+        );
         let spec = farm_plugins::script_spec("carp", &source);
         cart.plugins.push(farm_cart::CartPlugin {
             id: spec.id,
@@ -679,8 +679,7 @@ mod tests {
         let again = run_loaded(cart.clone(), &morning, Some(first.save_json.as_bytes())).unwrap();
         assert_eq!(held(&again.save_json, &item), before + 2);
         // The debug shortcut's mornings are mornings too.
-        let skip =
-            ReplayFile::parse(r#"{"inputs":[{"kind":"debug","action":{"type":"skipDay","days":3}}]}"#).unwrap();
+        let skip = ReplayFile::parse(r#"{"inputs":[{"kind":"debug","action":{"type":"skipDay","days":3}}]}"#).unwrap();
         assert_eq!(held(&run_loaded(cart, &skip, None).unwrap().save_json, &item), before + 3);
     }
 

@@ -5,6 +5,12 @@
 //! season; wrapping past the last season rolls the year. The nightly pass is where the world
 //! "lives": crops grow, soil dries, nodes respawn, energy restores.
 //!
+//! A game's rules (#243, `settings.rules`) take that night apart: the date rolling over with the
+//! night's work ([`roll_day`]) is separate from recovery, the collapse penalty, moving the
+//! player and closing what was open ([`DayRoll`]). A game where sleep is optional rolls the date
+//! at the day's end without a collapse; one without sleep runs its clock round the whole day and
+//! rolls at midnight ([`end_day`]).
+//!
 //! All calendar math below is driven by a project's `settings.calendar` (seasons + their
 //! lengths, plus festival days) rather than a hardcoded 4×28 layout. Every helper takes the
 //! resolved [`CalendarConfig`] — usually `ctx.content.settings.calendar` — rather than a full
@@ -237,11 +243,89 @@ pub fn format_time_of_day_in(day_minutes: u32, time_minutes: u32) -> String {
     format!("{hours12}:{minutes:0>2} {suffix}")
 }
 
+/// What a rolling date does to the player besides the night's work (#243).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Recovery {
+    /// A night's sleep: full energy and health.
+    Sleep,
+    /// A collapse: the money penalty, part of the energy, full health, and the wake spot when
+    /// the game has one.
+    Collapse,
+    /// Nobody slept: this many thousandths of the player's energy return (health with all of it).
+    Fraction(u32),
+}
+
+/// How a date rolls over (#243): the night's work always runs; the rest is selectable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DayRoll {
+    pub recovery: Recovery,
+    /// The player went to bed or fell: an open dialogue, shop, minigame, storage or cutscene ends.
+    pub interrupts: bool,
+    /// The time of day the clock keeps (a continuous day carries what ran past midnight);
+    /// `None`: the new day starts at `dayStartMinute`.
+    pub carry: Option<u32>,
+}
+
 /// The overnight pass: advances the clock, weather, crops, animals, machines, NPC schedules.
 ///
 /// End the day: nightly world pass + calendar roll + energy restore.
 /// Emits onDayEnd / onSeasonChange / onYearStart / onDayStart hooks.
 pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepOptions) -> Effects {
+    let recovery = if options.collapsed { Recovery::Collapse } else { Recovery::Sleep };
+    roll_day(ctx, state, DayRoll { recovery, interrupts: true, carry: None })
+}
+
+/// The `sleep` command: a night's sleep, where the game has sleep (#243).
+pub fn handle_sleep(ctx: &EngineContext, state: &mut GameState) -> Effects {
+    if !crate::schema::Rules::of(&ctx.content.settings).can_sleep {
+        return vec![Effect::say(message_levels::INFO, &messages::NO_SLEEP)];
+    }
+    perform_sleep(ctx, state, SleepOptions { collapsed: false })
+}
+
+/// The clock reached the end of what a day holds (#243): a collapse where the day's end
+/// collapses, else the date rolls over under the player, who carries on. A continuous game
+/// (`in_day`: the minutes of its day, in micro-minutes) keeps the time that ran past midnight.
+pub fn end_day(ctx: &EngineContext, state: &mut GameState) -> Effects {
+    let rules = crate::schema::Rules::of(&ctx.content.settings);
+    if rules.day_end_collapses {
+        return perform_sleep(ctx, state, SleepOptions { collapsed: true });
+    }
+    let carry = rules.continuous.then(|| {
+        let day = time_config(&ctx.content.settings.time).minutes_per_day().saturating_mul(units::MINUTE);
+        state.clock.time_minutes.saturating_sub(day).min(day.saturating_sub(1))
+    });
+    roll_day(ctx, state, DayRoll { recovery: Recovery::Fraction(rules.rollover_energy), interrupts: false, carry })
+}
+
+/// Where the clock stops and [`end_day`] runs, in micro-minutes: `dayEndMinute`, or midnight
+/// (the length of the day) in a continuous game.
+pub fn day_end_micro(ctx: &EngineContext) -> u64 {
+    let time = time_config(&ctx.content.settings.time);
+    let minute = if crate::schema::Rules::of(&ctx.content.settings).continuous {
+        time.minutes_per_day()
+    } else {
+        time.day_end_minute
+    };
+    u64::from(minute) * u64::from(units::MINUTE)
+}
+
+/// The minutes of the day the clock may stand at, as `(first, last)`: the day window, or the
+/// whole day in a continuous game (#243). Debug tools keep the clock inside it.
+pub fn clock_window(ctx: &EngineContext) -> (u32, u32) {
+    let time = time_config(&ctx.content.settings.time);
+    if crate::schema::Rules::of(&ctx.content.settings).continuous {
+        (0, time.minutes_per_day())
+    } else {
+        (time.day_start_minute, time.day_end_minute.max(time.day_start_minute))
+    }
+}
+
+/// The date rolls over (#243): the night's work (the world pass, the calendar, weather, shops,
+/// schedules, animals, machines, shipping, building, the morning's mail and events), then what
+/// `roll` selects: recovery, the collapse penalty and wake spot, closing what was open, and the
+/// time of day the new date starts at.
+pub fn roll_day(ctx: &EngineContext, state: &mut GameState, roll: DayRoll) -> Effects {
     let mut effects = crate::festivals::finish_day(ctx, state);
     let settings = &ctx.content.settings;
     let previous_day = state.clock.day;
@@ -267,6 +351,16 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
         waters_outdoor_soil: weather_def.is_some_and(|def| def.waters_outdoor_soil),
     };
 
+    // The hours a night skips (bed or collapse to the morning) pass for the game's properties
+    // too (#244); a date that rolls over under a running clock skips none.
+    if roll.carry.is_none() {
+        let time = time_config(&settings.time);
+        let day = time.minutes_per_day();
+        let now = units::whole_minute(state.clock.time_minutes) % day;
+        let skipped = (day + time.day_start_minute % day - now) % day;
+        effects.extend(crate::properties::advance_skipped(ctx, state, skipped));
+    }
+
     // Multi-tile crops grow and fall as one (watered together; a storm takes the whole crop).
     let multi_tile_crops = multi_tile::before_night(state);
     // What scarecrows and sprinklers cover tonight (M5).
@@ -275,13 +369,14 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     multi_tile::after_night(state, &multi_tile_crops);
 
     state.player.buffs.retain(|buff| buff.definition.persists_after_sleep);
-    let (energy, money) = wake_energy_and_money(ctx, state, options, &mut effects);
+    let (energy, money) = wake_energy_and_money(ctx, state, roll.recovery, &mut effects);
 
     state.clock.day = next.day;
     state.clock.season = next.season.clone();
     state.clock.day_of_season = next.day_of_season;
     state.clock.year = next.year;
-    state.clock.time_minutes = units::minutes(time_config(&settings.time).day_start_minute);
+    state.clock.time_minutes =
+        roll.carry.unwrap_or_else(|| units::minutes(time_config(&settings.time).day_start_minute));
     state.clock.weather_id = new_weather_id.clone();
     // Sprinklers water the morning's soil (M5).
     if !cover.is_empty() {
@@ -290,11 +385,13 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     state.player.energy = energy;
     state.player.money = money;
     state.rng = rng.state;
-    state.dialogue = None;
-    state.shop = None;
-    state.minigame = None;
-    state.storage = None;
-    crate::cutscenes::stop(state);
+    if roll.interrupts {
+        state.dialogue = None;
+        state.shop = None;
+        state.minigame = None;
+        state.storage = None;
+        crate::cutscenes::stop(state);
+    }
     state.shop_purchases_today = IndexMap::new();
     crate::commerce::expire_sales(ctx, state);
     crate::npcs::npc_movement::select_schedules(ctx, state);
@@ -309,7 +406,13 @@ pub fn perform_sleep(ctx: &EngineContext, state: &mut GameState, options: SleepO
     effects.extend(crate::goals::ship_overnight(ctx, state));
     effects.extend(crate::buildings::advance_construction(ctx, state));
     effects.extend(animals::breed_overnight(ctx, state));
-    crate::combat::restore_overnight(ctx, state);
+    // Health fills with a night's rest (or a rollover that gives all the energy back).
+    if !matches!(roll.recovery, Recovery::Fraction(fraction) if fraction < units::MILLI_ONE) {
+        crate::combat::restore_overnight(ctx, state);
+    }
+    if roll.recovery == Recovery::Collapse {
+        effects.extend(wake_after_collapse(ctx, state));
+    }
     crate::combat::spawn_scenes(ctx, state);
     crate::foraging::morning(ctx, state);
     effects.extend(quests::after_step(ctx, state));
@@ -406,6 +509,9 @@ fn night_world_pass(
     cover: &crate::objects::AreaCover,
     rng: &mut Rng,
 ) {
+    // Without farming (#243) the crops and soil on the map are scenery: nothing grows, dries,
+    // withers or is eaten; nodes still come back.
+    let farming = crate::schema::Rules::of(&ctx.content.settings).farming;
     let pest_chance = ctx.content.settings.farm.as_ref().map_or(0, |farm| farm.pest_chance);
     // Object.fromEntries: later duplicates win.
     let mut node_types: IndexMap<&str, &NodeTypeDefinition> = IndexMap::new();
@@ -423,9 +529,16 @@ fn night_world_pass(
         .iter()
         .find(|season| season.id == next.season)
         .and_then(|season| season.temperature);
-    for scene in &mut state.world.scenes {
+    // What each scene's properties are tonight (#244), for the crops that need one in a range.
+    let property_values: Vec<Vec<(&str, i64)>> = if ctx.content.properties.is_empty() {
+        Vec::new()
+    } else {
+        state.world.scenes.iter().map(|scene| crate::properties::values_in_scene(&ctx.content, state, scene)).collect()
+    };
+    for (scene_index, scene) in state.world.scenes.iter_mut().enumerate() {
         // Crops whose growth requirements (M1) the scene does not meet tonight.
-        let unmet = growth::unmet_tiles(ctx, scene, season_temperature);
+        let properties = property_values.get(scene_index).map_or(&[][..], Vec::as_slice);
+        let unmet = growth::unmet_tiles(ctx, scene, season_temperature, properties);
         // Weather stays outside indoor scenes (greenhouses, interiors, mine floors) and off
         // indoor terrain.
         let outdoor_scene = !scene.is_indoor();
@@ -433,6 +546,10 @@ fn night_world_pass(
         let all_seasons = scene.is_all_seasons();
         for (y, row) in scene.tiles.iter_mut().enumerate() {
             for (x, tile) in row.iter_mut().enumerate() {
+                if !farming {
+                    respawn_node(tile, &node_types, next.day);
+                    continue;
+                }
                 let outdoor = outdoor_scene && !terrains.indoor(tile);
                 // A scarecrow's area (M5) is safe from storms and pests.
                 let protected = !cover.is_empty() && cover.protects(&scene.id, x, y);
@@ -627,19 +744,43 @@ fn respawn_node(tile: &mut Tile, node_types: &IndexMap<&str, &NodeTypeDefinition
     }
 }
 
-/// The player's energy and money in the morning: full energy after a sleep; after a collapse
-/// the money penalty (with its message) and part of the energy.
+/// A collapse moves the player to the game's wake spot (#243), when it has one that exists;
+/// otherwise they come to where they fell.
+fn wake_after_collapse(ctx: &EngineContext, state: &mut GameState) -> Effects {
+    let Some(spot) = crate::schema::Rules::of(&ctx.content.settings).collapse_wake else { return Vec::new() };
+    if spot.scene_id.is_empty() || crate::world::world_movement::ensure_scene(ctx, state, &spot.scene_id).is_none() {
+        return Vec::new();
+    }
+    state.player.move_intent = Default::default();
+    let (landed, landing) = crate::world::world_movement::land_player(ctx, state, &spot.scene_id, spot.x, spot.y);
+    let mut effects = vec![Effect::SceneChanged { scene_id: spot.scene_id.clone(), x: landed.x, y: landed.y }];
+    effects.extend(landing);
+    effects
+}
+
+/// The player's energy and money on the new date: full energy after a sleep; after a collapse
+/// the money penalty (with its message) and part of the energy; after a rollover nobody slept
+/// through, what they had plus the rollover's share (at most all of it).
 fn wake_energy_and_money(
     ctx: &EngineContext,
     state: &GameState,
-    options: SleepOptions,
+    recovery: Recovery,
     effects: &mut Effects,
 ) -> (i32, i64) {
     let settings = &ctx.content.settings;
     let max_energy = crate::buffs::max_energy(ctx, state);
     let mut money = state.player.money;
-    if !options.collapsed {
-        return (max_energy, money);
+    match recovery {
+        Recovery::Sleep => return (max_energy, money),
+        Recovery::Fraction(fraction) => {
+            let back = units::div_round(
+                i64::from(max_energy) * i64::from(fraction.min(units::MILLI_ONE)),
+                i64::from(units::MILLI_ONE),
+            );
+            let energy = (i64::from(state.player.energy) + back).clamp(0, i64::from(max_energy));
+            return (i32::try_from(energy).unwrap_or(max_energy), money);
+        }
+        Recovery::Collapse => {}
     }
     let penalty = money.min(settings.collapse_money_penalty);
     money = money.saturating_sub(penalty);

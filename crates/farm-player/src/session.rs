@@ -876,9 +876,9 @@ impl PlaySession {
             DebugAction::AddMinutes { minutes } if minutes.is_finite() => {
                 // Stays inside the day window: the clock stops at the day's end, where the next
                 // tick ends the day the way it does in play (it never jumps past it).
-                let time = &self.ctx.content.settings.time;
                 let minute = i64::from(units::MINUTE);
-                let (start, end) = (i64::from(time.day_start_minute) * minute, i64::from(time.day_end_minute) * minute);
+                let (start, end) = farm_sim::game_time::clock_window(&self.ctx);
+                let (start, end) = (i64::from(start) * minute, i64::from(end) * minute);
                 let micro = i64::from(self.state.clock.time_minutes)
                     .saturating_add((minutes * f64::from(units::MINUTE)).round() as i64);
                 let micro = micro.min(end).max(start.min(end)).max(0);

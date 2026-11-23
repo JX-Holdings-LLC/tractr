@@ -1,5 +1,6 @@
 namespace FarmEngine.Authoring
 
+open System
 open System.Collections.Generic
 open FarmEngine.Schemas
 
@@ -2744,8 +2745,342 @@ module internal ChecksContent =
                         outcomes context sink "festival" (path + ".activity.contest.rewards") festival.Name program.SceneId target contest.Rewards
                     | None -> ())
 
+    /// The game's rules (#243): words the engine knows, a rollover share between 0 and 1, a wake
+    /// spot that exists, and what a setting that is off leaves without effect.
+    let private gameRules (context: Context) (sink: Sink) =
+        let project = context.Project
+        let settings = Some NavigationTarget.Settings
+
+        match project.Settings.Rules with
+        | None -> ()
+        | Some rules ->
+            let word (field: string) (value: string option) (known: string list) =
+                match value with
+                | Some value when not (List.contains value known) ->
+                    sink.Error(
+                        "rules.unknownWord",
+                        "settings.rules." + field,
+                        sprintf "The game's rules say %s \"%s\"; it is one of %s (the classic rule is used)" field value (String.concat ", " known),
+                        settings
+                    )
+                | _ -> ()
+
+            word "sleep" rules.Sleep SleepPolicies.All
+            word "dayEnd" rules.DayEnd DayEndRules.All
+            word "exhaustion" rules.Exhaustion ExhaustionRules.All
+
+            match rules.RolloverEnergyFraction with
+            | Some fraction when Double.IsNaN fraction || fraction < 0.0 || fraction > 1.0 ->
+                sink.Error(
+                    "rules.rolloverEnergy",
+                    "settings.rules.rolloverEnergyFraction",
+                    sprintf "A day rolling over gives back %g of the player's energy; it is a share between 0 and 1" fraction,
+                    settings
+                )
+            | _ -> ()
+
+            match rules.CollapseWake with
+            | Some spot when not (context.Scenes.ContainsKey spot.SceneId) ->
+                sink.Error(
+                    "rules.unknownWakeScene",
+                    "settings.rules.collapseWake.sceneId",
+                    sprintf "The player wakes after a collapse in missing scene \"%s\"" spot.SceneId,
+                    settings
+                )
+            | Some spot when not (Context.tileInScene context spot.SceneId spot.X spot.Y) ->
+                sink.Error(
+                    "rules.wakeOutOfBounds",
+                    "settings.rules.collapseWake.x",
+                    sprintf "The player wakes after a collapse at (%g,%g), outside \"%s\"" spot.X spot.Y context.Scenes.[spot.SceneId].Name,
+                    Some(NavigationTarget.Scene(spot.SceneId, 0, 0))
+                )
+            | _ -> ()
+
+            let noSleep = rules.Sleep = Some SleepPolicies.None
+
+            if noSleep && rules.DayEnd = Some DayEndRules.Collapse then
+                sink.Warning(
+                    "rules.dayEndWithoutDay",
+                    "settings.rules.dayEnd",
+                    "The day's end is set to collapse the player, but nobody sleeps in this game: its clock runs round the whole day and the date rolls over at midnight, so nothing collapses",
+                    settings
+                )
+
+            let collapses =
+                (not noSleep
+                 && (rules.DayEnd = Some DayEndRules.Collapse
+                     || (rules.DayEnd.IsNone && rules.Sleep <> Some SleepPolicies.Optional)))
+                || (project.Settings.EnergyEnabled
+                    && (rules.Exhaustion = Some ExhaustionRules.Collapse
+                        || (rules.Exhaustion.IsNone
+                            && not noSleep
+                            && rules.Sleep <> Some SleepPolicies.Optional)))
+
+            if rules.CollapseWake.IsSome && not collapses then
+                sink.Info(
+                    "rules.wakeWithoutCollapse",
+                    "settings.rules.collapseWake",
+                    "There is a place to wake after a collapse, but nothing in this game's rules collapses the player",
+                    settings
+                )
+
+            if rules.Farming = Some false then
+                let crops = defaultArg project.CustomCrops []
+
+                let planted =
+                    project.Scenes
+                    |> List.exists (fun scene -> scene.Tiles |> List.exists (List.exists (fun tile -> tile.Crop.IsSome)))
+
+                let seeds = project.Items |> List.filter (fun item -> item.Type = ItemTypes.Seed)
+
+                if not crops.IsEmpty || planted || not seeds.IsEmpty then
+                    sink.Info(
+                        "rules.farmingOff",
+                        "settings.rules.farming",
+                        sprintf
+                            "Farming is off: nothing can be tilled, watered or planted, and crops on the map do not grow. The game still has %s"
+                            ([
+                                if not crops.IsEmpty then
+                                    sprintf "%d of its own crops" crops.Length
+                                if not seeds.IsEmpty then
+                                    sprintf "%d seed items" seeds.Length
+                                if planted then
+                                    "crops planted on its maps"
+                             ]
+                             |> String.concat ", "),
+                        settings
+                    )
+
+    /// Properties (#244): ids that work as variable names, a scope, bounds the right way round,
+    /// scenes and machines that exist, conditions and outcomes like anywhere else, scene start
+    /// values and crop requirements that name a property.
+    let private properties (context: Context) (sink: Sink) =
+        let project = context.Project
+        let settings = Some NavigationTarget.Settings
+        let all = defaultArg project.Properties []
+        let byId = all |> List.map (fun p -> p.Id, p) |> dict
+
+        all
+        |> List.iteri (fun i property ->
+            let path = sprintf "properties[%d]" i
+
+            let label =
+                sprintf "Property \"%s\"" (if property.Name = "" then property.Id else property.Name)
+
+            if property.Id = "" then
+                sink.Error("property.noId", path + ".id", "A property has no id", settings)
+            elif
+                property.Id
+                |> Seq.exists (fun c -> c = '@' || c = ':' || c = ',' || Char.IsWhiteSpace c || c = '{' || c = '}')
+            then
+                sink.Error(
+                    "property.id",
+                    path + ".id",
+                    sprintf
+                        "%s has the id \"%s\"; an id cannot hold spaces, @, :, commas or braces (conditions name a scene's value as id@scene)"
+                        label
+                        property.Id,
+                    settings
+                )
+            elif all |> List.take i |> List.exists (fun other -> other.Id = property.Id) then
+                sink.Error("property.duplicateId", path + ".id", sprintf "Two properties have the id \"%s\"" property.Id, settings)
+
+            if not (List.contains property.Scope PropertyScopes.All) then
+                sink.Error(
+                    "property.scope",
+                    path + ".scope",
+                    sprintf "%s belongs to \"%s\"; it is one of %s" label property.Scope (String.concat ", " PropertyScopes.All),
+                    settings
+                )
+
+            match property.Hud with
+            | Some style when not (List.contains style PropertyHudStyles.All) ->
+                sink.Error(
+                    "property.hud",
+                    path + ".hud",
+                    sprintf "%s is shown as \"%s\"; it is one of %s" label style (String.concat ", " PropertyHudStyles.All),
+                    settings
+                )
+            | Some _ when property.Scope = PropertyScopes.Object ->
+                sink.Info(
+                    "property.hudObject",
+                    path + ".hud",
+                    sprintf "%s is a machine's, and the HUD shows the player's and the scene's properties only" label,
+                    settings
+                )
+            | _ -> ()
+
+            if
+                Double.IsNaN property.Min
+                || Double.IsNaN property.Max
+                || property.Min >= property.Max
+            then
+                sink.Error(
+                    "property.bounds",
+                    path + ".max",
+                    sprintf "%s goes from %g to %g; the most must be more than the least" label property.Min property.Max,
+                    settings
+                )
+            elif property.Initial < property.Min || property.Initial > property.Max then
+                sink.Warning(
+                    "property.initial",
+                    path + ".initial",
+                    sprintf "%s starts at %g, outside %g to %g; it starts at the nearest bound" label property.Initial property.Min property.Max,
+                    settings
+                )
+
+            match property.Scenes with
+            | Some scenes ->
+                if property.Scope <> PropertyScopes.Scene then
+                    sink.Info("property.scenesUnused", path + ".scenes", sprintf "%s lists scenes, but only a scene's property has them" label, settings)
+
+                scenes
+                |> List.iteri (fun k scene ->
+                    if not (context.Scenes.ContainsKey scene) then
+                        sink.Error("property.unknownScene", sprintf "%s.scenes[%d]" path k, sprintf "%s is in missing scene \"%s\"" label scene, settings))
+            | None -> ()
+
+            match property.Objects with
+            | Some machines ->
+                if property.Scope <> PropertyScopes.Object then
+                    sink.Info("property.objectsUnused", path + ".objects", sprintf "%s lists machines, but only a machine's property has them" label, settings)
+
+                machines
+                |> List.iteri (fun k machine ->
+                    if not (context.MachineTypeIds.Contains machine) then
+                        sink.Error(
+                            "property.unknownMachine",
+                            sprintf "%s.objects[%d]" path k,
+                            sprintf "%s is on missing machine type \"%s\"" label machine,
+                            settings
+                        ))
+            | None -> ()
+
+            property.Rates
+            |> List.iteri (fun k rate ->
+                let ratePath = sprintf "%s.rates[%d]" path k
+
+                if Double.IsNaN rate.PerHour || rate.PerHour = 0.0 then
+                    sink.Warning("property.rateZero", ratePath + ".perHour", sprintf "%s has a rate of 0 an hour, which changes nothing" label, settings)
+
+                conditions context sink "property" ratePath label "" settings rate.Conditions)
+
+            property.Thresholds
+            |> List.iteri (fun k threshold ->
+                let thresholdPath = sprintf "%s.thresholds[%d]" path k
+
+                if not (List.contains threshold.Compare PropertyComparisons.All) then
+                    sink.Error(
+                        "property.compare",
+                        thresholdPath + ".compare",
+                        sprintf "%s compares with \"%s\"; it is one of %s" label threshold.Compare (String.concat ", " PropertyComparisons.All),
+                        settings
+                    )
+                elif property.Min < property.Max then
+                    // A threshold the bounds keep on one side for good never starts to hold.
+                    let holds (value: float) =
+                        match threshold.Compare with
+                        | PropertyComparisons.Lt -> value < threshold.Value
+                        | PropertyComparisons.Ge -> value >= threshold.Value
+                        | PropertyComparisons.Gt -> value > threshold.Value
+                        | _ -> value <= threshold.Value
+
+                    if holds property.Min = holds property.Max then
+                        sink.Warning(
+                            "property.thresholdNeverCrossed",
+                            thresholdPath + ".value",
+                            sprintf
+                                "%s has a threshold at %g that is never crossed: it goes from %g to %g, so the threshold %s"
+                                label
+                                threshold.Value
+                                property.Min
+                                property.Max
+                                (if holds property.Min then "always holds" else "never holds"),
+                            settings
+                        )
+
+                if threshold.Outcomes.IsEmpty && threshold.Message.IsNone then
+                    sink.Info("property.thresholdEmpty", thresholdPath, sprintf "%s has a threshold that does nothing" label, settings)
+
+                outcomes context sink "property" thresholdPath label "" settings threshold.Outcomes))
+
+        // What scenes start their properties at.
+        project.Scenes
+        |> List.iteri (fun i scene ->
+            defaultArg scene.Properties []
+            |> List.iter (fun (id, value) ->
+                let path = sprintf "scenes[%d].properties.%s" i id
+                let target = Some(NavigationTarget.Scene(scene.Id, 0, 0))
+
+                match byId.TryGetValue id with
+                | false, _ ->
+                    sink.Error("property.unknownInScene", path, sprintf "Scene \"%s\" starts missing property \"%s\" at %g" scene.Name id value, target)
+                | true, property when property.Scope <> PropertyScopes.Scene ->
+                    sink.Warning(
+                        "property.notOfScenes",
+                        path,
+                        sprintf "Scene \"%s\" starts \"%s\" at %g, but that property is not a scene's" scene.Name property.Name value,
+                        target
+                    )
+                | true, property when
+                    property.Scenes
+                    |> Option.exists (fun scenes -> not (List.contains scene.Id scenes))
+                    ->
+                    sink.Warning(
+                        "property.sceneLacksIt",
+                        path,
+                        sprintf "Scene \"%s\" starts \"%s\" at %g, but the property does not list this scene" scene.Name property.Name value,
+                        target
+                    )
+                | true, property when value < property.Min || value > property.Max ->
+                    sink.Warning(
+                        "property.sceneInitial",
+                        path,
+                        sprintf "Scene \"%s\" starts \"%s\" at %g, outside %g to %g" scene.Name property.Name value property.Min property.Max,
+                        target
+                    )
+                | _ -> ()))
+
+        // The properties crops need in a range.
+        defaultArg project.CustomCrops []
+        |> List.iteri (fun i crop ->
+            crop.Requirements
+            |> Option.bind (fun needs -> needs.Properties)
+            |> Option.defaultValue []
+            |> List.iteri (fun k range ->
+                let path = sprintf "customCrops[%d].definition.requirements.properties[%d]" i k
+                let target = Some(NavigationTarget.Crop crop.Id)
+
+                match byId.TryGetValue range.Property with
+                | false, _ ->
+                    sink.Error(
+                        "property.unknownInCrop",
+                        path + ".property",
+                        sprintf "Crop \"%s\" needs missing property \"%s\"" crop.Name range.Property,
+                        target
+                    )
+                | true, property when property.Scope = PropertyScopes.Object ->
+                    sink.Error(
+                        "property.cropNeedsObject",
+                        path + ".property",
+                        sprintf "Crop \"%s\" needs \"%s\", a machine's property; a crop reads its scene's and the player's" crop.Name property.Name,
+                        target
+                    )
+                | true, property ->
+                    match range.Min, range.Max with
+                    | Some min, Some max when min > max ->
+                        sink.Error(
+                            "property.cropRange",
+                            path + ".max",
+                            sprintf "Crop \"%s\" needs \"%s\" from %g to %g, which nothing is" crop.Name property.Name min max,
+                            target
+                        )
+                    | _ -> ()))
+
     let run (context: Context) (sink: Sink) =
         festivalPrograms context sink
+        gameRules context sink
+        properties context sink
 
         context.Project.Quests
         |> List.iteri (fun i quest ->
