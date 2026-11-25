@@ -1,3 +1,4 @@
+using FarmEngine.Authoring;
 using FarmEngine.Export;
 using Tractr.App.Mvvm;
 using Tractr.App.Projects;
@@ -78,6 +79,14 @@ public sealed class ExportGameViewModel : ObservableObject
 
     /// <summary>"WillowCreek · game id com.example.willow".</summary>
     public string GameDetail => $"{Summary.ExecutableName} · game id {Summary.GameId}";
+
+    /// <summary>What New Game starts with in the exported game, in one line.</summary>
+    public string OpeningText => _workspace.Current is { } project ? "New Game starts: " + Playtests.OpeningLine(project) : "";
+
+    /// <summary>Says that the kept playtest stays out of the export; empty without one.</summary>
+    public string KeptPlaytestNote => _workspace.Current is { } project && Playtests.HasKept(project)
+        ? " The kept playtest is not exported."
+        : "";
 
     /// <summary>Problems errors stop the export before it starts.</summary>
     public bool IsBlockedByProblems => Summary.ErrorCount > 0;

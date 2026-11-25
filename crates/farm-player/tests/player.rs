@@ -85,6 +85,60 @@ fn new_game_walk_sleep_autosave_quit_and_continue() {
     assert_eq!(player.current_slot(), Some(1));
 }
 
+/// A project script's morning reward (the roadmap's carp): the day's autosave holds it, so a game
+/// continued from any morning's save has had every reward exactly once.
+#[test]
+fn a_scripted_morning_reward_survives_quit_and_continue() {
+    let mut project = common::starter();
+    let item = project.items[0].id.clone();
+    let source = format!(
+        "api.on('onDayStart', function () {{ return [{{ type: 'giveItem', itemId: '{item}', quantity: 1 }}]; }});"
+    );
+    project.scripts =
+        Some(vec![serde_json::from_value(serde_json::json!({ "id": "carp", "source": source })).unwrap()]);
+    let held = |state: &farm_sim::GameState| -> u32 {
+        state.player.inventory.iter().filter(|slot| slot.item.id == item).map(|slot| slot.quantity).sum()
+    };
+    let saved = |stores: &Stores, player: &Player| {
+        let bytes = farm_player::SaveStore::read(&stores.saves, 1).unwrap();
+        let content = player.session().unwrap().content();
+        let loaded =
+            save_file::load_save_bytes(&bytes, &save_file::SaveTarget::for_project(&project, content), content);
+        assert!(loaded.ok, "{:?}", loaded.errors);
+        loaded.state.unwrap()
+    };
+
+    // Uninterrupted: two sleeps, two carp, and the day-three autosave agrees.
+    let stores = Stores::new();
+    let mut player = common::new_game_of(&stores, &project);
+    assert!(player.plugin_errors().is_empty(), "{:?}", player.plugin_errors());
+    let before = held(player.state().unwrap());
+    press(&mut player, "z");
+    let day_two = farm_player::SaveStore::read(&stores.saves, 1).unwrap();
+    assert_eq!(held(&saved(&stores, &player)), before + 1, "the day-two autosave holds the first carp");
+    press(&mut player, "z");
+    assert_eq!(player.state().unwrap().clock.day, 3);
+    assert_eq!(held(player.state().unwrap()), before + 2);
+    let uninterrupted = saved(&stores, &player);
+    assert_eq!(held(&uninterrupted), before + 2);
+
+    // Resumed: quit, Continue from the day-two autosave (twice over), sleep once.
+    for _ in 0..2 {
+        let stores = Stores::new();
+        let mut saves = stores.saves.clone();
+        farm_player::SaveStore::write(&mut saves, 1, &day_two).unwrap();
+        let mut player = stores.standalone(&project);
+        idle(&mut player, 1);
+        press(&mut player, "enter");
+        assert_eq!(player.screen(), ScreenKind::Playing);
+        assert_eq!(player.state().unwrap().clock.day, 2);
+        assert_eq!(held(player.state().unwrap()), before + 1, "loading gives nothing again");
+        press(&mut player, "z");
+        assert_eq!(held(player.state().unwrap()), before + 2);
+        assert_eq!(held(&saved(&stores, &player)), before + 2, "the resumed day-three autosave");
+    }
+}
+
 #[test]
 fn closing_the_window_during_a_game_asks_first() {
     let stores = Stores::new();
@@ -497,6 +551,51 @@ fn pad_to(player: &mut Player, direction: GamepadButton, target: WidgetId) {
         pad(player, direction);
     }
     panic!("the D-pad never reached {target:?}");
+}
+
+/// A gamepad has no button left for Goals and Mail (M6), and the toolbar is the mouse's: the
+/// pause menu offers both, at the default and at a larger text size.
+#[test]
+fn a_gamepad_reaches_goals_and_mail_through_the_pause_menu() {
+    let mut project = common::starter();
+    let item = project.items[0].id.clone();
+    project.collections =
+        Some(vec![
+            serde_json::from_value(serde_json::json!({ "id": "museum", "name": "Museum", "items": [item] })).unwrap()
+        ]);
+    project.mail = Some(vec![serde_json::from_value(
+        serde_json::json!({ "id": "welcome", "subject": "Welcome", "text": "Hello." }),
+    )
+    .unwrap()]);
+    for text_size in [1.0, 1.5] {
+        let stores = Stores::new();
+        let mut player = stores.standalone(&project);
+        let mut settings = player.settings().clone();
+        settings.accessibility.text_size = text_size;
+        player.set_settings(settings);
+        idle(&mut player, 1);
+        pad(&mut player, GamepadButton::South);
+        assert_eq!(player.screen(), ScreenKind::Playing);
+        for (entry, panel) in [("Goals", Panel::Goals), ("Mail", Panel::Mail)] {
+            pad(&mut player, GamepadButton::Start);
+            assert_eq!(player.screen(), ScreenKind::Pause);
+            pad_to(&mut player, GamepadButton::DpadDown, WidgetId::new("pause").with(entry));
+            pad(&mut player, GamepadButton::South);
+            assert_eq!(player.screen(), ScreenKind::Playing, "{entry} at text size {text_size}");
+            assert_eq!(player.panel(), Some(panel));
+            // B closes the panel again.
+            pad(&mut player, GamepadButton::East);
+            assert_eq!(player.panel(), None);
+        }
+    }
+    // A game without goals or mail has neither entry.
+    let stores = Stores::new();
+    let mut player = new_game(&stores);
+    press(&mut player, "escape");
+    assert_eq!(player.screen(), ScreenKind::Pause);
+    assert!(player.widget_rect(WidgetId::new("pause").with("Goals")).is_none());
+    assert!(player.widget_rect(WidgetId::new("pause").with("Mail")).is_none());
+    assert!(player.widget_rect(WidgetId::new("pause").with("Settings")).is_some());
 }
 
 #[test]

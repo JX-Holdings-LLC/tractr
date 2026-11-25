@@ -1878,6 +1878,8 @@ and GameContent =
         Monsters: (MonsterDefinition list) option
         /// Rules for saves written before a game update (#242); absent when there are none.
         SaveMigrations: (SaveMigration list) option
+        /// Creator-defined properties (#244); absent when there are none.
+        Properties: (PropertyDefinition list) option
     }
 
     /// A `GameContent` with every field at its schema default.
@@ -1919,6 +1921,7 @@ and GameContent =
             Mail = None
             Monsters = None
             SaveMigrations = None
+            Properties = None
         }
 
 and GameEvent =
@@ -2198,6 +2201,8 @@ and GameProject =
         Monsters: (MonsterDefinition list) option
         /// Rules for saves written before a game update (#242), compiled into the content.
         SaveMigrations: (SaveMigration list) option
+        /// Creator-defined properties (#244), compiled into the content.
+        Properties: (PropertyDefinition list) option
         /// Named states a playtest can start from (#229); never compiled into a cartridge.
         TestStates: (TestState list) option
         /// The files art and scenes were imported from (Aseprite, Tiled, LDtk), for re-import.
@@ -2220,6 +2225,11 @@ and GameProject =
         /// the shipping log, collections, bundles, achievements, mail, monsters and health).
         /// Only the engine reads it.
         KeptState: Json option
+        /// A playtest kept with **Keep changes**: where the next playtest in the editor goes on
+        /// (`state`, the engine's game state, and a fingerprint of each scene as it was authored
+        /// then). It is not the opening: New Game, `farmc` and Export Game start from the fields
+        /// above and never read it; making it the opening is the creator's own, explicit step.
+        KeptPlaytest: Json option
         /// The game's own text in other languages: one table per language (the project's
         /// `settings.locale` is the source).
         Translations: (TranslationTable list) option
@@ -2294,6 +2304,7 @@ and GameProject =
             Mail = None
             Monsters = None
             SaveMigrations = None
+            Properties = None
             TestStates = None
             Imports = None
             Export = None
@@ -2303,6 +2314,7 @@ and GameProject =
             MineDeepestFloor = None
             QuarantinedItems = None
             KeptState = None
+            KeptPlaytest = None
             Translations = None
             ContentTemplates = None
             Extra = []
@@ -2416,6 +2428,8 @@ and GrowthRequirements =
         Fertilizers: string list
         /// Neighbours it needs around its tile.
         Neighbors: NeighborRequirement list
+        /// Properties (#244) that must be within a range for it to grow: its scene's pressure, say.
+        Properties: (PropertyRange list) option
     }
 
     /// A `GrowthRequirements` with every field at its schema default.
@@ -2428,6 +2442,7 @@ and GrowthRequirements =
             SceneTags = []
             Fertilizers = []
             Neighbors = []
+            Properties = None
         }
 
 and GraphicsSettings =
@@ -3687,6 +3702,8 @@ and ProjectSettings =
         SkillDefinitions: (SkillDefinition list) option
         /// Budgets of the project's own scripts (#241); None: the pack plugin defaults.
         Scripts: ScriptSettings option
+        /// Which systems the game has and how its days end (#243); absent: a classic farming game.
+        Rules: GameRules option
     }
 
     /// A `ProjectSettings` with every field at its schema default.
@@ -3712,6 +3729,142 @@ and ProjectSettings =
             Progression = None
             SkillDefinitions = None
             Scripts = None
+            Rules = None
+        }
+
+/// A tile the player is put on (after a collapse).
+and WakeSpot =
+    {
+        SceneId: string
+        /// int.
+        X: float
+        /// int.
+        Y: float
+    }
+
+    /// A `WakeSpot` with every field at its schema default.
+    static member Default: WakeSpot = { SceneId = ""; X = 0.0; Y = 0.0 }
+
+/// The rules of a game that is not (only) a classic farming game (#243): whether it has farming at all, how it sleeps, and what the end of a day and of the player's energy do. A classic night does four things together; here the date rolling over (with the night's work), recovery, the collapse penalty and moving the player are separate. Every part left out keeps the classic rule. Stamina is `energyEnabled` and combat `combat.enabled`.
+and GameRules =
+    {
+        /// One of `SleepPolicies`: `required` (the day ends in bed or in a collapse), `optional` (a day nobody slept through still rolls over) or `none` (the clock runs round the whole day and the date rolls at midnight); absent: required.
+        Sleep: string option
+        /// One of `DayEndRules`: what the clock reaching the day's end does, `collapse` or `rollover`; absent: collapse when sleep is required, else rollover.
+        DayEnd: string option
+        /// One of `ExhaustionRules`: what running out of energy does, `collapse` or `rest` (nothing that costs energy works until some returns); absent: collapse when sleep is required, else rest.
+        Exhaustion: string option
+        /// The fraction of the player's energy a rollover nobody slept through gives back; absent: none where the player may sleep, all of it where nobody sleeps. 0..1.
+        RolloverEnergyFraction: float option
+        /// Off: no tilling, watering or planting, and crops on the map do not grow; absent: on.
+        Farming: bool option
+        /// Where a collapse puts the player; absent: where they fell.
+        CollapseWake: WakeSpot option
+    }
+
+    /// A `GameRules` with every field at its schema default.
+    static member Default: GameRules =
+        {
+            Sleep = None
+            DayEnd = None
+            Exhaustion = None
+            RolloverEnergyFraction = None
+            Farming = None
+            CollapseWake = None
+        }
+
+/// A change per in-game hour while its conditions hold (#244): a drain when negative, a recovery when positive. A scene's or machine's property reads the conditions for that scene or machine.
+and PropertyRate =
+    {
+        PerHour: float
+        /// All of them must hold; empty: always.
+        Conditions: EventCondition list
+    }
+
+    /// A `PropertyRate` with every field at its schema default.
+    static member Default: PropertyRate = { PerHour = 0.0; Conditions = [] }
+
+/// What a property does when it crosses a value (#244): the outcomes run once each time the comparison starts to hold.
+and PropertyThreshold =
+    {
+        /// One of `PropertyComparisons`: `le` (at most), `lt` (below), `ge` (at least) or `gt` (above).
+        Compare: string
+        Value: float
+        /// Shown when it is crossed; absent: nothing is said.
+        Message: string option
+        Outcomes: EventOutcome list
+    }
+
+    /// A `PropertyThreshold` with every field at its schema default.
+    static member Default: PropertyThreshold =
+        {
+            Compare = "le"
+            Value = 0.0
+            Message = None
+            Outcomes = []
+        }
+
+/// A property of the game (#244): a typed, bounded number the game keeps for the player, for each scene or for each placed machine. It is a declared variable: conditions and outcomes name it by its id (`variable`, `setVariable`, `addVariable`), and for a scene or machine property the bare id means the scene the player is in or the machine they face (`pressure@scene-b` names another scene's).
+and PropertyDefinition =
+    {
+        Id: string
+        Name: string
+        /// One of `PropertyScopes`.
+        Scope: string
+        /// Written after the number ("kPa", "%"); absent: none.
+        Unit: string option
+        /// The least it can be.
+        Min: float
+        /// The most it can be.
+        Max: float
+        /// What it starts at (a scene may start at its own, `Scene.Properties`).
+        Initial: float
+        /// Scene scope: the scenes that have it; absent: every scene.
+        Scenes: (string list) option
+        /// Object scope: the machine types whose placed machines have it; absent: every machine.
+        Objects: (string list) option
+        /// How it changes as game time passes; the rates whose conditions hold add up.
+        Rates: PropertyRate list
+        /// What happens when it crosses a value.
+        Thresholds: PropertyThreshold list
+        /// One of `PropertyHudStyles`; absent: not on the HUD.
+        Hud: string option
+        /// `#rrggbb` of its HUD meter; absent: the interface's own.
+        Color: string option
+    }
+
+    /// A `PropertyDefinition` with every field at its schema default.
+    static member Default: PropertyDefinition =
+        {
+            Id = ""
+            Name = ""
+            Scope = "player"
+            Unit = None
+            Min = 0.0
+            Max = 100.0
+            Initial = 100.0
+            Scenes = None
+            Objects = None
+            Rates = []
+            Thresholds = []
+            Hud = None
+            Color = None
+        }
+
+/// A range a property must be in for a crop to grow (#244): the scene's value of a scene property, the player's of a player property.
+and PropertyRange =
+    {
+        Property: string
+        Min: float option
+        Max: float option
+    }
+
+    /// A `PropertyRange` with every field at its schema default.
+    static member Default: PropertyRange =
+        {
+            Property = ""
+            Min = None
+            Max = None
         }
 
 and RequestBoard =
@@ -4062,6 +4215,8 @@ and Scene =
         Layers: (SceneLayer list) option
         /// Forage that spawns in it each morning.
         ForageSpawns: (ForageSpawnTable list) option
+        /// What its scene properties start at, by property id (#244); absent: each property's own start value.
+        Properties: ((string * float) list) option
         /// Undeclared keys, in order.
         Extra: (string * Json) list
     }
@@ -4088,6 +4243,7 @@ and Scene =
             Monsters = None
             Layers = None
             ForageSpawns = None
+            Properties = None
             Extra = []
         }
 

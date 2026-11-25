@@ -175,8 +175,11 @@ dotnet run --project src/FarmEngine.Cli -- export path/to/WillowCreek --target w
 
 `<project>` is a project folder (or its `project.json`) or a single-file
 project JSON. Without `--target`, farmc exports the targets the project last
-exported. It prints the same report as the editor and exits with 1 when
-anything failed, so a CI job fails with it. `farmc compile <project> --out
+exported. It prints the same report as the editor, then what New Game starts
+with (the date, the player's place, money and inventory, quests under way),
+and exits with 1 when anything failed, so a CI job fails with it. A playtest
+kept in the editor is never exported: New Game starts from the project's
+[opening](CREATOR-GUIDE.md#the-opening-and-a-kept-playtest). `farmc compile <project> --out
 game.cart` builds only the cartridge. The templates must be the ones of the
 same Tractr version: export refuses others.
 

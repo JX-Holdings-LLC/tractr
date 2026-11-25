@@ -1,0 +1,13 @@
+{
+  "id": "tool-axe",
+  "name": "Axe",
+  "description": "Chop down trees and wooden objects",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 100,
+  "toolType": "axe",
+  "toolPower": 1,
+  "durability": 100,
+  "maxDurability": 100
+}

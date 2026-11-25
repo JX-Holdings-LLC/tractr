@@ -7,9 +7,20 @@ using static Tractr.App.Tests.Ui.UiTestHelpers;
 
 namespace Tractr.App.Tests.Game;
 
-/// <summary>Project Settings: weather odds, the mine card and the season arrows.</summary>
+/// <summary>Project Settings: weather odds, the mine card, the season arrows, the game's rules and its properties.</summary>
 public sealed class SettingsEditorTests
 {
+    private static readonly string? OutputDir = Environment.GetEnvironmentVariable("FRM_SCREENSHOT_DIR");
+
+    /// <summary>Saves a look at the tab scrolled to <paramref name="control"/> when FRM_SCREENSHOT_DIR is set.</summary>
+    private static void Snapshot(GameTestHost host, Control control, string file)
+    {
+        if (string.IsNullOrEmpty(OutputDir)) return;
+        control.BringIntoView();
+        Pump();
+        GameTestHost.Capture(host.Window).Save(Path.Combine(OutputDir, file), Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+    }
+
     private static void OpenSettings(GameTestHost host)
     {
         FindByName<TabControl>(host.Window, "EditorTabs").SelectedIndex = 3;
@@ -18,6 +29,96 @@ public sealed class SettingsEditorTests
 
     private static void Press(GameTestHost host, string name) =>
         FindByName<Button>(host.Window, name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    private static void Toggle(GameTestHost host, string name, bool on)
+    {
+        var box = FindByName<CheckBox>(host.Window, name);
+        box.IsChecked = on;
+        box.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Pump();
+    }
+
+    /// <summary>The Rules section (#243): the switch spells the classic rules out, the workshop preset drops sleep and farming, and Play Mode follows.</summary>
+    [AvaloniaFact]
+    public void RulesSwitchAndWorkshopPresetChangeHowTheGameSleeps()
+    {
+        using var host = new GameTestHost();
+        OpenSettings(host);
+        var classic = host.Workspace.Current!;
+        Assert.Null(classic.Settings.Rules.OrNull());
+        Assert.Null(TryFindByName<Button>(host.Window, "SaveRulesButton"));
+
+        Toggle(host, "Setting_Rules", true);
+        var rules = host.Workspace.Current!.Settings.Rules.OrNull();
+        Assert.NotNull(rules);
+        Assert.Equal("required", rules!.Sleep.OrNull());
+        Assert.NotNull(TryFindByName<Button>(host.Window, "SaveRulesButton"));
+        Assert.Equal("Rules saved.", FindByName<TextBlock>(host.Window, "RulesMessage").Text);
+
+        Press(host, "WorkshopRulesButton");
+        Pump();
+        rules = host.Workspace.Current!.Settings.Rules.OrNull();
+        Assert.Equal("none", rules!.Sleep.OrNull());
+        Assert.Equal("rest", rules.Exhaustion.OrNull());
+        Assert.False(rules.Farming.OrNullable());
+        Snapshot(host, FindByName<Button>(host.Window, "SaveRulesButton"), "settings-rules.png");
+        // Saving the form as it stands changes nothing.
+        Press(host, "SaveRulesButton");
+        Assert.Equal("No changes were made.", FindByName<TextBlock>(host.Window, "RulesMessage").Text);
+
+        // In play nobody sleeps: the sleep command leaves the day as it is.
+        host.EnterPlay();
+        host.Play.Use(player => player.RunCommands("""[{"type":"sleep"}]"""));
+        Assert.Equal(1, host.Play.Use(player => player.Summary()).Day);
+        host.ViewModel.Mode = Tractr.App.Hosting.EditorMode.Edit;
+        Pump();
+
+        // Off again: the classic rules, and each step undoes.
+        OpenSettings(host);
+        Toggle(host, "Setting_Rules", false);
+        Assert.Null(host.Workspace.Current!.Settings.Rules.OrNull());
+        host.Workspace.Undo();
+        Assert.Equal("none", host.Workspace.Current!.Settings.Rules.OrNull()!.Sleep.OrNull());
+    }
+
+    /// <summary>The Properties section (#244): rows are drafts until Save properties, which is one undo step.</summary>
+    [AvaloniaFact]
+    public void PropertiesAreAddedRemovedAndSavedTogether()
+    {
+        using var host = new GameTestHost();
+        OpenSettings(host);
+        var before = host.Workspace.Current!;
+        Assert.Empty(SettingsForm.PropertyList(before));
+
+        Press(host, "AddPropertyButton");
+        Press(host, "AddPropertyButton");
+        Pump();
+        Assert.NotNull(TryFindByName<Border>(host.Window, "Property_0"));
+        Assert.NotNull(TryFindByName<Border>(host.Window, "Property_1"));
+        // Drafts: nothing is in the project until they are saved.
+        Assert.Same(before, host.Workspace.Current);
+
+        Press(host, "SavePropertiesButton");
+        Pump();
+        var saved = SettingsForm.PropertyList(host.Workspace.Current!);
+        Assert.Equal(["property-1", "property-2"], saved.Select(property => property.Id));
+        Assert.All(saved, property => Assert.Equal("player", property.Scope));
+        Assert.Equal("Properties saved.", FindByName<TextBlock>(host.Window, "PropertiesMessage").Text);
+        Assert.DoesNotContain(Problems.Collect(host.Workspace.Current!), problem => problem.Code.StartsWith("property.", StringComparison.Ordinal));
+
+        Snapshot(host, FindByName<Button>(host.Window, "SavePropertiesButton"), "settings-properties.png");
+        Press(host, "RemoveProperty_0");
+        Press(host, "SavePropertiesButton");
+        Pump();
+        Assert.Equal(["property-2"], SettingsForm.PropertyList(host.Workspace.Current!).Select(property => property.Id));
+        Press(host, "SavePropertiesButton");
+        Assert.Equal("No changes were made.", FindByName<TextBlock>(host.Window, "PropertiesMessage").Text);
+
+        // Both saves undo.
+        host.Workspace.Undo();
+        host.Workspace.Undo();
+        Assert.Same(before, host.Workspace.Current);
+    }
 
     [AvaloniaFact]
     public void WeatherOddsSaveAsOneUndoStep()

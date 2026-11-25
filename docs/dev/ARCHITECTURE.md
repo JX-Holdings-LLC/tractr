@@ -226,7 +226,9 @@ covers what an exported game contains.
 - **Plugin hooks.** Plugin mutations are queued and come back as
   commands (`PluginMutationQueue`), drained right before each tick
   (`PlaySession` advances one tick at a time, so they do not depend on the
-  frame rate). The engine lets `onWeatherRoll` listeners return an override
+  frame rate). The queue is not part of the state, so the session settles it
+  (`PlaySession::settle`) after a step that starts a day, and hosts settle
+  before they write a save: a save never loses a queued mutation. The engine lets `onWeatherRoll` listeners return an override
   *during* the nightly step, but plugins never do. So `farm-plugins`' `PluginRuntime` dispatches
   `onWeatherRoll` after the step like any other hook, and installs no
   `WeatherRollListener`; the Problems panel warns about plugins that listen
@@ -392,6 +394,32 @@ without a Rust toolchain, which reports them as skipped.
   records with `[<CLIMutable>]` only where binding needs it. Options are
   exposed as nullable through small helper modules; don't make C# match on
   F# unions.
+
+### Rules and properties
+
+Two parts of a project change what the engine's day and state mean, and both
+are read from the content, never hard-coded per game:
+
+- **Game rules** (`settings.rules`, `farm_sim::schema::Rules`, #243). A classic
+  night is four things: the date rolling over with the night's work, recovery,
+  the collapse penalty, and moving the player. `game_time::roll_day` takes them
+  apart (`DayRoll`: what recovers, whether open screens close, what time the
+  new date starts at); `perform_sleep` is the classic combination, and
+  `end_day` picks one for the clock reaching the day's end (or midnight, in a
+  game without sleep). Absent rules resolve to `Rules::CLASSIC`, so classic
+  projects replay tick for tick.
+- **Properties** (`properties`, `farm_sim::properties`, #244) are declared
+  variables: their values live in `GameState::flags` under `id`,
+  `id@<scene>` or `id@<scene>:<x>,<y>`, so saves, the `variable` condition,
+  the variable outcomes, plugins and test states need nothing new. The module
+  resolves a name to an instance (the scene the player is in, the machine
+  they face, or the instance whose own rates and thresholds are being worked
+  out), keeps writes within bounds, runs thresholds on a crossing, and moves
+  values with the clock by exact shares of their hourly rates.
+
+Fields added for either are *extension fields* of the state hash
+(`hash::extension_field`): absent, they contribute no byte, so the hashes of
+games that do not use them are unchanged.
 
 ### Rust conventions
 

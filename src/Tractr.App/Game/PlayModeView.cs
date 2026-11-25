@@ -137,6 +137,9 @@ public sealed class PlayModeView : UserControl
     /// <summary>"Save this state": keep the running game as a test state of the project (#229).</summary>
     public event EventHandler? SaveStateRequested;
 
+    /// <summary>"Play from the opening": a new game as an exported one starts, whatever playtest is kept.</summary>
+    public event EventHandler? PlayFromOpeningRequested;
+
     /// <summary>The project's test states (id, name) the States menu lists.</summary>
     public Func<IReadOnlyList<(string Id, string Name)>>? TestStates { get; set; }
 
@@ -144,6 +147,10 @@ public sealed class PlayModeView : UserControl
     public MenuFlyout BuildStatesMenu()
     {
         var menu = new MenuFlyout();
+        var opening = new MenuItem { Header = "Play from the opening", Name = "PlayFromOpening" };
+        opening.Click += (_, _) => PlayFromOpeningRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(opening);
+        menu.Items.Add(new Separator());
         var states = TestStates?.Invoke() ?? Array.Empty<(string Id, string Name)>();
         foreach (var (id, name) in states)
         {

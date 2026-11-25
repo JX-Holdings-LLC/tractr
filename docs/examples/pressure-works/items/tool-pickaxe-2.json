@@ -1,0 +1,14 @@
+{
+  "id": "tool-pickaxe-2",
+  "name": "Copper Pickaxe",
+  "description": "Cracks boulders lesser picks cannot",
+  "type": "tool",
+  "stackable": false,
+  "maxStack": 1,
+  "value": 500,
+  "toolType": "pickaxe",
+  "toolPower": 2,
+  "toolTier": 2,
+  "durability": 200,
+  "maxDurability": 200
+}

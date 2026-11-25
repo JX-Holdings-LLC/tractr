@@ -49,6 +49,12 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private ContentForm? _progressionForm;
     private readonly StackPanel _progression = new() { Name = "ProgressionSettings", Spacing = 6 };
     private readonly StackPanel _mineBands = new() { Name = "MineBands", Spacing = 8 };
+    private readonly StackPanel _opening = new() { Name = "OpeningSection", Spacing = 6 };
+    private readonly CheckBox _rulesOn = new() { Name = "Setting_Rules", Content = "This game has its own rules: sleep, the day's end, exhaustion, farming" };
+    private readonly StackPanel _rules = new() { Name = "RulesSettings", Spacing = 6 };
+    private ContentForm? _rulesForm;
+    private readonly StackPanel _properties = new() { Name = "PropertySettings", Spacing = 8 };
+    private readonly List<ContentForm> _propertyForms = [];
     private readonly List<ContentForm> _mineBandForms = [];
     private readonly DraftRows<SeasonDraft> _seasonRows;
     private readonly Dictionary<SeasonDraft, (Button Up, Button Down)> _seasonArrows = [];
@@ -203,9 +209,34 @@ public sealed class SettingsEditorView : UserControl, IRetirable
         form.Children.Add(_combatOn);
         form.Children.Add(_combat);
         form.Children.Add(Shown("CombatMessage", nameof(SettingsViewModel.CombatMessage)));
+        form.Children.Add(Ui.Text("RULES", "section"));
+        form.Children.Add(Ui.Wrapped("Which systems the game has and how its days end. Off, it is a classic farming game: the day ends in bed or in a collapse. On, each part is its own choice: whether anyone sleeps, what the day's end and an empty energy bar do, where a collapse wakes the player, and whether there is farming at all. Stamina is Energy enabled above, and combat has its own section.", "muted", "small"));
+        _rulesOn.Click += (_, _) => ViewModel.SetRulesOn(_rulesOn.IsChecked == true);
+        form.Children.Add(_rulesOn);
+        form.Children.Add(_rules);
+        form.Children.Add(Shown("RulesMessage", nameof(SettingsViewModel.RulesMessage)));
+        form.Children.Add(Ui.Text("PROPERTIES", "section"));
+        form.Children.Add(Ui.Wrapped("Numbers the game keeps and shows: the player's oxygen, a greenhouse's pressure, a tank's charge. A property has bounds, changes by the hour while its conditions hold, and does something when it crosses a value. Conditions and outcomes use it by its id as a variable; for a scene's or a machine's property the id alone means the scene the player is in or the machine they face, and id@scene another scene's.", "muted", "small"));
+        form.Children.Add(_properties);
+        var addProperty = Ui.Button("Add property", AddProperty, "tool");
+        addProperty.Name = "AddPropertyButton";
+        var saveProperties = Ui.Button("Save properties", SaveProperties, "accent");
+        saveProperties.Name = "SavePropertiesButton";
+        form.Children.Add(Ui.HStack(8, addProperty, saveProperties));
+        form.Children.Add(Shown("PropertiesMessage", nameof(SettingsViewModel.PropertiesMessage)));
+        ViewModel.RulesChanged += ShowRules;
+        ViewModel.RulesChanged += ShowProperties;
+        ShowRules();
+        ShowProperties();
         form.Children.Add(Ui.Text("PLAYER PROGRESSION", "section"));
         form.Children.Add(Ui.Wrapped("Set permanent upgrade limits and skills, action XP, level rewards and perk choices. Empty skills retain the built-in rules.", "muted", "small"));
         form.Children.Add(_progression);
+        form.Children.Add(Ui.Text("OPENING", "section"));
+        form.Children.Add(Ui.Wrapped("What New Game starts with, in Play Mode and in the exported game. Keep changes keeps a playtest beside the opening, for the next playtest to go on from; it becomes the opening only when you say so here.", "muted", "small"));
+        form.Children.Add(_opening);
+        form.Children.Add(Shown("OpeningMessage", nameof(SettingsViewModel.OpeningMessage)));
+        ViewModel.OpeningChanged += ShowOpening;
+        ShowOpening();
         form.Children.Add(Ui.Text("EXPORT", "section"));
         form.Children.Add(Ui.Wrapped("How File → Export Game names and packages the standalone game. Empty title and version use the project's.", "muted", "small"));
         Field(form, "Game title", "Export_Title", nameof(SettingsViewModel.ExportTitle)).PlaceholderText = "Project name";
@@ -422,6 +453,137 @@ public sealed class SettingsEditorView : UserControl, IRetirable
     private void SaveMineBands()
     {
         if (DraftMineBands() is { } bands) ViewModel.SaveMineBands(bands);
+    }
+
+    /// <summary>The Rules section (#243): its switch and, when on, the rules as a form with Save and the workshop preset.</summary>
+    private void ShowRules()
+    {
+        var rules = ViewModel.Rules;
+        _rulesOn.IsChecked = rules is not null;
+        _rules.Children.Clear();
+        _rulesForm = null;
+        if (rules is null || ViewModel.Workspace.Current is not { } project) return;
+        var fields = new StackPanel { Spacing = 6 };
+        _rulesForm = new ContentForm(project, rules, typeof(GameRules), fields, ViewModel.ReportRules);
+        _rules.Children.Add(fields);
+        var save = Ui.Button("Save rules", () => SaveRules<GameRules>(_rulesForm, ViewModel.SaveRules, ViewModel.ReportRules), "accent");
+        save.Name = "SaveRulesButton";
+        var workshop = Ui.Button("Workshop: no sleep, no farming", ViewModel.UseWorkshopRules, "tool");
+        workshop.Name = "WorkshopRulesButton";
+        _rules.Children.Add(Ui.HStack(8, save, workshop));
+    }
+
+    /// <summary>One form per property (#244), as stored.</summary>
+    private void ShowProperties() => ShowProperties(ViewModel.Properties);
+
+    private void ShowProperties(IReadOnlyList<PropertyDefinition> properties)
+    {
+        _properties.Children.Clear();
+        _propertyForms.Clear();
+        if (ViewModel.Workspace.Current is not { } project) return;
+        for (var i = 0; i < properties.Count; i++)
+        {
+            var index = i;
+            var fields = new StackPanel { Spacing = 6 };
+            _propertyForms.Add(new ContentForm(project, properties[i], typeof(PropertyDefinition), fields, ViewModel.ReportProperties));
+            var remove = Ui.Button(EditorStrings.Get("common.remove"), () => RemoveProperty(index), "tool", "small");
+            remove.Name = $"RemoveProperty_{i}";
+            var title = string.IsNullOrEmpty(properties[i].Name) ? properties[i].Id : properties[i].Name;
+            var card = Ui.VStack(6, Ui.HStack(8, Ui.Text(title, "muted", "small"), remove), fields);
+            _properties.Children.Add(new Border { Name = $"Property_{i}", Child = card }.WithClasses("row"));
+        }
+    }
+
+    /// <summary>The property forms as they stand (unsaved edits included), or null after saying which form does not read.</summary>
+    private List<PropertyDefinition>? DraftProperties()
+    {
+        try
+        {
+            return [.. _propertyForms.Select(form => (PropertyDefinition)form.Commit())];
+        }
+        catch (Exception error) when (error is FormatException or System.Text.Json.JsonException)
+        {
+            ViewModel.ReportProperties(EditorStrings.Format("settings.couldNotSave", error.Message));
+            return null;
+        }
+    }
+
+    /// <summary>A new property after the last one (unsaved until Save properties).</summary>
+    private void AddProperty()
+    {
+        if (DraftProperties() is not { } properties || ViewModel.NewProperty() is not { } added) return;
+        // An id no draft row has yet.
+        var id = added.Id;
+        for (var n = 2; properties.Any(property => property.Id == id); n++)
+        {
+            id = $"property-{properties.Count + n - 1}";
+        }
+
+        properties.Add(added.WithId(id));
+        ShowProperties(properties);
+    }
+
+    private void RemoveProperty(int index)
+    {
+        if (DraftProperties() is not { } properties || index >= properties.Count) return;
+        properties.RemoveAt(index);
+        ShowProperties(properties);
+    }
+
+    private void SaveProperties()
+    {
+        if (DraftProperties() is { } properties) ViewModel.SaveProperties(properties);
+    }
+
+    /// <summary>The Opening section: the opening's facts, and the kept playtest with what promoting it would change.</summary>
+    private void ShowOpening()
+    {
+        _opening.Children.Clear();
+        var facts = new StackPanel { Name = "OpeningFacts", Spacing = 2 };
+        foreach (var line in ViewModel.OpeningLines)
+        {
+            facts.Children.Add(Ui.Wrapped(line, "small"));
+        }
+
+        _opening.Children.Add(facts);
+        if (!ViewModel.HasKeptPlaytest)
+        {
+            _opening.Children.Add(Ui.Wrapped("No playtest is kept.", "muted", "small"));
+            return;
+        }
+
+        _opening.Children.Add(Ui.Text("Kept playtest", "muted", "small"));
+        var kept = new StackPanel { Name = "KeptPlaytestFacts", Spacing = 2 };
+        foreach (var line in ViewModel.KeptPlaytestLines)
+        {
+            kept.Children.Add(Ui.Wrapped(line, "small"));
+        }
+
+        _opening.Children.Add(kept);
+        if (ViewModel.EditedSinceKept is { Count: > 0 } edited)
+        {
+            _opening.Children.Add(Ui.Wrapped($"Edited since it was kept: {string.Join(", ", edited)}. The kept playtest goes on with these maps as they are now.", "muted", "small"));
+        }
+
+        _opening.Children.Add(Ui.Text("If it became the opening", "muted", "small"));
+        var preview = new StackPanel { Name = "PromotionPreview", Spacing = 2 };
+        var changes = ViewModel.PromotionPreview;
+        foreach (var line in changes)
+        {
+            preview.Children.Add(Ui.Wrapped(line, "small"));
+        }
+
+        if (changes.Count == 0)
+        {
+            preview.Children.Add(Ui.Wrapped("Nothing listed here would change.", "muted", "small"));
+        }
+
+        _opening.Children.Add(preview);
+        var promote = Ui.Button("Make the kept playtest the opening", ViewModel.PromoteKeptPlaytest, "tool");
+        promote.Name = "PromoteKeptPlaytestButton";
+        var discard = Ui.Button("Discard the kept playtest", ViewModel.DiscardKeptPlaytest, "tool");
+        discard.Name = "DiscardKeptPlaytestButton";
+        _opening.Children.Add(Ui.HStack(8, promote, discard));
     }
 
     public SettingsViewModel ViewModel { get; }

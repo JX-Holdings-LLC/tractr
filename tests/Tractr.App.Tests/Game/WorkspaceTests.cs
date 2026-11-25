@@ -144,9 +144,10 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
-    public void Playtest_KeepChanges_WritesTheFinalStateBack()
+    public void Playtest_KeepChanges_KeepsThePlaytestBesideTheOpening()
     {
         using var host = new GameTestHost();
+        var opening = Playtests.OpeningLines(host.Workspace.Current!);
         host.EnterPlay();
         host.Play.Use(player => player.RunCommands("""[{"type":"sleep"}]"""));
         Click(host.Window, FindByName<Avalonia.Controls.Primitives.ToggleButton>(host.Window, "KeepChangesButton"));
@@ -154,10 +155,74 @@ public sealed class WorkspaceTests
         host.ViewModel.Mode = EditorMode.Edit;
         Pump();
 
+        // The opening is as authored (New Game and exports start there); the playtest is kept beside it.
         var project = host.Workspace.Current!;
-        Assert.Equal(2, project.CurrentDay);
-        Assert.Equal(2, host.Workspace.Store.Load(project.Id).Project!.CurrentDay);
+        Assert.Equal(1, project.CurrentDay);
+        Assert.True(Playtests.HasKept(project));
+        Assert.Equal(opening, Playtests.OpeningLines(project));
+        Assert.Equal(2, Playtests.Resume(project).CurrentDay);
+        var stored = host.Workspace.Store.Load(project.Id).Project!;
+        Assert.Equal(1, stored.CurrentDay);
+        Assert.True(Playtests.HasKept(stored));
         Assert.Contains("kept", host.ViewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.Contains("opening", host.ViewModel.StatusMessage, StringComparison.Ordinal);
+
+        // The next playtest goes on from the kept one; States → Play from the opening starts a new game.
+        host.EnterPlay();
+        Assert.Equal(2, host.Play.Use(player => player.Summary()).Day);
+        Assert.Contains("kept playtest", host.ViewModel.StatusMessage, StringComparison.Ordinal);
+        var fromOpening = host.Play.BuildStatesMenu().Items.OfType<MenuItem>().Single(item => item.Name == "PlayFromOpening");
+        fromOpening.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
+        Pump();
+        Assert.Equal(1, host.Play.Use(player => player.Summary()).Day);
+        host.ViewModel.Mode = EditorMode.Edit;
+        Pump();
+        // Leaving without Keep changes leaves the kept playtest as it was.
+        Assert.Equal(2, Playtests.Resume(host.Workspace.Current!).CurrentDay);
+    }
+
+    [AvaloniaFact]
+    public void Settings_Opening_PreviewsAndPromotesTheKeptPlaytest()
+    {
+        using var host = new GameTestHost();
+        host.EnterPlay();
+        host.Play.Use(player => player.RunCommands("""[{"type":"sleep"}]"""));
+        host.Play.KeepChanges = true;
+        host.ViewModel.Mode = EditorMode.Edit;
+        Pump();
+
+        var settings = new SettingsEditorView(host.Workspace);
+        var window = new Window { Content = settings, Width = 900, Height = 700 };
+        window.Show();
+        Pump();
+        try
+        {
+            // The section shows the opening, the kept playtest and what promoting it would change.
+            var text = AllVisibleText(FindByName<StackPanel>(window, "OpeningSection"));
+            Assert.Contains("Date: Day 1 of", text, StringComparison.Ordinal);
+            Assert.Contains("Kept playtest", text, StringComparison.Ordinal);
+            Assert.Contains("Date: Day 2 of", text, StringComparison.Ordinal);
+            Assert.Contains("\u2192 Day 2 of", AllVisibleText(FindByName<StackPanel>(window, "PromotionPreview")), StringComparison.Ordinal);
+
+            // Promoting is the explicit step: the opening becomes day 2, nothing is kept beside it, and Undo takes it back.
+            settings.ViewModel.PromoteKeptPlaytest();
+            Pump();
+            Assert.Equal(2, host.Workspace.Current!.CurrentDay);
+            Assert.False(Playtests.HasKept(host.Workspace.Current!));
+            Assert.Contains("No playtest is kept.", AllVisibleText(FindByName<StackPanel>(window, "OpeningSection")), StringComparison.Ordinal);
+            Assert.True(host.Workspace.Undo());
+            Assert.Equal(1, host.Workspace.Current!.CurrentDay);
+            Assert.True(Playtests.HasKept(host.Workspace.Current!));
+
+            // Discarding forgets the playtest and leaves the opening.
+            settings.ViewModel.DiscardKeptPlaytest();
+            Assert.Equal(1, host.Workspace.Current!.CurrentDay);
+            Assert.False(Playtests.HasKept(host.Workspace.Current!));
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [AvaloniaFact]

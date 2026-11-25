@@ -1,5 +1,6 @@
 //! Growth requirements (M1): what a crop needs to grow beyond water and its seasons — light or
-//! dark, a temperature range, and neighbours (crops, a terrain, water). Where it may be planted
+//! dark, a temperature range, neighbours (crops, a terrain, water), and (#244) properties of its
+//! scene within a range. Where it may be planted
 //! (terrains, scene tags, fertilizers) is checked when it is planted
 //! (`farming_actions::plant_seed`); this module decides, each night, which crops a scene holds
 //! back.
@@ -11,7 +12,12 @@ use indexmap::IndexSet;
 /// The tiles of `scene` whose live crop does not grow tonight because a growth requirement is
 /// not met. `season_temperature` is the new season's temperature, which a scene without its own
 /// has. Empty when no crop in the scene has requirements (every built-in crop).
-pub fn unmet_tiles(ctx: &EngineContext, scene: &Scene, season_temperature: Option<i32>) -> IndexSet<(usize, usize)> {
+pub fn unmet_tiles(
+    ctx: &EngineContext,
+    scene: &Scene,
+    season_temperature: Option<i32>,
+    properties: &[(&str, i64)],
+) -> IndexSet<(usize, usize)> {
     let mut unmet = IndexSet::new();
     let temperature = scene.temperature.or(season_temperature);
     for (y, row) in scene.tiles.iter().enumerate() {
@@ -20,12 +26,23 @@ pub fn unmet_tiles(ctx: &EngineContext, scene: &Scene, season_temperature: Optio
             let Some(needs) = ctx.content.crops.get(&crop.r#type).and_then(|def| def.requirements.as_ref()) else {
                 continue;
             };
-            if !grows_here(ctx, scene, (x, y), needs, temperature) {
+            if !grows_here(ctx, scene, (x, y), needs, temperature) || !properties_suit(needs, properties) {
                 unmet.insert((x, y));
             }
         }
     }
     unmet
+}
+
+/// Whether every property a crop needs in a range (#244) is in it. `properties` holds the
+/// scene's values (`crate::properties::values_in_scene`); a property the scene lacks suits no
+/// crop that needs it.
+pub fn properties_suit(needs: &GrowthRequirements, properties: &[(&str, i64)]) -> bool {
+    needs.properties.iter().flatten().all(|range| {
+        properties.iter().find(|(id, _)| *id == range.property).is_some_and(|(_, value)| {
+            range.min.is_none_or(|min| *value >= min) && range.max.is_none_or(|max| *value <= max)
+        })
+    })
 }
 
 /// Whether a crop with `needs` on tile `(x, y)` of `scene` grows tonight.

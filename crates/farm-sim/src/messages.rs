@@ -273,6 +273,11 @@ catalog! {
     // Energy, time and the calendar.
     EXHAUSTED = "msg.exhausted" => "You are getting exhausted \u{2014} consider sleeping.";
     COLLAPSED = "msg.collapsed" => "You collapsed from exhaustion! Lost ${0}.";
+    GETTING_TIRED = "msg.gettingTired" => "You are getting tired.";
+    NO_SLEEP = "msg.noSleep" => "There is no sleeping here: the day goes on.";
+    WORN_OUT = "msg.wornOut" => "You are worn out. Rest or eat before doing more.";
+    TOO_TIRED = "msg.tooTired" => "You are too tired for that.";
+    NO_FARMING = "msg.noFarming" => "Nothing grows here.";
     WEATHER_TODAY = "msg.weatherToday" => "Weather: {0}";
     SEASON_ARRIVED = "msg.seasonArrived" => "{0} has arrived!";
     YEAR_BEGINS = "msg.yearBegins" => "Year {0} begins!";

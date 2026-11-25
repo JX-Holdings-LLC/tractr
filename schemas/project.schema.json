@@ -3192,6 +3192,13 @@
             "$ref": "#/$defs/SaveMigration"
           }
         },
+        "properties": {
+          "description": "Creator-defined properties (#244), compiled into the content.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropertyDefinition"
+          }
+        },
         "testStates": {
           "description": "Named states a playtest can start from (#229); never compiled into a cartridge.",
           "type": "array",
@@ -3239,6 +3246,9 @@
         "keptState": {
           "description": "The rest of a kept playtest's state (Rust `KeptState`: tick, open dialogue, shop, minigame or cutscene, chosen music, today's shop purchases, NPC walks, mine floor, children, changed shop stock, and the M5–M7 `goals`: open storage, the farm layout, the shipping log, collections, bundles, achievements, mail, monsters and health). Only the engine reads it."
         },
+        "keptPlaytest": {
+          "description": "A playtest kept with **Keep changes**: where the next playtest in the editor goes on (`state`, the engine's game state, and a fingerprint of each scene as it was authored then). It is not the opening: New Game, `farmc` and Export Game start from the fields above and never read it; making it the opening is the creator's own, explicit step."
+        },
         "translations": {
           "description": "The game's own text in other languages: one table per language (the project's `settings.locale` is the source).",
           "type": "array",
@@ -3258,6 +3268,68 @@
         "schemaVersion"
       ],
       "additionalProperties": true
+    },
+    "GameRules": {
+      "description": "The rules of a game that is not (only) a classic farming game (#243): whether it has farming at all, how it sleeps, and what the end of a day and of the player's energy do. A classic night does four things together; here the date rolling over (with the night's work), recovery, the collapse penalty and moving the player are separate. Every part left out keeps the classic rule. Stamina is `energyEnabled` and combat `combat.enabled`.",
+      "type": "object",
+      "properties": {
+        "sleep": {
+          "description": "One of `SleepPolicies`: `required` (the day ends in bed or in a collapse), `optional` (a day nobody slept through still rolls over) or `none` (the clock runs round the whole day and the date rolls at midnight); absent: required.",
+          "anyOf": [
+            {
+              "enum": [
+                "required",
+                "optional",
+                "none"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "dayEnd": {
+          "description": "One of `DayEndRules`: what the clock reaching the day's end does, `collapse` or `rollover`; absent: collapse when sleep is required, else rollover.",
+          "anyOf": [
+            {
+              "enum": [
+                "collapse",
+                "rollover"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "exhaustion": {
+          "description": "One of `ExhaustionRules`: what running out of energy does, `collapse` or `rest` (nothing that costs energy works until some returns); absent: collapse when sleep is required, else rest.",
+          "anyOf": [
+            {
+              "enum": [
+                "collapse",
+                "rest"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "rolloverEnergyFraction": {
+          "description": "The fraction of the player's energy a rollover nobody slept through gives back; absent: none where the player may sleep, all of it where nobody sleeps. 0..1.",
+          "type": "number"
+        },
+        "farming": {
+          "description": "Off: no tilling, watering or planting, and crops on the map do not grow; absent: on.",
+          "type": "boolean"
+        },
+        "collapseWake": {
+          "description": "Where a collapse puts the player; absent: where they fell.",
+          "$ref": "#/$defs/WakeSpot"
+        }
+      },
+      "additionalProperties": false
     },
     "GameWords": {
       "description": "The words of a game (M1): what it calls money, energy and the skills, in every language.",
@@ -3390,6 +3462,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/NeighborRequirement"
+          }
+        },
+        "properties": {
+          "description": "Properties (#244) that must be within a range for it to grow: its scene's pressure, say.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropertyRange"
           }
         }
       },
@@ -5621,6 +5700,179 @@
         "scripts": {
           "description": "Budgets of the project's own scripts (#241); None: the pack plugin defaults.",
           "$ref": "#/$defs/ScriptSettings"
+        },
+        "rules": {
+          "description": "Which systems the game has and how its days end (#243); absent: a classic farming game.",
+          "$ref": "#/$defs/GameRules"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropertyDefinition": {
+      "description": "A property of the game (#244): a typed, bounded number the game keeps for the player, for each scene or for each placed machine. It is a declared variable: conditions and outcomes name it by its id (`variable`, `setVariable`, `addVariable`), and for a scene or machine property the bare id means the scene the player is in or the machine they face (`pressure@scene-b` names another scene's).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "default": ""
+        },
+        "name": {
+          "type": "string",
+          "default": ""
+        },
+        "scope": {
+          "description": "One of `PropertyScopes`.",
+          "anyOf": [
+            {
+              "enum": [
+                "player",
+                "scene",
+                "object"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "player"
+        },
+        "unit": {
+          "description": "Written after the number (\"kPa\", \"%\"); absent: none.",
+          "type": "string"
+        },
+        "min": {
+          "description": "The least it can be.",
+          "type": "number",
+          "default": 0
+        },
+        "max": {
+          "description": "The most it can be.",
+          "type": "number",
+          "default": 100
+        },
+        "initial": {
+          "description": "What it starts at (a scene may start at its own, `Scene.Properties`).",
+          "type": "number",
+          "default": 100
+        },
+        "scenes": {
+          "description": "Scene scope: the scenes that have it; absent: every scene.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "objects": {
+          "description": "Object scope: the machine types whose placed machines have it; absent: every machine.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rates": {
+          "description": "How it changes as game time passes; the rates whose conditions hold add up.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropertyRate"
+          }
+        },
+        "thresholds": {
+          "description": "What happens when it crosses a value.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PropertyThreshold"
+          }
+        },
+        "hud": {
+          "description": "One of `PropertyHudStyles`; absent: not on the HUD.",
+          "anyOf": [
+            {
+              "enum": [
+                "meter",
+                "number"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "color": {
+          "description": "`#rrggbb` of its HUD meter; absent: the interface's own.",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropertyRange": {
+      "description": "A range a property must be in for a crop to grow (#244): the scene's value of a scene property, the player's of a player property.",
+      "type": "object",
+      "properties": {
+        "property": {
+          "type": "string",
+          "default": ""
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropertyRate": {
+      "description": "A change per in-game hour while its conditions hold (#244): a drain when negative, a recovery when positive. A scene's or machine's property reads the conditions for that scene or machine.",
+      "type": "object",
+      "properties": {
+        "perHour": {
+          "type": "number",
+          "default": 0
+        },
+        "conditions": {
+          "description": "All of them must hold; empty: always.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventCondition"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "PropertyThreshold": {
+      "description": "What a property does when it crosses a value (#244): the outcomes run once each time the comparison starts to hold.",
+      "type": "object",
+      "properties": {
+        "compare": {
+          "description": "One of `PropertyComparisons`: `le` (at most), `lt` (below), `ge` (at least) or `gt` (above).",
+          "anyOf": [
+            {
+              "enum": [
+                "le",
+                "lt",
+                "ge",
+                "gt"
+              ]
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "le"
+        },
+        "value": {
+          "type": "number",
+          "default": 0
+        },
+        "message": {
+          "description": "Shown when it is crossed; absent: nothing is said.",
+          "type": "string"
+        },
+        "outcomes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventOutcome"
+          }
         }
       },
       "additionalProperties": false
@@ -6292,6 +6544,13 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/ForageSpawnTable"
+          }
+        },
+        "properties": {
+          "description": "What its scene properties start at, by property id (#244); absent: each property's own start value.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
           }
         }
       },
@@ -7673,6 +7932,27 @@
         },
         "frame": {
           "$ref": "#/$defs/ArtFrame"
+        }
+      },
+      "additionalProperties": false
+    },
+    "WakeSpot": {
+      "description": "A tile the player is put on (after a collapse).",
+      "type": "object",
+      "properties": {
+        "sceneId": {
+          "type": "string",
+          "default": ""
+        },
+        "x": {
+          "description": "int.",
+          "type": "number",
+          "default": 0
+        },
+        "y": {
+          "description": "int.",
+          "type": "number",
+          "default": 0
         }
       },
       "additionalProperties": false

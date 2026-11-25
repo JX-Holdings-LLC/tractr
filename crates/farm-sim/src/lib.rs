@@ -54,6 +54,7 @@ pub mod overlay;
 pub mod packs;
 pub mod plugin_world;
 pub mod progression;
+pub mod properties;
 pub mod quests;
 pub mod relationships;
 pub mod replay;

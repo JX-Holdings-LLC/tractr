@@ -1,0 +1,9 @@
+{
+  "id": "material-fiber",
+  "name": "Fiber",
+  "description": "Plant fiber cut from weeds",
+  "type": "material",
+  "stackable": true,
+  "maxStack": 999,
+  "value": 2
+}

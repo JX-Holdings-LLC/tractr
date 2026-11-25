@@ -1,0 +1,14 @@
+{
+  "seed": "shift",
+  "testState": { "id": "in-b", "sceneId": "greenhouse-b", "x": 5, "y": 5 },
+  "inputs": [
+    { "kind": "tick", "ticks": 1200 },
+    { "kind": "command", "command": { "type": "performAction", "actionId": "pump" } },
+    { "kind": "tick", "ticks": 1200 }
+  ],
+  "expect": [
+    { "variable": "pressure@greenhouse-b", "value": 58 },
+    { "variable": "pressure@greenhouse-a", "value": 78 },
+    { "variable": "oxygen", "value": 100 }
+  ]
+}

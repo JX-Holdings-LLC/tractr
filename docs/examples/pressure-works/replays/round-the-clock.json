@@ -1,0 +1,11 @@
+{
+  "seed": "shift",
+  "inputs": [{ "kind": "tick", "ticks": 30000 }],
+  "expect": [
+    { "money": 100 },
+    { "scene": "scene-main" },
+    { "variable": "oxygen", "value": 100 },
+    { "variable": "pressure@greenhouse-a", "value": 0 },
+    { "variable": "alarms", "value": 1 }
+  ]
+}

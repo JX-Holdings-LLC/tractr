@@ -205,7 +205,8 @@ public sealed class GameWorkspaceView : UserControl
         RustPlayer player;
         try
         {
-            player = CreatePlayer(_workspace.Current);
+            // A kept playtest goes on where it left off; the opening itself is never played over.
+            player = CreatePlayer(Playtests.Resume(_workspace.Current));
         }
 #pragma warning disable CA1031 // A broken project must not take the app down; report and stay in Edit Mode.
         catch (Exception ex)
@@ -220,11 +221,14 @@ public sealed class GameWorkspaceView : UserControl
         _play = new PlayModeView(player, _options.AutoRun);
         _play.RestartRequested += OnRestartRequested;
         _play.PlayFromStateRequested += OnPlayFromState;
+        _play.PlayFromOpeningRequested += OnPlayFromOpening;
         _play.SaveStateRequested += OnSaveState;
         _play.TestStates = TestStateNames;
         _play.Faulted += OnPlayFaulted;
         Content = _play;
-        _shell.ShowStatus($"Playtesting {DisplayName()} — changes are discarded on exit unless you keep them.");
+        _shell.ShowStatus(Playtests.HasKept(_snapshot)
+            ? $"Playtesting {DisplayName()} from the kept playtest (States → Play from the opening starts a new game) — changes are discarded on exit unless you keep them."
+            : $"Playtesting {DisplayName()} — changes are discarded on exit unless you keep them.");
         _play.Focus();
     }
 
@@ -246,7 +250,8 @@ public sealed class GameWorkspaceView : UserControl
             try
             {
                 var state = play.Use(player => player.StateJson());
-                finalProject = Playtests.ApplyState(_snapshot!, state);
+                // Kept beside the opening: New Game and exports still start as authored.
+                finalProject = Playtests.Keep(_snapshot!, state);
             }
             catch (Exception ex) when (ex is FarmFfiException or FormatException)
             {
@@ -257,6 +262,7 @@ public sealed class GameWorkspaceView : UserControl
 
         play.RestartRequested -= OnRestartRequested;
         play.PlayFromStateRequested -= OnPlayFromState;
+        play.PlayFromOpeningRequested -= OnPlayFromOpening;
         play.SaveStateRequested -= OnSaveState;
         play.Faulted -= OnPlayFaulted;
         play.Close();
@@ -266,7 +272,7 @@ public sealed class GameWorkspaceView : UserControl
         if (finalProject is not null)
         {
             _workspace.KeepPlaytestResult(finalProject);
-            _shell.ShowStatus("Playtest changes kept.");
+            _shell.ShowStatus("Playtest kept: the next playtest goes on from it. New Game and exports still start from the opening (Settings → Opening).");
         }
         else if (unreadable)
         {
@@ -416,7 +422,7 @@ public sealed class GameWorkspaceView : UserControl
         RustPlayer player;
         try
         {
-            player = CreatePlayer(_snapshot);
+            player = CreatePlayer(Playtests.Resume(_snapshot));
         }
         catch (FarmFfiException ex)
         {
@@ -444,7 +450,7 @@ public sealed class GameWorkspaceView : UserControl
 
         try
         {
-            var player = CreatePlayer(_snapshot);
+            var player = CreatePlayer(Playtests.Opening(_snapshot));
             player.DebugJson(TestStatesApi.ApplyAction(state));
             _play.Attach(player);
             _play.ShowToast(new ToastMessage($"Playing from \"{(string.IsNullOrEmpty(state.Name) ? state.Id : state.Name)}\"", ToastKind.Success));
@@ -452,6 +458,25 @@ public sealed class GameWorkspaceView : UserControl
         catch (FarmFfiException ex)
         {
             _play.ShowToast(new ToastMessage($"Could not play from that state: {ex.Message}", ToastKind.Error));
+        }
+    }
+
+    /// <summary>"Play from the opening": a new game as the exported game starts it, leaving any kept playtest alone.</summary>
+    private void OnPlayFromOpening(object? sender, EventArgs e)
+    {
+        if (_play is null || _snapshot is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _play.Attach(CreatePlayer(Playtests.Opening(_snapshot)));
+            _play.ShowToast(new ToastMessage("Playing from the opening", ToastKind.Success));
+        }
+        catch (FarmFfiException ex)
+        {
+            _play.ShowToast(new ToastMessage($"Could not play from the opening: {ex.Message}", ToastKind.Error));
         }
     }
 

@@ -160,6 +160,14 @@ are tiles (0 to 511); a `sceneId` left out means the scene the NPC is in
 | `addMaxEnergy`, `addMaxHealth` | `amount`: -1000 to 1000 points, within the game's progression limits |
 | `applyBuff` | `buff`: `id`, `stat`, `amount` (-1000 to 1000), `durationMinutes` (1 to 525,600), and optionally `icon`, `persistsAfterSleep` and `additive`; at most 2048 bytes. Reusing an id restarts that buff. At most 64 buffs are active. |
 
+A [property](CREATOR-GUIDE.md#properties) of the game is a variable with
+bounds: `setVariable` and `addVariable` on its id keep the value within them
+and run the thresholds it crosses, and `api.state` reads it like any
+variable. A scene's property is `id@<scene id>` (the id alone is the scene
+the player is in), a placed machine's `id@<scene id>:<x>,<y>`. Properties
+are the game's own, so a project script names them as written and a pack
+needs the `:any` form of `setVariable` or `addVariable`.
+
 Entities and timers ([Entities, timers and item use](#entities-timers-and-item-use)):
 
 | Mutation | Fields |
@@ -248,8 +256,9 @@ api.on('onSceneEnter', p => {
   It needs no capability: it touches nothing but the plugin's own data.
 - `onLoad` is heard by each plugin alone, with `{ data }`: what it saved in
   this game, or `null`. It comes when a new game starts and when a save
-  loads (and when Play Mode starts a playtest, whose **Keep changes**
-  carries the data into the next one), before any other hook.
+  loads (and when Play Mode starts a playtest; a playtest kept with
+  **Keep changes** carries the data into the one that goes on from it),
+  before any other hook.
   Answers to it apply before the first tick like any other. A plugin rebuilt
   after a strike (its JavaScript state starts over) hears it again before
   the next tick, with what it has saved up to then.
@@ -494,6 +503,16 @@ Player-installed mods stay in the pack tier; only the project holds scripts.
   order they arrived. The game advances one tick at a time, so this does not
   depend on the frame rate: the same input gives the same game at 30 and at
   144 frames per second.
+- **A morning is settled at once.** Answers to the step that starts a new day
+  (`onDayEnd`, `onDayStart`, the morning's `onEffect`s) run as soon as that
+  step ends, and so do the answers to those. The game autosaves each morning,
+  and that save already holds the morning's rewards: a player who continues
+  from it gets each of them exactly once. Anything still queued when the
+  player saves by hand is applied before the save is written, too.
+- **Headless replays run your code.** `farm-player --headless` loads the
+  cartridge's project scripts and pack plugins and steps the game the same
+  way, so a replay tests the rules the game ships with
+  ([Checking a game](PLAYER.md#checking-a-game-with---headless)).
 - **Chains stop.** A step caused by a plugin mutation does not fire
   `onCommand` or `onEffect`, and mutations three reactions deep are dropped
   (a plugin answering a mutation's hook, another answering that, and so on).

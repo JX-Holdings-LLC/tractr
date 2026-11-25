@@ -180,6 +180,10 @@ pub struct Scene {
     pub layers: Option<Vec<SceneLayer>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub forage_spawns: Option<Vec<super::ForageSpawnTable>>,
+    /// What its scene properties start at, by property id (#244); absent: each property's own
+    /// start value.
+    #[serde(skip_serializing_if = "Option::is_none", with = "super::properties::start_values")]
+    pub properties: Option<indexmap::IndexMap<String, i64>>,
     #[serde(flatten)]
     pub extra: Map<String, Value>,
 }

@@ -5,7 +5,6 @@ use crate::commands::Command;
 use crate::effects::{message_levels, Effect};
 use crate::engine_types::{CommandRules, Effects, EngineContext};
 use crate::farming::farming_actions;
-use crate::game_time::SleepOptions;
 use crate::hooks::{CommandHookPayload, HookEvent, SceneEnterHookPayload, TimeOfDayHookPayload};
 use crate::messages;
 use crate::npcs::npc_movement;
@@ -78,7 +77,7 @@ fn run_command(ctx: &EngineContext, state: &mut GameState, command: &Command) ->
         ),
         Command::ChooseDialogueOption { index } => dialogue_system::handle_choose_dialogue_option(ctx, state, *index),
         Command::CloseDialogue => dialogue_system::handle_close_dialogue(state),
-        Command::Sleep => game_time::perform_sleep(ctx, state, SleepOptions { collapsed: false }),
+        Command::Sleep => game_time::handle_sleep(ctx, state),
         Command::OpenShop { shop_id } => economy::handle_open_shop(ctx, state, shop_id),
         Command::CloseShop => economy::handle_close_shop(state),
         Command::BuyItem { item_id, quantity } => economy::handle_buy_item(ctx, state, item_id, *quantity),
@@ -516,6 +515,8 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
     if state.clock.tick == 1 {
         combat::spawn_scenes(ctx, state);
         crate::foraging::morning(ctx, state);
+        // The game's properties start at their start values (#244).
+        crate::properties::materialize(ctx, state);
     }
     // Free movement integrates every tick from the held intent. Frozen while a dialogue, shop or
     // minigame is open (modal interactions pause the body), and so are the monsters.
@@ -536,6 +537,8 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
         crafting::settle_machines(ctx, state);
         // Plugin timers and entity ticks (#238).
         crate::plugin_world::advance_minute(ctx, state);
+        // Properties drain and recover with the clock (#244).
+        effects.extend(crate::properties::advance(ctx, state, before_minute, after_minute));
         effects.extend(events::evaluate_events(ctx, state, "tick", None));
         // `time` events whose minute the clock just reached (M3).
         let span = (before_minute.saturating_mul(units::MINUTE), after_minute.saturating_mul(units::MINUTE));
@@ -546,8 +549,10 @@ fn advance_single_tick_inner(ctx: &EngineContext, state: &mut GameState) -> Effe
         ));
     }
 
-    if u64::from(state.clock.time_minutes) >= u64::from(time.day_end_minute) * u64::from(units::MINUTE) {
-        effects.extend(game_time::perform_sleep(ctx, state, SleepOptions { collapsed: true }));
+    // The day's end: a collapse, or (#243) the date rolling over under a player who carries on;
+    // midnight in a game without sleep.
+    if u64::from(state.clock.time_minutes) >= game_time::day_end_micro(ctx) {
+        effects.extend(game_time::end_day(ctx, state));
     }
     effects.extend(crate::festivals::advance(ctx, state));
     objects::forget_gone(ctx, state);

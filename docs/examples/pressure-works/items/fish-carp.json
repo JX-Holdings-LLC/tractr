@@ -1,0 +1,9 @@
+{
+  "id": "fish-carp",
+  "name": "Carp",
+  "description": "A common pond fish",
+  "type": "fish",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 18
+}

@@ -81,6 +81,8 @@ type Edit =
     | SetSceneAllSeasons of sceneId: string * allSeasons: bool
     /// The monsters the scene has each morning (M7); none is absent.
     | SetSceneMonsters of sceneId: string * monsters: MonsterSpawn list
+    /// What the scene's properties start at (#244), by property id; an empty list: each property's own start value.
+    | SetSceneProperties of sceneId: string * values: (string * float) list
     /// The scene's extra layers (M8); none is absent. A layer left out takes what was painted on
     /// it with it.
     | SetSceneLayers of sceneId: string * layers: SceneLayer list
@@ -197,6 +199,8 @@ type Edit =
     | SetExportSettings of settings: ExportSettings option
     /// The project's save migration rules (#242).
     | SetSaveMigrations of rules: SaveMigration list
+    /// The project's properties (#244); an empty list removes them.
+    | SetProperties of properties: PropertyDefinition list
     /// The project's test states (#229).
     | SetTestStates of states: TestState list
     /// ProjectSettingsEditor `removeSeason`: also drops festivals and weather rows of that season; refused for the last season.

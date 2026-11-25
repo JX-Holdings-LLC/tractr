@@ -147,7 +147,21 @@ let private export (args: Arguments) (out: TextWriter) (err: TextWriter) : int =
                     project
 
             let text = Exporter.format report
-            if report.Ok then out.Write text else err.Write text
+
+            if report.Ok then
+                out.Write text
+                // What the exported game opens with, so a kept playtest or test progress in the
+                // opening is seen before the build is shared.
+                out.WriteLine "New Game starts with:"
+
+                for line in Playtests.OpeningLines project do
+                    out.WriteLine("  " + line)
+
+                if Playtests.HasKept project then
+                    out.WriteLine "  (The project's kept playtest is not exported.)"
+            else
+                err.Write text
+
             if report.Ok then 0 else 1
     | _ -> 2
 

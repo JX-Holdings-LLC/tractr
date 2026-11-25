@@ -241,7 +241,11 @@ ended (`clock`: day, season, year, minute, scene and tile), every quest with
 its status, the flags (`true` or `false`), the variables (numbers and texts)
 and the money. The same game and the same inputs always end in the same
 state, on every machine, so a build server can check that an exported game
-still plays the same:
+still plays the same. The run steps the game the way the window does: the
+game's project scripts and pack plugins hear every step and their changes
+apply, so a scripted reward shows up in the replay, in the save it writes and
+in its `expect` checks. What a script or plugin got wrong during the run is
+listed in the report's `pluginErrors`:
 
 ```json
 {

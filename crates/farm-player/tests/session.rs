@@ -140,18 +140,24 @@ fn escape_cancels_a_minigame() {
     assert!(session.state().minigame.is_none());
 }
 
-/// Records what it saw and answers every `onDayStart` with a gift of money.
-#[derive(Default)]
+/// Records what it saw and answers every `answers` hook with a gift of money.
 struct FakePlugins {
     seen: Arc<Mutex<Vec<String>>>,
     queued: Vec<Command>,
+    answers: &'static str,
+}
+
+impl FakePlugins {
+    fn answering(answers: &'static str, seen: &Arc<Mutex<Vec<String>>>) -> Option<Box<dyn SessionPlugins>> {
+        Some(Box::new(Self { seen: seen.clone(), queued: Vec::new(), answers }))
+    }
 }
 
 impl SessionPlugins for FakePlugins {
-    fn dispatch(&mut self, events: &[HookEvent], _depth: u32, _game: farm_plugins::GameView<'_>) {
+    fn dispatch(&mut self, events: &[HookEvent], depth: u32, _game: farm_plugins::GameView<'_>) {
         for event in events {
             self.seen.lock().unwrap().push(event.hook().to_owned());
-            if event.hook() == "onDayStart" {
+            if event.hook() == self.answers && depth == 0 {
                 self.queued.push(Command::PluginMutation {
                     plugin_id: "pack:gift".into(),
                     mutation: serde_json::from_value::<PluginMutation>(
@@ -172,13 +178,12 @@ impl SessionPlugins for FakePlugins {
 fn plugin_mutations_enter_the_command_log_before_the_next_tick() {
     let mut session = session_for(&starter());
     let seen = Arc::new(Mutex::new(Vec::new()));
-    session.set_plugins(Some(Box::new(FakePlugins { seen: seen.clone(), queued: Vec::new() })));
+    session.set_plugins(FakePlugins::answering("onTimeOfDay", &seen));
     let money = session.state().player.money;
-    session.run_command(&Command::Sleep);
-    assert!(seen.lock().unwrap().iter().any(|hook| hook == "onDayStart"), "{:?}", seen.lock().unwrap());
-    // Engine hooks come first, then one onEffect per effect.
-    let first_effect = seen.lock().unwrap().iter().position(|hook| hook == "onEffect").unwrap();
-    assert!(seen.lock().unwrap()[..first_effect].iter().all(|hook| hook != "onEffect"));
+    // The clock starts at 6:00; the tick that reaches 7:00 is heard, and answered with a gift.
+    while !seen.lock().unwrap().iter().any(|hook| hook == "onTimeOfDay") {
+        session.update(1.0 / TICK_RATE, false);
+    }
     assert_eq!(session.state().player.money, money, "not applied mid-step");
     // A frame without a tick applies nothing; the next tick does.
     session.update(0.0, false);
@@ -187,8 +192,57 @@ fn plugin_mutations_enter_the_command_log_before_the_next_tick() {
     assert_eq!(session.state().player.money, money + 25);
 }
 
+/// What plugins answer to a morning is in the state when the step that started the day ends:
+/// the host autosaves on `DayStarted`, and a queue is not part of a save.
+#[test]
+fn a_new_day_settles_what_plugins_answered_to_it() {
+    let mut session = session_for(&starter());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    session.set_plugins(FakePlugins::answering("onDayStart", &seen));
+    let money = session.state().player.money;
+    session.run_command(&Command::Sleep);
+    assert!(seen.lock().unwrap().iter().any(|hook| hook == "onDayStart"), "{:?}", seen.lock().unwrap());
+    // Engine hooks come first, then one onEffect per effect.
+    let first_effect = seen.lock().unwrap().iter().position(|hook| hook == "onEffect").unwrap();
+    assert!(seen.lock().unwrap()[..first_effect].iter().all(|hook| hook != "onEffect"));
+    assert_eq!(session.state().player.money, money + 25, "in the state the morning autosave writes");
+    // Once: the ticks that follow add nothing.
+    for _ in 0..5 {
+        session.update(1.0 / TICK_RATE, false);
+    }
+    assert_eq!(session.state().player.money, money + 25);
+    // A day the clock ends (a collapse inside a tick) settles the same way.
+    let mut session = session_for(&starter());
+    session.set_plugins(FakePlugins::answering("onDayStart", &seen));
+    session.debug(&DebugAction::AddMinutes { minutes: 100_000.0 });
+    session.step_ticks(1);
+    assert_eq!(session.state().clock.day, 2);
+    assert!(session.state().player.money >= money - 50 + 25, "{}", session.state().player.money);
+    let settled = session.state().player.money;
+    session.step_ticks(3);
+    assert_eq!(session.state().player.money, settled);
+}
+
+/// A mutation still queued when the host saves is applied first ([`PlaySession::settle`]).
+#[test]
+fn settling_applies_queued_mutations_once() {
+    let mut session = session_for(&starter());
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    session.set_plugins(FakePlugins::answering("onTimeOfDay", &seen));
+    let money = session.state().player.money;
+    while !seen.lock().unwrap().iter().any(|hook| hook == "onTimeOfDay") {
+        session.step_ticks(1);
+    }
+    assert_eq!(session.state().player.money, money);
+    session.settle();
+    assert_eq!(session.state().player.money, money + 25);
+    session.settle();
+    session.step_ticks(2);
+    assert_eq!(session.state().player.money, money + 25);
+}
+
 /// The golden plugin scenario's project with the real sandbox: its `onDayStart` plugin speaks
-/// after every sleep, and the message enters the game at the next frame.
+/// after every sleep, and the message enters the game with the morning.
 #[test]
 fn the_wasm_sandbox_runs_pack_plugins_in_a_session() {
     let fixture: serde_json::Value =
@@ -212,9 +266,9 @@ fn the_wasm_sandbox_runs_pack_plugins_in_a_session() {
     session.set_plugins(farm_player::plugins::for_cartridge(&cart_plugins, Default::default(), None));
     assert!(session.has_plugins());
     assert!(session.plugin_errors().is_empty(), "{:?}", session.plugin_errors());
-    session.run_command(&Command::Sleep);
     session.drain_events();
-    session.update(1.0 / TICK_RATE, false);
+    // The plugin's answer to the morning settles with the step that started the day.
+    session.run_command(&Command::Sleep);
     let toasts: Vec<String> = session
         .drain_events()
         .into_iter()
@@ -223,7 +277,10 @@ fn the_wasm_sandbox_runs_pack_plugins_in_a_session() {
             _ => None,
         })
         .collect();
-    assert!(!toasts.is_empty(), "the plugin's day-start message reached the game");
+    assert!(
+        toasts.iter().any(|text| text.contains("glowshrooms hum")),
+        "the plugin's day-start message reached the game: {toasts:?}"
+    );
     assert!(farm_player::plugins::for_project(&starter(), Default::default()).is_none());
 }
 

@@ -1,6 +1,7 @@
 //! Screenshot goldens of the graphical player at 1280×800 (Steam Deck, 16:10) and 1920×1080
 //! (16:9): the title screen, settings, the gameplay HUD, a dialogue and a shop; and the start of
-//! the Cozy Garden and Quest RPG samples and a pack-defined minigame at 1280×800.
+//! the Cozy Garden and Quest RPG samples, a pack-defined minigame, the HUD with Goals and Mail
+//! and the HUD of a game with its own rules and properties at 1280×800.
 //!
 //! Frames are rendered at full size, then halved (2×2 box filter) and compared with the PNGs in
 //! `fixtures/player/` within a small tolerance, so the checked-in images stay small.
@@ -105,6 +106,15 @@ fn settings_screen() {
 #[test]
 fn gameplay_hud() {
     check_all("hud");
+}
+
+/// The toolbar with Goals and Mail, and a game with its own rules and meters, at the Steam
+/// Deck's size: the top bar stays on one row.
+#[test]
+fn hud_with_goals_mail_and_properties() {
+    let failures: Vec<String> =
+        ["hud-goals-mail", "hud-properties"].iter().filter_map(|name| check(name, 1280, 800).err()).collect();
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
 #[test]

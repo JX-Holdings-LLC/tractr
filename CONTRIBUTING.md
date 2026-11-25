@@ -181,7 +181,7 @@ leave `fixtures/` changed (`tools/ci/golden-guard.sh`).
 | `FARM_RECORD_GOLDENS=1` | `fixtures/golden/{replays,content,saves}`, `rng.json`, `hash.json` (and stamps `SOURCE.txt`) | `cargo test -p farm-sim --test golden_replays` (`golden_content`, `golden_primitives`), `cargo test -p farm-cart --test golden_saves` |
 | `FARM_RENDER_BLESS=1` | `fixtures/render/*.png` (renderer goldens) | `cargo test -p farm-render --test golden` |
 | `FARM_PLAYER_BLESS=1` | `fixtures/player/*.png` (game screens) | `cargo test -p farm-player --test screenshots` |
-| `FARM_RECORD_CARTRIDGES=1` | `fixtures/golden/cartridges/*.cart` | `dotnet test tests/FarmEngine.Authoring.Tests --filter "FullyQualifiedName~CartridgeTests\|FullyQualifiedName~ValidationTests"` |
+| `FARM_RECORD_CARTRIDGES=1` | `fixtures/golden/cartridges/*.cart` (the samples, and `pressure-works.cart` from `docs/examples/pressure-works`) | `dotnet test tests/FarmEngine.Authoring.Tests --filter "FullyQualifiedName~CartridgeTests\|FullyQualifiedName~ValidationTests\|FullyQualifiedName~ProjectSchemaTests"` |
 | `FARM_RECORD_SNAPSHOTS=1` | `fixtures/authoring/snapshots.json` | `dotnet test tests/FarmEngine.Authoring.Tests --filter FullyQualifiedName~SnapshotTests` |
 | `FARM_RECORD_CONTENT_LINTS=1` | `fixtures/projects/content-lints.json` | `dotnet test tests/FarmEngine.Authoring.Tests --filter FullyQualifiedName~ValidationCaseTests` |
 | `FARM_EDITOR_BLESS=1` | `fixtures/editor/*.png` (editor screenshots at half size, compared with a tolerance on Linux) | `dotnet test tests/Tractr.App.Tests --filter "FullyQualifiedName~Screenshot"` |

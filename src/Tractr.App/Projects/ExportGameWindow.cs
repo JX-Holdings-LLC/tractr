@@ -64,9 +64,14 @@ internal sealed class ExportGameWindow : ProjectDialogWindow
             Ui.Text(viewModel.GameText, "h3"),
             Ui.Text(viewModel.GameDetail, "muted", "small"));
 
+        // What the exported game opens with: test progress in the opening is seen before it ships.
+        var opening = Ui.Wrapped(viewModel.OpeningText + viewModel.KeptPlaytestNote, "muted", "small");
+        opening.Name = "ExportOpening";
+
         var form = Ui.VStack(
             10,
             problems,
+            opening,
             Ui.VStack(6, Ui.Text("TARGETS", "section"), windows, linux, web),
             Ui.VStack(6, Ui.Text("OUTPUT FOLDER", "section"), folderRow, archives));
 

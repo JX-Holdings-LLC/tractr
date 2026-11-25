@@ -1,0 +1,9 @@
+{
+  "id": "fertilizer-quality",
+  "name": "Quality Fertilizer",
+  "description": "Increases chance of higher quality crops",
+  "type": "fertilizer",
+  "stackable": true,
+  "maxStack": 99,
+  "value": 25
+}

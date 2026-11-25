@@ -50,6 +50,7 @@ write it.
 | Event outcome `amount` (money, friendship; applied as whole gold/points, rounded) | `i64` | 1/1000 | number |
 | Counts: quantities, stacks, yields, harvest counts, inventory size, floors, stages, weights of drops/fish/rocks/weather | `u32` (`i64` where a difference can be negative) | whole | count |
 | Energy, max energy, energy costs | `i32` | 1/1000 point | points (2.5) |
+| Property values, bounds, start values, hourly rates, thresholds and crop ranges (#244); a rollover's energy share (`rolloverEnergyFraction`, `u32`) | `i64` | 1/1000 | number (72.5); a share (0.25) |
 | Absolute day, day of season, year, days grown, days without water, age and interval days | `u32` | whole day | days |
 | Time of day, `timeOfDay` condition bounds | `u32` | 1/1000000 minute ("micro-minutes") | minutes (390.5) |
 | Absolute in-game time (a machine's `completesAtMinute`) | `i64` | micro-minute | minutes |
@@ -140,10 +141,10 @@ time of day, animal positions and mood) are on the engine's grid, so the
 editor shows what the game will run. Content definitions (prices, chances) keep what the creator typed; the Rust
 loader quantizes them, and Problems reports a warning (`numbers.offGrid`)
 where that changes a value in a way a player could notice (a fractional
-price or count). "Keep changes" (the hosts' synced project) writes the running
-state into the project JSON as the editor sent it
-(`state::apply_state_to_project_json`), so it never replaces content values
-with their quantized form.
+price or count). Making a kept playtest the opening (and the hosts' synced
+project) writes the running state into the project JSON as the editor sent it
+(`state::apply_state_to_project_json`, F# `Playtest.applyStateJson`), so it
+never replaces content values with their quantized form.
 
 ## Goldens
 

@@ -24,6 +24,19 @@ module internal ChecksExport =
             | _ -> false)
 
     let run (project: GameProject) (sink: Sink) =
+        // The opening holds what only a kept playtest writes (Keep changes before it kept
+        // playtests beside the opening, or a deliberate "make it the opening"): say so, so test
+        // progress does not ship unseen.
+        if project.KeptState.IsSome then
+            sink.Info(
+                "export.openingPlayed",
+                "keptState",
+                sprintf
+                    "New Game starts from a played state (day %d of the game). If that is not the opening you mean, set the opening's date, player and map in the editor; Settings \u2192 Opening shows what a new game starts with."
+                    (int project.CurrentDay),
+                Some NavigationTarget.Settings
+            )
+
         match project.Export with
         | None -> ()
         | Some settings ->

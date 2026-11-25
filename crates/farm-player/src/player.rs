@@ -1127,6 +1127,8 @@ impl Player {
                     title: self.def.info.title.clone(),
                     full: self.mode == PlayerMode::Standalone,
                     can_quit: self.can_quit,
+                    goals: farm_ui::game::has_goals(&self.def.content),
+                    mail: farm_ui::game::has_mail(&self.def.content),
                 };
                 shell::pause(&mut self.ui, &view)
             }
@@ -1327,6 +1329,14 @@ impl Player {
                 }
             }
             ShellAction::QuitToTitle => self.screens.push(Screen::Confirm(Confirmation::QuitToTitle)),
+            ShellAction::OpenGoals | ShellAction::OpenMail => {
+                // Out of the menu and into the panel: the game's own panels sit over the world.
+                self.screens.clear();
+                let panel = if action == ShellAction::OpenGoals { Panel::Goals } else { Panel::Mail };
+                if self.game_ui.panel != Some(panel) {
+                    self.toggle_panel(panel);
+                }
+            }
             ShellAction::Resume | ShellAction::Back | ShellAction::Cancel => {
                 if self.screens.last() != Some(&Screen::Title) {
                     self.screens.pop();
@@ -1612,6 +1622,8 @@ impl Player {
         let background = self.ui.theme().colors.background;
         let lang = self.ui.lang();
         let Some(game) = self.game.as_mut() else { return };
+        // Plugin mutations still queued are not part of the state: apply them, or the save loses them.
+        game.session.settle();
         let mut preview = SavePreview::of_state(game.session.state());
         preview.farm_name = self.def.info.title.clone();
         preview.play_seconds = game.play_seconds.floor();

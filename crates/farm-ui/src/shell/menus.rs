@@ -16,6 +16,11 @@ pub struct PauseView {
     pub full: bool,
     /// A Quit (to desktop) button.
     pub can_quit: bool,
+    /// The game has goals (M6): a Goals entry, so a gamepad (which has no button left for it)
+    /// reaches the panel.
+    pub goals: bool,
+    /// The game sends letters (M6): a Mail entry, for the same reason.
+    pub mail: bool,
 }
 
 pub fn pause(ui: &mut Ui, view: &PauseView) -> Option<ShellAction> {
@@ -25,6 +30,12 @@ pub fn pause(ui: &mut Ui, view: &PauseView) -> Option<ShellAction> {
     if view.full {
         entries.push(("Save", "pause.save", Icon::Save, ShellAction::OpenSave));
         entries.push(("Load", "pause.load", Icon::Folder, ShellAction::OpenLoad));
+    }
+    if view.goals {
+        entries.push(("Goals", "toolbar.goals", Icon::Book, ShellAction::OpenGoals));
+    }
+    if view.mail {
+        entries.push(("Mail", "toolbar.mail", Icon::Mail, ShellAction::OpenMail));
     }
     entries.push(("Settings", "pause.settings", Icon::Gear, ShellAction::OpenSettings));
     if view.full {
